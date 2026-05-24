@@ -1,0 +1,394 @@
+import { z } from "zod";
+import {
+  StoredArchiveRowSchema,
+  StoredResultAssetSchema,
+  WorkspaceSnapshotSchema,
+  providerConfigFor,
+  type StorageRepository,
+  type StoredArchiveRow,
+  type StoredProviderConfig,
+  type StoredResultAsset,
+  type WorkspaceSnapshot,
+  type WorkspaceSnapshotSummary,
+} from "../storage/contracts";
+import {
+  createMemoryCredentialResolver,
+  createProviderCredentialRef,
+  type CredentialResolver,
+  type ProviderCredentialRef,
+} from "../providers/credentials";
+import type { ProviderAdapterRegistry } from "../providers/executor";
+import type { LocalResultFileStore, ResultStoredFileMetadata } from "../results/file-store";
+import type { ProviderId } from "../schema/zod";
+import { prepareImageForTargetSize, type ImageOutputProcessing } from "../results/image-post-processing";
+import { summarizeWorkspaceSnapshot } from "../storage/contracts";
+import {
+  QueuePlanSchema,
+  QueueSummarySchema,
+  summarizeQueue,
+  type QueuePlan,
+  type QueueSummary,
+  type QueueTask,
+} from "./contracts";
+import { runMockQueuePlan } from "./mock-runner";
+
+export const WorkspaceQueueWorkerInputSchema = z.object({
+  workspaceId: z.string().min(1),
+  jobId: z.string().min(1),
+  archiveResults: z.boolean().default(true),
+});
+
+export const WorkspaceQueueWorkerResultSchema = z.object({
+  workspace: WorkspaceSnapshotSchema,
+  summary: QueueSummarySchema,
+  resultCount: z.number().int().min(0),
+  archiveRowCount: z.number().int().min(0),
+});
+
+export type WorkspaceQueueWorkerInput = z.infer<typeof WorkspaceQueueWorkerInputSchema>;
+export type WorkspaceQueueWorkerResult = z.infer<typeof WorkspaceQueueWorkerResultSchema>;
+
+export type WorkspaceQueueWorkerOptions = {
+  repository: StorageRepository;
+  now?: () => string;
+  credentialResolver?: CredentialResolver;
+  credentialRefs?: Partial<Record<ProviderId, ProviderCredentialRef>>;
+  providerRegistry?: ProviderAdapterRegistry;
+  resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
+  useMockCredentials?: boolean;
+};
+
+function cloneSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
+  return WorkspaceSnapshotSchema.parse(JSON.parse(JSON.stringify(snapshot)));
+}
+
+async function loadWorkspace(repository: StorageRepository, workspaceId: string): Promise<WorkspaceSnapshot> {
+  const loaded = await repository.loadSnapshot(workspaceId);
+  if (!loaded.ok) throw new Error(loaded.message);
+  return cloneSnapshot(loaded.snapshot);
+}
+
+function findQueuePlan(snapshot: WorkspaceSnapshot, jobId: string): QueuePlan {
+  const plan = snapshot.queuePlans.find((candidate) => candidate.job.id === jobId);
+  if (!plan) throw new Error(`Queue plan ${jobId} was not found in workspace ${snapshot.metadata.workspaceId}.`);
+  return QueuePlanSchema.parse(plan);
+}
+
+function taskCreatesResult(task: QueueTask): boolean {
+  return ["imageGeneration", "imageEdit", "upscale", "backgroundRemoval"].includes(task.kind);
+}
+
+function providerAssetFromTask(task: QueueTask, providerResultId: string, index: number): Record<string, unknown> | null {
+  const providerAssets = task.output.metadata.providerAssets;
+  if (!Array.isArray(providerAssets)) return null;
+  const exact = providerAssets.find((asset) =>
+    Boolean(asset && typeof asset === "object" && "id" in asset && asset.id === providerResultId),
+  );
+  const candidate = exact || providerAssets[index];
+  return candidate && typeof candidate === "object" ? candidate as Record<string, unknown> : null;
+}
+
+function stringField(source: Record<string, unknown> | null, key: string): string | null {
+  const value = source?.[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function numberField(source: Record<string, unknown> | null, key: string): number | null {
+  const value = source?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function resultIdForTask(task: QueueTask, index: number): string {
+  return `result-${task.id}-${index + 1}`;
+}
+
+function fileNameForResult(task: QueueTask, index: number, width: number, height: number): string {
+  return [task.mode, task.input.schemeId || task.kind, `${width}x${height}`, String(index + 1)].join("-");
+}
+
+function providerAssetForMetadata(
+  providerAsset: Record<string, unknown> | null,
+  resultFile: ResultStoredFileMetadata | null,
+): Record<string, unknown> | null {
+  if (!providerAsset || !resultFile || !stringField(providerAsset, "dataUrl")) return providerAsset;
+  const { dataUrl: _dataUrl, ...safeProviderAsset } = providerAsset;
+  return {
+    ...safeProviderAsset,
+    dataUrlPersisted: true,
+  };
+}
+
+function sanitizeProviderAssetForQueue(providerAsset: unknown): unknown {
+  if (!providerAsset || typeof providerAsset !== "object") return providerAsset;
+  if (!("dataUrl" in providerAsset)) return providerAsset;
+  const { dataUrl: _dataUrl, ...safeProviderAsset } = providerAsset as Record<string, unknown>;
+  return {
+    ...safeProviderAsset,
+    dataUrlPersisted: true,
+  };
+}
+
+function sanitizeQueuePlanProviderAssets(plan: QueuePlan): QueuePlan {
+  return QueuePlanSchema.parse({
+    ...plan,
+    tasks: plan.tasks.map((task) => {
+      const providerAssets = task.output.metadata.providerAssets;
+      if (!Array.isArray(providerAssets)) return task;
+      return {
+        ...task,
+        output: {
+          ...task.output,
+          metadata: {
+            ...task.output.metadata,
+            providerAssets: providerAssets.map(sanitizeProviderAssetForQueue),
+          },
+        },
+      };
+    }),
+  });
+}
+
+async function storeResultFile(input: {
+  fileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
+  workspaceId: string;
+  task: QueueTask;
+  providerAsset: Record<string, unknown> | null;
+  resultId: string;
+  index: number;
+  width: number;
+  height: number;
+  dataUrl?: string | null;
+}): Promise<ResultStoredFileMetadata | null> {
+  const dataUrl = input.dataUrl || stringField(input.providerAsset, "dataUrl");
+  if (!input.fileStore || !dataUrl) return null;
+
+  return input.fileStore.storeDataUrl({
+    workspaceId: input.workspaceId,
+    resultId: input.resultId,
+    fileName: fileNameForResult(input.task, input.index, input.width, input.height),
+    dataUrl,
+  });
+}
+
+function resultFromTask(
+  task: QueueTask,
+  providerResultId: string,
+  index: number,
+  createdAt: string,
+  resultFile: ResultStoredFileMetadata | null = null,
+  outputProcessing: ImageOutputProcessing | null = null,
+  dimensions?: { width: number; height: number },
+): StoredResultAsset {
+  const providerAsset = providerAssetFromTask(task, providerResultId, index);
+  const safeProviderAsset = providerAssetForMetadata(providerAsset, resultFile);
+  const assetUrl = stringField(providerAsset, "url");
+  const width = dimensions?.width || numberField(providerAsset, "width") || task.input.width || 1024;
+  const height = dimensions?.height || numberField(providerAsset, "height") || task.input.height || 1024;
+  const { providerAssets: _providerAssets, ...taskMetadata } = task.output.metadata;
+
+  return StoredResultAssetSchema.parse({
+    id: resultIdForTask(task, index),
+    projectId: task.jobId.split("-").slice(2).join("-") || "project",
+    schemeId: task.input.schemeId || "scheme-unknown",
+    jobId: task.jobId,
+    mode: task.mode,
+    width,
+    height,
+    platformPreset: task.input.platformPreset || "custom",
+    language: null,
+    model: task.input.model || task.kind,
+    status: "ready",
+    taskId: task.id,
+    providerResultId,
+    thumbnailUrl: null,
+    assetUrl,
+    favorite: false,
+    archivedAt: null,
+    metadata: {
+      queueTaskKind: task.kind,
+      sourceResultId: task.input.sourceResultId || null,
+      providerCapability: task.providerCapability || null,
+      ...taskMetadata,
+      ...(resultFile ? { resultFile } : {}),
+      ...(outputProcessing ? { outputProcessing } : {}),
+      ...(safeProviderAsset ? { providerAsset: safeProviderAsset } : {}),
+    },
+    createdAt,
+    updatedAt: createdAt,
+  });
+}
+
+async function resultFromTaskWithProject(input: {
+  task: QueueTask;
+  providerResultId: string;
+  index: number;
+  projectId: string;
+  workspaceId: string;
+  createdAt: string;
+  fileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
+}): Promise<StoredResultAsset> {
+  const providerAsset = providerAssetFromTask(input.task, input.providerResultId, input.index);
+  const sourceWidth = numberField(providerAsset, "width") || input.task.input.width || 1024;
+  const sourceHeight = numberField(providerAsset, "height") || input.task.input.height || 1024;
+  const prepared = await prepareImageForTargetSize({
+    dataUrl: stringField(providerAsset, "dataUrl"),
+    sourceWidth,
+    sourceHeight,
+    targetWidth: input.task.input.width || null,
+    targetHeight: input.task.input.height || null,
+  });
+  const resultFile = await storeResultFile({
+    ...(input.fileStore ? { fileStore: input.fileStore } : {}),
+    workspaceId: input.workspaceId,
+    task: input.task,
+    providerAsset,
+    resultId: resultIdForTask(input.task, input.index),
+    index: input.index,
+    width: prepared.width,
+    height: prepared.height,
+    dataUrl: prepared.dataUrl,
+  });
+  const result = resultFromTask(
+    input.task,
+    input.providerResultId,
+    input.index,
+    input.createdAt,
+    resultFile,
+    prepared.processing,
+    { width: prepared.width, height: prepared.height },
+  );
+  return StoredResultAssetSchema.parse({
+    ...result,
+    projectId: input.projectId,
+  });
+}
+
+function archiveRowFromResult(result: StoredResultAsset, createdAt: string): StoredArchiveRow {
+  return StoredArchiveRowSchema.parse({
+    id: `archive-${result.id}`,
+    projectId: result.projectId,
+    resultAssetId: result.id,
+    title: `${result.mode} ${result.schemeId} ${result.width}x${result.height}`,
+    mode: result.mode,
+    model: result.model,
+    state: "editable",
+    createdAt,
+    updatedAt: createdAt,
+  });
+}
+
+function mergeResults(existing: StoredResultAsset[], incoming: StoredResultAsset[]): StoredResultAsset[] {
+  const merged = new Map(existing.map((result) => [result.id, result]));
+  for (const result of incoming) merged.set(result.id, result);
+  return [...merged.values()];
+}
+
+function mergeArchiveRows(existing: StoredArchiveRow[], incoming: StoredArchiveRow[]): StoredArchiveRow[] {
+  const merged = new Map(existing.map((row) => [row.id, row]));
+  for (const row of incoming) merged.set(row.id, row);
+  return [...merged.values()];
+}
+
+function mergeQueuePlans(existing: QueuePlan[], incoming: QueuePlan): QueuePlan[] {
+  const merged = new Map(existing.map((plan) => [plan.job.id, plan]));
+  merged.set(incoming.job.id, incoming);
+  return [...merged.values()];
+}
+
+function mergeQueueSummaries(existing: QueueSummary[], incoming: QueueSummary): QueueSummary[] {
+  const merged = new Map(existing.map((summary) => [summary.jobId, summary]));
+  merged.set(incoming.jobId, incoming);
+  return [...merged.values()];
+}
+
+function credentialRefFromStoredConfig(config: StoredProviderConfig | null | undefined): ProviderCredentialRef | undefined {
+  if (!config?.hasApiKey) return undefined;
+  return createProviderCredentialRef({
+    providerId: config.providerId,
+    source: "runtime",
+    keyRef: config.providerId,
+    apiKeyPreview: config.apiKeyMasked,
+    configured: config.hasApiKey,
+    updatedAt: config.updatedAt,
+  });
+}
+
+function mockResolverForStoredConfig(config: StoredProviderConfig | null | undefined): CredentialResolver | undefined {
+  if (!config?.hasApiKey) return undefined;
+  return createMemoryCredentialResolver([
+    {
+      providerId: config.providerId,
+      apiKey: `mock-${config.providerId}-queue-runtime-key`,
+      expiresAt: null,
+    },
+  ]);
+}
+
+export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions) {
+  const { repository } = options;
+  const now = options.now || (() => new Date().toISOString());
+
+  return {
+    async run(input: WorkspaceQueueWorkerInput): Promise<WorkspaceQueueWorkerResult> {
+      const parsed = WorkspaceQueueWorkerInputSchema.parse(input);
+      const snapshot = await loadWorkspace(repository, parsed.workspaceId);
+      const initialPlan = findQueuePlan(snapshot, parsed.jobId);
+      const storedConfig = providerConfigFor(snapshot, initialPlan.job.providerId);
+      const credentialRef = options.credentialRefs?.[initialPlan.job.providerId] || credentialRefFromStoredConfig(storedConfig);
+      const credentialResolver = options.credentialResolver || (options.useMockCredentials === false ? undefined : mockResolverForStoredConfig(storedConfig));
+      const runResult = await runMockQueuePlan(initialPlan, {
+        snapshot,
+        storedConfig,
+        ...(credentialRef ? { credentialRef } : {}),
+        ...(credentialResolver ? { credentialResolver } : {}),
+        ...(options.providerRegistry ? { registry: options.providerRegistry } : {}),
+      });
+      const createdAt = now();
+
+      const resultBatches = await Promise.all(runResult.plan.tasks
+        .filter((task) => task.status === "succeeded" && taskCreatesResult(task))
+        .map((task) =>
+          Promise.all(task.output.providerResultIds.map((providerResultId, index) =>
+            resultFromTaskWithProject({
+              task,
+              providerResultId,
+              index,
+              projectId: snapshot.project.id,
+              workspaceId: snapshot.metadata.workspaceId,
+              createdAt,
+              ...(options.resultFileStore ? { fileStore: options.resultFileStore } : {}),
+            }),
+          )),
+        ));
+      const newResults = resultBatches.flat();
+
+      const newArchiveRows = parsed.archiveResults ? newResults.map((result) => archiveRowFromResult(result, createdAt)) : [];
+      const safeRunPlan = sanitizeQueuePlanProviderAssets(runResult.plan);
+      const nextSnapshot = WorkspaceSnapshotSchema.parse({
+        ...snapshot,
+        queuePlans: mergeQueuePlans(snapshot.queuePlans, safeRunPlan),
+        queueSummaries: mergeQueueSummaries(snapshot.queueSummaries, summarizeQueue(safeRunPlan)),
+        results: mergeResults(snapshot.results, newResults),
+        archiveRows: mergeArchiveRows(snapshot.archiveRows, newArchiveRows),
+        metadata: {
+          ...snapshot.metadata,
+          revision: snapshot.metadata.revision + 1,
+          updatedAt: createdAt,
+        },
+      });
+
+      await repository.saveSnapshot(nextSnapshot);
+
+      return WorkspaceQueueWorkerResultSchema.parse({
+        workspace: nextSnapshot,
+        summary: summarizeQueue(runResult.plan),
+        resultCount: newResults.length,
+        archiveRowCount: newArchiveRows.length,
+      });
+    },
+  };
+}
+
+export function summarizeWorkerWorkspace(snapshot: WorkspaceSnapshot): WorkspaceSnapshotSummary {
+  return summarizeWorkspaceSnapshot(WorkspaceSnapshotSchema.parse(snapshot));
+}

@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Next.js / Electron build outputs
+.next/
+dist-desktop/
+release/
+out/
+build/
+
+# Local runtime files and generated assets
+public/uploads/
+output/
+outputs/
+artifacts/
+db/
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Tool caches and temporary workspaces
+.playwright-cli/
+.tmp-app-schema/
+.codex-symlink-test/
+.deepseek-litellm/
+codex-plusplus/
+
+# TypeScript / logs
+*.tsbuildinfo
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
