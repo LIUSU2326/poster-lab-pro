@@ -76,12 +76,13 @@ function createProviderSettings() {
     ...createProviderConfigDefaults("openai"),
     apiKey: ["sk", "workspace", "example", "1234"].join("-"),
   };
+  const aigocode: ProviderConfigForm = createProviderConfigDefaults("aigocode");
   const google: ProviderConfigForm = createProviderConfigDefaults("google");
-  const replicate: ProviderConfigForm = createProviderConfigDefaults("replicate");
-  const comfy: ProviderConfigForm = createProviderConfigDefaults("comfy");
-  const custom: ProviderConfigForm = createProviderConfigDefaults("custom");
+  const deepseek: ProviderConfigForm = createProviderConfigDefaults("deepseek");
+  const claude: ProviderConfigForm = createProviderConfigDefaults("claude");
+  const qwen: ProviderConfigForm = createProviderConfigDefaults("qwen");
 
-  return redactProviderConfigs([openai, google, replicate, comfy, custom], { updatedAt: CREATED_AT });
+  return redactProviderConfigs([openai, aigocode, google, deepseek, claude, qwen], { updatedAt: CREATED_AT });
 }
 
 export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {
@@ -178,7 +179,7 @@ export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {
     height: 1920,
     platformPreset: "tiktok",
     language: "en-US",
-    model: "gpt-image-1",
+    model: "gpt-image-2",
     status: "ready",
   });
 
@@ -223,7 +224,7 @@ export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {
         resultAssetId: result.id,
         title: "Poster campaign result",
         mode: "poster",
-        model: "gpt-image-1",
+        model: "gpt-image-2",
         state: "archived",
         createdAt: CREATED_AT,
         updatedAt: CREATED_AT,

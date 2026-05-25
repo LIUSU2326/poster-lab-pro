@@ -4,7 +4,7 @@ export const enums = {
   productionMode: ["poster", "collab", "announcement", "logo", "icon"],
   theme: ["light", "dark"],
   workbenchView: ["schemes", "text", "archive", "results", "compare", "export"],
-  providerId: ["openai", "google", "replicate", "comfy", "custom"],
+  providerId: ["openai", "aigocode", "google", "deepseek", "claude", "qwen"],
   providerStatus: ["idle", "testing", "success", "warning", "error"],
   assetRole: [
     "gameCharacter",

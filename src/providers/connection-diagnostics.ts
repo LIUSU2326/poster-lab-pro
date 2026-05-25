@@ -12,8 +12,11 @@ import type { ProviderErrorCode } from "./contracts";
 import { getProviderManifest } from "./manifests";
 
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_AIGOCODE_BASE_URL = "https://api.aigocode.com/v1";
 const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_REPLICATE_BASE_URL = "https://api.replicate.com";
+const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
+const DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com/v1";
+const DEFAULT_QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
 export const ProviderConnectionTransportRequestSchema = z.object({
   url: z.string().url(),
@@ -125,8 +128,11 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
 
 function probeUrl(config: StoredProviderConfig): string {
   if (config.providerId === "openai") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_OPENAI_BASE_URL)}/models`;
+  if (config.providerId === "aigocode") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_AIGOCODE_BASE_URL)}/models`;
   if (config.providerId === "google") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_GOOGLE_BASE_URL)}/models`;
-  if (config.providerId === "replicate") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_REPLICATE_BASE_URL)}/v1/models`;
+  if (config.providerId === "deepseek") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_DEEPSEEK_BASE_URL)}/models`;
+  if (config.providerId === "claude") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_CLAUDE_BASE_URL)}/models`;
+  if (config.providerId === "qwen") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_QWEN_BASE_URL)}/models`;
   return normalizeBaseUrl(config.baseUrl, "");
 }
 
@@ -139,8 +145,9 @@ function providerHeaders(providerId: ProviderId, apiKey?: string): Record<string
     headers["x-goog-api-key"] = apiKey;
     return headers;
   }
-  if (providerId === "replicate") {
-    headers.Authorization = `Token ${apiKey}`;
+  if (providerId === "claude") {
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
     return headers;
   }
   headers.Authorization = `Bearer ${apiKey}`;
@@ -347,7 +354,7 @@ export async function runProviderConnectionDiagnostic(input: {
     });
   }
 
-  const defaultModel = input.storedConfig.modelSlots.image || input.storedConfig.defaultModel || manifest.modelSlots.image?.[0];
+  const defaultModel = input.storedConfig.defaultModel || input.storedConfig.modelSlots.image || manifest.modelSlots.image?.[0];
   let apiKey = "";
   if (manifest.apiKeyRequired) {
     const resolved = await resolveApiKey({

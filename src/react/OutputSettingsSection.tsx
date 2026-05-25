@@ -13,6 +13,7 @@ type DeliverySuite = {
   id: PlatformPreset;
   label: string;
   sizes: string[];
+  custom?: boolean;
 };
 
 type OutputSettingsSectionProps = {
@@ -28,20 +29,17 @@ const deliverySuitesByMode: Record<ProductionMode, DeliverySuite[]> = {
     { id: "metaAds", label: "Meta 广告", sizes: ["1:1", "4:3", "9:16", "1200x627"] },
     { id: "googlePlay", label: "Google Play", sizes: ["16:9", "1:1", "1024x500"] },
     { id: "appStore", label: "App Store", sizes: ["1:1", "4:3", "9:16"] },
-    { id: "custom", label: "自定义套装", sizes: [] },
   ],
   collab: [
     { id: "metaAds", label: "Meta 广告", sizes: ["1:1", "4:3", "9:16", "1200x627"] },
     { id: "tiktok", label: "TikTok 竖版", sizes: ["9:16", "1080x1920"] },
     { id: "googlePlay", label: "Google Play", sizes: ["16:9", "1:1"] },
-    { id: "custom", label: "自定义套装", sizes: [] },
   ],
   announcement: [
     { id: "tapTap", label: "TapTap", sizes: ["16:9", "1:1"] },
     { id: "googlePlay", label: "Google Play", sizes: ["16:9", "1:1", "1024x500"] },
-    { id: "custom", label: "自定义套装", sizes: [] },
   ],
-  logo: [{ id: "custom", label: "自定义套装", sizes: ["1:1", "4:3"] }],
+  logo: [{ id: "custom", label: "标识套装", sizes: ["1:1", "4:3"], custom: true }],
   icon: [
     { id: "appStore", label: "App Store", sizes: ["1:1"] },
     { id: "googlePlay", label: "Google Play", sizes: ["1:1"] },
@@ -57,7 +55,7 @@ function normalizeInitialValues(mode: ProductionMode, values: OutputSettingsForm
 }
 
 function uniqueSizes(sizes: string[]): string[] {
-  return Array.from(new Set(sizes.filter(Boolean)));
+  return Array.from(new Set(sizes.map((size) => size.trim()).filter(Boolean)));
 }
 
 function customSuiteSizes(): string[] {
@@ -70,6 +68,22 @@ function numericDimension(value: string): number | null {
   if (!Number.isFinite(parsed)) return null;
   const rounded = Math.round(parsed);
   return rounded >= 256 && rounded <= 8192 ? rounded : null;
+}
+
+function isCustomSizeLabel(value: string): boolean {
+  return value === "自定义" || value.toLowerCase() === "custom" || value.includes("自定义") || value.includes("鑷");
+}
+
+function normalizeOutputSizeLabel(value: string): string {
+  return isCustomSizeLabel(value) ? "自定义" : value;
+}
+
+function splitExplicitSize(size: string): { width: string; height: string } {
+  const match = size.match(/^(\d{3,5})x(\d{3,5})$/i);
+  return {
+    width: match?.[1] || "1080",
+    height: match?.[2] || "1920",
+  };
 }
 
 export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNote }: OutputSettingsSectionProps) {
@@ -87,6 +101,9 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
   const [suiteWidth, setSuiteWidth] = useState("1080");
   const [suiteHeight, setSuiteHeight] = useState("1920");
   const [customSuite, setCustomSuite] = useState(customSuiteSizes());
+  const [customSuiteEnabled, setCustomSuiteEnabled] = useState(state.outputCustomSuiteEnabled !== false);
+  const [sizeDrafts, setSizeDrafts] = useState<Record<string, { width: string; height: string }>>({});
+  const [selectionMode, setSelectionMode] = useState(state.outputSelectionMode || "suite");
   const [planStrategy, setPlanStrategy] = useState(state.outputPlanStrategy || "unified");
 
   const commit = async (nextValues: OutputSettingsForm) => {
@@ -115,20 +132,23 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
     await commit(nextValues);
   };
 
-  const suites = (deliverySuitesByMode[mode] || deliverySuitesByMode.poster).map((suite) =>
-    suite.id === "custom" ? { ...suite, sizes: customSuite } : suite,
-  );
   const currentValues = {
     ...defaults,
     ...values,
   };
-  const outputSelectionMode = state.outputSelectionMode || "suite";
-  const suiteMode = outputSelectionMode === "suite";
-  const customSizeMode = outputSelectionMode === "custom-size";
+  const customDeliverySuite: DeliverySuite = { id: "custom", label: "自定义套装", sizes: customSuite, custom: true };
+  const suites = [
+    ...(deliverySuitesByMode[mode] || deliverySuitesByMode.poster),
+    ...(mode !== "logo" && customSuiteEnabled ? [customDeliverySuite] : []),
+  ];
+  const suiteMode = selectionMode === "suite";
+  const customSizeMode = selectionMode === "custom-size";
+  const visibleOutputSizes = outputSizes.map(normalizeOutputSizeLabel);
 
   const selectSuite = async (suite: DeliverySuite) => {
     const sizes = uniqueSizes(suite.sizes.length > 0 ? suite.sizes : customSuite);
     state.outputSelectionMode = "suite";
+    setSelectionMode("suite");
     await updateMany({
       platformPresets: [suite.id],
       aspectRatios: sizes.length > 0 ? sizes : ["1:1"],
@@ -137,25 +157,17 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
   };
 
   const selectSingleSize = async (ratio: string) => {
-    if (ratio === "自定义") {
+    if (isCustomSizeLabel(ratio)) {
       state.outputSelectionMode = "custom-size";
+      setSelectionMode("custom-size");
       return;
     }
 
     state.outputSelectionMode = "single";
+    setSelectionMode("single");
     await updateMany({
       platformPresets: ["custom"],
       aspectRatios: [ratio],
-      customSize: null,
-    });
-  };
-
-  const enableSingleSizeMode = async () => {
-    const firstSize = visibleOutputSizes.find((item) => item !== "自定义") || "1:1";
-    state.outputSelectionMode = "single";
-    await updateMany({
-      platformPresets: ["custom"],
-      aspectRatios: [firstSize],
       customSize: null,
     });
   };
@@ -166,6 +178,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
     if (!width || !height) return;
 
     state.outputSelectionMode = "custom-size";
+    setSelectionMode("custom-size");
     await updateMany({
       platformPresets: ["custom"],
       aspectRatios: [`${width}x${height}`],
@@ -178,14 +191,53 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
     const height = numericDimension(suiteHeight);
     if (!width || !height) return;
     const next = uniqueSizes([...customSuite, `${width}x${height}`]);
+    state.outputCustomSuiteEnabled = true;
+    state.outputCustomSuiteSizes = next;
+    setCustomSuiteEnabled(true);
+    setCustomSuite(next);
+  };
+
+  const updateCustomSuiteSize = (oldSize: string) => {
+    const draft = sizeDrafts[oldSize] || splitExplicitSize(oldSize);
+    const width = numericDimension(draft.width);
+    const height = numericDimension(draft.height);
+    if (!width || !height) return;
+    const nextSize = `${width}x${height}`;
+    const next = uniqueSizes(customSuite.map((size) => (size === oldSize ? nextSize : size)));
     state.outputCustomSuiteSizes = next;
     setCustomSuite(next);
+    setSizeDrafts((current) => {
+      const nextDrafts = { ...current };
+      delete nextDrafts[oldSize];
+      return nextDrafts;
+    });
   };
 
   const removeCustomSuiteSize = (size: string) => {
     const next = customSuite.filter((item) => item !== size);
-    state.outputCustomSuiteSizes = next.length > 0 ? next : ["1080x1920"];
-    setCustomSuite(state.outputCustomSuiteSizes);
+    state.outputCustomSuiteSizes = next;
+    setCustomSuite(next);
+  };
+
+  const createCustomSuite = () => {
+    const next = customSuite.length > 0 ? customSuite : ["1080x1920", "1200x627"];
+    state.outputCustomSuiteEnabled = true;
+    state.outputCustomSuiteSizes = next;
+    setCustomSuiteEnabled(true);
+    setCustomSuite(next);
+    setSuiteManagerOpen(true);
+    state.outputSuiteManagerOpen = true;
+  };
+
+  const deleteCustomSuite = async () => {
+    state.outputCustomSuiteEnabled = false;
+    state.outputCustomSuiteSizes = [];
+    setCustomSuiteEnabled(false);
+    setCustomSuite([]);
+    const fallbackSuite = (deliverySuitesByMode[mode] || deliverySuitesByMode.poster)[0];
+    if (currentValues.platformPresets.includes("custom") && fallbackSuite) {
+      await selectSuite(fallbackSuite);
+    }
   };
 
   const setStrategy = (strategy: "unified" | "independent") => {
@@ -193,13 +245,24 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
     setPlanStrategy(strategy);
   };
 
-  const visibleOutputSizes = outputSizes.map((item) => (item === "多尺寸套装" ? "自定义" : item));
-
   return (
     <div className="output-settings-rhf" data-rhf-output-settings>
       {suites.length > 0 ? (
         <>
-          <span className="field-caption">投放套装</span>
+          <div className="field-caption-row">
+            <span className="field-caption">投放套装</span>
+            <button
+              className="mini-ghost-button"
+              type="button"
+              onClick={() => {
+                const next = !suiteManagerOpen;
+                state.outputSuiteManagerOpen = next;
+                setSuiteManagerOpen(next);
+              }}
+            >
+              {suiteManagerOpen ? "收起管理" : "套装管理"}
+            </button>
+          </div>
           <div className="platform-grid" aria-label="投放套装">
             {suites.map((suite) => {
               const active = suiteMode && currentValues.platformPresets.includes(suite.id);
@@ -207,7 +270,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
                 <button
                   className={active ? "active" : ""}
                   type="button"
-                  key={suite.id}
+                  key={`${suite.id}:${suite.label}`}
                   onClick={() => void selectSuite(suite)}
                   aria-pressed={active}
                 >
@@ -216,17 +279,45 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
               );
             })}
           </div>
+
+          <div className="segmented suite-strategy-row" aria-label="方案策略">
+            <button
+              className={planStrategy === "unified" ? "active" : ""}
+              type="button"
+              onClick={() => setStrategy("unified")}
+            >
+              {mode === "icon" ? "锁定方形" : "统一方案"}
+            </button>
+            <button
+              className={planStrategy === "independent" ? "active" : ""}
+              type="button"
+              disabled={mode === "icon"}
+              onClick={() => setStrategy("independent")}
+            >
+              {mode === "icon" ? "不改尺寸" : "独立方案"}
+            </button>
+          </div>
+
           {suiteManagerOpen ? (
             <SuiteManager
               suites={suites}
+              customSuiteEnabled={customSuiteEnabled}
               customSuite={customSuite}
               suiteWidth={suiteWidth}
               suiteHeight={suiteHeight}
+              sizeDrafts={sizeDrafts}
               onSuiteWidth={setSuiteWidth}
               onSuiteHeight={setSuiteHeight}
               onAddCustomSize={addCustomSuiteSize}
               onRemoveCustomSize={removeCustomSuiteSize}
+              onUpdateCustomSize={updateCustomSuiteSize}
+              onDraftSize={(size, patch) => setSizeDrafts((current) => ({
+                ...current,
+                [size]: { ...splitExplicitSize(size), ...(current[size] || {}), ...patch },
+              }))}
               onSelectSuite={(suite) => void selectSuite(suite)}
+              onCreateCustomSuite={createCustomSuite}
+              onDeleteCustomSuite={() => void deleteCustomSuite()}
             />
           ) : null}
         </>
@@ -235,7 +326,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       <span className="field-caption">尺寸选择</span>
       <div className={`size-grid ${mode === "icon" ? "single-size" : ""}`} aria-label="图片比例与尺寸">
         {visibleOutputSizes.map((item) => {
-          const active = customSizeMode && item === "自定义"
+          const active = customSizeMode && isCustomSizeLabel(item)
             ? true
             : !suiteMode && currentValues.aspectRatios.includes(item);
           return (
@@ -245,20 +336,12 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
               key={item}
               onClick={() => void selectSingleSize(item)}
               aria-pressed={active}
-              disabled={suiteMode && mode !== "icon"}
-              title={suiteMode && mode !== "icon" ? "已选择投放套装，单一尺寸暂不可选" : undefined}
             >
               {item}
             </button>
           );
         })}
       </div>
-
-      {suiteMode && mode !== "icon" ? (
-        <button className="switch-size-mode" type="button" onClick={() => void enableSingleSizeMode()}>
-          改用单一尺寸
-        </button>
-      ) : null}
 
       {customSizeMode ? (
         <div className="custom-size-panel">
@@ -293,24 +376,6 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
           <button type="button">自定义</button>
         </div>
       ) : null}
-
-      <div className="segmented" aria-label="方案策略">
-        <button
-          className={planStrategy === "unified" ? "active" : ""}
-          type="button"
-          onClick={() => setStrategy("unified")}
-        >
-          {mode === "icon" ? "锁定方形" : "统一方案"}
-        </button>
-        <button
-          className={planStrategy === "independent" ? "active" : ""}
-          type="button"
-          disabled={mode === "icon"}
-          onClick={() => setStrategy("independent")}
-        >
-          {mode === "icon" ? "不改尺寸" : "独立方案"}
-        </button>
-      </div>
 
       <div className="number-row">
         <span>每个方案出图</span>
@@ -352,52 +417,80 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
 
 function SuiteManager({
   suites,
+  customSuiteEnabled,
   customSuite,
   suiteWidth,
   suiteHeight,
+  sizeDrafts,
   onSuiteWidth,
   onSuiteHeight,
   onAddCustomSize,
   onRemoveCustomSize,
+  onUpdateCustomSize,
+  onDraftSize,
   onSelectSuite,
+  onCreateCustomSuite,
+  onDeleteCustomSuite,
 }: {
   suites: DeliverySuite[];
+  customSuiteEnabled: boolean;
   customSuite: string[];
   suiteWidth: string;
   suiteHeight: string;
+  sizeDrafts: Record<string, { width: string; height: string }>;
   onSuiteWidth: (value: string) => void;
   onSuiteHeight: (value: string) => void;
   onAddCustomSize: () => void;
   onRemoveCustomSize: (size: string) => void;
+  onUpdateCustomSize: (size: string) => void;
+  onDraftSize: (size: string, patch: Partial<{ width: string; height: string }>) => void;
   onSelectSuite: (suite: DeliverySuite) => void;
+  onCreateCustomSuite: () => void;
+  onDeleteCustomSuite: () => void;
 }) {
   return (
     <div className="suite-manager-panel">
       <div className="suite-manager-head">
         <strong>套装管理</strong>
-        <small>查看每个套装包含的尺寸</small>
+        <small>查看、选择并编辑自定义套装尺寸</small>
+      </div>
+      <div className="suite-manager-toolbar">
+        <button className="mini-ghost-button" type="button" onClick={onCreateCustomSuite}>
+          新增自定义套装
+        </button>
+        <button className="danger-text-button" type="button" onClick={onDeleteCustomSuite} disabled={!customSuiteEnabled}>
+          删除自定义套装
+        </button>
       </div>
       <div className="suite-list">
         {suites.map((suite) => (
-          <article className="suite-card" key={suite.id}>
+          <article className="suite-card" key={`${suite.id}:${suite.label}`}>
             <button type="button" onClick={() => onSelectSuite(suite)}>
               <strong>{suite.label}</strong>
               <small>{suite.sizes.join(" / ") || "待添加尺寸"}</small>
             </button>
-            {suite.id === "custom" ? (
-              <div className="custom-suite-tags">
-                {customSuite.map((size) => (
-                  <button type="button" key={size} onClick={() => onRemoveCustomSize(size)} title="删除这个尺寸">
-                    {size}
-                  </button>
-                ))}
+            {suite.custom ? (
+              <div className="suite-size-editor">
+                {customSuite.length === 0 ? <small>这个自定义套装还没有尺寸。</small> : null}
+                {customSuite.map((size) => {
+                  const draft = sizeDrafts[size] || splitExplicitSize(size);
+                  return (
+                    <div className="suite-size-row" key={size}>
+                      <input aria-label={`${size} 宽度`} inputMode="numeric" value={draft.width} onChange={(event) => onDraftSize(size, { width: event.currentTarget.value })} />
+                      <span>×</span>
+                      <input aria-label={`${size} 高度`} inputMode="numeric" value={draft.height} onChange={(event) => onDraftSize(size, { height: event.currentTarget.value })} />
+                      <button type="button" onClick={() => onUpdateCustomSize(size)}>保存</button>
+                      <button type="button" onClick={() => onRemoveCustomSize(size)}>删除</button>
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
           </article>
         ))}
       </div>
       <div className="custom-size-panel">
-        <strong>自定义套装尺寸</strong>
+        <strong>添加套装尺寸</strong>
         <div className="custom-size-row">
           <input aria-label="套装宽度" inputMode="numeric" value={suiteWidth} onChange={(event) => onSuiteWidth(event.currentTarget.value)} />
           <span>×</span>

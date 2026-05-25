@@ -16,11 +16,12 @@ export function renderCenterBoard(activeMode, selected) {
 
   const schemes = getModeSchemes();
   const resultsByScheme = groupResultsByScheme(getModeResults());
+  const visibleSchemes = getVisibleBoardSchemes(activeMode, schemes, resultsByScheme);
   return `
     <section class="center-board scheme-plan-board" aria-label="生产画板">
       <div class="figma-board-block">
         <div class="scheme-plan-list ${state.copyVisible ? "copy-visible" : "copy-hidden"}">
-          ${schemes.map((scheme) => renderSchemeCard(
+          ${visibleSchemes.length === 0 ? renderSchemeBoardEmpty(activeMode) : visibleSchemes.map((scheme) => renderSchemeCard(
             activeMode,
             scheme,
             selected?.id === scheme.id,
@@ -30,6 +31,31 @@ export function renderCenterBoard(activeMode, selected) {
       </div>
     </section>
     ${state.resultViewerOpen ? renderResultViewer() : ""}
+  `;
+}
+
+function getVisibleBoardSchemes(activeMode, schemes, resultsByScheme) {
+  const fixtureIds = new Set((activeMode?.schemes || []).map((scheme) => scheme.id));
+  return schemes.filter((scheme) => {
+    if (!fixtureIds.has(scheme.id)) return true;
+    const results = resultsByScheme.get(scheme.id) || [];
+    return results.some((result) => isRealGeneratedResult(result));
+  });
+}
+
+function isRealGeneratedResult(result) {
+  if (!result) return false;
+  if (result.metadata?.mockPreviewUrl || result.metadata?.source === "mock-provider") return false;
+  return Boolean(result.metadata?.resultFile || result.thumbnailUrl || result.assetUrl);
+}
+
+function renderSchemeBoardEmpty(activeMode) {
+  return `
+    <div class="scheme-plan-empty" role="status">
+      <strong>等待真实 API 生成方案</strong>
+      <small>中间区域的示例卡片已隐藏。配置 API Key 后，从右上角“生成海报”开始真实测试。</small>
+      <button type="button" data-action="open-settings">配置模型与 API Key</button>
+    </div>
   `;
 }
 

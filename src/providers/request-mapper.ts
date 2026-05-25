@@ -100,11 +100,11 @@ export type ProviderBackgroundRemovalMappedRequest = z.infer<typeof ProviderBack
 export type ProviderMappedRequest = z.infer<typeof ProviderMappedRequestSchema>;
 
 const FALLBACK_MODELS: Record<ProviderModelSlot, string> = {
-  concept: "gpt-4o",
-  image: "gpt-image-1",
-  styleReference: "gpt-4o",
-  compositionReference: "gpt-4o",
-  imageEdit: "gpt-image-1",
+  concept: "gpt-5.2",
+  image: "gpt-image-2",
+  styleReference: "gpt-5.2",
+  compositionReference: "gpt-5.2",
+  imageEdit: "gpt-image-2",
   upscale: "nightmareai/real-esrgan",
   backgroundRemoval: "cjwbw/rembg",
 };

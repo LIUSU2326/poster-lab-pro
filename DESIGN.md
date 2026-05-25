@@ -443,11 +443,17 @@ Provider 详情页必须支持按任务场景分配模型：
 | Slot | Flow | Example |
 |---|---|---|
 | 方案生成 | Brief → Creative Concept | GPT-4o |
-| 图像生成 | Concept → Image Output | gpt-image-1 / Imagen Pro |
+| 图像生成 | Concept → Image Output | gpt-image-1.5 / Gemini image / Qwen image |
 | 风格参考分析 | Style Reference image understanding | GPT-4o Vision |
 | 构图参考分析 | Layout Reference image understanding | GPT-4o Vision |
 
 静态原型只展示表单和状态。真实实现阶段由 provider adapter 读取 slot 配置并映射到对应任务。
+
+### Scheme Board Empty State
+
+- 中央方案板默认不展示内置示例方案卡；示例数据只能作为内部模板和测试兜底。
+- 未生成真实方案或真实图片前，中央区域显示轻量空状态和 API Key 配置入口。
+- 一旦真实 provider 生成方案或本地结果文件，才把对应方案卡渲染回生产板，避免用户把 mock 卡误认为 API 结果。
 
 ### Archive Surface
 
@@ -1443,3 +1449,20 @@ Classification: MVP visual quality refinement.
 - Provider settings, archive selection, top actions, and left production configuration are priority polish zones because they carry dense operational copy.
 - UI motion should stay functional and quiet: hover, focus, pressed, sheet, and card feedback only; animate transform or opacity and honor reduced motion.
 - Routine verification remains desktop-first and lightweight unless a full visual review is requested.
+
+## 2026-05-25 Control Surface Interaction Cleanup
+
+Classification: MVP workflow refinement.
+
+- Style selection should keep the left panel compact: clicking the style library opens a focused selection dialog with search and all available styles.
+- Composition and style reference uploads must show the uploaded image inside the upload surface itself. Reference extraction controls live directly under the preview, not in a separate route/status card.
+- Composition extraction has two clear actions: composition-only and full image-to-prompt. Style extraction has one primary action. All extraction actions stay disabled or explanatory until a provider/API key is configured.
+- Output presets and single sizes must both remain selectable. Choosing a single size switches away from suite mode instead of disabling the size buttons.
+- Suite management needs an obvious management surface for inspecting presets, creating/deleting the custom suite, and adding, editing, or removing custom sizes.
+- Unified scheme and independent scheme strategy belongs with suite output planning, above the single-size picker.
+- Provider settings should be resizeable from the lower-left corner for dense model and credential workflows.
+- Provider settings list focuses on mainstream model providers and a practical OpenAI-compatible gateway path: OpenAI, AIGoCode, Google AI Studio, DeepSeek, Claude, and Qwen. Experimental Replicate, ComfyUI, and Custom HTTP rows are removed from the primary workbench settings.
+- AIGoCode is treated as an OpenAI-compatible relay provider. Its Base URL stays editable, defaults to the relay `/v1` endpoint, and connection testing uses the model-list diagnostic before any paid generation path.
+- Provider routing schemes should support switching, icon-based add/delete actions, and secondary editing through the active scheme name plus model-slot selects. Capability tags are removed from the bottom of the settings sheet until they map to a real workflow action.
+- Sheet resize affordances should be quiet, integrated, and discoverable on hover; avoid heavy corner marks that look like broken window chrome.
+- The top-right generation action is the primary workbench CTA and must visually outrank export, theme, model settings, and text-toggle controls.

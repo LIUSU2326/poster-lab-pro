@@ -35,7 +35,7 @@ for (const token of [
   if (!liveAdapters.includes(token)) issues.push(`live-adapter-stubs.ts: missing ${token}`);
 }
 
-for (const providerId of ["openai", "google", "replicate", "comfy", "custom"]) {
+for (const providerId of ["openai", "aigocode", "google", "deepseek", "claude", "qwen"]) {
   if (!liveAdapters.includes("providerManifestList")) {
     issues.push("live-adapter-stubs.ts: live registry should derive providers from providerManifestList");
     break;
@@ -150,7 +150,7 @@ async function runRuntimeCheck() {
     const defaults = await import(pathToFileURL(defaultsModulePath).href);
 
     const registry = providers.createLiveProviderRegistry();
-    for (const providerId of ["openai", "google", "replicate", "comfy", "custom"]) {
+    for (const providerId of ["openai", "aigocode", "google", "deepseek", "claude", "qwen"]) {
       if (!registry[providerId]) issues.push(`live registry should include ${providerId}`);
     }
 
@@ -193,15 +193,15 @@ async function runRuntimeCheck() {
       issues.push("live image stub should return structured provider_unavailable");
     }
 
-    const comfyConfig = {
-      ...defaults.createProviderConfigDefaults("comfy"),
+    const claudeConfig = {
+      ...defaults.createProviderConfigDefaults("claude"),
       enabled: true,
-      baseUrl: "",
-      defaultModel: "poster-lab-workflow",
+      apiKey: "",
+      defaultModel: "claude-sonnet-4-5",
     };
-    const comfyHealth = await registry.comfy.healthCheck(comfyConfig);
-    if (!comfyHealth.ok || comfyHealth.value.status !== "not_configured") {
-      issues.push("ComfyUI live stub should require baseUrl configuration");
+    const claudeHealth = await registry.claude.healthCheck(claudeConfig);
+    if (!claudeHealth.ok || claudeHealth.value.status !== "not_configured") {
+      issues.push("Claude live stub should require API Key configuration");
     }
   } finally {
     const resolved = path.resolve(outDir);

@@ -56,9 +56,25 @@ export function getWorkspaceProject() {
 }
 
 export function getProviderRows() {
-  return Object.values(runtimeSnapshot().providerConfigs).map((provider) => {
-    const fallback = providerFallbacks[provider.providerId] || {};
+  const configs = runtimeSnapshot().providerConfigs || {};
+  const fixtureIds = providerFixtures.map((provider) => provider.id);
+  const providerIds = [
+    ...fixtureIds,
+    ...Object.keys(configs).filter((providerId) => !fixtureIds.includes(providerId)),
+  ];
 
+  return providerIds.map((providerId) => {
+    const fallback = providerFallbacks[providerId] || {};
+    const provider = configs[providerId] || {
+      providerId,
+      status: fallback.status || "idle",
+      apiKeyMasked: fallback.key || "",
+      baseUrl: fallback.url || "",
+      defaultModel: fallback.model || "",
+      displayName: fallback.name || providerId,
+      capabilities: fallback.caps || [],
+      note: fallback.note || "",
+    };
     return {
       id: provider.providerId,
       name: provider.displayName || fallback.name || provider.providerId,

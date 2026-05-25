@@ -41,7 +41,12 @@ export function renderTopbar(activeMode) {
           <span class="${state.theme === "dark" ? "active" : ""}">暗色</span>
         </button>
         <button type="button" data-view="archive">导出</button>
-        <button class="primary-button" type="button" data-action="submit-generation">生成${modeLabel}</button>
+        <button class="primary-button generate-primary" type="button" data-action="submit-generation">
+          <svg class="top-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M8 5v14l11-7-11-7Z"></path>
+          </svg>
+          <span>生成${modeLabel}</span>
+        </button>
       </nav>
       <div class="topbar-meta">
         <span>${escapeHtml(modeLabel)}</span>

@@ -104,7 +104,7 @@ function normalizeBaseUrl(config: ProviderConfigForm): string {
 }
 
 function imageModel(request: ImageGenerationRequest, config: ProviderConfigForm): string {
-  return request.model || config.modelSlots.image || config.defaultModel || "gemini-2.5-flash-image";
+  return request.model || config.modelSlots.image || config.defaultModel || "gemini-3-pro-image-preview";
 }
 
 function imagePrompt(request: ImageGenerationRequest): string {

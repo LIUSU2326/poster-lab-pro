@@ -1,5 +1,31 @@
 # PRODUCT.md
 
+## 2026-05-25 MVP Scope Update: Reference Upload And Suite Editing
+
+Reference images and output suites are production inputs, not decorative form fields. The MVP workbench should let users see uploaded composition and style references immediately, choose the intended extraction depth, and manage custom delivery sizes without leaving the left control panel.
+
+Product boundaries:
+
+- Composition reference uploads show the uploaded image in the reference upload area.
+- Composition extraction exposes two user intents: composition-only recognition and full image-to-prompt recognition for generating similar images.
+- Style reference uploads show their image preview and expose style extraction.
+- Reference extraction controls are gated by configured provider/API readiness and route through the existing provider settings model slots.
+- The extra material-routing status card is removed from the normal left-panel flow.
+- Custom output suites can be created, edited, selected, have sizes added or removed, and be deleted when they are user-created.
+- Single custom size selection remains separate from suite presets but uses the same compact output section.
+
+## 2026-05-25 MVP Scope Update: AIGoCode Gateway Provider
+
+Users who manage model keys through AIGoCode need a first-class way to save the relay API Key, keep the relay Base URL editable, and verify connectivity before generation. This is an MVP provider-settings refinement because it extends the existing OpenAI-compatible relay path without changing the production workflow.
+
+Product boundaries:
+
+- AIGoCode appears as a dedicated provider row in Model and API Key settings.
+- The provider uses an OpenAI-compatible Base URL and Bearer API Key authentication.
+- The connection test calls the lightweight model-list diagnostic and reports ready, auth failure, degraded model availability, or unavailable states.
+- API Keys continue to use the encrypted credential vault and must not appear in snapshots, route payloads, logs, or Git history.
+- This step does not add a provider-specific billing dashboard, usage sync, team key sharing, or automatic model discovery UI beyond the existing diagnostic sample list.
+
 ## 2026-05-23 MVP Scope Update: OpenAI-Compatible And Google Provider Setup
 
 Users may not have an official OpenAI API Key, but they may have an OpenAI-compatible relay key or a Google AI Studio key for Nano Banana style image generation. The MVP provider foundation should support those paths without weakening credential safety or binding the app to one model vendor.
@@ -10,7 +36,7 @@ Product boundaries:
 - Google AI Studio becomes an MVP provider for image generation through the provider adapter boundary.
 - Google provider support starts with connection diagnostics, image generation adapter mapping, and manual live test eligibility.
 - Google API Keys follow the same encrypted credential vault rules as other providers.
-- Nano Banana support means Google Gemini image models such as `gemini-2.5-flash-image`; exact model availability depends on the user's Google AI Studio account and region.
+- Nano Banana support means Google Gemini image models such as `gemini-3.1-flash-image-preview` or `gemini-3-pro-image-preview`; exact model availability depends on the user's Google AI Studio account and region.
 - This step does not add Google-specific image editing, upscale, background removal, billing dashboards, quota management, or team credential sharing.
 
 ## 2026-05-23 MVP Scope Update: Persisted Result File Download

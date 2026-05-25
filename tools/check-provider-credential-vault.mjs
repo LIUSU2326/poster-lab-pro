@@ -201,7 +201,7 @@ async function runRuntimeCheck() {
       issues.push("vault should resolve clear-text key only through CredentialResolver");
     }
 
-    const mismatch = await vaultInstance.resolveCredential({ ...status.credentialRef, providerId: "replicate" });
+    const mismatch = await vaultInstance.resolveCredential({ ...status.credentialRef, providerId: "deepseek" });
     if (mismatch.ok || mismatch.error.code !== "invalid_request") {
       issues.push("vault should reject provider-mismatched credential refs");
     }

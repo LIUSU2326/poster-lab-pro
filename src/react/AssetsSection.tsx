@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { uploadWorkbenchAssetFile } from "../asset-library-client.js";
-import { state } from "../state.js";
+import { analyzeReferenceImageForWorkbench } from "../reference-analysis-client.js";
+import { getRuntimeWorkspaceSnapshot, state } from "../state.js";
 import type { ProductionMode } from "../schema/zod";
 
 type AssetSlot = {
@@ -39,7 +40,7 @@ type AssetsSectionProps = {
 };
 
 const acceptedImageTypes = ["image/png", "image/jpeg", "image/webp"];
-const customSlotTones = ["violet", "teal", "orange", "blue"];
+const customSlotTone = "custom";
 
 function normalizeCategoryLabel(value: string): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 24);
@@ -47,6 +48,44 @@ function normalizeCategoryLabel(value: string): string {
 
 function assetSlotKey(slot: Pick<AssetSlot, "role" | "label">, defaultRole: string): string {
   return `${slot.role || defaultRole}:${slot.label}`;
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Failed to read image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function analysisApiReady(): boolean {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const provider = snapshot.providerConfigs?.[state.provider];
+  return Boolean(
+    state.providerCredential?.configured ||
+    state.providerConnection?.ok ||
+    provider?.hasApiKey ||
+    provider?.status === "success",
+  );
+}
+
+function latestPreviewForRole(slots: AssetSlot[], localPreviews: Record<string, string>, role: string): string {
+  const local = Object.entries(localPreviews)
+    .filter(([key]) => key.startsWith(`${role}:`))
+    .map(([, value]) => value)
+    .filter(Boolean)
+    .at(-1);
+  if (local) return local;
+  return [...slots].reverse().find((slot) => slot.role === role && slot.previewUrl)?.previewUrl || "";
+}
+
+function latestDataUrlForRole(role: string): string {
+  return Object.entries(state.referenceUploadDataUrls || {})
+    .filter(([key]) => key.startsWith(`${role}:`))
+    .map(([, value]) => value)
+    .filter(Boolean)
+    .at(-1) || "";
 }
 
 export function AssetsSection({
@@ -70,23 +109,27 @@ export function AssetsSection({
   const [hiddenSlotKeys, setHiddenSlotKeys] = useState<string[]>(
     Array.isArray(state.hiddenAssetSlots?.[mode]) ? state.hiddenAssetSlots[mode] : [],
   );
+  const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
+  const [analysisMessage, setAnalysisMessage] = useState("");
 
   const isPending = operation?.status === "planning";
   const visibleSlots = useMemo<VisibleAssetSlot[]>(() => {
     const existing = new Set(slots.map((slot) => slot.label));
     const extraSlots = customCategories
       .filter((label) => !existing.has(label))
-      .map((label, index) => ({
+      .map((label) => ({
         role: defaultAssetRole,
         label,
         state: "自定义",
-        tone: customSlotTones[index % customSlotTones.length] || "violet",
+        tone: customSlotTone,
         previewUrl: null,
         custom: true,
       }));
 
     return [...slots, ...extraSlots].filter((slot) => !hiddenSlotKeys.includes(assetSlotKey(slot, defaultAssetRole)));
   }, [customCategories, defaultAssetRole, hiddenSlotKeys, slots]);
+  const referencePreview = latestPreviewForRole(slots, localPreviews, referenceRole);
+  const canExtractReference = Boolean(referencePreview) && analysisApiReady();
 
   const commitCustomCategories = (nextCategories: string[]) => {
     state.customAssetCategories = {
@@ -135,7 +178,7 @@ export function AssetsSection({
         label: file?.name || label,
         transport: result.transport,
         assetCount: result.assetList?.ok ? result.assetList.data.assets.length : null,
-        error: result.ok ? null : "素材路由失败",
+        error: result.ok ? null : "上传失败",
       });
     } catch (error) {
       setOperation({
@@ -143,7 +186,7 @@ export function AssetsSection({
         role,
         label: file?.name || label,
         transport: "runtime",
-        error: error instanceof Error ? error.message : "素材路由失败",
+        error: error instanceof Error ? error.message : "上传失败",
       });
     } finally {
       setPendingKey(null);
@@ -180,6 +223,17 @@ export function AssetsSection({
       }
       const label = target.multiple && selectedFiles.length > 1 ? `${target.label} ${index + 1}` : target.label;
       const previewUrl = URL.createObjectURL(file);
+      const key = `${target.role}:${label}`;
+      setLocalPreviews((current) => ({ ...current, [key]: previewUrl }));
+      try {
+        const dataUrl = await fileToDataUrl(file);
+        state.referenceUploadDataUrls = {
+          ...(state.referenceUploadDataUrls || {}),
+          [key]: dataUrl,
+        };
+      } catch {
+        // Preview still works when FileReader fails; extraction can ask the user to re-upload later.
+      }
       await uploadMetadata(target.role, label, file, previewUrl);
     }
   };
@@ -210,6 +264,43 @@ export function AssetsSection({
     addCategory();
   };
 
+  const runReferenceExtraction = async (kind: "composition" | "full") => {
+    if (!referencePreview) {
+      setAnalysisMessage("请先上传一张构图参考图。");
+      return;
+    }
+    const imageDataUrl = latestDataUrlForRole(referenceRole);
+    if (!imageDataUrl) {
+      setAnalysisMessage("请重新上传参考图后再识别。");
+      return;
+    }
+    if (!analysisApiReady()) {
+      setAnalysisMessage("先在「模型与 API Key」里保存并测试可用的构图识别 API。");
+      return;
+    }
+
+    const label = kind === "composition" ? "仅识别构图" : "完整识别";
+    setAnalysisMessage(`${label}中，请稍候...`);
+    try {
+      const result = await analyzeReferenceImageForWorkbench({
+        kind,
+        role: referenceRole,
+        label: referenceLabel,
+        imageDataUrl,
+        key: `${referenceRole}:${kind}`,
+      });
+      if (!result.ok) {
+        setAnalysisMessage(result.error?.message || `${label}失败，请检查 API 配置。`);
+        return;
+      }
+      const text = String(result.data?.text || "").trim();
+      const summary = text.length > 120 ? `${text.slice(0, 120)}...` : text;
+      setAnalysisMessage(summary || `${label}完成，但供应商没有返回文本。`);
+    } catch (error) {
+      setAnalysisMessage(error instanceof Error ? error.message : `${label}失败，请稍后重试。`);
+    }
+  };
+
   return (
     <div className="assets-section-react" data-rhf-assets-section>
       <input ref={fileInputRef} className="asset-file-input" type="file" accept={acceptedImageTypes.join(",")} onChange={handleFileChange} />
@@ -218,7 +309,8 @@ export function AssetsSection({
         {visibleSlots.map((slot) => {
           const role = slot.role || defaultAssetRole;
           const key = `${role}:${slot.label}`;
-          const status = pendingKey === key ? "上传中" : slot.previewUrl ? "已就绪" : "待上传";
+          const previewUrl = localPreviews[key] || slot.previewUrl || "";
+          const status = pendingKey === key ? "上传中" : previewUrl ? "已就绪" : "待上传";
 
           return (
             <article className={`asset-slot-card ${slot.tone}`} key={key}>
@@ -229,10 +321,9 @@ export function AssetsSection({
                 disabled={isPending}
                 aria-busy={pendingKey === key}
               >
-                <i
-                  className={slot.previewUrl ? "asset-preview" : undefined}
-                  style={slot.previewUrl ? { backgroundImage: `url(${slot.previewUrl})` } : undefined}
-                />
+                <i className={previewUrl ? "asset-preview" : undefined}>
+                  {previewUrl ? <img className="asset-preview-img" src={previewUrl} alt="" /> : null}
+                </i>
                 <strong>{slot.label}</strong>
                 <small>{status}</small>
               </button>
@@ -256,16 +347,38 @@ export function AssetsSection({
         </button>
       ) : null}
 
-      <button
-        className="upload-drop"
-        type="button"
-        onClick={() => openFilePicker(referenceRole, referenceLabel, true)}
-        disabled={isPending}
-        aria-busy={pendingKey === `${referenceRole}:${referenceLabel}`}
-      >
-        <span>{referenceLabel}</span>
-        <small>{pendingKey === `${referenceRole}:${referenceLabel}` ? "上传中" : referenceHelper}</small>
-      </button>
+      <div className={`reference-upload-card ${referencePreview ? "has-preview" : ""}`}>
+        <button
+          className="reference-upload-main"
+          type="button"
+          onClick={() => openFilePicker(referenceRole, referenceLabel, true)}
+          disabled={isPending}
+          aria-busy={pendingKey?.startsWith(`${referenceRole}:`)}
+        >
+          <span className="reference-thumb" aria-hidden="true">
+            {referencePreview ? <img className="reference-preview-image" src={referencePreview} alt="" /> : null}
+          </span>
+          {referencePreview ? null : (
+            <span>
+              <strong>{referenceLabel}</strong>
+              <small>{pendingKey?.startsWith(`${referenceRole}:`) ? "上传中" : referenceHelper}</small>
+            </span>
+          )}
+        </button>
+        <div className="reference-analysis-tools">
+          <button type="button" onClick={() => runReferenceExtraction("composition")} disabled={!referencePreview}>
+            仅识别构图
+          </button>
+          <button type="button" onClick={() => runReferenceExtraction("full")} disabled={!referencePreview}>
+            完整识别
+          </button>
+        </div>
+        {analysisMessage ? (
+          <small className={canExtractReference ? "reference-ready-note" : "reference-muted-note"}>
+            {analysisMessage}
+          </small>
+        ) : null}
+      </div>
 
       <div className="asset-category-panel">
         <strong>新增素材类别</strong>
@@ -298,26 +411,6 @@ export function AssetsSection({
           <small>新增后会出现在上方素材卡片，可直接点击上传。</small>
         )}
       </div>
-
-      {operation ? <AssetOperationStatus operation={operation} /> : null}
-    </div>
-  );
-}
-
-function AssetOperationStatus({ operation }: { operation: AssetOperation }) {
-  const status = operation.status === "ready" ? "ready" : operation.status === "error" ? "error" : "planning";
-  const detail =
-    operation.status === "ready"
-      ? `${operation.transport || "静态"} / ${operation.assetCount ?? "本地"} 个素材`
-      : operation.status === "error"
-        ? operation.error || "素材路由失败"
-        : `${operation.transport || "静态"} 路由处理中`;
-
-  return (
-    <div className={`asset-route-status ${status}`}>
-      <span>素材路由</span>
-      <strong>{operation.label || operation.role || "素材"}</strong>
-      <small>{detail}</small>
     </div>
   );
 }

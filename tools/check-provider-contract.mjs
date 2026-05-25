@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const requiredProviderIds = ["openai", "google", "replicate", "comfy", "custom"];
+const requiredProviderIds = ["openai", "aigocode", "google", "deepseek", "claude", "qwen"];
 const requiredContractFiles = [
   "src/providers/contracts.ts",
   "src/providers/manifests.ts",

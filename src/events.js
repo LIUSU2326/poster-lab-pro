@@ -105,6 +105,7 @@ export function bindEvents(render) {
   bindKeyRevealControls();
 
   bindProviderControls(render);
+  bindProviderModelControls(render);
   bindArchiveControls(render);
 
   bindLiveGateControls(render);
@@ -198,6 +199,27 @@ async function handleActionControl(control, event, render) {
   if (action === "toggle-suite-manager") {
     state.outputSuiteManagerOpen = !state.outputSuiteManagerOpen;
   }
+  if (action === "add-provider-route-plan") {
+    const plans = Array.isArray(state.providerRoutePlans) ? [...state.providerRoutePlans] : [];
+    const nextIndex = plans.length + 1;
+    const plan = {
+      id: `custom-${Date.now().toString(36)}`,
+      name: `方案 ${nextIndex}`,
+    };
+    state.providerRoutePlans = [...plans, plan];
+    state.providerRoutePlan = plan.id;
+    refreshSettingsLayer(render);
+    return;
+  }
+  if (action === "delete-provider-route-plan") {
+    const plans = Array.isArray(state.providerRoutePlans) ? [...state.providerRoutePlans] : [];
+    if (plans.length > 1) {
+      state.providerRoutePlans = plans.filter((plan) => plan.id !== state.providerRoutePlan);
+      state.providerRoutePlan = state.providerRoutePlans[0]?.id || "standard";
+      refreshSettingsLayer(render);
+      return;
+    }
+  }
   if (action === "project-library-create") {
     state.projectLibraryMessage = "已准备新建项目入口；当前桌面版会先保留现有项目数据。";
   }
@@ -225,6 +247,64 @@ function bindProviderControls(render, root = document) {
   root.querySelectorAll("[data-provider]").forEach((button) => {
     button.addEventListener("click", () => handleProviderControl(button, render));
   });
+}
+
+function bindProviderModelControls(render, root = document) {
+  root.querySelectorAll("[data-provider-default-model]").forEach((control) => {
+    control.addEventListener("change", () => {
+      const providerId = control.dataset.providerDefaultModel;
+      if (!providerId) return;
+      const overrideKey = getProviderModelOverrideKey(providerId);
+      state.providerModelOverrides = {
+        ...(state.providerModelOverrides || {}),
+        [overrideKey]: {
+          ...(state.providerModelOverrides?.[overrideKey] || {}),
+          defaultModel: control.value,
+        },
+      };
+    });
+  });
+
+  root.querySelectorAll("[data-provider-model-slot]").forEach((control) => {
+    control.addEventListener("change", () => {
+      const providerId = control.dataset.providerId || state.provider;
+      const slot = control.dataset.providerModelSlot;
+      if (!slot) return;
+      const overrideKey = getProviderModelOverrideKey(providerId);
+      state.providerModelOverrides = {
+        ...(state.providerModelOverrides || {}),
+        [overrideKey]: {
+          ...(state.providerModelOverrides?.[overrideKey] || {}),
+          [slot]: control.value,
+        },
+      };
+    });
+  });
+
+  root.querySelectorAll("[data-provider-route-plan]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const planId = button.dataset.providerRoutePlan;
+      if (!planId) return;
+      state.providerRoutePlan = planId;
+      refreshSettingsLayer(render);
+    });
+  });
+
+  root.querySelectorAll("[data-provider-route-name]").forEach((control) => {
+    control.addEventListener("change", () => {
+      const planId = control.dataset.providerRouteName;
+      const nextName = control.value.trim();
+      if (!planId || !nextName) return;
+      state.providerRoutePlans = (state.providerRoutePlans || []).map((plan) =>
+        plan.id === planId ? { ...plan, name: nextName.slice(0, 24) } : plan,
+      );
+      refreshSettingsLayer(render);
+    });
+  });
+}
+
+function getProviderModelOverrideKey(providerId) {
+  return `${providerId}:${state.providerRoutePlan || "standard"}`;
 }
 
 async function handleProviderControl(button, render) {
@@ -287,6 +367,7 @@ function refreshSettingsLayer(render) {
     bindActionControls(render, nextLayer);
     bindKeyRevealControls(nextLayer);
     bindProviderControls(render, nextLayer);
+    bindProviderModelControls(render, nextLayer);
     bindSettingsResize(nextLayer);
   }
 }
@@ -524,6 +605,38 @@ function bindSettingsResize(root = document) {
         const delta = startX - moveEvent.clientX;
         state.settingsWidth = clamp(startWidth + delta, 760, Math.max(760, window.innerWidth - 32));
         sheet.style.setProperty("--settings-sheet-width", `${state.settingsWidth}px`);
+      };
+
+      const onPointerUp = () => {
+        document.body.classList.remove("is-resizing");
+        window.removeEventListener("pointermove", onPointerMove);
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp, { once: true });
+      event.preventDefault();
+    });
+  });
+
+  root.querySelectorAll("[data-settings-resize-corner]").forEach((handle) => {
+    handle.addEventListener("pointerdown", (event) => {
+      const sheet = document.querySelector(".settings-sheet");
+      if (!sheet) return;
+
+      const rect = sheet.getBoundingClientRect();
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const startWidth = state.settingsWidth || rect.width;
+      const startHeight = state.settingsHeight || rect.height;
+      document.body.classList.add("is-resizing");
+
+      const onPointerMove = (moveEvent) => {
+        const widthDelta = startX - moveEvent.clientX;
+        const heightDelta = moveEvent.clientY - startY;
+        state.settingsWidth = clamp(startWidth + widthDelta, 760, Math.max(760, window.innerWidth - 32));
+        state.settingsHeight = clamp(startHeight + heightDelta, 560, Math.max(560, window.innerHeight - 32));
+        sheet.style.setProperty("--settings-sheet-width", `${state.settingsWidth}px`);
+        sheet.style.setProperty("--settings-sheet-height", `${state.settingsHeight}px`);
       };
 
       const onPointerUp = () => {

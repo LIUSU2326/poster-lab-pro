@@ -22,7 +22,7 @@ const OPENAI_PROVIDER_ID = "openai" as const;
 export const OpenAIManualLiveSmokeInputSchema = z.object({
   enabled: z.boolean().default(false),
   apiKey: z.string().min(1).optional(),
-  model: z.string().min(1).default("gpt-image-1"),
+  model: z.string().min(1).default("gpt-image-2"),
   prompt: z
     .string()
     .min(1)

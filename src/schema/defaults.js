@@ -36,38 +36,48 @@ export const modeDefaultOutput = {
 };
 
 export const defaultProviderModelSlots = {
-  concept: "gpt-4o",
-  image: "gpt-image-1",
-  styleReference: "gpt-4o",
-  compositionReference: "gpt-4o",
+  concept: "gpt-5.2",
+  image: "gpt-image-2",
+  styleReference: "gpt-5.2",
+  compositionReference: "gpt-5.2",
 };
 
 const providerDefaults = {
   openai: {
     baseUrl: "",
-    defaultModel: "gpt-image-1",
+    defaultModel: "gpt-image-2",
+  },
+  aigocode: {
+    baseUrl: "https://api.aigocode.com/v1",
+    defaultModel: "gpt-5.2",
+    modelSlots: {
+      concept: "gpt-5.2",
+      image: "gpt-image-2",
+      styleReference: "gpt-5.2",
+      compositionReference: "gpt-5.2",
+    },
   },
   google: {
     baseUrl: "",
-    defaultModel: "gemini-2.5-flash-image",
+    defaultModel: "gemini-3-pro-image-preview",
     modelSlots: {
-      concept: "gemini-2.5-flash",
-      image: "gemini-2.5-flash-image",
-      styleReference: "gemini-2.5-flash",
-      compositionReference: "gemini-2.5-flash",
+      concept: "gemini-3-pro-preview",
+      image: "gemini-3-pro-image-preview",
+      styleReference: "gemini-3-pro-preview",
+      compositionReference: "gemini-3-pro-preview",
     },
   },
-  replicate: {
+  deepseek: {
     baseUrl: "",
-    defaultModel: "black-forest-labs/flux",
+    defaultModel: "deepseek-v4-flash",
   },
-  comfy: {
-    baseUrl: "http://127.0.0.1:8188",
-    defaultModel: "poster-lab-workflow",
-  },
-  custom: {
+  claude: {
     baseUrl: "",
-    defaultModel: "custom-image-endpoint",
+    defaultModel: "claude-opus-4-1-20250805",
+  },
+  qwen: {
+    baseUrl: "",
+    defaultModel: "qwen3.7-max",
   },
 };
 

@@ -1,6 +1,45 @@
 import { state } from '../state.js';
 import { getModelSlots, getProviderRows } from '../data/workspace-adapters.js';
 
+const providerModelCatalog = {
+  openai: {
+    default: ["gpt-5.2", "gpt-5.1", "gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-image-2", "gpt-image-1.5", "gpt-image-1"],
+    plan: ["gpt-5.2", "gpt-5.1", "gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4.1", "gpt-4.1-mini"],
+    image: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "chatgpt-image-latest"],
+    vision: ["gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4.1"],
+  },
+  aigocode: {
+    default: ["gpt-5.2", "gpt-5.1", "gpt-5-mini", "gpt-4.1-mini", "gpt-4.1", "gpt-image-2"],
+    plan: ["gpt-5.2", "gpt-5.1", "gpt-5-mini", "gpt-4.1-mini", "gpt-4.1"],
+    image: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "dall-e-3"],
+    vision: ["gpt-5.2", "gpt-5.1", "gpt-5-mini", "gpt-4.1-mini", "gpt-4.1"],
+  },
+  google: {
+    default: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-3-pro-image-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-image"],
+    plan: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+    image: ["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "imagen-4.0-generate-001", "imagen-4.0-ultra-generate-001"],
+    vision: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+  },
+  deepseek: {
+    default: ["deepseek-v4-flash", "deepseek-v4-pro"],
+    plan: ["deepseek-v4-flash", "deepseek-v4-pro"],
+    image: ["gpt-image-2", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro"],
+    vision: ["gpt-5.2", "gemini-3-pro-preview", "qwen3.6-plus"],
+  },
+  claude: {
+    default: ["claude-opus-4-1-20250805", "claude-sonnet-4-20250514", "claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022"],
+    plan: ["claude-opus-4-1-20250805", "claude-sonnet-4-20250514", "claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022"],
+    image: ["gpt-image-2", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro"],
+    vision: ["claude-opus-4-1-20250805", "claude-sonnet-4-20250514", "claude-3-7-sonnet-20250219"],
+  },
+  qwen: {
+    default: ["qwen3.7-max", "qwen3.6-max-preview", "qwen3.6-plus", "qwen3.6-flash", "qwen-image-2.0-pro", "wan2.7-image-pro"],
+    plan: ["qwen3.7-max", "qwen3.6-max-preview", "qwen3.6-plus", "qwen3.6-flash"],
+    image: ["wan2.7-image-pro", "wan2.7-image", "qwen-image-2.0-pro", "qwen-image-2.0", "z-image-turbo"],
+    vision: ["qwen3.6-plus", "qwen3.5-flash", "qwen3.5-plus"],
+  },
+};
+
 function selectedCredentialState(providerId) {
   return state.providerCredential.providerId === providerId ? state.providerCredential : null;
 }
@@ -15,6 +54,47 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function getProviderPlanKey(providerId) {
+  return `${providerId}:${state.providerRoutePlan || "standard"}`;
+}
+
+function getProviderOverrides(providerId) {
+  return {
+    ...(state.providerModelOverrides?.[providerId] || {}),
+    ...(state.providerModelOverrides?.[getProviderPlanKey(providerId)] || {}),
+  };
+}
+
+function uniqueOptions(options) {
+  return Array.from(new Set(options.filter(Boolean)));
+}
+
+function getProviderDefaultModel(provider) {
+  return getProviderOverrides(provider.id).defaultModel || provider.model;
+}
+
+function getSlotKind(slot) {
+  const text = `${slot.name} ${slot.flow}`.toLowerCase();
+  if (text.includes("image") || text.includes("图像") || text.includes("圖片") || text.includes("鍥惧儚")) return "image";
+  if (text.includes("vision") || text.includes("参考") || text.includes("參考") || text.includes("鍙傝")) return "vision";
+  return "plan";
+}
+
+function getModelOptions(providerId, kind, currentValue) {
+  const catalog = providerModelCatalog[providerId] || providerModelCatalog.openai;
+  return uniqueOptions([currentValue, ...(catalog[kind] || catalog.default), ...(catalog.default || [])]);
+}
+
+function getRoutePlans() {
+  const plans = Array.isArray(state.providerRoutePlans) && state.providerRoutePlans.length > 0
+    ? state.providerRoutePlans
+    : [{ id: "standard", name: "标准方案" }];
+  if (!plans.some((plan) => plan.id === state.providerRoutePlan)) {
+    state.providerRoutePlan = plans[0].id;
+  }
+  return plans;
 }
 
 function providerStateLabel(provider, credential) {
@@ -67,12 +147,17 @@ export function renderSettingsSheet() {
   const maskedKey = credential?.masked || selectedProvider.key || "";
   const connectionClass = connection?.status || "not_configured";
   const canTest = configured && !credentialBusy && !connectionBusy;
+  const providerOverrides = getProviderOverrides(selectedProvider.id);
+  const selectedDefaultModel = getProviderDefaultModel(selectedProvider);
+  const routePlans = getRoutePlans();
+  const activeRoutePlan = routePlans.find((plan) => plan.id === state.providerRoutePlan) || routePlans[0];
 
   return `
     <div class="settings-layer" role="dialog" aria-modal="true" aria-label="模型与 API Key">
       <div class="settings-backdrop" data-action="close-settings"></div>
-      <section class="settings-sheet provider-config-sheet" style="--settings-sheet-width: ${state.settingsWidth}px;">
+      <section class="settings-sheet provider-config-sheet" style="--settings-sheet-width: ${state.settingsWidth}px; --settings-sheet-height: ${state.settingsHeight}px;">
         <div class="settings-resize-edge" data-settings-resize aria-hidden="true"></div>
+        <div class="settings-resize-corner" data-settings-resize-corner aria-hidden="true"></div>
         <header>
           <h2>模型与 API Key</h2>
           <button type="button" data-action="close-settings">关闭</button>
@@ -82,10 +167,11 @@ export function renderSettingsSheet() {
           <aside class="provider-list">
             ${providers.map((provider) => {
               const rowCredential = selectedCredentialState(provider.id);
+              const providerModel = getProviderDefaultModel(provider);
               return `
                 <button class="${provider.id === selectedProvider.id ? "active" : ""}" type="button" data-provider="${provider.id}">
                   <strong>${escapeHtml(provider.name)} ${renderProviderStatus(provider, rowCredential)}</strong>
-                  <small>${escapeHtml(provider.model)}</small>
+                  <small>${escapeHtml(providerModel)}</small>
                 </button>
               `;
             }).join("")}
@@ -145,16 +231,19 @@ export function renderSettingsSheet() {
 
                 <label class="field">
                   <span>默认模型</span>
-                  <input
-                    value="${escapeHtml(selectedProvider.model)}"
+                  <select
                     aria-label="默认模型"
                     data-provider-default-model="${escapeHtml(selectedProvider.id)}"
-                  />
+                  >
+                    ${getModelOptions(selectedProvider.id, "default", selectedDefaultModel)
+                      .map((option) => `<option value="${escapeHtml(option)}" ${option === selectedDefaultModel ? "selected" : ""}>${escapeHtml(option)}</option>`)
+                      .join("")}
+                  </select>
                 </label>
               </div>
             </section>
 
-            <section class="provider-state-card ${escapeHtml(connectionClass)} ${connectionBusy ? "testing" : ""}" aria-live="polite">
+            <section class="provider-state-card connection-test-status ${escapeHtml(connectionClass)} ${connectionBusy ? "testing" : ""}" aria-live="polite">
               <div>
                 <strong>${escapeHtml(connectionCopy(connection))}</strong>
                 <small>${escapeHtml(connectionDetail(connection))}</small>
@@ -173,22 +262,51 @@ export function renderSettingsSheet() {
                 <strong>配置方案</strong>
                 <small>按任务选择不同模型</small>
               </div>
+              <div class="route-plan-manager" aria-label="配置方案管理">
+                <div class="route-plan-topline">
+                  <div class="route-plan-tabs">
+                    ${routePlans.map((plan) => `
+                      <button class="${plan.id === state.providerRoutePlan ? "active" : ""}" type="button" data-provider-route-plan="${escapeHtml(plan.id)}">
+                        ${escapeHtml(plan.name)}
+                      </button>
+                    `).join("")}
+                  </div>
+                  <div class="route-plan-actions">
+                    <button class="route-plan-icon-button" type="button" data-action="add-provider-route-plan" aria-label="新增配置方案" title="新增配置方案">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M5 12h14"></path>
+                      </svg>
+                    </button>
+                    <button class="route-plan-icon-button danger" type="button" data-action="delete-provider-route-plan" aria-label="删除当前方案" title="删除当前方案" ${routePlans.length <= 1 ? "disabled" : ""}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <label class="route-plan-name">
+                  <span>方案名称</span>
+                  <input value="${escapeHtml(activeRoutePlan?.name || "")}" data-provider-route-name="${escapeHtml(activeRoutePlan?.id || "")}" aria-label="编辑配置方案名称" />
+                </label>
+              </div>
               <div class="model-slot-grid">
-                ${modelSlots.map((slot) => `
+                ${modelSlots.map((slot) => {
+                  const slotKey = slot.name;
+                  const currentValue = providerOverrides[slotKey] || slot.value;
+                  const slotKind = getSlotKind(slot);
+                  const options = getModelOptions(selectedProvider.id, slotKind, currentValue);
+                  return `
                   <label class="model-slot">
                     <span>${escapeHtml(slot.name)}</span>
                     <small>${escapeHtml(slot.flow)}</small>
-                    <select aria-label="${escapeHtml(slot.name)}模型">
-                      ${slot.options.map((option) => `<option ${option === slot.value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+                    <select aria-label="${escapeHtml(slot.name)}模型" data-provider-model-slot="${escapeHtml(slotKey)}" data-provider-id="${escapeHtml(selectedProvider.id)}">
+                      ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === currentValue ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
                     </select>
                   </label>
-                `).join("")}
+                `;
+                }).join("")}
               </div>
             </section>
-
-            <div class="capability-row provider-capabilities">
-              ${selectedProvider.caps.map((cap) => `<span>${escapeHtml(cap)}</span>`).join("")}
-            </div>
 
             <div class="settings-actions provider-config-actions">
               <button class="solid-button ${credentialBusy ? "loading" : ""}" type="button" data-action="save-provider-key" data-provider-id="${escapeHtml(selectedProvider.id)}" ${credentialBusy ? "disabled" : ""}>保存 API Key</button>

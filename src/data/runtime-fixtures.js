@@ -7,7 +7,7 @@
 
 export const archiveRows = [
   { title: "荒野狩猎：从战场到餐桌的极致鲜味", project: "Pizza Kitchen Adventures", model: "自动路由", state: "已归档", status: "archived", type: "KV", tone: "forest" },
-  { title: "双厨联合：联名代言人登场", project: "Pizza Kitchen Adventures", model: "gpt-image-1", state: "可编辑", status: "editable", type: "CO", tone: "forest" },
+  { title: "双厨联合：联名代言人登场", project: "Pizza Kitchen Adventures", model: "gpt-image-2", state: "可编辑", status: "editable", type: "CO", tone: "forest" },
   { title: "停机维护：巨型厨房告示牌", project: "Pizza Kitchen Adventures", model: "Imagen Pro", state: "待补图", status: "missing", type: "AN", tone: "ice" },
   { title: "Pizza Kitchen Adventures 厚重糖果字标", project: "Pizza Kitchen Adventures", model: "Nano Flash", state: "可编辑", status: "editable", type: "LG", tone: "ember" },
   { title: "主角冲刺与火焰披萨铲", project: "Pizza Kitchen Adventures", model: "自动路由", state: "已归档", status: "archived", type: "IC", tone: "violet" },

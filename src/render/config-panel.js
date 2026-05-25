@@ -165,7 +165,6 @@ export function renderConfigPanel(activeMode) {
               <span>构图参考</span>
               <small>${activeMode.id === "icon" ? "上传方形构图参考。" : "上传构图或裁切参考。"}</small>
             </button>
-            ${renderAssetOperation()}
           </div>
         </section>
 
@@ -207,10 +206,9 @@ export function renderConfigPanel(activeMode) {
             <span>05 模型</span>
             <button type="button" data-action="open-settings">配置</button>
           </div>
-          <div class="engine-card">
-            <span>当前运行方式</span>
-            <strong>自动路由模型适配器</strong>
-            <small>${copy.short} 使用对应模式的提示词规则；模型、Key 与实机状态在顶部统一查看。</small>
+          <div class="engine-card engine-card-compact">
+            <strong>自动路由模型</strong>
+            <span>已启用</span>
           </div>
         </section>
       </div>
@@ -250,11 +248,11 @@ function normalizeAssetLabel(label) {
 
 function getCustomAssetSlots(modeId, defaultRole) {
   const labels = Array.isArray(state.customAssetCategories?.[modeId]) ? state.customAssetCategories[modeId] : [];
-  return labels.map((label, index) => ({
+  return labels.map((label) => ({
     role: defaultRole || "styleReference",
     label,
     state: "自定义",
-    tone: ["violet", "teal", "orange", "blue"][index % 4],
+    tone: "custom",
   }));
 }
 

@@ -1,17 +1,19 @@
 export const providerLabels = {
   openai: "OpenAI",
+  aigocode: "AIGoCode",
   google: "Google AI Studio",
-  replicate: "Replicate",
-  comfy: "ComfyUI",
-  custom: "Custom HTTP",
+  deepseek: "DeepSeek",
+  claude: "Claude",
+  qwen: "Qwen",
 };
 
 const providerCapabilities = {
   openai: ["briefGeneration", "imageGeneration", "imageEdit"],
+  aigocode: ["briefGeneration", "imageGeneration", "imageEdit", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   google: ["briefGeneration", "imageGeneration"],
-  replicate: ["imageGeneration", "imageEdit", "upscale", "backgroundRemoval"],
-  comfy: ["imageGeneration", "imageEdit", "upscale", "backgroundRemoval"],
-  custom: ["imageGeneration", "imageEdit", "upscale", "backgroundRemoval"],
+  deepseek: ["briefGeneration"],
+  claude: ["briefGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
+  qwen: ["briefGeneration", "imageGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
 };
 
 export const resultOperationRouting = {
@@ -20,21 +22,21 @@ export const resultOperationRouting = {
     taskKind: "图像编辑",
     capability: "imageEdit",
     flags: { includeImageEdit: true, includeUpscale: false, includeBackgroundRemoval: false },
-    providers: ["openai", "replicate", "comfy", "custom"],
+    providers: ["openai", "aigocode", "qwen", "google"],
   },
   upscale: {
     label: "高清放大",
     taskKind: "高清放大",
     capability: "upscale",
     flags: { includeImageEdit: false, includeUpscale: true, includeBackgroundRemoval: false },
-    providers: ["replicate", "comfy", "custom"],
+    providers: ["openai", "aigocode", "qwen", "google"],
   },
   removeBg: {
     label: "移除背景",
     taskKind: "背景移除",
     capability: "backgroundRemoval",
     flags: { includeImageEdit: false, includeUpscale: false, includeBackgroundRemoval: true },
-    providers: ["replicate", "comfy", "custom"],
+    providers: ["openai", "aigocode", "qwen", "google"],
   },
 };
 

@@ -175,7 +175,7 @@ async function runRuntimeCheck() {
 
     const badProviderRef = {
       ...session.credentialRef,
-      providerId: "replicate",
+      providerId: "deepseek",
     };
     const mismatch = await store.resolveCredential(badProviderRef);
     if (mismatch.ok || mismatch.error.code !== "invalid_request") {

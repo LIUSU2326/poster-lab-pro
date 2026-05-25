@@ -3,7 +3,7 @@ import { z } from "zod";
 export const ProductionModeSchema = z.enum(["poster", "collab", "announcement", "logo", "icon"]);
 export const ThemeSchema = z.enum(["light", "dark"]);
 export const WorkbenchViewSchema = z.enum(["schemes", "text", "archive", "results", "compare", "export"]);
-export const ProviderIdSchema = z.enum(["openai", "google", "replicate", "comfy", "custom"]);
+export const ProviderIdSchema = z.enum(["openai", "aigocode", "google", "deepseek", "claude", "qwen"]);
 export const ProviderStatusSchema = z.enum(["idle", "testing", "success", "warning", "error"]);
 export const AssetRoleSchema = z.enum([
   "gameCharacter",

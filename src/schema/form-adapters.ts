@@ -157,7 +157,7 @@ export function createProviderSettingsAdapter(providerId = "openai"): FormAdapte
         id: "provider",
         label: "Provider",
         fields: [
-          { name: "providerId", label: "Provider", control: "segmented", options: ["openai", "google", "replicate", "comfy", "custom"] },
+          { name: "providerId", label: "Provider", control: "segmented", options: ["openai", "aigocode", "google", "deepseek", "claude", "qwen"] },
           { name: "enabled", label: "Enabled", control: "switch" },
           { name: "apiKey", label: "API Key", control: "secret", helper: "Masked by default. Static prototype does not persist credentials." },
           { name: "baseUrl", label: "Base URL", control: "text" },

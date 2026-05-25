@@ -148,6 +148,11 @@ export async function saveProviderCredentialForWorkbench(input, options = {}) {
     input?.defaultModel ??
     document.querySelector(`[data-provider-default-model="${providerId}"]`)?.value?.trim() ??
     "";
+  const modelSlots = Object.fromEntries(
+    Array.from(document.querySelectorAll(`[data-provider-model-slot][data-provider-id="${providerId}"]`))
+      .map((control) => [control.dataset.providerModelSlot, control.value?.trim()])
+      .filter(([slot, value]) => slot && value),
+  );
 
   state.providerCredential = {
     ...state.providerCredential,
@@ -164,7 +169,7 @@ export async function saveProviderCredentialForWorkbench(input, options = {}) {
       baseUrl,
       defaultModel,
       enabled: true,
-      ...(defaultModel ? { modelSlots: { image: defaultModel } } : {}),
+      ...(Object.keys(modelSlots).length > 0 ? { modelSlots } : defaultModel ? { modelSlots: { image: defaultModel } } : {}),
     },
   });
   applyStatus(envelope, providerId);
