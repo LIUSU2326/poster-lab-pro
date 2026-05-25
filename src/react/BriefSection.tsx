@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
 import { ProjectBriefFormSchema, type ProductionMode, type ProjectBriefForm } from "../schema/zod";
@@ -19,17 +19,29 @@ function normalizeInitialValues(values: ProjectBriefForm): ProjectBriefForm {
   return {
     ...parsed,
     gameDescription: looksLikeMojibake(parsed.gameDescription)
-      ? "A cozy puzzle RPG launch batch focused on readable campaign art, store-ready crops, and consistent reward moments."
+      ? "A hybrid cooking management and wilderness hunting game where chef teams gather rare ingredients for VIP guests."
       : parsed.gameDescription,
     focusGuidance: parsed.focusGuidance && looksLikeMojibake(parsed.focusGuidance)
-      ? "Keep variants close to food rewards, creature encounters, chef-team reactions, and restaurant-management moments."
+      ? "Emphasize the chef squad, monster ingredients, restaurant operation, and adventure tone."
       : parsed.focusGuidance,
   };
 }
 
 function looksLikeMojibake(value: string | undefined): boolean {
   if (!value) return false;
-  return /[�]|[杩鏄鐨涓鍚妗绛浠褰椤鎻渚闄]/.test(value);
+  return /[锟絔鏉╅弰閻ㄦ稉閸氬缁涙禒瑜版い閹绘笟闂刔]/.test(value);
+}
+
+function splitGuidance(value: string | undefined): string[] {
+  return String(value || "")
+    .split(/[;；、\n]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function joinGuidance(items: string[]): string {
+  return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean))).join("\n");
 }
 
 export function BriefSection({ modeShort, revision, assetCount, initialValues }: BriefSectionProps) {
@@ -45,6 +57,7 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
     ...defaults,
     ...values,
   };
+  const [focusDraft, setFocusDraft] = useState("");
 
   const commit = async (nextValues: ProjectBriefForm) => {
     const parsed = ProjectBriefFormSchema.safeParse(nextValues);
@@ -63,6 +76,25 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
 
   const toggleFocus = async () => {
     await update("focusGuidanceEnabled", !currentValues.focusGuidanceEnabled);
+  };
+
+  const focusItems = splitGuidance(currentValues.focusGuidance);
+
+  const setFocusItems = async (items: string[]) => {
+    await update("focusGuidance", joinGuidance(items));
+  };
+
+  const addFocusDraft = async () => {
+    const nextItem = focusDraft.trim();
+    if (!nextItem) return;
+    await setFocusItems([...focusItems, nextItem]);
+    setFocusDraft("");
+  };
+
+  const handleFocusKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    void addFocusDraft();
   };
 
   return (
@@ -99,12 +131,41 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
             {currentValues.focusGuidanceEnabled ? "开启" : "关闭"}
           </button>
         </div>
-        <input
-          aria-label="侧重点引导"
-          value={currentValues.focusGuidance || ""}
-          disabled={!currentValues.focusGuidanceEnabled}
-          onChange={(event) => void update("focusGuidance", event.currentTarget.value)}
-        />
+        <div className="inline-add-row">
+          <input
+            aria-label="添加侧重点"
+            value={focusDraft}
+            disabled={!currentValues.focusGuidanceEnabled}
+            placeholder="输入侧重点，按回车添加"
+            onChange={(event) => setFocusDraft(event.currentTarget.value)}
+            onKeyDown={handleFocusKeyDown}
+          />
+          <button
+            className="mini-solid-button"
+            type="button"
+            disabled={!currentValues.focusGuidanceEnabled || !focusDraft.trim()}
+            onClick={() => void addFocusDraft()}
+          >
+            添加
+          </button>
+        </div>
+        {focusItems.length > 0 ? (
+          <div className="tag-list guidance-tag-list" aria-label="已添加侧重点">
+            {focusItems.map((item) => (
+              <button
+                type="button"
+                key={item}
+                disabled={!currentValues.focusGuidanceEnabled}
+                onClick={() => void setFocusItems(focusItems.filter((focus) => focus !== item))}
+                title="点击移除"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <small>添加后会写入方案生成提示词。</small>
+        )}
         {errors.focusGuidance?.message ? <small className="form-error">{errors.focusGuidance.message}</small> : null}
       </div>
     </div>

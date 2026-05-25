@@ -14,20 +14,27 @@ const modeCopy = {
     short: "海报",
     description: "休闲解谜 RPG 上线批量方案，保持主视觉清晰、裁切安全、可用于商店与广告位。",
     cta: "生成海报批次",
-    styles: ["精致休闲奇幻", "电影感奖励揭示", "角色反应组合", "商店头图裁切"],
-    directionTitle: "先确定视觉决策",
-    directionHelper: "保持清晰主体比例、稳定角色姿态和可复用的宣发构图。",
-    assets: ["角色", "标识", "风格", "奖励"],
+    styles: [
+      "精致休闲奇幻", "电影感奖励揭示", "角色反应组合", "商店头图裁切", "国潮厚涂", "低多边形",
+      "像素复古", "欧美写实", "赛博霓虹", "水彩绘本", "厚涂奇幻", "黏土定格",
+      "日系赛璐璐", "美式卡通", "暗黑哥特", "明亮童话", "蒸汽朋克", "魔幻写实",
+      "科幻机甲", "童趣手绘", "纸艺拼贴", "复古海报", "漫画分镜", "硬表面3D",
+      "柔光治愈", "荒野写实", "海岛度假", "森林冒险", "街机霓虹", "可爱三渲二",
+      "油画质感", "剪纸舞台", "定格玩具", "广告大片", "轻奢产品", "手绘绘本",
+    ],
+    directionTitle: "上传画风参考",
+    directionHelper: "上传画风、光影、材质或品牌参考，作为当前批次的视觉约束。",
+    assets: ["角色", "LOGO", "场景", "BOSS"],
   },
   collab: {
     label: "联名",
     short: "联名",
     description: "品牌联名批量方案，保持原生游戏构图，并控制品牌露出比例。",
     cta: "生成联名方案",
-    styles: ["原生联名", "品牌优先", "游戏优先", "活动主视觉"],
+    styles: ["原生联名", "品牌优先", "游戏优先", "活动主视觉", "高端大片", "双主角对峙", "街头潮流", "节日限定"],
     directionTitle: "品牌与游戏平衡",
     directionHelper: "游戏世界保持主导，品牌通过色彩、材质和道具自然融入。",
-    assets: ["角色", "品牌 标识", "品牌素材", "场景"],
+    assets: ["角色", "品牌 LOGO", "品牌素材", "场景"],
   },
   announcement: {
     label: "公告",
@@ -37,7 +44,7 @@ const modeCopy = {
     styles: ["维护公告", "版本更新", "限时活动", "社区赛事"],
     directionTitle: "先保证可读性",
     directionHelper: "为文案留出安静空间，避免文字后方出现过多噪声。",
-    assets: ["角色", "标识", "面板", "背景"],
+    assets: ["角色", "LOGO", "面板", "背景"],
   },
   logo: {
     label: "标识",
@@ -76,8 +83,11 @@ export function renderConfigPanel(activeMode) {
   const project = getWorkspaceProject();
   const snapshotSummary = getWorkspaceSnapshotSummary();
   const copy = getModeCopy(activeMode.id);
-  const assetSlots = normalizeAssetSlots(activeMode.id, getAssetSlotsForMode(activeMode.id, activeMode.assets));
   const defaultAssetRole = getDefaultAssetRoleForMode(activeMode.id);
+  const assetSlots = [
+    ...normalizeAssetSlots(activeMode.id, getAssetSlotsForMode(activeMode.id, activeMode.assets)),
+    ...getCustomAssetSlots(activeMode.id, defaultAssetRole),
+  ];
   const form = getActiveGenerationFormValues();
   const projectBrief = form.projectBrief;
   const direction = getDirectionPayload(activeMode.id);
@@ -107,7 +117,7 @@ export function renderConfigPanel(activeMode) {
         <section class="config-section">
           <div class="section-title">
             <span>01 项目</span>
-            <button type="button">项目库</button>
+            <button type="button" data-view="project-library">项目库</button>
           </div>
           <div
             data-react-brief-section
@@ -136,9 +146,9 @@ export function renderConfigPanel(activeMode) {
             data-assets-mode="${activeMode.id}"
             data-asset-slots="${escapeAttribute(JSON.stringify(assetSlots))}"
             data-default-asset-role="${escapeAttribute(defaultAssetRole)}"
-            data-reference-role="${escapeAttribute(activeMode.id === "icon" ? "compositionReference" : "styleReference")}"
-            data-reference-label="${escapeAttribute(activeMode.id === "icon" ? "构图参考" : "风格参考")}"
-            data-reference-helper="${escapeAttribute(activeMode.id === "icon" ? "上传方形构图参考，用于轮循分配。" : "上传风格、构图或品牌参考。")}"
+            data-reference-role="${escapeAttribute("compositionReference")}"
+            data-reference-label="${escapeAttribute("构图参考")}"
+            data-reference-helper="${escapeAttribute(activeMode.id === "icon" ? "上传方形构图参考，用于轮循分配。" : "上传构图、版式或裁切参考。")}"
             data-asset-operation="${escapeAttribute(JSON.stringify(state.assetOperation || null))}"
           ></div>
           <div data-assets-section-fallback>
@@ -151,9 +161,9 @@ export function renderConfigPanel(activeMode) {
                 </button>
               `).join("")}
             </div>
-            <button class="upload-drop" type="button" data-action="simulate-asset-upload" data-asset-role="${activeMode.id === "icon" ? "compositionReference" : "styleReference"}" data-asset-label="${activeMode.id === "icon" ? "构图参考" : "风格参考"}">
-              <span>${activeMode.id === "icon" ? "构图参考" : "风格参考"}</span>
-              <small>${activeMode.id === "icon" ? "上传方形构图参考。" : "上传风格或构图参考。"}</small>
+            <button class="upload-drop" type="button" data-action="simulate-asset-upload" data-asset-role="compositionReference" data-asset-label="构图参考">
+              <span>构图参考</span>
+              <small>${activeMode.id === "icon" ? "上传方形构图参考。" : "上传构图或裁切参考。"}</small>
             </button>
             ${renderAssetOperation()}
           </div>
@@ -161,8 +171,8 @@ export function renderConfigPanel(activeMode) {
 
         <section class="config-section">
           <div class="section-title">
-            <span>03 方向</span>
-            <button type="button">换一组</button>
+            <span>03 画风</span>
+            <button type="button" data-action="rotate-direction-library" data-direction-mode="${activeMode.id}">换一组</button>
           </div>
           <div
             data-react-direction-section
@@ -179,7 +189,7 @@ export function renderConfigPanel(activeMode) {
         <section class="config-section">
           <div class="section-title">
             <span>04 输出</span>
-            <button type="button">规格</button>
+            <button type="button" data-action="toggle-suite-manager">套装管理</button>
           </div>
           <div
             data-react-output-settings
@@ -229,8 +239,22 @@ function normalizeAssetSlots(modeId, slots) {
   const labels = getModeCopy(modeId).assets;
   return slots.map((slot, index) => ({
     ...slot,
-    label: labels[index] || slot.label || `Asset ${index + 1}`,
-    state: slot.previewUrl ? "已就绪" : index < 2 ? "必需" : "可选",
+    label: normalizeAssetLabel(labels[index] || slot.label || `Asset ${index + 1}`),
+    state: slot.previewUrl ? "已就绪" : index < 2 ? "待上传" : "可选",
+  }));
+}
+
+function normalizeAssetLabel(label) {
+  return String(label || "").replace(/品牌\s*标识/g, "品牌 LOGO").replace(/游戏\s*标识/g, "游戏 LOGO").replace(/标识/g, "LOGO");
+}
+
+function getCustomAssetSlots(modeId, defaultRole) {
+  const labels = Array.isArray(state.customAssetCategories?.[modeId]) ? state.customAssetCategories[modeId] : [];
+  return labels.map((label, index) => ({
+    role: defaultRole || "styleReference",
+    label,
+    state: "自定义",
+    tone: ["violet", "teal", "orange", "blue"][index % 4],
   }));
 }
 
@@ -246,9 +270,9 @@ function getOutputNote(modeId, fallback) {
 
 function getOutputSizes(modeId, fallback = []) {
   const sizes = {
-    poster: ["16:9", "9:16", "1:1", "4:3", "1200x627"],
-    collab: ["16:9", "9:16", "1:1", "1200x627"],
-    announcement: ["16:9", "9:16", "4:3", "1200x627"],
+    poster: ["16:9", "9:16", "1:1", "4:3", "1200x627", "自定义"],
+    collab: ["16:9", "9:16", "1:1", "1200x627", "自定义"],
+    announcement: ["16:9", "9:16", "1:1", "4:3", "1200x627", "自定义"],
     logo: ["方形", "横版", "浅色背景", "深色背景"],
     icon: ["1:1"],
   }[modeId];
@@ -429,7 +453,7 @@ function renderModeOutput(activeMode, form, outputSizes) {
     ` : ""}
     <div class="segmented">
       <button class="active" type="button">${activeMode.id === "icon" ? "锁定方形" : "统一方案"}</button>
-      <button type="button">${activeMode.id === "icon" ? "不改尺寸" : "分别裁切"}</button>
+      <button type="button">${activeMode.id === "icon" ? "不改尺寸" : "独立方案"}</button>
     </div>
     <p class="output-note">${getOutputNote(activeMode.id, activeMode.sizeNote)}</p>
   `;

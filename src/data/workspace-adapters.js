@@ -150,12 +150,19 @@ export function getAssetSlotsForMode(modeId, fallbackAssets = []) {
   return assets.map((asset) => ({
     role: asset.role,
     label: asset.label,
+    sourceType: asset.sourceType,
     state: asset.sourceType === "placeholder" ? "placeholder" : (asset.usage || ["input"]).join(" / "),
     tone: roleTone[asset.role] || "blue",
-    previewUrl: asset.previewUrl || null,
+    previewUrl: normalizePreviewUrl(asset.previewUrl),
   }));
 }
 
 export function getDefaultAssetRoleForMode(modeId) {
   return rolePriorityByMode[modeId]?.[0] || "styleReference";
+}
+
+function normalizePreviewUrl(value) {
+  const url = typeof value === "string" ? value : "";
+  if (!url || /example\.com/i.test(url)) return null;
+  return url;
 }

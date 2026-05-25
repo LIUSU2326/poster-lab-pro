@@ -14,10 +14,12 @@ export const state = {
   copyVisible: true,
   activeMode: defaultWorkspaceSnapshot.activeMode || "poster",
   selectedScheme: "",
+  selectedSchemeVariants: /** @type {Record<string, number>} */ ({}),
   selectedResult: "",
   selectedResultUserSet: false,
   archiveSelection: [],
   archiveExportMessage: "",
+  projectLibraryMessage: "",
   resultViewerOpen: false,
   taskOpen: false,
   settingsOpen: false,
@@ -29,6 +31,7 @@ export const state = {
   workspaceLoadStatus: "static",
   workspaceLoadError: /** @type {string | null} */ (null),
   assetOperation: /** @type {null | Record<string, unknown>} */ (null),
+  hiddenAssetSlots: /** @type {Record<string, string[]>} */ ({}),
   providerCredential: {
     status: "idle",
     error: /** @type {string | null} */ (null),
@@ -69,6 +72,13 @@ export const state = {
   },
   resultOperation: /** @type {null | Record<string, unknown>} */ (null),
   resultOperations: /** @type {Array<Record<string, unknown>>} */ ([]),
+  customAssetCategories: /** @type {Record<string, string[]>} */ ({}),
+  customStyleTags: /** @type {Record<string, string[]>} */ ({}),
+  directionLibraryOffset: /** @type {Record<string, number>} */ ({}),
+  outputSuiteManagerOpen: false,
+  outputSelectionMode: "suite",
+  outputPlanStrategy: "unified",
+  outputCustomSuiteSizes: /** @type {string[]} */ (["1080x1920", "1200x627"]),
   leftCollapsed: false,
   leftWidth: 320,
   submission: null,
@@ -95,6 +105,7 @@ export function applyPrototypeStateFromUrl() {
   const api = params.get("api");
   if (theme === "dark" || theme === "light") state.theme = theme;
   if (view === "archive") state.view = "archive";
+  if (view === "project-library") state.view = "project-library";
   if (view === "schemes" || view === "text" || view === "results") state.view = "schemes";
   if (view === "text") state.copyVisible = true;
   if (modeSpecs[mode]) state.activeMode = mode;

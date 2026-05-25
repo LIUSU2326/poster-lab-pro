@@ -127,7 +127,7 @@ function parseJsonArray(value: string | undefined): string[] {
   }
 }
 
-function parseJsonArrayOfObjects(value: string | undefined): Array<{ role?: string; label: string; state: string; tone: string; previewUrl?: string | null }> {
+function parseJsonArrayOfObjects(value: string | undefined): Array<{ role?: string; label: string; state: string; tone: string; sourceType?: string; previewUrl?: string | null }> {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
@@ -138,6 +138,7 @@ function parseJsonArrayOfObjects(value: string | undefined): Array<{ role?: stri
         label: item && typeof item.label === "string" ? item.label : "Asset",
         state: item && typeof item.state === "string" ? item.state : "input",
         tone: item && typeof item.tone === "string" ? item.tone : "blue",
+        sourceType: item && typeof item.sourceType === "string" ? item.sourceType : undefined,
         previewUrl: item && typeof item.previewUrl === "string" ? item.previewUrl : null,
       }));
   } catch {

@@ -32,7 +32,7 @@ export function bindEvents(render) {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextView = button.dataset.view;
-      state.view = nextView === "archive" ? "archive" : "schemes";
+      state.view = nextView === "archive" ? "archive" : nextView === "project-library" ? "project-library" : "schemes";
       render();
     });
   });
@@ -85,7 +85,24 @@ export function bindEvents(render) {
     });
   });
 
+  document.querySelectorAll("[data-scheme-variant]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const schemeId = button.dataset.schemeId;
+      const variant = Number(button.dataset.schemeVariant);
+      if (!schemeId || !Number.isFinite(variant)) return;
+      state.selectedScheme = schemeId;
+      state.selectedSchemeVariants = {
+        ...(state.selectedSchemeVariants || {}),
+        [schemeId]: Math.max(0, variant - 1),
+      };
+      event.preventDefault();
+      event.stopPropagation();
+      render();
+    });
+  });
+
   bindActionControls(render);
+  bindKeyRevealControls();
 
   bindProviderControls(render);
   bindArchiveControls(render);
@@ -170,6 +187,23 @@ async function handleActionControl(control, event, render) {
     render();
     await assetPromise;
   }
+  if (action === "rotate-direction-library") {
+    const modeId = control.dataset.directionMode || state.activeMode;
+    const current = state.directionLibraryOffset?.[modeId] || 0;
+    state.directionLibraryOffset = {
+      ...(state.directionLibraryOffset || {}),
+      [modeId]: current + 1,
+    };
+  }
+  if (action === "toggle-suite-manager") {
+    state.outputSuiteManagerOpen = !state.outputSuiteManagerOpen;
+  }
+  if (action === "project-library-create") {
+    state.projectLibraryMessage = "已准备新建项目入口；当前桌面版会先保留现有项目数据。";
+  }
+  if (action === "project-library-delete") {
+    state.projectLibraryMessage = "删除项目需要二次确认和持久化接口；当前先锁定为安全预览。";
+  }
   if (action === "toggle-task") state.taskOpen = !state.taskOpen;
   if (action === "open-result-viewer") {
     if (control.dataset.resultId) {
@@ -251,9 +285,36 @@ function refreshSettingsLayer(render) {
 
   if (nextLayer) {
     bindActionControls(render, nextLayer);
+    bindKeyRevealControls(nextLayer);
     bindProviderControls(render, nextLayer);
     bindSettingsResize(nextLayer);
   }
+}
+
+function bindKeyRevealControls(root = document) {
+  root.querySelectorAll("[data-key-reveal]").forEach((button) => {
+    const providerId = button.dataset.keyReveal;
+    const input = root.querySelector(`[data-provider-api-key="${providerId}"]`) || document.querySelector(`[data-provider-api-key="${providerId}"]`);
+    if (!input) return;
+
+    const reveal = (event) => {
+      input.type = "text";
+      event.preventDefault();
+    };
+    const hide = () => {
+      input.type = "password";
+    };
+
+    button.addEventListener("pointerdown", reveal);
+    button.addEventListener("pointerup", hide);
+    button.addEventListener("pointerleave", hide);
+    button.addEventListener("pointercancel", hide);
+    button.addEventListener("blur", hide);
+    button.addEventListener("keydown", (event) => {
+      if (event.key === " " || event.key === "Enter") reveal(event);
+    });
+    button.addEventListener("keyup", hide);
+  });
 }
 
 function bindArchiveControls(render) {

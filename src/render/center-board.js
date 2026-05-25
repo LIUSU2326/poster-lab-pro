@@ -8,9 +8,11 @@
 } from '../state.js';
 import { renderArchiveBoard } from './archive-board.js';
 import { resolveResultOperationRoute } from '../provider-capabilities.js';
+import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/workspace-adapters.js';
 
 export function renderCenterBoard(activeMode, selected) {
   if (state.view === "archive") return renderArchiveBoard();
+  if (state.view === "project-library") return renderProjectLibraryBoard(activeMode);
 
   const schemes = getModeSchemes();
   const resultsByScheme = groupResultsByScheme(getModeResults());
@@ -28,6 +30,75 @@ export function renderCenterBoard(activeMode, selected) {
       </div>
     </section>
     ${state.resultViewerOpen ? renderResultViewer() : ""}
+  `;
+}
+
+function renderProjectLibraryBoard(activeMode) {
+  const project = getWorkspaceProject();
+  const summary = getWorkspaceSnapshotSummary();
+  const snapshot = state.workspaceSnapshot;
+  const modeStates = Array.isArray(snapshot.modeStates) ? snapshot.modeStates : [];
+  const assets = Array.isArray(snapshot.assets) ? snapshot.assets : [];
+  const updatedAt = summary.updatedAt ? new Date(summary.updatedAt).toLocaleString() : "未记录";
+
+  return `
+    <section class="center-board project-library-board" aria-label="项目库">
+      <div class="project-library-hero">
+        <div>
+          <span>PROJECT LIBRARY</span>
+          <h1>${escapeHtml(project.name || "未命名项目")}</h1>
+          <p>${escapeHtml(project.description || "暂无项目描述。")}</p>
+        </div>
+        <div class="project-library-side">
+          <div class="project-library-stats">
+            <strong>${summary.assetCount}</strong><span>素材</span>
+            <strong>${summary.schemeCount}</strong><span>方案</span>
+            <strong>${summary.resultCount}</strong><span>结果</span>
+          </div>
+          <div class="project-library-top-actions">
+            <button class="primary" type="button" data-action="project-library-create">新增项目</button>
+            <button class="danger" type="button" data-action="project-library-delete">删除项目</button>
+          </div>
+        </div>
+      </div>
+      ${state.projectLibraryMessage ? `<p class="project-library-message">${escapeHtml(state.projectLibraryMessage)}</p>` : ""}
+
+      <div class="project-library-grid">
+        <article class="project-library-card current">
+          <span>当前项目</span>
+          <strong>${escapeHtml(project.name || "未命名项目")}</strong>
+          <small>版本 ${summary.revision} / 更新 ${escapeHtml(updatedAt)}</small>
+          <div class="project-library-actions">
+            <button type="button" data-view="schemes">打开项目</button>
+            <button type="button" data-view="archive">查看归档</button>
+          </div>
+        </article>
+        ${modeStates.map((modeState) => `
+          <article class="project-library-card">
+            <span>${escapeHtml(getModeName(modeState.mode))}</span>
+            <strong>${escapeHtml(modeState.projectBrief?.projectName || project.name || "项目")}</strong>
+            <small>${(modeState.selectedSchemeIds || []).length} 个方案 / ${modeState.outputSettings?.aspectRatios?.slice(0, 3).join("、") || "未设尺寸"}</small>
+            <button type="button" data-mode="${escapeHtml(modeState.mode)}">切换到此模式</button>
+          </article>
+        `).join("")}
+      </div>
+
+      <div class="project-library-assets">
+        <div class="project-library-section-title">
+          <strong>项目素材</strong>
+          <small>素材库管理项目输入，不等同于归档结果。</small>
+        </div>
+        <div class="project-library-asset-grid">
+          ${(assets.length > 0 ? assets : getProjectLibraryFallbackAssets()).map((asset) => `
+            <button class="project-library-asset" type="button" data-action="simulate-asset-upload" data-asset-role="${escapeHtml(asset.role)}" data-asset-label="${escapeAttribute(asset.label)}">
+              <i class="${asset.previewUrl ? "has-preview" : ""}" ${asset.previewUrl ? `style="background-image:url('${escapeAttribute(asset.previewUrl)}')"` : ""}></i>
+              <strong>${escapeHtml(normalizeProjectAssetLabel(asset.label))}</strong>
+              <small>${asset.previewUrl ? "已上传" : "待上传"} / ${escapeHtml(getAssetRoleName(asset.role))}</small>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -54,6 +125,15 @@ function renderResultBoard(activeMode) {
     </section>
     ${state.resultViewerOpen ? renderResultViewer() : ""}
   `;
+}
+
+function getProjectLibraryFallbackAssets() {
+  return [
+    { role: "gameCharacter", label: "角色", previewUrl: "" },
+    { role: "gameLogo", label: "LOGO", previewUrl: "" },
+    { role: "background", label: "场景", previewUrl: "" },
+    { role: "prop", label: "BOSS", previewUrl: "" },
+  ];
 }
 
 function renderResultEmpty(activeMode) {
@@ -237,7 +317,8 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
 }
 
 function renderPlanImageArea(activeMode, scheme, display, schemeResults) {
-  const primaryResult = schemeResults.find((result) => getResultPreviewUrl(result)) || schemeResults[0];
+  const variantIndex = getSelectedSchemeVariantIndex(scheme.id);
+  const primaryResult = schemeResults[variantIndex] || schemeResults.find((result) => getResultPreviewUrl(result)) || schemeResults[0];
   const previewUrl = primaryResult ? getResultPreviewUrl(primaryResult) : "";
 
   if (previewUrl && primaryResult) {
@@ -285,14 +366,20 @@ function renderPlanImageArea(activeMode, scheme, display, schemeResults) {
 function renderSchemeVersionPager(scheme, schemeResults) {
   const total = Math.max(4, parseProgressTotal(scheme.progress), schemeResults.length);
   const readyCount = Math.max(schemeResults.length, parseProgressDone(scheme.progress));
+  const activeIndex = Math.min(getSelectedSchemeVariantIndex(scheme.id), Math.min(total, 6) - 1);
   const buttons = Array.from({ length: Math.min(total, 6) }, (_, index) => {
     const number = index + 1;
-    const active = number === 1;
+    const active = index === activeIndex;
     const filled = number <= readyCount;
-    return `<button class="${active ? "active" : ""} ${filled ? "filled" : ""}" type="button" aria-label="方案变体 ${number}">${number}</button>`;
+    return `<button class="${active ? "active" : ""} ${filled ? "filled" : ""}" type="button" data-scheme-id="${escapeHtml(scheme.id)}" data-scheme-variant="${number}" aria-label="方案变体 ${number}">${number}</button>`;
   });
 
   return `<div class="version-pager">${buttons.join("")}</div>`;
+}
+
+function getSelectedSchemeVariantIndex(schemeId) {
+  const rawValue = state.selectedSchemeVariants?.[schemeId];
+  return Number.isFinite(rawValue) ? Math.max(0, Math.floor(rawValue)) : 0;
 }
 
 function groupResultsByScheme(results) {
@@ -620,6 +707,43 @@ function simplifyRatio(width, height) {
 
 function gcd(a, b) {
   return b === 0 ? a : gcd(b, a % b);
+}
+
+function getModeName(modeId) {
+  return {
+    poster: "海报",
+    collab: "联名",
+    announcement: "公告",
+    logo: "LOGO",
+    icon: "图标",
+  }[modeId] || modeId || "模式";
+}
+
+function getAssetRoleName(role) {
+  return {
+    gameCharacter: "角色",
+    collabCharacter: "联名角色",
+    gameLogo: "LOGO",
+    brandLogo: "品牌 LOGO",
+    background: "场景",
+    prop: "道具",
+    uiScreenshot: "界面截图",
+    styleReference: "画风参考",
+    compositionReference: "构图参考",
+    subjectReference: "主体参考",
+  }[role] || role || "素材";
+}
+
+function normalizeProjectAssetLabel(label) {
+  return String(label || "").replace(/品牌\s*标识/g, "品牌 LOGO").replace(/游戏\s*标识/g, "游戏 LOGO").replace(/标识/g, "LOGO");
+}
+
+function escapeAttribute(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 function escapeHtml(value) {
