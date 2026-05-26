@@ -147,16 +147,67 @@ async function handleActionControl(control, event, render) {
         providerId,
         error: "请输入 API Key 后再保存。",
       };
+      refreshSettingsLayer(render);
+      return;
     } else {
-      render();
-      await saveProviderCredentialForWorkbench({ providerId, apiKey });
+      const providerSettings = readProviderSettingsFromSheet(providerId);
+      state.providerCredential = {
+        ...state.providerCredential,
+        status: "saving",
+        providerId,
+        error: null,
+      };
+      refreshSettingsLayer(render);
+      await saveProviderCredentialForWorkbench({ providerId, apiKey, ...providerSettings });
+      refreshSettingsLayer(render);
+      return;
     }
   }
   if (action === "test-provider-connection") {
-    render();
-    await testProviderConnectionForWorkbench({
-      providerId: control.dataset.providerId || state.provider,
-    });
+    const providerId = control.dataset.providerId || state.provider;
+    const input = document.querySelector(`[data-provider-api-key="${providerId}"]`);
+    const apiKey = input?.value?.trim() || "";
+    const credentialReady = state.providerCredential.providerId === providerId && state.providerCredential.configured;
+
+    if (!credentialReady) {
+      if (!apiKey) {
+        state.providerCredential = {
+          ...state.providerCredential,
+          status: "error",
+          providerId,
+          error: "请先输入 API Key；如果已经保存过，请重新打开此供应商状态。",
+        };
+        refreshSettingsLayer(render);
+        return;
+      }
+
+      const providerSettings = readProviderSettingsFromSheet(providerId);
+      state.providerCredential = {
+        ...state.providerCredential,
+        status: "saving",
+        providerId,
+        error: null,
+      };
+      refreshSettingsLayer(render);
+      const saveEnvelope = await saveProviderCredentialForWorkbench({ providerId, apiKey, ...providerSettings });
+      if (!saveEnvelope.ok) {
+        refreshSettingsLayer(render);
+        return;
+      }
+    }
+
+    state.providerConnection = {
+      ...state.providerConnection,
+      phase: "testing",
+      status: "degraded",
+      providerId,
+      error: null,
+      message: "正在测试供应商连接...",
+    };
+    refreshSettingsLayer(render);
+    await testProviderConnectionForWorkbench({ providerId });
+    refreshSettingsLayer(render);
+    return;
   }
   if (action === "revoke-provider-key") {
     render();
@@ -211,6 +262,18 @@ async function handleActionControl(control, event, render) {
     refreshSettingsLayer(render);
     return;
   }
+  if (action === "rename-provider-route-plan") {
+    const planId = control.dataset.providerRouteNameTarget || state.providerRoutePlan;
+    const input = control.closest(".route-plan-manager")?.querySelector("[data-provider-route-name-draft]");
+    const nextName = input?.value?.trim();
+    if (planId && nextName) {
+      state.providerRoutePlans = (state.providerRoutePlans || []).map((plan) =>
+        plan.id === planId ? { ...plan, name: nextName.slice(0, 24) } : plan,
+      );
+      refreshSettingsLayer(render);
+      return;
+    }
+  }
   if (action === "delete-provider-route-plan") {
     const plans = Array.isArray(state.providerRoutePlans) ? [...state.providerRoutePlans] : [];
     if (plans.length > 1) {
@@ -219,6 +282,44 @@ async function handleActionControl(control, event, render) {
       refreshSettingsLayer(render);
       return;
     }
+  }
+  if (action === "add-provider-custom-model") {
+    const providerId = control.dataset.providerId || state.provider;
+    const input = document.querySelector(`[data-provider-custom-model-input="${providerId}"]`);
+    const modelId = input?.value?.trim();
+    if (!modelId) return;
+    const current = Array.isArray(state.providerCustomModels?.[providerId])
+      ? state.providerCustomModels[providerId]
+      : [];
+    const nextModels = Array.from(new Set([...current, modelId])).slice(0, 40);
+    const overrideKey = getProviderModelOverrideKey(providerId);
+    state.providerCustomModels = {
+      ...(state.providerCustomModels || {}),
+      [providerId]: nextModels,
+    };
+    state.providerModelOverrides = {
+      ...(state.providerModelOverrides || {}),
+      [overrideKey]: {
+        ...(state.providerModelOverrides?.[overrideKey] || {}),
+        defaultModel: modelId,
+      },
+    };
+    refreshSettingsLayer(render);
+    return;
+  }
+  if (action === "delete-provider-custom-model") {
+    const providerId = control.dataset.providerId || state.provider;
+    const modelId = control.dataset.providerModelId || "";
+    const current = Array.isArray(state.providerCustomModels?.[providerId])
+      ? state.providerCustomModels[providerId]
+      : [];
+    state.providerCustomModels = {
+      ...(state.providerCustomModels || {}),
+      [providerId]: current.filter((model) => model !== modelId),
+    };
+    state.providerModelOverrides = removeProviderModelOverrideValue(providerId, modelId);
+    refreshSettingsLayer(render);
+    return;
   }
   if (action === "project-library-create") {
     state.projectLibraryMessage = "已准备新建项目入口；当前桌面版会先保留现有项目数据。";
@@ -247,6 +348,22 @@ function bindProviderControls(render, root = document) {
   root.querySelectorAll("[data-provider]").forEach((button) => {
     button.addEventListener("click", () => handleProviderControl(button, render));
   });
+}
+
+function readProviderSettingsFromSheet(providerId) {
+  const baseUrl = document.querySelector(`[data-provider-base-url="${providerId}"]`)?.value?.trim() || "";
+  const defaultModel = document.querySelector(`[data-provider-default-model="${providerId}"]`)?.value?.trim() || "";
+  const modelSlots = Object.fromEntries(
+    Array.from(document.querySelectorAll(`[data-provider-model-slot][data-provider-id="${providerId}"]`))
+      .map((control) => [control.dataset.providerModelSlot, control.value?.trim()])
+      .filter(([slot, value]) => slot && value),
+  );
+
+  return {
+    baseUrl,
+    defaultModel,
+    modelSlots,
+  };
 }
 
 function bindProviderModelControls(render, root = document) {
@@ -301,10 +418,32 @@ function bindProviderModelControls(render, root = document) {
       refreshSettingsLayer(render);
     });
   });
+
+  root.querySelectorAll("[data-provider-custom-model-input]").forEach((control) => {
+    control.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      const providerId = control.dataset.providerCustomModelInput;
+      root.querySelector(`[data-action="add-provider-custom-model"][data-provider-id="${providerId}"]`)?.click();
+    });
+  });
 }
 
 function getProviderModelOverrideKey(providerId) {
   return `${providerId}:${state.providerRoutePlan || "standard"}`;
+}
+
+function removeProviderModelOverrideValue(providerId, modelId) {
+  const overrides = { ...(state.providerModelOverrides || {}) };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (key !== providerId && !key.startsWith(`${providerId}:`)) continue;
+    const nextValue = { ...value };
+    for (const [slot, model] of Object.entries(nextValue)) {
+      if (model === modelId) delete nextValue[slot];
+    }
+    overrides[key] = nextValue;
+  }
+  return overrides;
 }
 
 async function handleProviderControl(button, render) {

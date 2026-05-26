@@ -49,10 +49,10 @@ export const modeDefaultOutput: Record<ProductionMode, Omit<OutputSettingsForm, 
 };
 
 export const defaultProviderModelSlots = {
-  concept: "gpt-5.2",
+  concept: "gpt-5.5",
   image: "gpt-image-2",
-  styleReference: "gpt-5.2",
-  compositionReference: "gpt-5.2",
+  styleReference: "gpt-5.5",
+  compositionReference: "gpt-5.5",
 };
 
 const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: string; modelSlots?: Record<string, string> }> = {
@@ -62,12 +62,12 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
   },
   aigocode: {
     baseUrl: "https://api.aigocode.com/v1",
-    defaultModel: "gpt-5.2",
+    defaultModel: "gpt-5.5",
     modelSlots: {
-      concept: "gpt-5.2",
+      concept: "gpt-5.5",
       image: "gpt-image-2",
-      styleReference: "gpt-5.2",
-      compositionReference: "gpt-5.2",
+      styleReference: "gpt-5.5",
+      compositionReference: "gpt-5.5",
     },
   },
   google: {

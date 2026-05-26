@@ -166,7 +166,8 @@ export function setGenerationFormChoice(path, rawValue, options = {}) {
   if (multi) {
     const list = Array.isArray(current) ? [...current] : [];
     const next = list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
-    setPath(modeState, path, next.length > 0 ? next : [value]);
+    const allowEmpty = path === "modeForm.styleTags";
+    setPath(modeState, path, next.length > 0 || allowEmpty ? next : [value]);
   } else {
     setPath(modeState, path, value);
   }

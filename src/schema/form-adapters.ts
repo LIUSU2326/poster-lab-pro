@@ -183,7 +183,7 @@ const modeGroups = {
       id: "poster-direction",
       label: "03 Direction",
       fields: [
-        { name: "styleTags", label: "Style tags", control: "chipGroup", required: true },
+        { name: "styleTags", label: "Style tags", control: "chipGroup", required: false },
         { name: "compositionReferenceStrength", label: "Composition reference", control: "segmented", options: ["weak", "composition", "highFidelityComposition"] },
       ],
     },

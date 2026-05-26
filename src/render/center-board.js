@@ -351,7 +351,6 @@ function renderPlanImageArea(activeMode, scheme, display, schemeResults) {
     return `
       <div class="plan-image-frame has-image">
         <img src="${previewUrl}" alt="${escapeHtml(display.title)}" width="640" height="360" loading="lazy">
-        <span class="plan-image-label">${escapeHtml(display.brand || activeMode.short || activeMode.label || "素材")}</span>
         <span class="plan-image-size">${escapeHtml(formatResultSize(primaryResult))}</span>
         <div class="result-preview-actions plan-preview-actions">
           ${renderPreviewIconButton(primaryResult.id, "view")}
@@ -381,7 +380,6 @@ function renderPlanImageArea(activeMode, scheme, display, schemeResults) {
 
   return `
     <div class="plan-image-frame generated-placeholder ${scheme.tone || "forest"} ${scheme.status === "loading" ? "is-loading" : ""}">
-      <span class="plan-image-label">${escapeHtml(display.brand || activeMode.short || "素材")}</span>
       <b>${escapeHtml(display.visualHero)}</b>
       <small>${escapeHtml(scheme.platform || display.secondary || activeMode.outputSizes?.[0] || "多尺寸")}</small>
       <i></i>

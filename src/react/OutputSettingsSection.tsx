@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
 import { state } from "../state.js";
@@ -245,6 +246,48 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
     setPlanStrategy(strategy);
   };
 
+  const closeSuiteManager = () => {
+    state.outputSuiteManagerOpen = false;
+    setSuiteManagerOpen(false);
+  };
+
+  const suiteManagerDialog = suiteManagerOpen && typeof document !== "undefined"
+    ? createPortal(
+      <>
+        <div className="suite-manager-backdrop" aria-hidden="true" onClick={closeSuiteManager} />
+        <div className="suite-manager-modal" role="dialog" aria-modal="true" aria-label="套装管理">
+          <div className="suite-manager-modal-head">
+            <strong>套装管理</strong>
+            <button className="mini-ghost-button" type="button" onClick={closeSuiteManager}>
+              关闭
+            </button>
+          </div>
+          <SuiteManager
+            suites={suites}
+            customSuiteEnabled={customSuiteEnabled}
+            customSuite={customSuite}
+            suiteWidth={suiteWidth}
+            suiteHeight={suiteHeight}
+            sizeDrafts={sizeDrafts}
+            onSuiteWidth={setSuiteWidth}
+            onSuiteHeight={setSuiteHeight}
+            onAddCustomSize={addCustomSuiteSize}
+            onRemoveCustomSize={removeCustomSuiteSize}
+            onUpdateCustomSize={updateCustomSuiteSize}
+            onDraftSize={(size, patch) => setSizeDrafts((current) => ({
+              ...current,
+              [size]: { ...splitExplicitSize(size), ...(current[size] || {}), ...patch },
+            }))}
+            onSelectSuite={(suite) => void selectSuite(suite)}
+            onCreateCustomSuite={createCustomSuite}
+            onDeleteCustomSuite={() => void deleteCustomSuite()}
+          />
+        </div>
+      </>,
+      document.body,
+    )
+    : null;
+
   return (
     <div className="output-settings-rhf" data-rhf-output-settings>
       {suites.length > 0 ? (
@@ -298,28 +341,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
             </button>
           </div>
 
-          {suiteManagerOpen ? (
-            <SuiteManager
-              suites={suites}
-              customSuiteEnabled={customSuiteEnabled}
-              customSuite={customSuite}
-              suiteWidth={suiteWidth}
-              suiteHeight={suiteHeight}
-              sizeDrafts={sizeDrafts}
-              onSuiteWidth={setSuiteWidth}
-              onSuiteHeight={setSuiteHeight}
-              onAddCustomSize={addCustomSuiteSize}
-              onRemoveCustomSize={removeCustomSuiteSize}
-              onUpdateCustomSize={updateCustomSuiteSize}
-              onDraftSize={(size, patch) => setSizeDrafts((current) => ({
-                ...current,
-                [size]: { ...splitExplicitSize(size), ...(current[size] || {}), ...patch },
-              }))}
-              onSelectSuite={(suite) => void selectSuite(suite)}
-              onCreateCustomSuite={createCustomSuite}
-              onDeleteCustomSuite={() => void deleteCustomSuite()}
-            />
-          ) : null}
+          {suiteManagerDialog}
         </>
       ) : null}
 

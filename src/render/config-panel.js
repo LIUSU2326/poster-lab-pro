@@ -186,10 +186,9 @@ export function renderConfigPanel(activeMode) {
         </section>
 
         <section class="config-section">
-          <div class="section-title">
-            <span>04 输出</span>
-            <button type="button" data-action="toggle-suite-manager">套装管理</button>
-          </div>
+        <div class="section-title">
+          <span>04 输出</span>
+        </div>
           <div
             data-react-output-settings
             data-output-mode="${activeMode.id}"
@@ -425,7 +424,7 @@ function renderModeDirection(activeMode, form) {
   return `
     <input class="search-input" value="搜索 ${direction.styles.length}+ 个视觉方向..." aria-label="搜索视觉方向" readonly />
     <div class="chip-grid">
-      ${direction.styles.map((chip, index) => `<button class="${activeTags.includes(chip) || (activeTags.length === 0 && index === 0) ? "active" : ""}" type="button" data-form-choice="modeForm.styleTags" data-choice-value="${escapeAttribute(chip)}" data-choice-multi="true">${escapeHtml(chip)}</button>`).join("")}
+      ${direction.styles.map((chip) => `<button class="${activeTags.includes(chip) ? "active" : ""}" type="button" data-form-choice="modeForm.styleTags" data-choice-value="${escapeAttribute(chip)}" data-choice-multi="true">${escapeHtml(chip)}</button>`).join("")}
     </div>
     <div class="mode-lock-note">
       <strong>${direction.title}</strong>

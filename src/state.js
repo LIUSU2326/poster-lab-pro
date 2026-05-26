@@ -27,6 +27,7 @@ export const state = {
   settingsHeight: 820,
   provider: "openai",
   providerModelOverrides: /** @type {Record<string, Record<string, string>>} */ ({}),
+  providerCustomModels: /** @type {Record<string, string[]>} */ ({}),
   providerRoutePlan: "standard",
   providerRoutePlans: /** @type {Array<{ id: string, name: string }>} */ ([
     { id: "standard", name: "标准方案" },

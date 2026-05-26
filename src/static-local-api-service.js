@@ -169,7 +169,7 @@ function buildPromptPackage(payload) {
 
 function resolveModel(snapshot, providerId, slot) {
   const config = snapshot.providerConfigs?.[providerId];
-  return config?.modelSlots?.[slot] || config?.defaultModel || (slot === "image" ? "gpt-image-2" : "gpt-5.2");
+  return config?.modelSlots?.[slot] || config?.defaultModel || (slot === "image" ? "gpt-image-2" : "gpt-5.5");
 }
 
 function mapProviderRequestPayload(payload) {

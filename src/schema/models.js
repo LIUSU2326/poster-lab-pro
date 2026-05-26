@@ -166,7 +166,7 @@ export const formSchemas = {
   ModeForms: {
     poster: {
       mode: { const: "poster" },
-      styleTags: { type: "string[]", minItems: 1 },
+      styleTags: { type: "string[]", default: [] },
       compositionReferenceStrength: { enum: enums.referenceStrength, default: "composition" },
     },
     collab: {

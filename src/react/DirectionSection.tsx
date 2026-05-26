@@ -142,7 +142,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
 
   const commitPosterTags = async (nextTags: string[]) => {
     if (currentValues.mode !== "poster") return;
-    const safeTags = nextTags.length > 0 ? nextTags : [recommendedStyles[0] || styleLibrary[0] || "精致休闲奇幻"];
+    const safeTags = uniqueStrings(nextTags);
     const nextValues = { ...currentValues, styleTags: safeTags } as ModeForm;
     form.setValue("styleTags", safeTags, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
     await commit(nextValues);
@@ -150,8 +150,10 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
 
   const toggleStyle = async (chip: string) => {
     if (currentValues.mode !== "poster") return;
-    await commitPosterTags([chip]);
-    setShowLibrary(false);
+    const nextTags = activeTags.includes(chip)
+      ? activeTags.filter((item) => item !== chip)
+      : [chip];
+    await commitPosterTags(nextTags);
   };
 
   const handleStyleReferenceChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -387,9 +389,9 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
           <small>6 个画风</small>
         </div>
         <div className="chip-grid style-recommendation-grid">
-          {recommendedStyles.map((chip, index) => (
+          {recommendedStyles.map((chip) => (
             <button
-              className={activeTags.includes(chip) || (activeTags.length === 0 && index === 0) ? "active" : ""}
+              className={activeTags.includes(chip) ? "active" : ""}
               type="button"
               key={chip}
               onClick={() => void toggleStyle(chip)}
@@ -397,6 +399,21 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
               {chip}
             </button>
           ))}
+        </div>
+
+        <div className="selected-style-strip" aria-live="polite">
+          <strong>已选画风</strong>
+          {activeTags.length > 0 ? (
+            <span>
+              {activeTags.map((chip) => (
+                <button type="button" key={chip} onClick={() => void toggleStyle(chip)}>
+                  {chip}
+                </button>
+              ))}
+            </span>
+          ) : (
+            <small>未选择</small>
+          )}
         </div>
 
         {styleLibraryDialog}

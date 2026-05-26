@@ -177,7 +177,7 @@ export const ProviderConfigFormSchema = z.object({
 
 export const PosterModeFormSchema = z.object({
   mode: z.literal("poster"),
-  styleTags: z.array(z.string().min(1)).min(1),
+  styleTags: z.array(z.string().min(1)).default([]),
   compositionReferenceStrength: ReferenceStrengthSchema.default("composition"),
 });
 

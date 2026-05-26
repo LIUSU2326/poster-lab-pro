@@ -39,14 +39,31 @@ async function requestJson(path, options = {}) {
     throw new Error("Provider credential client requires a fetch implementation.");
   }
 
-  const response = await fetchImpl(path, {
-    method: options.method || "GET",
-    headers: {
-      accept: "application/json",
-      ...(options.body ? { "content-type": "application/json" } : {}),
-    },
-    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-  });
+  let response;
+  try {
+    response = await fetchImpl(path, {
+      method: options.method || "GET",
+      headers: {
+        accept: "application/json",
+        ...(options.body ? { "content-type": "application/json" } : {}),
+      },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        code: "network_error",
+        message: error instanceof Error ? error.message : "Provider credential request failed.",
+        fieldErrors: {},
+        details: { path },
+      },
+      meta: {
+        traceId: `trace-provider-credential-client-${Date.now().toString(36)}`,
+        createdAt: new Date().toISOString(),
+      },
+    };
+  }
 
   return readEnvelope(response);
 }
@@ -148,7 +165,7 @@ export async function saveProviderCredentialForWorkbench(input, options = {}) {
     input?.defaultModel ??
     document.querySelector(`[data-provider-default-model="${providerId}"]`)?.value?.trim() ??
     "";
-  const modelSlots = Object.fromEntries(
+  const modelSlots = input?.modelSlots ?? Object.fromEntries(
     Array.from(document.querySelectorAll(`[data-provider-model-slot][data-provider-id="${providerId}"]`))
       .map((control) => [control.dataset.providerModelSlot, control.value?.trim()])
       .filter(([slot, value]) => slot && value),

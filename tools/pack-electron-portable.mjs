@@ -9,7 +9,9 @@ const root = process.cwd();
 const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
 const productName = "Poster Lab Pro";
 const electronDist = path.dirname(electronPath);
-const outputDir = path.join(root, "release", "win-unpacked");
+const outputDir = process.env.POSTER_LAB_PORTABLE_OUTPUT
+  ? path.resolve(root, process.env.POSTER_LAB_PORTABLE_OUTPUT)
+  : path.join(root, "release", "win-unpacked");
 const resourcesDir = path.join(outputDir, "resources");
 const appDir = path.join(resourcesDir, "app");
 const nextPayload = path.join(root, "dist-desktop", "next");

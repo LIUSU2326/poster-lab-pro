@@ -103,7 +103,7 @@ export function validateModeForm(mode, data) {
   }
 
   if (mode === "poster") {
-    assertStringArray(data?.styleTags, "styleTags", issues, { minItems: 1 });
+    assertStringArray(data?.styleTags, "styleTags", issues);
     assertEnum(data?.compositionReferenceStrength, enums.referenceStrength, "compositionReferenceStrength", issues);
   }
 
