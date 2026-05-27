@@ -13,6 +13,8 @@ export const ProviderConnectionStatusSchema = z.enum([
 export const ProviderConnectionTestRequestSchema = z.object({
   workspaceId: z.string().min(1),
   providerId: ProviderIdSchema,
+  model: z.string().min(1).max(160).optional(),
+  strictModel: z.boolean().default(false),
   verifyModels: z.boolean().default(true),
   timeoutMs: z.number().int().min(1000).max(30000).default(10000),
 });

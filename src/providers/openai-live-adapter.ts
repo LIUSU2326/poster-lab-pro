@@ -150,6 +150,16 @@ function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResu
   const providerMessage = parsedError.success ? parsedError.data.error?.message : undefined;
   const message = providerMessage || `OpenAI image generation failed with HTTP ${status}.`;
 
+  if (status <= 0) {
+    return {
+      ok: false,
+      error: createProviderError(OPENAI_PROVIDER_ID, "provider_unavailable", message, {
+        retryable: true,
+        userMessage: "OpenAI network request failed. Check proxy, VPN, or provider connectivity.",
+      }),
+    };
+  }
+
   if (status === 401 || status === 403) {
     return {
       ok: false,
@@ -256,11 +266,24 @@ function parseImageResponse(
 export function createOpenAIHttpTransport(fetchImpl: typeof fetch): OpenAIImageTransport {
   return async (request) => {
     const parsed = OpenAIImageTransportRequestSchema.parse(request);
-    const response = await fetchImpl(parsed.url, {
-      method: parsed.method,
-      headers: parsed.headers,
-      body: JSON.stringify(parsed.body),
-    });
+    let response: Response;
+    try {
+      response = await fetchImpl(parsed.url, {
+        method: parsed.method,
+        headers: parsed.headers,
+        body: JSON.stringify(parsed.body),
+      });
+    } catch (error) {
+      return OpenAIImageTransportResponseSchema.parse({
+        ok: false,
+        status: 0,
+        body: {
+          error: {
+            message: error instanceof Error ? error.message : "OpenAI network request failed.",
+          },
+        },
+      });
+    }
 
     let body: unknown = null;
     try {

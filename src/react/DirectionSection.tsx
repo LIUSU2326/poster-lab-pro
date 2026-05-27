@@ -107,8 +107,16 @@ function styleAnalysisProviderReady(providerId: string): boolean {
 }
 
 function latestStylePreview(): string {
+  const localDataUrl = Object.entries(state.referenceUploadDataUrls || {})
+    .filter(([key]) => key.startsWith("styleReference:"))
+    .map(([, value]) => value)
+    .filter(Boolean)
+    .at(-1);
+  if (localDataUrl) return localDataUrl;
+
   const snapshot = getRuntimeWorkspaceSnapshot();
-  return [...(snapshot.assets || [])].reverse().find((asset) => asset.role === "styleReference" && asset.previewUrl)?.previewUrl || "";
+  const previewUrl = [...(snapshot.assets || [])].reverse().find((asset) => asset.role === "styleReference" && asset.previewUrl)?.previewUrl || "";
+  return normalizeLocalPreviewUrl(previewUrl);
 }
 
 function latestStyleDataUrl(): string {
@@ -119,7 +127,29 @@ function latestStyleDataUrl(): string {
     .at(-1) || "";
 }
 
-function stylePreviewTone(style: string, index: number): string {
+function normalizeLocalPreviewUrl(value: string | null | undefined): string {
+  const url = typeof value === "string" ? value : "";
+  if (!url || /example\.com/i.test(url) || /^blob:/i.test(url)) return "";
+  const localUpload = url.match(/^https?:\/\/(?:localhost|127\.0\.0\.1):\d+(\/uploads\/.+)$/i);
+  return localUpload?.[1] || url;
+}
+
+function stylePreviewClass(style: string, index: number): string {
+  const rules: Array<[RegExp, string]> = [
+    [/像素|街机/i, "preview-pixel"],
+    [/水彩|绘本|手绘/i, "preview-watercolor"],
+    [/国潮|厚涂|油画/i, "preview-painterly"],
+    [/电影|大片|写实|荒野/i, "preview-cinematic"],
+    [/低多边形|几何/i, "preview-polygon"],
+    [/赛博|霓虹|科幻|机甲/i, "preview-neon"],
+    [/黏土|定格|玩具/i, "preview-clay"],
+    [/剪纸|纸艺/i, "preview-paper"],
+    [/漫画|赛璐璐|卡通/i, "preview-comic"],
+    [/商店|裁切|广告|产品/i, "preview-layout"],
+    [/奇幻|魔幻|哥特/i, "preview-fantasy"],
+  ];
+  const match = rules.find(([pattern]) => pattern.test(style));
+  if (match) return match[1];
   const seed = Array.from(style).reduce((total, char) => total + char.charCodeAt(0), index);
   return `tone-${seed % 8}`;
 }
@@ -141,6 +171,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   const [search, setSearch] = useState("");
   const [styleUploadStatus, setStyleUploadStatus] = useState("");
   const [stylePreview, setStylePreview] = useState(latestStylePreview());
+  const [stylePreviewBroken, setStylePreviewBroken] = useState(false);
   const [styleAnalysisMessage, setStyleAnalysisMessage] = useState("");
   const customStyles = Array.isArray(state.customStyleTags?.[mode]) ? state.customStyleTags[mode] : [];
 
@@ -158,8 +189,9 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   const filteredStyles = styleLibrary.filter((style) => style.toLowerCase().includes(search.trim().toLowerCase()));
   const activeTags = currentValues.mode === "poster" ? uniqueStrings(currentValues.styleTags).slice(0, 1) : [];
   const styleProviderId = routeProviderForSlot("styleReference");
-  const canExtractStyle = Boolean(stylePreview) && analysisApiReady(styleProviderId) && styleAnalysisProviderReady(styleProviderId);
-  const styleDisabledReason = stylePreview
+  const displayStylePreview = stylePreview && !stylePreviewBroken ? stylePreview : "";
+  const canExtractStyle = Boolean(displayStylePreview) && analysisApiReady(styleProviderId) && styleAnalysisProviderReady(styleProviderId);
+  const styleDisabledReason = displayStylePreview
     ? !styleAnalysisProviderReady(styleProviderId)
       ? "当前供应商不支持图片识别"
       : !analysisApiReady(styleProviderId)
@@ -203,6 +235,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
     } catch {
       previewUrl = URL.createObjectURL(file);
     }
+    setStylePreviewBroken(false);
     setStylePreview(previewUrl);
 
     const result = await uploadWorkbenchAssetFile({
@@ -215,7 +248,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   };
 
   const extractStyle = async () => {
-    if (!stylePreview) {
+    if (!displayStylePreview) {
       setStyleAnalysisMessage("请先上传一张画风参考图。");
       return;
     }
@@ -257,6 +290,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   const deleteStyleReference = () => {
     removeWorkbenchAssetsByRoleLabel("styleReference");
     setStylePreview("");
+    setStylePreviewBroken(false);
     setStyleUploadStatus("");
     setStyleAnalysisMessage("");
   };
@@ -266,13 +300,14 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       title={directionTitle}
       helper={directionHelper}
       status={styleUploadStatus}
-      previewUrl={stylePreview}
+      previewUrl={displayStylePreview}
       analysisMessage={styleNote}
       canExtract={canExtractStyle}
       inputRef={styleInputRef}
       onChange={handleStyleReferenceChange}
       onExtract={extractStyle}
       onRemove={deleteStyleReference}
+      onPreviewError={() => setStylePreviewBroken(true)}
     />
   );
   const styleLibraryDialog = showLibrary && typeof document !== "undefined"
@@ -302,7 +337,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
                 key={chip}
                 onClick={() => void toggleStyle(chip)}
               >
-                <span className={`style-library-swatch ${stylePreviewTone(chip, index)}`} aria-hidden="true">
+                <span className={`style-library-swatch ${stylePreviewClass(chip, index)}`} aria-hidden="true">
                   <i />
                 </span>
                 <strong>{chip}</strong>
@@ -487,6 +522,7 @@ function StyleReferenceUpload({
   onChange,
   onExtract,
   onRemove,
+  onPreviewError,
 }: {
   title: string;
   helper: string;
@@ -498,12 +534,13 @@ function StyleReferenceUpload({
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onExtract: () => void;
   onRemove: () => void;
+  onPreviewError: () => void;
 }) {
   return (
     <div className={`style-reference-upload ${previewUrl ? "has-preview" : ""}`}>
       <button className="style-reference-main" type="button" onClick={() => inputRef.current?.click()}>
         <span className="style-reference-preview" aria-hidden="true">
-          {previewUrl ? <img className="style-preview-image" src={previewUrl} alt="" /> : null}
+          {previewUrl ? <img className="style-preview-image" src={previewUrl} alt="" onError={onPreviewError} /> : null}
         </span>
         {previewUrl ? null : (
           <span>

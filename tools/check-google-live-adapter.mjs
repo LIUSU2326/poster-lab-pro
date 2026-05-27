@@ -265,6 +265,9 @@ async function runRuntimeCheck() {
     if (capturedRequest?.body?.generationConfig?.imageConfig?.aspectRatio !== "9:16") {
       issues.push("Google adapter should pass the closest supported aspect ratio through imageConfig");
     }
+    if (capturedRequest?.body?.generationConfig?.responseFormat) {
+      issues.push("Google adapter should not send the rejected responseFormat.image request shape");
+    }
 
     let calls = 0;
     const missingKeyAdapter = providers.createGoogleLiveImageAdapter({
@@ -351,9 +354,9 @@ async function runRuntimeCheck() {
           }
           const promptText = request.body?.contents?.[0]?.parts?.[0]?.text || "";
           for (const token of [
-            "A stored poster creative brief",
-            "From brief to batch output",
-            "Target output: 1080x1920",
+            "幻想料理冒险游戏海报",
+            "厨师小队",
+            "Target output: 1920x1080",
             "Provider asset constraints",
           ]) {
             if (!promptText.includes(token)) {
@@ -374,7 +377,7 @@ async function runRuntimeCheck() {
                       {
                         inlineData: {
                           mimeType: "image/png",
-                          data: await fakePngBase64(768, 1344),
+                            data: await fakePngBase64(1344, 768),
                         },
                       },
                     ],
@@ -398,16 +401,16 @@ async function runRuntimeCheck() {
     if (!loaded.ok || !loaded.snapshot.results[0]?.metadata?.resultFile?.storageKey) {
       issues.push("Google live queue should store resultFile metadata in the workspace snapshot");
     }
-    if (loaded.ok && (loaded.snapshot.results[0]?.width !== 1080 || loaded.snapshot.results[0]?.height !== 1920)) {
+    if (loaded.ok && (loaded.snapshot.results[0]?.width !== 1920 || loaded.snapshot.results[0]?.height !== 1080)) {
       issues.push("Google live queue should store locally resized platform dimensions on result assets");
     }
-    if (loaded.ok && loaded.snapshot.results[0]?.metadata?.requestedOutput?.width !== 1080) {
+    if (loaded.ok && loaded.snapshot.results[0]?.metadata?.requestedOutput?.width !== 1920) {
       issues.push("Google live queue should keep requested output dimensions in task metadata");
     }
     if (loaded.ok && loaded.snapshot.results[0]?.metadata?.outputProcessing?.strategy !== "localResizeExact") {
       issues.push("Google live queue should record localResizeExact output processing metadata");
     }
-    if (loaded.ok && loaded.snapshot.results[0]?.metadata?.providerAsset?.width !== 768) {
+    if (loaded.ok && loaded.snapshot.results[0]?.metadata?.providerAsset?.width !== 1344) {
       issues.push("Google live queue should keep native provider dimensions inside providerAsset metadata");
     }
     if (loaded.ok && JSON.stringify(loaded.snapshot).includes("GOOGLE_QUEUE_KEY_TEST_PLACEHOLDER")) {

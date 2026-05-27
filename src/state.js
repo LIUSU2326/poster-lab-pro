@@ -36,6 +36,13 @@ export const state = {
     { id: "standard", name: "标准方案" },
     { id: "image-first", name: "图像优先" },
   ]),
+  providerRoutePlanTest: {
+    phase: "idle",
+    planId: "standard",
+    updatedAt: /** @type {string | null} */ (null),
+    results: /** @type {Array<Record<string, unknown>>} */ ([]),
+    error: /** @type {string | null} */ (null),
+  },
   apiMode: "static",
   workspaceId: defaultWorkspaceSnapshot.metadata.workspaceId,
   workspaceSnapshot: defaultWorkspaceSnapshot,
@@ -87,7 +94,7 @@ export const state = {
   customStyleTags: /** @type {Record<string, string[]>} */ ({}),
   directionLibraryOffset: /** @type {Record<string, number>} */ ({}),
   outputSuiteManagerOpen: false,
-  outputSelectionMode: "suite",
+  outputSelectionMode: "single",
   outputPlanStrategy: "unified",
   outputCustomSuiteEnabled: true,
   outputCustomSuiteSizes: /** @type {string[]} */ (["1080x1920", "1200x627"]),
@@ -296,18 +303,31 @@ export function isResultOperationActive(action, resultId) {
   );
 }
 
+function findSchemePromptBlock(promptBlocks, labels) {
+  if (!Array.isArray(promptBlocks)) return "";
+  const normalizedLabels = labels.map((label) => label.toLowerCase());
+  const match = promptBlocks.find((block) => {
+    const title = String(block?.title || "").toLowerCase();
+    return normalizedLabels.some((label) => title.includes(label));
+  });
+  return typeof match?.text === "string" ? match.text : "";
+}
+
 function adaptRuntimeScheme(activeMode, scheme, snapshot, index) {
   const modeState = snapshot.modeStates?.find((item) => item.mode === activeMode.id);
   const resultCount = snapshot.results?.filter((result) => result.schemeId === scheme.id).length || 0;
   const targetCount = Math.max(1, modeState?.outputSettings?.imagesPerScheme || 1);
   const status = scheme.status === "rendering" ? "loading" : scheme.status === "archived" ? "ready" : scheme.status;
-  const promptText = scheme.promptBlocks?.map((block) => `${block.title}: ${block.text}`).join("\n") || scheme.brief;
+  const promptZh = findSchemePromptBlock(scheme.promptBlocks, ["中文提示词", "chinese prompt", "prompt zh"]);
+  const promptEn = findSchemePromptBlock(scheme.promptBlocks, ["english prompt", "英文提示词", "prompt en"]);
+  const visualBrief = findSchemePromptBlock(scheme.promptBlocks, ["视觉方向", "visual direction"]);
+  const promptText = promptZh || promptEn || scheme.promptBlocks?.map((block) => `${block.title}: ${block.text}`).join("\n") || scheme.brief;
 
   return {
     id: scheme.id,
     code: scheme.code,
     title: scheme.title,
-    brief: scheme.brief,
+    brief: visualBrief || scheme.brief,
     zh: scheme.slogans?.["zh-CN"] || scheme.slogans?.["en-US"] || "宣传词待生成",
     en: scheme.slogans?.["en-US"] || scheme.slogans?.["zh-CN"] || "宣传词待生成",
     platform: scheme.outputPresets?.length ? scheme.outputPresets.join(" / ") : activeMode.outputSizes?.[0] || "自定义",
@@ -316,5 +336,7 @@ function adaptRuntimeScheme(activeMode, scheme, snapshot, index) {
     progress: `${Math.min(resultCount, targetCount)}/${targetCount}`,
     tone: schemeToneFallbacks[index % schemeToneFallbacks.length],
     prompt: promptText,
+    promptZh,
+    promptEn,
   };
 }

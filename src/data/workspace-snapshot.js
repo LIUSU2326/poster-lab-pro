@@ -3,9 +3,9 @@ import { providers as providerFixtures } from './providers.js';
 
 const createdAt = "2026-05-21T00:00:00.000Z";
 const platformPresetsByMode = {
-  poster: ["tiktok", "metaAds"],
-  collab: ["metaAds", "tiktok"],
-  announcement: ["tapTap", "googlePlay"],
+  poster: ["custom"],
+  collab: ["custom"],
+  announcement: ["custom"],
   logo: ["custom"],
   icon: ["appStore", "googlePlay"],
 };
@@ -59,7 +59,7 @@ function createModeState(mode) {
     outputSettings: {
       mode: mode.id,
       platformPresets: platformPresetsByMode[mode.id] || ["custom"],
-      aspectRatios: mode.outputSizes,
+      aspectRatios: mode.id === "icon" ? ["1:1"] : mode.id === "logo" ? ["1:1"] : ["16:9"],
       customSize: null,
       schemeCount: mode.schemes.length,
       imagesPerScheme: 1,

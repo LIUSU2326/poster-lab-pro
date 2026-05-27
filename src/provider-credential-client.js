@@ -245,6 +245,8 @@ export async function testProviderConnectionForWorkbench(input = {}, options = {
     ...options,
     method: "POST",
     body: {
+      ...(input.model ? { model: input.model } : {}),
+      strictModel: input.strictModel ?? false,
       verifyModels: input.verifyModels ?? true,
       timeoutMs: input.timeoutMs || 10000,
     },
@@ -260,4 +262,20 @@ export async function testProviderConnectionForWorkbench(input = {}, options = {
   }
 
   return envelope;
+}
+
+export async function testProviderModelConnectionForWorkbench(input = {}, options = {}) {
+  const providerId = input.providerId || state.provider;
+  const workspaceId = input.workspaceId || state.workspaceId;
+
+  return requestJson(connectionTestPath(workspaceId, providerId), {
+    ...options,
+    method: "POST",
+    body: {
+      ...(input.model ? { model: input.model } : {}),
+      strictModel: input.strictModel ?? true,
+      verifyModels: input.verifyModels ?? true,
+      timeoutMs: input.timeoutMs || 10000,
+    },
+  });
 }

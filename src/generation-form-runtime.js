@@ -91,6 +91,11 @@ export function getActiveGenerationFormValues() {
     ...(modeState?.modeForm || {}),
     mode: modeId,
   });
+  const outputSettings = normalizeRuntimeOutputSettings(modeId, {
+    ...createOutputSettingsDefaults(modeId),
+    ...(modeState?.outputSettings || {}),
+    mode: modeId,
+  });
 
   return {
     mode: modeId,
@@ -100,11 +105,7 @@ export function getActiveGenerationFormValues() {
       projectName: snapshot.project.name,
       gameDescription: modeState?.projectBrief?.gameDescription || snapshot.project.description || getActiveMode().description,
     },
-    outputSettings: {
-      ...createOutputSettingsDefaults(modeId),
-      ...(modeState?.outputSettings || {}),
-      mode: modeId,
-    },
+    outputSettings,
     sloganSettings: {
       ...createSloganSettingsDefaults(),
       ...(modeState?.sloganSettings || {}),
@@ -114,6 +115,29 @@ export function getActiveGenerationFormValues() {
     },
     providerId: state.provider,
     selectedSchemeIds: modeState?.selectedSchemeIds || [],
+  };
+}
+
+function normalizeRuntimeOutputSettings(modeId, outputSettings) {
+  const aspectRatios = Array.isArray(outputSettings?.aspectRatios) ? outputSettings.aspectRatios : [];
+  const platformPresets = Array.isArray(outputSettings?.platformPresets) ? outputSettings.platformPresets : [];
+  const oldSuitePresetIds = new Set(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
+  const carriesOldSuitePreset = platformPresets.some((preset) => oldSuitePresetIds.has(preset));
+  const carriesCustomSuiteState = platformPresets.includes("custom") && aspectRatios.length > 1 && !outputSettings?.customSize;
+
+  if (["poster", "collab", "announcement"].includes(modeId) && (carriesOldSuitePreset || carriesCustomSuiteState)) {
+    return {
+      ...outputSettings,
+      platformPresets: ["custom"],
+      aspectRatios: ["16:9"],
+      customSize: null,
+    };
+  }
+
+  return {
+    ...outputSettings,
+    platformPresets,
+    aspectRatios: modeId === "icon" ? ["1:1"] : (aspectRatios.length > 0 ? aspectRatios : ["16:9"]),
   };
 }
 

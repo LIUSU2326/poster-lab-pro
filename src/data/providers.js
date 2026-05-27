@@ -87,13 +87,13 @@ export const modelSlots = [
     name: "风格参考分析",
     flow: "风格参考识别",
     value: "gpt-5.5",
-    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-3.1-pro-preview", "gemini-3-pro-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
+    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-3.1-pro-preview", "gemini-3.5-flash", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
   },
   {
     id: "compositionReference",
     name: "构图参考分析",
     flow: "构图参考识别",
     value: "gpt-5.5",
-    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-3.1-pro-preview", "gemini-3-pro-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
+    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-3.1-pro-preview", "gemini-3.5-flash", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
   },
 ];

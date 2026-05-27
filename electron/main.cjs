@@ -169,11 +169,12 @@ async function resolveNextTarget() {
   }
 
   const requestedPort = Number(process.env.POSTER_LAB_NEXT_PORT || DEFAULT_PORT);
+  const canReuseExistingService = !usesPackagedNext();
   for (let offset = 0; offset < 20; offset += 1) {
     const port = requestedPort + offset;
     const url = baseUrlForPort(port);
     const healthUrl = `${url}${WORKSPACE_HEALTH_PATH}`;
-    if (await requestOk(healthUrl, 500)) {
+    if (canReuseExistingService && await requestOk(healthUrl, 500)) {
       return { url, port, shouldSpawn: false };
     }
     if (await portAvailable(port)) {

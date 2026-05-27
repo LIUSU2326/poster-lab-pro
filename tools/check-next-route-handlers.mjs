@@ -29,7 +29,7 @@ const routes = {
   resultDownload: read("app/api/workspaces/[workspaceId]/results/[resultId]/download/route.ts"),
 };
 
-for (const token of ["createLocalApiService", "createMemoryDraftRepository", "createMockWorkspaceSnapshot"]) {
+for (const token of ["createLocalApiService", "createJsonFileWorkspaceRepository", "createMockWorkspaceSnapshot"]) {
   if (!service.includes(token)) issues.push(`next-service.ts: missing ${token}`);
 }
 for (const token of ["createManualLiveGenerationService", "nextManualLiveGenerationService", "createOpenAIImageFetchTransport"]) {

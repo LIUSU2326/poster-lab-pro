@@ -35,6 +35,7 @@ for (const token of [
   "createProviderCredentialRef",
   "createMemoryCredentialResolver",
   "credentialResolver",
+  "credentialRefs",
   "StorageRepository",
   "mergeQueuePlans",
   "mergeQueueSummaries",
@@ -197,6 +198,39 @@ async function runRuntimeCheck() {
     }
     if (!loaded.snapshot.queueSummaries.some((summary) => summary.jobId === plan.job.id && summary.progress === 100)) {
       issues.push("saved workspace should include updated queue summary");
+    }
+
+    const mixedProviderPlan = queue.createBatchQueuePlan({
+      projectId: baseSnapshot.project.id,
+      mode: "poster",
+      providerId: "deepseek",
+      providerRoutes: {
+        image: { providerId: "google" },
+      },
+      schemeIds: ["scheme-poster-01"],
+      imagesPerScheme: 1,
+      includeImageEdit: false,
+      includeUpscale: false,
+      includeBackgroundRemoval: false,
+    });
+    const mixedProviderSnapshot = storage.WorkspaceSnapshotSchema.parse({
+      ...baseSnapshot,
+      queuePlans: [mixedProviderPlan],
+      queueSummaries: [queue.summarizeQueue(mixedProviderPlan)],
+      results: [],
+      archiveRows: [],
+    });
+    const mixedProviderRepository = storage.createMemoryDraftRepository([mixedProviderSnapshot]);
+    const mixedProviderWorker = queue.createWorkspaceQueueWorker({
+      repository: mixedProviderRepository,
+      now: () => "2026-05-21T12:00:00.000Z",
+    });
+    const mixedProviderRun = await mixedProviderWorker.run({
+      workspaceId: mixedProviderSnapshot.metadata.workspaceId,
+      jobId: mixedProviderPlan.job.id,
+    });
+    if (mixedProviderRun.summary.failed > 0 || mixedProviderRun.summary.completed !== mixedProviderPlan.tasks.length) {
+      issues.push("queue worker should resolve credentials per task provider in mixed-provider plans");
     }
 
     const missingCredentialPlan = queue.createBatchQueuePlan({

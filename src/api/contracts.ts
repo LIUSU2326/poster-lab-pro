@@ -180,6 +180,8 @@ export const ProviderCredentialDeleteApiResponseSchema = z.union([
 ]);
 
 export const ProviderConnectionTestApiRequestSchema = ProviderCredentialStatusApiRequestSchema.extend({
+  model: z.string().min(1).max(160).optional(),
+  strictModel: z.boolean().default(false),
   verifyModels: z.boolean().default(true),
   timeoutMs: z.number().int().min(1000).max(30000).default(10000),
 });

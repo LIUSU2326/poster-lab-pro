@@ -30,7 +30,7 @@ function formatElapsed(ms) {
 }
 
 function formatCost(value) {
-  return typeof value === "number" ? `$${value.toFixed(2)}` : "mock";
+  return typeof value === "number" ? `$${value.toFixed(2)}` : "真实成本未返回";
 }
 
 export async function runResultOperationForWorkbench(operation, options = {}) {

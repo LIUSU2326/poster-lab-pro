@@ -62,7 +62,7 @@ function parseCurrency(value) {
 }
 
 function formatCurrency(value) {
-  return `$${Math.max(0, value).toFixed(2)}`;
+  return typeof value === "number" && value > 0 ? `$${value.toFixed(2)}` : "真实成本未返回";
 }
 
 function getNestedValue(key) {
@@ -94,7 +94,9 @@ export function getPreparedLiveQueueJobId() {
 
 export function getLiveGateViewModel(activeMode) {
   const queue = createQueueViewModel(activeMode);
-  const estimatedCost = parseCurrency(queue.summary.estimatedCost);
+  const costLabel = queue.summary.costLabel || queue.summary.estimatedCost || "";
+  const costKnown = /[0-9]/.test(String(costLabel));
+  const estimatedCost = costKnown ? parseCurrency(costLabel) : 0;
   const liveGate = state.liveGate || {};
   const maxAcceptedCost = Number.isFinite(Number(liveGate.maxAcceptedCost))
     ? Number(liveGate.maxAcceptedCost)
@@ -108,7 +110,7 @@ export function getLiveGateViewModel(activeMode) {
     for (const row of confirmationRows) {
       if (!getNestedValue(row.key)) blockers.push(createBlocker(row.blocker, row.key));
     }
-    if (getNestedValue("confirmations.providerCost") && estimatedCost > maxAcceptedCost) {
+    if (costKnown && getNestedValue("confirmations.providerCost") && estimatedCost > maxAcceptedCost) {
       blockers.push(createBlocker("cost_limit_exceeded", "maxAcceptedCost"));
     }
     for (const row of prerequisiteRows) {
@@ -126,7 +128,7 @@ export function getLiveGateViewModel(activeMode) {
     stateLabel,
     providerName: getProviderName(),
     estimatedCost,
-    estimatedCostLabel: formatCurrency(estimatedCost),
+    estimatedCostLabel: costKnown ? formatCurrency(estimatedCost) : "真实成本未返回",
     maxAcceptedCost,
     maxAcceptedCostLabel: formatCurrency(maxAcceptedCost),
     blockerCount: blockers.length,

@@ -104,7 +104,15 @@ function normalizeBaseUrl(config: ProviderConfigForm): string {
 }
 
 function imageModel(request: ImageGenerationRequest, config: ProviderConfigForm): string {
-  return request.model || config.modelSlots.image || config.defaultModel || "gemini-3-pro-image-preview";
+  return normalizeGoogleImageModel(request.model || config.modelSlots.image || config.defaultModel || "gemini-3-pro-image-preview");
+}
+
+function normalizeGoogleImageModel(model: string): string {
+  const value = model.trim();
+  if (value === "gemini-3.1-flash-image-preview" || value === "gemini-3-flash-image-preview") {
+    return "gemini-2.5-flash-image";
+  }
+  return value;
 }
 
 function imagePrompt(request: ImageGenerationRequest): string {
@@ -151,6 +159,15 @@ function googleAspectRatio(request: ImageGenerationRequest): typeof GOOGLE_IMAGE
   });
   candidates.sort((a, b) => a.distance - b.distance);
   return candidates[0]?.value || "1:1";
+}
+
+function googleImageGenerationConfig(model: string, request: ImageGenerationRequest): Record<string, unknown> {
+  return {
+    responseModalities: ["TEXT", "IMAGE"],
+    imageConfig: {
+      aspectRatio: googleAspectRatio(request),
+    },
+  };
 }
 
 function dimensionsFromPng(bytes: Buffer): { width: number; height: number } | null {
@@ -261,6 +278,16 @@ function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResu
     .safeParse(body);
   const providerMessage = parsedError.success ? parsedError.data.error?.message : undefined;
   const message = providerMessage || `Google image generation failed with HTTP ${status}.`;
+
+  if (status <= 0) {
+    return {
+      ok: false,
+      error: createProviderError(GOOGLE_PROVIDER_ID, "provider_unavailable", message, {
+        retryable: true,
+        userMessage: "Google network request failed. Check proxy, VPN, or provider connectivity.",
+      }),
+    };
+  }
 
   if (status === 401 || status === 403) {
     return {
@@ -380,11 +407,24 @@ function parseImageResponse(
 export function createGoogleImageFetchTransport(fetchImpl: typeof fetch): GoogleImageTransport {
   return async (request) => {
     const parsed = GoogleImageTransportRequestSchema.parse(request);
-    const response = await fetchImpl(parsed.url, {
-      method: parsed.method,
-      headers: parsed.headers,
-      body: JSON.stringify(parsed.body),
-    });
+    let response: Response;
+    try {
+      response = await fetchImpl(parsed.url, {
+        method: parsed.method,
+        headers: parsed.headers,
+        body: JSON.stringify(parsed.body),
+      });
+    } catch (error) {
+      return GoogleImageTransportResponseSchema.parse({
+        ok: false,
+        status: 0,
+        body: {
+          error: {
+            message: error instanceof Error ? error.message : "Google network request failed.",
+          },
+        },
+      });
+    }
 
     let body: unknown = null;
     try {
@@ -466,12 +506,7 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
                 ],
               },
             ],
-            generationConfig: {
-              responseModalities: ["TEXT", "IMAGE"],
-              imageConfig: {
-                aspectRatio: googleAspectRatio(parsedRequest),
-              },
-            },
+            generationConfig: googleImageGenerationConfig(model, parsedRequest),
           },
         }),
       );

@@ -6,6 +6,7 @@ import {
   type ProviderCredentialVaultStatus,
 } from "../providers/encrypted-credential-vault";
 import { mapPromptPackageToProviderRequest } from "../providers/request-mapper";
+import type { ProviderAdapterRegistry } from "../providers/executor";
 import { createBatchQueuePlan } from "../queue/planner";
 import { summarizeQueue } from "../queue/contracts";
 import { createAssetLibraryService } from "../assets/library-service";
@@ -81,6 +82,7 @@ import {
 export type LocalApiServiceOptions = {
   repository?: StorageRepository;
   credentialVault?: EncryptedProviderCredentialVault;
+  providerRegistry?: ProviderAdapterRegistry;
   resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
 };
 
@@ -288,6 +290,9 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
   const assetLibrary = createAssetLibraryService({ repository });
   const queueWorker = createWorkspaceQueueWorker({
     repository,
+    credentialResolver: credentialVault,
+    storedCredentialSource: "secretStore",
+    ...(options.providerRegistry ? { providerRegistry: options.providerRegistry } : {}),
     ...(options.resultFileStore ? { resultFileStore: options.resultFileStore } : {}),
   });
 

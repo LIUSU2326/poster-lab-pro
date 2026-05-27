@@ -20,6 +20,7 @@ import {
 import type { ProviderAdapterRegistry } from "../providers/executor";
 import type { LocalResultFileStore, ResultStoredFileMetadata } from "../results/file-store";
 import type { ProviderId } from "../schema/zod";
+import { providerCredentialKeyRef } from "../api/provider-credential-refs";
 import { prepareImageForTargetSize, type ImageOutputProcessing } from "../results/image-post-processing";
 import { summarizeWorkspaceSnapshot } from "../storage/contracts";
 import {
@@ -53,6 +54,7 @@ export type WorkspaceQueueWorkerOptions = {
   now?: () => string;
   credentialResolver?: CredentialResolver;
   credentialRefs?: Partial<Record<ProviderId, ProviderCredentialRef>>;
+  storedCredentialSource?: "runtime" | "secretStore";
   providerRegistry?: ProviderAdapterRegistry;
   resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
   useMockCredentials?: boolean;
@@ -301,16 +303,34 @@ function mergeQueueSummaries(existing: QueueSummary[], incoming: QueueSummary): 
   return [...merged.values()];
 }
 
-function credentialRefFromStoredConfig(config: StoredProviderConfig | null | undefined): ProviderCredentialRef | undefined {
+function credentialRefFromStoredConfig(
+  config: StoredProviderConfig | null | undefined,
+  workspaceId: string,
+  source: "runtime" | "secretStore" = "runtime",
+): ProviderCredentialRef | undefined {
   if (!config?.hasApiKey) return undefined;
   return createProviderCredentialRef({
     providerId: config.providerId,
-    source: "runtime",
-    keyRef: config.providerId,
+    source,
+    keyRef: source === "secretStore" ? providerCredentialKeyRef({ workspaceId, providerId: config.providerId }) : config.providerId,
     apiKeyPreview: config.apiKeyMasked,
     configured: config.hasApiKey,
     updatedAt: config.updatedAt,
   });
+}
+
+function credentialRefsFromSnapshot(
+  snapshot: WorkspaceSnapshot,
+  explicitRefs: Partial<Record<ProviderId, ProviderCredentialRef>> | undefined,
+  source: "runtime" | "secretStore",
+): Partial<Record<ProviderId, ProviderCredentialRef>> {
+  const refs: Partial<Record<ProviderId, ProviderCredentialRef>> = { ...(explicitRefs || {}) };
+  for (const config of Object.values(snapshot.providerConfigs || {})) {
+    if (!config?.providerId || refs[config.providerId]) continue;
+    const ref = credentialRefFromStoredConfig(config, snapshot.metadata.workspaceId, source);
+    if (ref) refs[config.providerId] = ref;
+  }
+  return refs;
 }
 
 function mockResolverForStoredConfig(config: StoredProviderConfig | null | undefined): CredentialResolver | undefined {
@@ -345,7 +365,10 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
       const snapshot = await loadWorkspace(repository, parsed.workspaceId);
       const initialPlan = findQueuePlan(snapshot, parsed.jobId);
       const storedConfig = providerConfigFor(snapshot, initialPlan.job.providerId);
-      const credentialRef = options.credentialRefs?.[initialPlan.job.providerId] || credentialRefFromStoredConfig(storedConfig);
+      const storedCredentialSource = options.storedCredentialSource || (options.credentialResolver ? "secretStore" : "runtime");
+      const credentialRefs = credentialRefsFromSnapshot(snapshot, options.credentialRefs, storedCredentialSource);
+      const credentialRef = credentialRefs[initialPlan.job.providerId]
+        || credentialRefFromStoredConfig(storedConfig, snapshot.metadata.workspaceId, storedCredentialSource);
       const credentialResolver = options.credentialResolver
         || (options.useMockCredentials === false
           ? undefined
@@ -354,10 +377,12 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
         snapshot,
         storedConfig,
         ...(credentialRef ? { credentialRef } : {}),
+        credentialRefs,
         ...(credentialResolver ? { credentialResolver } : {}),
         ...(options.providerRegistry ? { registry: options.providerRegistry } : {}),
       });
       const createdAt = now();
+      const baseSnapshot = runResult.workspace || snapshot;
 
       const resultBatches = await Promise.all(runResult.plan.tasks
         .filter((task) => task.status === "succeeded" && taskCreatesResult(task))
@@ -367,8 +392,8 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
               task,
               providerResultId,
               index,
-              projectId: snapshot.project.id,
-              workspaceId: snapshot.metadata.workspaceId,
+              projectId: baseSnapshot.project.id,
+              workspaceId: baseSnapshot.metadata.workspaceId,
               createdAt,
               ...(options.resultFileStore ? { fileStore: options.resultFileStore } : {}),
             }),
@@ -379,14 +404,14 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
       const newArchiveRows = parsed.archiveResults ? newResults.map((result) => archiveRowFromResult(result, createdAt)) : [];
       const safeRunPlan = sanitizeQueuePlanProviderAssets(runResult.plan);
       const nextSnapshot = WorkspaceSnapshotSchema.parse({
-        ...snapshot,
-        queuePlans: mergeQueuePlans(snapshot.queuePlans, safeRunPlan),
-        queueSummaries: mergeQueueSummaries(snapshot.queueSummaries, summarizeQueue(safeRunPlan)),
-        results: mergeResults(snapshot.results, newResults),
-        archiveRows: mergeArchiveRows(snapshot.archiveRows, newArchiveRows),
+        ...baseSnapshot,
+        queuePlans: mergeQueuePlans(baseSnapshot.queuePlans, safeRunPlan),
+        queueSummaries: mergeQueueSummaries(baseSnapshot.queueSummaries, summarizeQueue(safeRunPlan)),
+        results: mergeResults(baseSnapshot.results, newResults),
+        archiveRows: mergeArchiveRows(baseSnapshot.archiveRows, newArchiveRows),
         metadata: {
-          ...snapshot.metadata,
-          revision: snapshot.metadata.revision + 1,
+          ...baseSnapshot.metadata,
+          revision: baseSnapshot.metadata.revision + 1,
           updatedAt: createdAt,
         },
       });

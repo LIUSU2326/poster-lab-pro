@@ -9,12 +9,22 @@ import {
 } from "../providers/encrypted-credential-vault";
 import { createProviderConnectionFetchTransport } from "../providers/connection-diagnostics";
 import { createLocalResultFileStore } from "../results";
-import { createMemoryDraftRepository, createMockWorkspaceSnapshot } from "../storage";
+import { createJsonFileWorkspaceRepository, createMockWorkspaceSnapshot } from "../storage";
+import {
+  createGoogleLiveImageAdapter,
+  createMockProviderRegistry,
+  createOpenAILiveImageAdapter,
+  type ProviderAdapterRegistry,
+} from "../providers";
 import {
   createGoogleImageFetchTransport,
   createManualLiveGenerationService,
   createOpenAIImageFetchTransport,
 } from "./manual-live-generation";
+import {
+  createOpenAICompatibleBriefAdapter,
+  createOpenAICompatibleChatFetchTransport,
+} from "../providers/openai-compatible-brief-adapter";
 import { createProviderDiagnosticService } from "./provider-diagnostics";
 
 function createFileCredentialVaultBackingStore(filePath: string): ProviderCredentialVaultBackingStore {
@@ -70,8 +80,49 @@ function createFileCredentialVaultBackingStore(filePath: string): ProviderCreden
   };
 }
 
+function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRegistry {
+  const registry = createMockProviderRegistry();
+  const chatTransport = createOpenAICompatibleChatFetchTransport(fetchImpl);
+  const openAIImageAdapter = createOpenAILiveImageAdapter({
+    transport: createOpenAIImageFetchTransport(fetchImpl),
+  });
+  const googleImageAdapter = createGoogleLiveImageAdapter({
+    transport: createGoogleImageFetchTransport(fetchImpl),
+  });
+
+  registry.openai = {
+    ...registry.openai,
+    manifest: openAIImageAdapter.manifest,
+    validateConfig: openAIImageAdapter.validateConfig,
+    healthCheck: openAIImageAdapter.healthCheck,
+    ...(openAIImageAdapter.generateImage ? { generateImage: openAIImageAdapter.generateImage.bind(openAIImageAdapter) } : {}),
+  };
+  for (const providerId of ["openai", "aigocode", "deepseek", "qwen"] as const) {
+    const briefAdapter = createOpenAICompatibleBriefAdapter({
+      providerId,
+      transport: chatTransport,
+    });
+    registry[providerId] = {
+      ...registry[providerId],
+      manifest: briefAdapter.manifest,
+      validateConfig: briefAdapter.validateConfig,
+      healthCheck: briefAdapter.healthCheck.bind(briefAdapter),
+      ...(briefAdapter.generateBrief ? { generateBrief: briefAdapter.generateBrief.bind(briefAdapter) } : {}),
+    };
+  }
+  registry.google = {
+    ...registry.google,
+    manifest: googleImageAdapter.manifest,
+    validateConfig: googleImageAdapter.validateConfig,
+    healthCheck: googleImageAdapter.healthCheck,
+    ...(googleImageAdapter.generateImage ? { generateImage: googleImageAdapter.generateImage.bind(googleImageAdapter) } : {}),
+  };
+
+  return registry;
+}
+
 type NextApiSingleton = {
-  repository: ReturnType<typeof createMemoryDraftRepository>;
+  repository: ReturnType<typeof createJsonFileWorkspaceRepository>;
   credentialVault: ReturnType<typeof createEncryptedProviderCredentialVault>;
   localApiService: ReturnType<typeof createLocalApiService>;
   providerDiagnosticService: ReturnType<typeof createProviderDiagnosticService>;
@@ -86,8 +137,11 @@ declare global {
 }
 
 function createNextApiSingleton(): NextApiSingleton {
-  const repository = createMemoryDraftRepository([createMockWorkspaceSnapshot()]);
   const runtimeDir = process.env.POSTER_LAB_RUNTIME_DIR || path.join(process.cwd(), "artifacts", "runtime");
+  const repository = createJsonFileWorkspaceRepository({
+    filePath: path.join(runtimeDir, "workspace-store.json"),
+    seedSnapshots: [createMockWorkspaceSnapshot()],
+  });
   const resultFileStore = createLocalResultFileStore({
     rootDir: path.join(runtimeDir, "..", "generated-results"),
   });
@@ -102,6 +156,7 @@ function createNextApiSingleton(): NextApiSingleton {
     localApiService: createLocalApiService({
       repository,
       credentialVault,
+      providerRegistry: createQueueProviderRegistry(fetch),
       resultFileStore,
     }),
     providerDiagnosticService: createProviderDiagnosticService({

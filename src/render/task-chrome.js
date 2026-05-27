@@ -25,7 +25,10 @@ function formatServiceQueue(serviceFlow) {
       ? serviceFlow.queuePlanCreate.data.summary
       : null;
   if (!summary) return "队列待处理";
-  return `${summary.completed || 0}/${summary.total} 个任务 / $${summary.estimatedCost.toFixed(2)}`;
+  const cost = typeof summary.actualCost === "number"
+    ? `实际 ${summary.actualCost.toFixed(2)}`
+    : "真实成本未返回";
+  return `${summary.completed || 0}/${summary.total} 个任务 / ${cost}`;
 }
 
 function formatValidationIssues(validation) {
@@ -57,7 +60,7 @@ export function renderTaskChrome(activeMode) {
       <button class="task-slim" type="button" data-action="toggle-task">
         <strong>${modeLabel}任务</strong>
         <span>${queue.summary.completed} / ${queue.summary.total} 完成</span>
-        <span>${submission ? `表单 ${submission.status}` : `阶段 ${queue.summary.currentStage}`}</span>
+        <span>${submission ? `本次 ${submission.status}` : `阶段 ${queue.summary.currentStage}`}</span>
         <span class="task-fail">${queue.summary.failed} 失败</span>
         <span class="manual-live-slim ${activeOperation ? "success" : ""}">${activeOperation ? `操作 ${activeOperation.status}` : "无操作"}</span>
         <b>${state.taskOpen ? "收起" : "详情"}</b>
@@ -86,7 +89,7 @@ export function renderTaskChrome(activeMode) {
           ${submission ? `
             <div class="submission-card compact">
               <div>
-                <span>当前任务</span>
+                <span>本次提交</span>
                 <strong>${escapeHtml(submission.schemeTitle)}</strong>
                 <small>${escapeHtml(submission.providerId)} / ${escapeHtml(submission.transport)} / ${escapeHtml(submission.status)}</small>
               </div>
@@ -104,7 +107,7 @@ export function renderTaskChrome(activeMode) {
           ` : ""}
           <div class="task-stats">
             <div><span>进度</span><strong>${queue.summary.progress}%</strong></div>
-            <div><span>预估成本</span><strong>${queue.summary.estimatedCost}</strong></div>
+            <div><span>成本</span><strong>${queue.summary.costLabel || queue.summary.estimatedCost}</strong></div>
             <div><span>耗时</span><strong>${queue.summary.elapsed}</strong></div>
             <div><span>失败处理</span><strong>${queue.summary.failureAction}</strong></div>
           </div>
@@ -118,7 +121,7 @@ export function renderTaskChrome(activeMode) {
                 <i><em style="width:${item.progress}%"></em></i>
               </div>
             `).join("")}
-            ${queue.rows.map((item) => `
+            ${queue.rows.length > 0 ? queue.rows.map((item) => `
               <div class="queue-row">
                 <div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span></div>
                 <span>${escapeHtml(item.state)}</span>
@@ -126,7 +129,15 @@ export function renderTaskChrome(activeMode) {
                 <span>${escapeHtml(item.time)}</span>
                 <i><em style="width:${item.progress}%"></em></i>
               </div>
-            `).join("")}
+            `).join("") : `
+              <div class="queue-row queue-empty-row">
+                <div><strong>暂无队列任务</strong><span>点击生成后，这里只显示真实创建的队列。</span></div>
+                <span>等待</span>
+                <span>真实成本未返回</span>
+                <span>等待</span>
+                <i><em style="width:0%"></em></i>
+              </div>
+            `}
           </div>
         </div>
       ` : ""}

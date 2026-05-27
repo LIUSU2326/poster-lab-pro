@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
@@ -48,11 +48,32 @@ const deliverySuitesByMode: Record<ProductionMode, DeliverySuite[]> = {
 };
 
 function normalizeInitialValues(mode: ProductionMode, values: OutputSettingsForm): OutputSettingsForm {
-  return OutputSettingsFormSchema.parse({
+  const parsed = OutputSettingsFormSchema.parse({
     ...values,
     mode,
     aspectRatios: mode === "icon" ? ["1:1"] : values.aspectRatios,
   });
+  const singleDefaultModes = new Set<ProductionMode>(["poster", "collab", "announcement"]);
+  const oldSuitePresetIds = new Set<PlatformPreset>(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
+  const carriesOldSuitePreset = parsed.platformPresets.some((preset) => oldSuitePresetIds.has(preset));
+  const carriesCustomSuiteState = parsed.platformPresets.includes("custom") && parsed.aspectRatios.length > 1 && !parsed.customSize;
+  if (singleDefaultModes.has(mode) && (carriesOldSuitePreset || carriesCustomSuiteState)) {
+    return {
+      ...parsed,
+      platformPresets: ["custom"],
+      aspectRatios: ["16:9"],
+      customSize: null,
+    };
+  }
+  return parsed;
+}
+
+function selectionModeForValues(values: OutputSettingsForm): "suite" | "single" | "custom-size" {
+  if (values.customSize) return "custom-size";
+  const suitePresetIds = new Set<PlatformPreset>(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
+  return values.platformPresets.some((preset) => suitePresetIds.has(preset)) || values.aspectRatios.length > 1
+    ? "suite"
+    : "single";
 }
 
 function uniqueSizes(sizes: string[]): string[] {
@@ -89,6 +110,8 @@ function splitExplicitSize(size: string): { width: string; height: string } {
 
 export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNote }: OutputSettingsSectionProps) {
   const defaults = useMemo(() => normalizeInitialValues(mode, initialValues), [mode, initialValues]);
+  const initialSelectionMode = useMemo(() => selectionModeForValues(defaults), [defaults]);
+  const committedDefaultsRef = useRef("");
   const form = useForm<OutputSettingsForm>({
     resolver: zodResolver(OutputSettingsFormSchema) as Resolver<OutputSettingsForm>,
     defaultValues: defaults,
@@ -104,8 +127,17 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
   const [customSuite, setCustomSuite] = useState(customSuiteSizes());
   const [customSuiteEnabled, setCustomSuiteEnabled] = useState(state.outputCustomSuiteEnabled !== false);
   const [sizeDrafts, setSizeDrafts] = useState<Record<string, { width: string; height: string }>>({});
-  const [selectionMode, setSelectionMode] = useState(state.outputSelectionMode || "suite");
+  const [selectionMode, setSelectionMode] = useState(initialSelectionMode);
   const [planStrategy, setPlanStrategy] = useState(state.outputPlanStrategy || "unified");
+
+  useEffect(() => {
+    const fingerprint = JSON.stringify(defaults);
+    if (committedDefaultsRef.current === fingerprint) return;
+    committedDefaultsRef.current = fingerprint;
+    state.outputSelectionMode = initialSelectionMode;
+    setSelectionMode(initialSelectionMode);
+    replaceGenerationFormField("outputSettings", defaults);
+  }, [defaults, initialSelectionMode]);
 
   const commit = async (nextValues: OutputSettingsForm) => {
     const parsed = OutputSettingsFormSchema.safeParse(nextValues);

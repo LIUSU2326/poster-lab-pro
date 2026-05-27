@@ -236,6 +236,7 @@ export function createManualLiveGenerationService(
           workspaceId: parsed.workspaceId,
           providerId: parsed.providerId,
           timeoutMs: parsed.timeoutMs,
+          strictModel: false,
           verifyModels: true,
         });
         if (!connectionEnvelope.ok) {

@@ -6,3 +6,4 @@ export * from "./local-draft-repository";
 export * from "./database-schema";
 export * from "./database-repository";
 export * from "./memory-database-client";
+export * from "./json-file-repository";

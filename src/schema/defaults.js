@@ -4,20 +4,20 @@ const defaultProjectName = "Pizza Kitchen Adventures";
 
 export const modeDefaultOutput = {
   poster: {
-    platformPresets: ["tiktok", "metaAds"],
-    aspectRatios: ["9:16", "16:9", "1200x627"],
+    platformPresets: ["custom"],
+    aspectRatios: ["16:9"],
     schemeCount: 16,
     imagesPerScheme: 1,
   },
   collab: {
-    platformPresets: ["metaAds", "tiktok"],
-    aspectRatios: ["16:9", "9:16", "1200x627"],
+    platformPresets: ["custom"],
+    aspectRatios: ["16:9"],
     schemeCount: 12,
     imagesPerScheme: 1,
   },
   announcement: {
-    platformPresets: ["tapTap", "googlePlay"],
-    aspectRatios: ["16:9", "1:1"],
+    platformPresets: ["custom"],
+    aspectRatios: ["16:9"],
     schemeCount: 8,
     imagesPerScheme: 1,
   },
@@ -61,10 +61,10 @@ const providerDefaults = {
     baseUrl: "",
     defaultModel: "gemini-3-pro-image-preview",
     modelSlots: {
-      concept: "gemini-3-pro-preview",
+      concept: "gemini-3.1-pro-preview",
       image: "gemini-3-pro-image-preview",
-      styleReference: "gemini-3-pro-preview",
-      compositionReference: "gemini-3-pro-preview",
+      styleReference: "gemini-3.1-pro-preview",
+      compositionReference: "gemini-3.1-pro-preview",
     },
   },
   deepseek: {

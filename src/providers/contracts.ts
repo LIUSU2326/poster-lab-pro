@@ -146,6 +146,8 @@ export const ProviderBriefResponseSchema = z.object({
       title: z.string().min(1),
       brief: z.string().min(1),
       prompt: z.string().min(1),
+      promptZh: z.string().min(1).optional(),
+      promptEn: z.string().min(1).optional(),
       slogans: z.partialRecord(SloganLanguageSchema, z.string().min(1)),
     }),
   ),

@@ -132,12 +132,43 @@ async function postJson(url: string, init: RequestInit): Promise<unknown> {
   const response = await fetch(url, init);
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    const message = body && typeof body === "object" && "error" in body
-      ? JSON.stringify((body as { error?: unknown }).error)
-      : `Provider returned HTTP ${response.status}.`;
+    const message = formatProviderError(url, response.status, body);
     throw new Error(message);
   }
   return body;
+}
+
+function formatProviderError(url: string, status: number, body: unknown): string {
+  const parsed = z
+    .object({
+      error: z
+        .object({
+          message: z.string().optional(),
+          status: z.string().optional(),
+          code: z.union([z.string(), z.number()]).optional(),
+        })
+        .passthrough()
+        .optional(),
+    })
+    .passthrough()
+    .safeParse(body);
+  const providerMessage = parsed.success ? parsed.data.error?.message || "" : "";
+  const modelMatch = url.match(/\/models\/([^:/?]+):/) || url.match(/model=([^&]+)/);
+  const model = modelMatch?.[1] ? decodeURIComponent(modelMatch[1]) : "";
+
+  if (status === 404 && /not found|no longer available|not available/i.test(providerMessage)) {
+    return model
+      ? `模型 ${model} 已不可用，请在“模型与 API Key”里改用新版模型后再提取参考图。`
+      : "当前选择的模型已不可用，请在“模型与 API Key”里改用新版模型后再提取参考图。";
+  }
+  if (status === 401 || status === 403) return "API Key 鉴权失败，请检查 Key、模型权限和供应商区域限制。";
+  if (status === 429) return "供应商限流或额度不足，请稍后重试或切换模型。";
+  return providerMessage || `Provider returned HTTP ${status}.`;
+}
+
+function normalizeReferenceModel(providerId: z.infer<typeof ProviderIdSchema>, model: string): string {
+  if (providerId === "google" && model === "gemini-3-pro-preview") return "gemini-3.1-pro-preview";
+  return model;
 }
 
 async function runOpenAICompatible(input: {
@@ -281,7 +312,7 @@ export async function POST(
     }
 
     const slot = body.kind === "style" ? "styleReference" : "compositionReference";
-    const model = config.modelSlots?.[slot] || config.defaultModel || "gpt-5.2";
+    const model = normalizeReferenceModel(providerId, config.modelSlots?.[slot] || config.defaultModel || "gpt-5.2");
     const baseUrl = normalizeBaseUrl(config.baseUrl, providerId);
     const image = parseImageDataUrl(body.imageDataUrl);
     const prompt = promptFor(body.kind, body.label);

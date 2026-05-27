@@ -157,6 +157,10 @@ function assetsForPromptMode(snapshot: WorkspaceSnapshot, mode: ProductionMode):
 
 function createSlogans(snapshot: WorkspaceSnapshot, modeState: WorkspaceModeState, schemeId: string | null) {
   const scheme = schemeId ? snapshot.schemes.find((item) => item.id === schemeId) : undefined;
+  if (modeState.sloganSettings.mode === "off") {
+    return {};
+  }
+
   if (modeState.sloganSettings.mode === "global" && modeState.sloganSettings.globalSlogan) {
     return Object.fromEntries(
       modeState.sloganSettings.languages.map((language) => [language, modeState.sloganSettings.globalSlogan]),

@@ -12,22 +12,22 @@ export const defaultProjectName = "Pizza Kitchen Adventures";
 
 export const modeDefaultOutput: Record<ProductionMode, Omit<OutputSettingsForm, "mode">> = {
   poster: {
-    platformPresets: ["tiktok", "metaAds"],
-    aspectRatios: ["9:16", "16:9", "1200x627"],
+    platformPresets: ["custom"],
+    aspectRatios: ["16:9"],
     schemeCount: 16,
     imagesPerScheme: 1,
     customSize: null,
   },
   collab: {
-    platformPresets: ["metaAds", "tiktok"],
-    aspectRatios: ["16:9", "9:16", "1200x627"],
+    platformPresets: ["custom"],
+    aspectRatios: ["16:9"],
     schemeCount: 12,
     imagesPerScheme: 1,
     customSize: null,
   },
   announcement: {
-    platformPresets: ["tapTap", "googlePlay"],
-    aspectRatios: ["16:9", "1:1"],
+    platformPresets: ["custom"],
+    aspectRatios: ["16:9"],
     schemeCount: 8,
     imagesPerScheme: 1,
     customSize: null,
@@ -74,10 +74,10 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
     baseUrl: "",
     defaultModel: "gemini-3-pro-image-preview",
     modelSlots: {
-      concept: "gemini-3-pro-preview",
+      concept: "gemini-2.5-flash",
       image: "gemini-3-pro-image-preview",
-      styleReference: "gemini-3-pro-preview",
-      compositionReference: "gemini-3-pro-preview",
+      styleReference: "gemini-2.5-flash",
+      compositionReference: "gemini-2.5-flash",
     },
   },
   deepseek: {

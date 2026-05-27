@@ -2,6 +2,7 @@
 import {
   getAssetSlotsForMode,
   getDefaultAssetRoleForMode,
+  getProviderRows,
   getWorkspaceProject,
   getWorkspaceSnapshotSummary,
 } from '../data/workspace-adapters.js';
@@ -84,10 +85,7 @@ export function renderConfigPanel(activeMode) {
   const snapshotSummary = getWorkspaceSnapshotSummary();
   const copy = getModeCopy(activeMode.id);
   const defaultAssetRole = getDefaultAssetRoleForMode(activeMode.id);
-  const assetSlots = [
-    ...normalizeAssetSlots(activeMode.id, getAssetSlotsForMode(activeMode.id, activeMode.assets)),
-    ...getCustomAssetSlots(activeMode.id, defaultAssetRole),
-  ];
+  const assetSlots = normalizeAssetSlots(activeMode.id, getAssetSlotsForMode(activeMode.id, activeMode.assets));
   const form = getActiveGenerationFormValues();
   const projectBrief = form.projectBrief;
   const direction = getDirectionPayload(activeMode.id);
@@ -134,6 +132,7 @@ export function renderConfigPanel(activeMode) {
             <textarea aria-label="项目描述" data-form-field="projectBrief.gameDescription">${escapeHtml(briefDescription)}</textarea>
             ${renderModeBrief(activeMode, form)}
           </div>
+          ${renderSloganSettings(form)}
         </section>
 
         <section class="config-section">
@@ -205,10 +204,7 @@ export function renderConfigPanel(activeMode) {
             <span>05 模型</span>
             <button type="button" data-action="open-settings">配置</button>
           </div>
-          <div class="engine-card engine-card-compact">
-            <strong>自动路由模型</strong>
-            <span>已启用</span>
-          </div>
+          ${renderModelRoutingSummary()}
         </section>
       </div>
 
@@ -242,6 +238,8 @@ function normalizeAssetSlots(modeId, slots) {
 }
 
 function normalizeAssetSlotLabel(slot, fallbackLabel) {
+  const fallback = normalizeAssetLabel(fallbackLabel);
+  if (fallback) return fallback;
   const label = normalizeAssetLabel(slot?.label || fallbackLabel);
   if (/背景|场景/i.test(label)) return "场景";
   if (/logo|标识/i.test(label)) return "LOGO";
@@ -254,16 +252,6 @@ function normalizeAssetLabel(label) {
   return String(label || "").replace(/品牌\s*标识/g, "品牌 LOGO").replace(/游戏\s*标识/g, "游戏 LOGO").replace(/标识/g, "LOGO");
 }
 
-function getCustomAssetSlots(modeId, defaultRole) {
-  const labels = Array.isArray(state.customAssetCategories?.[modeId]) ? state.customAssetCategories[modeId] : [];
-  return labels.map((label) => ({
-    role: defaultRole || "styleReference",
-    label,
-    state: "自定义",
-    tone: "custom",
-  }));
-}
-
 function getOutputNote(modeId, fallback) {
   return {
     poster: "批量输出会同时照顾竖版、商店主图和广告位裁切安全。",
@@ -272,6 +260,36 @@ function getOutputNote(modeId, fallback) {
     logo: "审批前检查浅色、深色和纯色背景下的可读性。",
     icon: "图标模式锁定 1:1，并避免文字型输出。",
   }[modeId] || fallback || "输出设置会应用到当前批次。";
+}
+
+function renderModelRoutingSummary() {
+  const providers = getProviderRows();
+  const providerNameById = Object.fromEntries(providers.map((provider) => [provider.id, provider.name || provider.id]));
+  const currentPlan = state.providerRoutePlans.find((plan) => plan.id === state.providerRoutePlan) || state.providerRoutePlans[0];
+  const slotLabels = {
+    concept: "方案",
+    image: "图像",
+    styleReference: "画风",
+    compositionReference: "构图",
+  };
+  const routeItems = Object.entries(slotLabels).map(([slot, label]) => {
+    const route = state.providerSlotRoutes?.[slot] || {};
+    const providerId = route.providerId || state.provider || "openai";
+    return `<span>${escapeHtml(label)} · ${escapeHtml(providerNameById[providerId] || providerId)}</span>`;
+  }).join("");
+
+  return `
+    <div class="engine-card engine-card-compact model-plan-card">
+      <div>
+        <strong>当前配置方案</strong>
+        <small>${escapeHtml(currentPlan?.name || "标准方案")}</small>
+      </div>
+      <span>${escapeHtml(state.providerRoutePlan === "image-first" ? "图像优先" : "已选择")}</span>
+      <div class="model-plan-routes">
+        ${routeItems}
+      </div>
+    </div>
+  `;
 }
 
 function getOutputSizes(modeId, fallback = []) {
@@ -405,6 +423,48 @@ function renderModeBrief(activeMode, form) {
   `;
 }
 
+function renderSloganSettings(form) {
+  const settings = form.sloganSettings || {};
+  const mode = settings.mode || "auto";
+  const globalSlogan = settings.globalSlogan || "";
+  const options = [
+    ["auto", "自动"],
+    ["global", "全局"],
+    ["off", "关闭"],
+  ];
+
+  return `
+    <div class="slogan-settings-card">
+      <div class="slogan-settings-head">
+        <strong>宣传词</strong>
+        <div class="segmented-mini" role="group" aria-label="宣传词模式">
+          ${options.map(([value, label]) => `
+            <button
+              class="${mode === value ? "active" : ""}"
+              type="button"
+              data-form-choice="sloganSettings.mode"
+              data-choice-value="${value}"
+            >${label}</button>
+          `).join("")}
+        </div>
+      </div>
+      ${mode === "global" ? `
+        <label class="slogan-global-field">
+          <span>全局宣传词</span>
+          <input
+            value="${escapeAttribute(globalSlogan)}"
+            aria-label="全局宣传词"
+            data-form-field="sloganSettings.globalSlogan"
+            placeholder="例如：狩猎巨型食材，端上荒野盛宴"
+          />
+        </label>
+      ` : `
+        <small>${mode === "off" ? "生成提示词时不写入宣传词。" : "由模型根据当前方案生成宣传词。"}</small>
+      `}
+    </div>
+  `;
+}
+
 function renderModeDirection(activeMode, form) {
   const modeForm = form.modeForm;
   const direction = getDirectionPayload(activeMode.id);
@@ -445,7 +505,10 @@ function renderModeDirection(activeMode, form) {
 }
 
 function renderModeOutput(activeMode, form, outputSizes) {
-  const outputSettings = form.outputSettings;
+  const outputSettings = normalizeRenderedOutputSettings(activeMode.id, form.outputSettings);
+  const suitePresetIds = new Set(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
+  const suiteMode = outputSettings.platformPresets?.some((preset) => suitePresetIds.has(preset))
+    || outputSettings.aspectRatios.length > 1;
 
   return `
     <div class="size-grid ${activeMode.id === "icon" ? "single-size" : ""}">
@@ -459,10 +522,31 @@ function renderModeOutput(activeMode, form, outputSizes) {
         <button type="button">自定义</button>
       </div>
     ` : ""}
-    <div class="segmented">
+    ${suiteMode ? `<div class="segmented">
       <button class="active" type="button">${activeMode.id === "icon" ? "锁定方形" : "统一方案"}</button>
       <button type="button">${activeMode.id === "icon" ? "不改尺寸" : "独立方案"}</button>
-    </div>
+    </div>` : ""}
     <p class="output-note">${getOutputNote(activeMode.id, activeMode.sizeNote)}</p>
   `;
+}
+
+function normalizeRenderedOutputSettings(modeId, values = {}) {
+  const aspectRatios = Array.isArray(values.aspectRatios) ? values.aspectRatios : [];
+  const platformPresets = Array.isArray(values.platformPresets) ? values.platformPresets : [];
+  const oldSuitePresetIds = new Set(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
+  const carriesOldSuitePreset = platformPresets.some((preset) => oldSuitePresetIds.has(preset));
+  const carriesCustomSuiteState = platformPresets.includes("custom") && aspectRatios.length > 1 && !values.customSize;
+  if (["poster", "collab", "announcement"].includes(modeId) && (carriesOldSuitePreset || carriesCustomSuiteState)) {
+    return {
+      ...values,
+      platformPresets: ["custom"],
+      aspectRatios: ["16:9"],
+      customSize: null,
+    };
+  }
+  return {
+    ...values,
+    platformPresets,
+    aspectRatios: modeId === "icon" ? ["1:1"] : (aspectRatios.length > 0 ? aspectRatios : ["16:9"]),
+  };
 }

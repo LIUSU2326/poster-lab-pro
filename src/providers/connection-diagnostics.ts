@@ -184,8 +184,9 @@ function modelIds(body: unknown): string[] {
     .filter((item): item is string => item.length > 0);
 }
 
-function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids: string[]): boolean {
+function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids: string[], strictModel = false): boolean {
   if (ids.length === 0 || ids.includes(defaultModel)) return true;
+  if (strictModel) return false;
   if ((providerId === "openai" || providerId === "aigocode") && defaultModel.startsWith("gpt-image-")) {
     return ids.some((id) => id.startsWith("gpt-image-"));
   }
@@ -365,7 +366,7 @@ export async function runProviderConnectionDiagnostic(input: {
     });
   }
 
-  const defaultModel = input.storedConfig.defaultModel || input.storedConfig.modelSlots.image || manifest.modelSlots.image?.[0];
+  const defaultModel = parsed.model || input.storedConfig.defaultModel || input.storedConfig.modelSlots.image || manifest.modelSlots.image?.[0];
   let apiKey = "";
   if (manifest.apiKeyRequired) {
     const resolved = await resolveApiKey({
@@ -428,7 +429,9 @@ export async function runProviderConnectionDiagnostic(input: {
     }
 
     const ids = parsed.verifyModels ? modelIds(response.body) : [];
-    const defaultModelAvailable = defaultModel ? modelFamilyAvailable(parsed.providerId, defaultModel, ids) : undefined;
+    const defaultModelAvailable = defaultModel
+      ? modelFamilyAvailable(parsed.providerId, defaultModel, ids, parsed.strictModel)
+      : undefined;
     const ok = !defaultModel || defaultModelAvailable !== false;
 
     return result({
@@ -439,10 +442,10 @@ export async function runProviderConnectionDiagnostic(input: {
       startedAt,
       message: ok
         ? `${manifest.displayName} connection test passed.`
-        : `${manifest.displayName} responded, but the default model was not found in the model list.`,
+        : `${manifest.displayName} responded, but the selected model was not found in the model list.`,
       userMessage: ok
         ? "Provider connection is ready."
-        : "Provider responded, but the selected default model was not found.",
+        : "Provider responded, but the selected model was not found.",
       errorCode: ok ? undefined : "missing_config",
       modelCount: ids.length,
       defaultModel,

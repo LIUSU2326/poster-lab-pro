@@ -66,10 +66,10 @@ export const providerManifests = {
       "costEstimate",
     ],
     modelSlots: {
-      concept: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+      concept: ["gemini-2.5-flash", "gemini-2.5-pro"],
       image: ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"],
-      styleReference: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro"],
-      compositionReference: ["gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro"],
+      styleReference: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview"],
+      compositionReference: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview"],
     },
     supportedModes: ["poster", "collab", "announcement", "logo", "icon"],
     notes: ["Google AI Studio Gemini image provider for Nano Banana style generation."],

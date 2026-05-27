@@ -15,10 +15,10 @@ const providerModelCatalog = {
     vision: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1"],
   },
   google: {
-    default: ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-3-pro-image-preview", "gemini-3.1-flash-image-preview"],
-    plan: ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash"],
-    image: ["gemini-3-pro-image-preview", "gemini-3.1-flash-image-preview", "imagen-4.0-generate-001", "imagen-4.0-ultra-generate-001"],
-    vision: ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite", "gemini-2.5-pro"],
+    default: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "gemini-2.5-flash-image"],
+    plan: ["gemini-2.5-flash", "gemini-2.5-pro"],
+    image: ["gemini-3-pro-image-preview", "gemini-2.5-flash-image", "imagen-4.0-generate-001", "imagen-4.0-ultra-generate-001"],
+    vision: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview"],
   },
   deepseek: {
     default: ["deepseek-v4-flash", "deepseek-v4-pro"],
@@ -202,6 +202,28 @@ function modelAvailability(connection, provider) {
   if (!connection || connection.phase === "idle") return "";
   if (typeof connection.modelCount === "number") return `${providerSourceLabel(provider)} 返回 ${connection.modelCount} 个模型`;
   return "";
+}
+
+function renderRoutePlanTestStatus() {
+  const test = state.providerRoutePlanTest || {};
+  const currentPlan = test.planId === state.providerRoutePlan ? test : null;
+  const results = Array.isArray(currentPlan?.results) ? currentPlan.results : [];
+  if (!currentPlan || currentPlan.phase === "idle") {
+    return `<p class="route-plan-test-hint">测试会逐项检查当前方案里的方案生成、图像生成、画风参考分析和构图参考分析模型。</p>`;
+  }
+
+  return `
+    <div class="route-plan-test-status ${escapeHtml(currentPlan.phase)}" aria-live="polite">
+      ${results.map((result) => `
+        <div class="${result.ok ? "ok" : result.status === "testing" || result.status === "pending" ? "pending" : "failed"}">
+          <strong>${escapeHtml(result.label || result.slot)}</strong>
+          <span>${escapeHtml(result.providerId)} · ${escapeHtml(result.model)}</span>
+          <small>${escapeHtml(result.ok ? "通过" : result.message || "未通过")}</small>
+        </div>
+      `).join("")}
+      ${currentPlan.error ? `<p>${escapeHtml(currentPlan.error)}</p>` : ""}
+    </div>
+  `;
 }
 
 function credentialFeedback(credential, configured) {
@@ -450,6 +472,9 @@ export function renderSettingsSheet() {
                     `).join("")}
                   </div>
                   <div class="route-plan-actions">
+                    <button class="route-plan-test-button ${state.providerRoutePlanTest?.phase === "testing" ? "loading" : ""}" type="button" data-action="test-provider-route-plan" ${state.providerRoutePlanTest?.phase === "testing" ? "disabled" : ""}>
+                      ${state.providerRoutePlanTest?.phase === "testing" ? "测试中..." : "测试当前方案"}
+                    </button>
                     <button class="route-plan-icon-button" type="button" data-action="add-provider-route-plan" aria-label="新增配置方案" title="新增配置方案">
                       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M12 5v14M5 12h14"></path>
@@ -467,6 +492,7 @@ export function renderSettingsSheet() {
                   <input value="${escapeHtml(activeRoutePlan?.name || "")}" data-provider-route-name-draft="${escapeHtml(activeRoutePlan?.id || "")}" aria-label="编辑配置方案名称" />
                   <button type="button" data-action="rename-provider-route-plan" data-provider-route-name-target="${escapeHtml(activeRoutePlan?.id || "")}">保存</button>
                 </div>
+                ${renderRoutePlanTestStatus()}
               </div>
               <div class="model-slot-grid">
                 ${modelSlots.map((slot) => {

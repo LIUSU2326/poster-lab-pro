@@ -10,6 +10,7 @@ import {
   revokeProviderCredentialForWorkbench,
   saveProviderCredentialForWorkbench,
   testProviderConnectionForWorkbench,
+  testProviderModelConnectionForWorkbench,
 } from './provider-credential-client.js';
 import { renderSettingsSheet } from './render/settings-sheet.js';
 
@@ -125,6 +126,8 @@ function bindActionControls(render, root = document) {
 }
 
 async function handleActionControl(control, event, render) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
   const action = control.dataset.action;
   if (action === "toggle-theme") state.theme = state.theme === "light" ? "dark" : "light";
   if (action === "toggle-copy") state.copyVisible = !state.copyVisible;
@@ -232,11 +235,22 @@ async function handleActionControl(control, event, render) {
     return;
   }
   if (action === "submit-generation") {
+    if (control.dataset.schemeId) {
+      state.selectedScheme = control.dataset.schemeId;
+      state.selectedSchemeVariants = {
+        ...(state.selectedSchemeVariants || {}),
+        [control.dataset.schemeId]: state.selectedSchemeVariants?.[control.dataset.schemeId] || 0,
+      };
+    }
     const submissionPromise = submitGenerationDraft();
     state.view = "schemes";
-    state.taskOpen = true;
+    state.taskOpen = false;
     render();
     await submissionPromise;
+  }
+  if (action === "test-provider-route-plan") {
+    await testCurrentProviderRoutePlan(render);
+    return;
   }
   if (action === "run-manual-live-test") {
     const liveTestPromise = runManualLiveTestForWorkbench();
@@ -361,6 +375,103 @@ async function handleActionControl(control, event, render) {
   }
   event.stopPropagation();
   render();
+}
+
+function getSlotLabel(slotKey) {
+  return {
+    concept: "方案生成",
+    image: "图像生成",
+    styleReference: "画风参考分析",
+    compositionReference: "构图参考分析",
+  }[slotKey] || slotKey;
+}
+
+function readCurrentProviderRoutePlanSlots(root = document) {
+  return Array.from(root.querySelectorAll("[data-provider-model-slot]"))
+    .map((modelControl) => {
+      const slot = modelControl.dataset.providerModelSlot || "";
+      const providerControl = root.querySelector(`[data-provider-slot-provider="${escapeSelectorValue(slot)}"]`);
+      const providerId = providerControl?.value || modelControl.dataset.providerId || state.provider;
+      const model = modelControl.value || "";
+      return {
+        slot,
+        label: getSlotLabel(slot),
+        providerId,
+        model,
+      };
+    })
+    .filter((item) => item.slot && item.providerId && item.model);
+}
+
+function escapeSelectorValue(value) {
+  return String(value || "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function applyRoutePlanTestPatch(patch) {
+  state.providerRoutePlanTest = {
+    ...(state.providerRoutePlanTest || {}),
+    planId: state.providerRoutePlan,
+    ...patch,
+  };
+}
+
+async function testCurrentProviderRoutePlan(render) {
+  const slots = readCurrentProviderRoutePlanSlots(document.querySelector(".settings-layer") || document);
+  const startedAt = new Date().toISOString();
+  applyRoutePlanTestPatch({
+    phase: "testing",
+    updatedAt: startedAt,
+    error: null,
+    results: slots.map((slot) => ({
+      ...slot,
+      status: "testing",
+      ok: false,
+      message: "测试中",
+    })),
+  });
+  refreshSettingsLayer(render);
+
+  const results = [];
+  for (const slot of slots) {
+    const envelope = await testProviderModelConnectionForWorkbench({
+      providerId: slot.providerId,
+      model: slot.model,
+      strictModel: true,
+      verifyModels: true,
+      timeoutMs: 12000,
+    });
+    const result = envelope.ok ? envelope.data?.result : null;
+    results.push({
+      ...slot,
+      status: result?.status || "unavailable",
+      ok: Boolean(envelope.ok && result?.ok),
+      message: result?.userMessage || envelope.error?.message || "测试失败",
+      sampledModels: result?.sampledModels || [],
+    });
+    applyRoutePlanTestPatch({
+      phase: "testing",
+      updatedAt: new Date().toISOString(),
+      results: [
+        ...results,
+        ...slots.slice(results.length).map((pending) => ({
+          ...pending,
+          status: "pending",
+          ok: false,
+          message: "等待测试",
+        })),
+      ],
+    });
+    refreshSettingsLayer(render);
+  }
+
+  const allOk = results.length > 0 && results.every((item) => item.ok);
+  applyRoutePlanTestPatch({
+    phase: allOk ? "success" : "error",
+    updatedAt: new Date().toISOString(),
+    results,
+    error: allOk ? null : "当前配置方案中有模型未通过连通测试。",
+  });
+  refreshSettingsLayer(render);
 }
 
 function bindProviderControls(render, root = document) {

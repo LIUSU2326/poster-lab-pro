@@ -38,7 +38,7 @@ const roleTone = {
 };
 
 const rolePriorityByMode = {
-  poster: ["gameCharacter", "gameLogo", "background", "compositionReference", "styleReference"],
+  poster: ["gameCharacter", "gameLogo", "background", "prop", "compositionReference", "styleReference"],
   collab: ["gameCharacter", "collabCharacter", "background", "gameLogo", "brandLogo"],
   announcement: ["gameCharacter", "background", "gameLogo", "brandLogo", "uiScreenshot"],
   logo: ["gameLogo", "subjectReference", "prop", "gameCharacter"],
@@ -163,22 +163,40 @@ export function getWorkspaceSnapshotSummary() {
 export function getAssetSlotsForMode(modeId, fallbackAssets = []) {
   const snapshot = runtimeSnapshot();
   const roles = rolePriorityByMode[modeId] || [];
-  const assets = snapshot.assets
+  const fallbackSlots = fallbackAssets.map((asset, index) => ({
+    ...asset,
+    role: asset.role || roles[index] || "styleReference",
+  }));
+  const fallbackRoles = new Set(fallbackSlots.map((slot) => slot.role));
+  const uploadedByRole = new Map();
+
+  snapshot.assets
     .map((asset) => ({
       ...asset,
       role: normalizeAssetRole(asset),
     }))
     .filter((asset) => roles.length === 0 || roles.includes(asset.role))
-    .sort((a, b) => roles.indexOf(a.role) - roles.indexOf(b.role));
+    .sort((a, b) => Date.parse(a.updatedAt || a.createdAt || "") - Date.parse(b.updatedAt || b.createdAt || ""))
+    .forEach((asset) => {
+      if (!fallbackRoles.has(asset.role)) return;
+      uploadedByRole.set(asset.role, asset);
+    });
 
-  if (assets.length === 0) {
-    return fallbackAssets.map((asset, index) => ({
-      ...asset,
-      role: roles[index] || "styleReference",
-    }));
+  if (fallbackSlots.length > 0) {
+    return fallbackSlots.map((slot) => {
+      const asset = uploadedByRole.get(slot.role);
+      return {
+        role: slot.role,
+        label: slot.label,
+        sourceType: asset?.sourceType || slot.sourceType || "placeholder",
+        state: asset?.sourceType && asset.sourceType !== "placeholder" ? "uploaded" : slot.state,
+        tone: roleTone[slot.role] || slot.tone || "blue",
+        previewUrl: normalizePreviewUrl(asset?.previewUrl || slot.previewUrl),
+      };
+    });
   }
 
-  return assets.map((asset) => ({
+  return [...uploadedByRole.values()].map((asset) => ({
     role: asset.role,
     label: asset.label,
     sourceType: asset.sourceType,
@@ -196,6 +214,8 @@ function normalizePreviewUrl(value) {
   const url = typeof value === "string" ? value : "";
   if (!url || /example\.com/i.test(url)) return null;
   if (/^blob:/i.test(url)) return null;
+  const localUpload = url.match(/^https?:\/\/(?:localhost|127\.0\.0\.1):\d+(\/uploads\/.+)$/i);
+  if (localUpload?.[1]) return localUpload[1];
   return url;
 }
 

@@ -51,6 +51,7 @@ function taskSucceeded(task: QueueTask, providerResultIds: string[] = [], metada
     stage: "done",
     progress: 100,
     attempts: task.attempts + 1,
+    error: null,
     output: {
       providerResultIds,
       status: "ready",
@@ -70,6 +71,7 @@ function taskStarted(task: QueueTask): QueueTask {
     status: "running",
     stage: task.providerCapability ? "providerCall" : "persisting",
     progress: 50,
+    error: null,
   });
 }
 
@@ -94,12 +96,17 @@ function canRun(task: QueueTask, tasks: QueueTask[]) {
 }
 
 function providerRequestKind(kind: QueueTaskKind) {
-  return kind === "imageGeneration" || kind === "imageEdit" || kind === "upscale" || kind === "backgroundRemoval";
+  return kind === "briefGeneration"
+    || kind === "imageGeneration"
+    || kind === "imageEdit"
+    || kind === "upscale"
+    || kind === "backgroundRemoval";
 }
 
 export type MockQueueRunResult = {
   plan: QueuePlan;
   summary: QueueSummary;
+  workspace?: WorkspaceSnapshot;
 };
 
 export type MockQueueRunOptions = {
@@ -107,6 +114,7 @@ export type MockQueueRunOptions = {
   registry?: ProviderAdapterRegistry;
   storedConfig?: StoredProviderConfig | null;
   credentialRef?: ProviderCredentialRef;
+  credentialRefs?: Partial<Record<ProviderId, ProviderCredentialRef>>;
   credentialResolver?: CredentialResolver;
   snapshot?: WorkspaceSnapshot;
 };
@@ -348,7 +356,8 @@ async function executeProviderTask(
   const adapter = options.adapter || createMockProviderAdapter(manifest);
   const registry = options.registry || ({ [providerId]: adapter } as ProviderAdapterRegistry);
   const useCredentialBoundary = Boolean(storedConfig);
-  const credentialRef = options.credentialRef?.providerId === providerId ? options.credentialRef : undefined;
+  const credentialRef = options.credentialRefs?.[providerId]
+    || (options.credentialRef?.providerId === providerId ? options.credentialRef : undefined);
   const response = storedConfig
     ? await executeMappedProviderRequestWithCredentials(
         {
@@ -368,6 +377,19 @@ async function executeProviderTask(
       );
 
   if (!response.ok) return { ok: false, error: response.error };
+  if ("schemes" in response.value) {
+    return {
+      ok: true,
+      providerResultIds: response.value.schemes.map((_, index) => `brief-scheme-${index + 1}`),
+      metadata: {
+        ...taskExecutionMetadata(useCredentialBoundary),
+        providerModel: response.value.model,
+        briefSchemes: response.value.schemes,
+        ...(response.value.usage ? { providerUsage: response.value.usage } : {}),
+      },
+    };
+  }
+
   const providerAssets = "assets" in response.value ? response.value.assets : [];
   const providerResultIds = providerAssets.map((asset) => asset.id);
   return {
@@ -384,6 +406,97 @@ async function executeProviderTask(
       providerAssets,
     },
   };
+}
+
+function cloneWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
+  return JSON.parse(JSON.stringify(snapshot)) as WorkspaceSnapshot;
+}
+
+function imageSchemeIds(plan: QueuePlan): string[] {
+  return Array.from(new Set(
+    plan.tasks
+      .filter((task) => task.kind === "imageGeneration" && typeof task.input.schemeId === "string")
+      .map((task) => String(task.input.schemeId)),
+  ));
+}
+
+function promptBlock(title: string, text: unknown) {
+  const value = typeof text === "string" ? text.trim().slice(0, 1200) : "";
+  return value ? { title, text: value } : null;
+}
+
+function stringValue(value: unknown, fallback: string, maxLength: number): string {
+  const text = typeof value === "string" ? value.trim() : "";
+  return (text || fallback).slice(0, maxLength);
+}
+
+function sloganValue(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.trim().slice(0, 120);
+  return text || undefined;
+}
+
+function schemeSlogans(source: Record<string, unknown>, current: WorkspaceSnapshot["schemes"][number] | null) {
+  const raw = source.slogans && typeof source.slogans === "object" ? source.slogans as Record<string, unknown> : {};
+  return {
+    ...(sloganValue(raw["zh-CN"]) ? { "zh-CN": sloganValue(raw["zh-CN"]) } : {}),
+    ...(sloganValue(raw["en-US"]) ? { "en-US": sloganValue(raw["en-US"]) } : {}),
+    ...(!sloganValue(raw["zh-CN"]) && !sloganValue(raw["en-US"]) ? current?.slogans || {} : {}),
+  };
+}
+
+function applyBriefSchemesToSnapshot(
+  snapshot: WorkspaceSnapshot | undefined,
+  plan: QueuePlan,
+  task: QueueTask,
+): WorkspaceSnapshot | undefined {
+  if (!snapshot || task.kind !== "briefGeneration") return snapshot;
+
+  const briefSchemes = task.output.metadata.briefSchemes;
+  if (!Array.isArray(briefSchemes) || briefSchemes.length === 0) return snapshot;
+
+  const next = cloneWorkspaceSnapshot(snapshot);
+  const targetSchemeIds = imageSchemeIds(plan);
+  const now = nowIso();
+
+  briefSchemes.forEach((briefScheme, index) => {
+    if (!briefScheme || typeof briefScheme !== "object") return;
+
+    const source = briefScheme as Record<string, unknown>;
+    const schemeId = targetSchemeIds[index] || targetSchemeIds[0] || `scheme-${plan.job.mode}-${index + 1}`;
+    const currentIndex = next.schemes.findIndex((scheme) => scheme.id === schemeId);
+    const current = currentIndex >= 0 ? next.schemes[currentIndex] ?? null : null;
+    const promptBlocks = [
+      promptBlock("视觉方向", source.brief),
+      promptBlock("中文提示词", source.promptZh || source.prompt),
+      promptBlock("English Prompt", source.promptEn || source.prompt),
+    ].filter((item): item is { title: string; text: string } => Boolean(item));
+
+    const updatedScheme = {
+      ...(current || {
+        id: schemeId,
+        projectId: next.project.id,
+        mode: plan.job.mode,
+        code: `${plan.job.mode.slice(0, 2).toUpperCase()}-${String(index + 1).padStart(2, "0")}`,
+        lockedFields: [],
+        outputPresets: [],
+      }),
+      title: stringValue(source.title, current?.title || "海报生成方案", 120),
+      brief: stringValue(source.brief, current?.brief || "AI 生成的海报设计方案。", 1200),
+      slogans: schemeSlogans(source, current),
+      promptBlocks,
+      status: "ready",
+    };
+
+    if (currentIndex >= 0) next.schemes[currentIndex] = updatedScheme as WorkspaceSnapshot["schemes"][number];
+    else next.schemes.push(updatedScheme as WorkspaceSnapshot["schemes"][number]);
+  });
+
+  next.metadata = {
+    ...next.metadata,
+    updatedAt: now,
+  };
+  return next;
 }
 
 function resolveTaskModel(
@@ -409,6 +522,7 @@ export async function runMockQueuePlan(
 ): Promise<MockQueueRunResult> {
   const options = normalizeOptions(optionsOrAdapter);
   let tasks = initialPlan.tasks;
+  let workingSnapshot = options.snapshot ? cloneWorkspaceSnapshot(options.snapshot) : undefined;
   const events: QueueEvent[] = [...initialPlan.events, event(initialPlan.job.id, "jobStarted", "Started mock queue run.")];
 
   for (const originalTask of tasks) {
@@ -422,7 +536,10 @@ export async function runMockQueuePlan(
     let providerResultIds: string[] = [];
     let providerMetadata: Record<string, unknown> = {};
     if (providerRequestKind(started.kind)) {
-      const execution = await executeProviderTask(initialPlan, started, options);
+      const execution = await executeProviderTask(initialPlan, started, {
+        ...options,
+        ...(workingSnapshot ? { snapshot: workingSnapshot } : {}),
+      });
       if (!execution.ok) {
         const failed = taskFailed(started, execution.error);
         tasks = tasks.map((task) => (task.id === failed.id ? failed : task));
@@ -435,6 +552,7 @@ export async function runMockQueuePlan(
 
     const completed = taskSucceeded(started, providerResultIds, providerMetadata);
     tasks = tasks.map((task) => (task.id === completed.id ? completed : task));
+    workingSnapshot = applyBriefSchemesToSnapshot(workingSnapshot, initialPlan, completed);
     events.push(event(initialPlan.job.id, "taskSucceeded", `Completed ${completed.kind}.`, completed.id));
   }
 
@@ -456,5 +574,6 @@ export async function runMockQueuePlan(
   return {
     plan,
     summary: summarizeQueue(plan),
+    ...(workingSnapshot ? { workspace: workingSnapshot } : {}),
   };
 }

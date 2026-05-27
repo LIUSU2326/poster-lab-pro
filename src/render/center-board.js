@@ -57,13 +57,39 @@ function isRealGeneratedResult(result) {
 }
 
 function renderSchemeBoardEmpty(activeMode) {
+  const modelReady = requiredModelRoutesReady();
+  if (modelReady) {
+    return `
+      <div class="scheme-plan-empty" role="status">
+        <strong>准备生成方案</strong>
+        <small>模型与 API Key 已配置。点击生成后，这里会显示真实方案和图片结果。</small>
+        <button type="button" data-action="submit-generation">${escapeHtml(activeMode?.cta || "生成")}</button>
+      </div>
+    `;
+  }
+
   return `
     <div class="scheme-plan-empty" role="status">
-      <strong>等待真实生成</strong>
-      <small>配置 API Key 后，点击右上角生成按钮开始正式测试。</small>
+      <strong>等待模型配置</strong>
+      <small>配置方案生成、图像生成、画风参考分析和构图参考分析后，再开始正式测试。</small>
       <button type="button" data-action="open-settings">配置模型与 API Key</button>
     </div>
   `;
+}
+
+function requiredModelRoutesReady() {
+  const snapshot = state.workspaceSnapshot || {};
+  const requiredSlots = ["concept", "image", "styleReference", "compositionReference"];
+  return requiredSlots.every((slot) => {
+    const route = state.providerSlotRoutes?.[slot] || {};
+    const providerId = route.providerId || state.provider;
+    const provider = snapshot.providerConfigs?.[providerId];
+    const credentialReady = state.providerCredential?.providerId === providerId && state.providerCredential?.configured;
+    const connectionReady = state.providerConnection?.providerId === providerId && state.providerConnection?.ok;
+    const hasConfig = Boolean(provider?.hasApiKey || provider?.status === "success" || credentialReady || connectionReady);
+    const hasModel = Boolean(route.model || provider?.modelSlots?.[slot] || provider?.defaultModel);
+    return hasConfig && hasModel;
+  });
 }
 
 function renderProjectLibraryBoard(activeMode) {
@@ -335,7 +361,12 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
 
       <footer>
         ${renderSchemeVersionPager(scheme, schemeResults)}
-        <button class="render-button ${scheme.status === "loading" ? "loading" : ""}" type="button">
+        <button
+          class="render-button ${scheme.status === "loading" ? "loading" : ""}"
+          type="button"
+          data-action="submit-generation"
+          data-scheme-id="${escapeHtml(scheme.id)}"
+        >
           ${scheme.status === "loading" ? "生成中" : scheme.status === "failed" ? "重试" : activeMode.id === "logo" ? "生成标识" : activeMode.id === "icon" ? "生成图标" : "渲染图片"}
         </button>
       </footer>
@@ -502,18 +533,24 @@ function renderVisualBlocks(activeMode, scheme, display) {
 }
 
 function renderTextBlocks(display) {
+  const slogan = [display.primary, display.secondary].filter(Boolean).join(" / ");
   return `
-    <div class="text-block">
-      <span>KV Direction</span>
-      <p>${escapeHtml(display.brief)}</p>
+    <div class="scheme-copy-details">
+      ${renderSchemeCopyField("海报标题", display.title)}
+      ${renderSchemeCopyField("宣传标语", slogan)}
+      ${renderSchemeCopyField("中文提示词", display.promptZh || display.prompt)}
+      ${renderSchemeCopyField("英文提示词", display.promptEn || display.prompt)}
+      ${renderSchemeCopyField("视觉方向", display.brief)}
     </div>
-    <div class="text-block">
-      <span>图片提示词</span>
-      <p>${escapeHtml(display.prompt)}</p>
-    </div>
-    <div class="slogan-box compact">
-      <strong>${escapeHtml(display.primary)}</strong>
-      <small>${escapeHtml(display.secondary)}</small>
+  `;
+}
+
+function renderSchemeCopyField(label, value) {
+  const text = String(value || "").trim() || "待生成";
+  return `
+    <div class="scheme-copy-field">
+      <span>${escapeHtml(label)}</span>
+      <p>${escapeHtml(text)}</p>
     </div>
   `;
 }
@@ -673,13 +710,22 @@ const schemeDisplayCopy = {
 
 function getSchemeDisplay(activeMode, scheme) {
   if (state.workspaceLoadStatus !== "static") {
+    const title = localizeSchemeTitle(scheme.title);
+    const primary = localizeSchemeTitle(scheme.zh || scheme.title || "");
+    const secondary = localizeSchemeSubtitle(scheme.en || scheme.platform || "");
+    const brief = localizeSchemeBrief(scheme.brief || "");
+    const prompt = localizeSchemePrompt(scheme.prompt || "");
+    const promptZh = localizeSchemePrompt(scheme.promptZh || "");
+    const promptEn = localizeSchemePrompt(scheme.promptEn || "");
     return {
       code: scheme.code || "ART",
-      title: scheme.title || "生成素材",
-      primary: scheme.zh || scheme.title || "宣发素材",
-      secondary: scheme.en || scheme.platform || "生产可用",
-      brief: scheme.brief || "暂无方案说明。",
-      prompt: scheme.prompt || "暂无提示词。",
+      title: title || "生成素材",
+      primary: primary || "宣发素材",
+      secondary: secondary || "生产可用",
+      brief: brief || "暂无方案说明。",
+      prompt: prompt || "暂无提示词。",
+      promptZh: promptZh || prompt || "暂无中文提示词。",
+      promptEn: promptEn || prompt || "No English prompt yet.",
       locked: Array.isArray(scheme.locked) ? scheme.locked : [],
       brand: activeMode?.id === "announcement" ? "公告" : "活动",
       visualHero: activeMode?.id === "collab" ? "联动" : activeMode?.id === "announcement" ? "更新" : "奖励",
@@ -693,7 +739,40 @@ function getSchemeDisplay(activeMode, scheme) {
   return {
     code: scheme.code || `ART-${codeIndex + 1}`,
     ...copy,
+    promptZh: copy.prompt,
+    promptEn: copy.prompt,
   };
+}
+
+function localizeSchemeTitle(value) {
+  const text = String(value || "").trim();
+  const normalized = text.toLowerCase();
+  if (normalized === "poster production direction") return "海报生产方向";
+  if (normalized === "from brief to batch output") return "从创意到批量出图";
+  if (normalized === "poster campaign result") return "海报生成结果";
+  return text;
+}
+
+function localizeSchemeSubtitle(value) {
+  const text = String(value || "").trim();
+  if (/^from brief to batch output$/i.test(text)) return "从创意到批量出图";
+  return text;
+}
+
+function localizeSchemeBrief(value) {
+  const text = String(value || "").trim();
+  if (/stored poster creative brief/i.test(text)) {
+    return "用于项目恢复和归档测试的海报创意简报。";
+  }
+  return text;
+}
+
+function localizeSchemePrompt(value) {
+  const text = String(value || "").trim();
+  if (/Storage:\s*This prompt block is stored as project context/i.test(text)) {
+    return "该提示词块作为项目上下文保存，不会由界面重新生成。";
+  }
+  return text.replace(/^Storage:\s*/i, "存档提示词：");
 }
 
 function getModeAbbrev(modeId) {

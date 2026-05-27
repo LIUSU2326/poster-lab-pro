@@ -324,10 +324,26 @@ function providerRouteForSlot(slot) {
     return config?.hasApiKey || config?.status === "success";
   });
   const supportedCurrentProvider = candidateIds.includes(state.provider) ? state.provider : "";
+  const providerId = route.providerId || configuredProvider || supportedCurrentProvider || candidateIds[0] || state.provider;
+  const providerConfig = snapshot.providerConfigs?.[providerId] || {};
+  const model = normalizeRouteModel(providerId, route.model || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "");
   return {
-    providerId: route.providerId || configuredProvider || supportedCurrentProvider || candidateIds[0] || state.provider,
-    ...(route.model ? { model: route.model } : {}),
+    providerId,
+    ...(model ? { model } : {}),
   };
+}
+
+function normalizeRouteModel(providerId, model) {
+  const value = String(model || "").trim();
+  if (providerId === "google") {
+    if (value === "gemini-3.1-flash-image-preview" || value === "gemini-3-flash-image-preview") {
+      return "gemini-2.5-flash-image";
+    }
+    if (value === "gemini-3.1-pro-preview" || value === "gemini-3.5-flash" || value === "gemini-3-flash-preview") {
+      return "gemini-2.5-flash";
+    }
+  }
+  return value;
 }
 
 function getProviderRoutesForSubmission() {

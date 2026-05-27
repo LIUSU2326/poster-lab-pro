@@ -47,6 +47,13 @@ function normalizeCategoryLabel(value: string): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 24);
 }
 
+function roleForCategoryLabel(label: string, defaultRole: string): string {
+  if (/logo|标识/i.test(label)) return "gameLogo";
+  if (/场景|背景/i.test(label)) return "background";
+  if (/boss|怪物|道具|武器|奖励/i.test(label)) return "prop";
+  return defaultRole || "gameCharacter";
+}
+
 function assetSlotKey(slot: Pick<AssetSlot, "role" | "label">, defaultRole: string): string {
   return `${slot.role || defaultRole}:${slot.label}`;
 }
@@ -91,6 +98,13 @@ function latestDataUrlForRole(role: string): string {
     .at(-1) || "";
 }
 
+function normalizeLocalPreviewUrl(value: string | null | undefined): string {
+  const url = typeof value === "string" ? value : "";
+  if (!url || /example\.com/i.test(url) || /^blob:/i.test(url)) return "";
+  const localUpload = url.match(/^https?:\/\/(?:localhost|127\.0\.0\.1):\d+(\/uploads\/.+)$/i);
+  return localUpload?.[1] || url;
+}
+
 function latestPreviewForRole(slots: AssetSlot[], localPreviews: Record<string, string>, role: string): string {
   const local = Object.entries(localPreviews)
     .filter(([key]) => key.startsWith(`${role}:`))
@@ -100,11 +114,12 @@ function latestPreviewForRole(slots: AssetSlot[], localPreviews: Record<string, 
   if (local) return local;
   const dataUrl = latestDataUrlForRole(role);
   if (dataUrl) return dataUrl;
-  return [...slots].reverse().find((slot) => slot.role === role && slot.previewUrl)?.previewUrl || "";
+  const previewUrl = [...slots].reverse().find((slot) => slot.role === role && slot.previewUrl)?.previewUrl || "";
+  return normalizeLocalPreviewUrl(previewUrl);
 }
 
 function previewForAssetSlot(key: string, slot: AssetSlot, localPreviews: Record<string, string>): string {
-  return localPreviews[key] || dataUrlForKey(key) || slot.previewUrl || "";
+  return localPreviews[key] || dataUrlForKey(key) || normalizeLocalPreviewUrl(slot.previewUrl);
 }
 
 function isReferenceOnlySlot(slot: AssetSlot, referenceRole: string): boolean {
@@ -142,7 +157,7 @@ export function AssetsSection({
     const extraSlots = customCategories
       .filter((label) => !existing.has(label))
       .map((label) => ({
-        role: defaultAssetRole,
+        role: roleForCategoryLabel(label, defaultAssetRole),
         label,
         state: "自定义",
         tone: customSlotTone,
@@ -155,11 +170,12 @@ export function AssetsSection({
     );
   }, [customCategories, defaultAssetRole, hiddenSlotKeys, referenceRole, slots]);
   const referencePreview = latestPreviewForRole(slots, localPreviews, referenceRole);
+  const displayReferencePreview = referencePreview && !brokenPreviewUrls[referencePreview] ? referencePreview : "";
   const referenceProviderId = routeProviderForSlot(referenceRole);
   const providerCanAnalyzeReference = referenceAnalysisProviderReady(referenceProviderId);
   const referenceApiReady = analysisApiReady(referenceProviderId);
-  const canExtractReference = Boolean(referencePreview) && providerCanAnalyzeReference && referenceApiReady;
-  const referenceDisabledReason = referencePreview
+  const canExtractReference = Boolean(displayReferencePreview) && providerCanAnalyzeReference && referenceApiReady;
+  const referenceDisabledReason = displayReferencePreview
     ? !providerCanAnalyzeReference
       ? "当前供应商不支持图片识别，请切换到 OpenAI、AIGoCode、Google、Claude 或 Qwen。"
       : !referenceApiReady
@@ -315,7 +331,7 @@ export function AssetsSection({
   };
 
   const runReferenceExtraction = async (kind: "composition" | "full") => {
-    if (!referencePreview) {
+    if (!displayReferencePreview) {
       setAnalysisMessage("请先上传一张构图参考图。");
       return;
     }
@@ -388,7 +404,7 @@ export function AssetsSection({
           const key = `${role}:${slot.label}`;
           const previewUrl = previewForAssetSlot(key, slot, localPreviews);
           const displayPreviewUrl = previewUrl && !brokenPreviewUrls[previewUrl] ? previewUrl : "";
-          const status = pendingKey === key ? "上传中" : displayPreviewUrl ? "已就绪" : previewUrl ? "预览失效" : "待上传";
+          const status = pendingKey === key ? "上传中" : displayPreviewUrl ? "已上传" : "待上传";
 
           return (
             <article className={`asset-slot-card ${slot.tone}`} key={key}>
@@ -398,6 +414,7 @@ export function AssetsSection({
                 onClick={() => openFilePicker(role, slot.label)}
                 disabled={isPending}
                 aria-busy={pendingKey === key}
+                aria-label={`${slot.label}，${status}`}
               >
                 <i className={displayPreviewUrl ? "asset-preview" : undefined}>
                   {displayPreviewUrl ? (
@@ -410,7 +427,6 @@ export function AssetsSection({
                   ) : null}
                 </i>
                 <strong>{slot.label}</strong>
-                <small>{status}</small>
               </button>
               <button
                 className="asset-slot-delete"
@@ -432,7 +448,7 @@ export function AssetsSection({
         </button>
       ) : null}
 
-      <div className={`reference-upload-card ${referencePreview ? "has-preview" : ""}`}>
+      <div className={`reference-upload-card ${displayReferencePreview ? "has-preview" : ""}`}>
         <button
           className="reference-upload-main"
           type="button"
@@ -442,16 +458,23 @@ export function AssetsSection({
           aria-busy={pendingKey?.startsWith(`${referenceRole}:`)}
         >
           <span className="reference-thumb" aria-hidden="true">
-            {referencePreview ? <img className="reference-preview-image" src={referencePreview} alt="" /> : null}
+            {displayReferencePreview ? (
+              <img
+                className="reference-preview-image"
+                src={displayReferencePreview}
+                alt=""
+                onError={() => setBrokenPreviewUrls((current) => ({ ...current, [displayReferencePreview]: true }))}
+              />
+            ) : null}
           </span>
-          {referencePreview ? null : (
+          {displayReferencePreview ? null : (
             <span>
               <strong>{referenceLabel}</strong>
               <small>{pendingKey?.startsWith(`${referenceRole}:`) ? "上传中" : "上传图片后选择识别方式"}</small>
             </span>
           )}
         </button>
-        {referencePreview ? (
+        {displayReferencePreview ? (
           <>
             <div className="reference-analysis-tools">
               <button
