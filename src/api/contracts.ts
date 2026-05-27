@@ -141,6 +141,8 @@ export const ProviderCredentialStatusApiResponseSchema = z.union([
   apiSuccessEnvelope(
     z.object({
       status: ProviderCredentialVaultStatusSchema,
+      providerConfigUpdated: z.boolean().optional(),
+      recoveredInvalidCredential: z.boolean().optional(),
     }),
   ),
   ApiFailureEnvelopeSchema,
@@ -197,6 +199,15 @@ export const QueuePlanCreateApiRequestSchema = z.object({
   projectId: z.string().min(1),
   mode: ProductionModeSchema,
   providerId: ProviderIdSchema.default("openai"),
+  providerRoutes: z
+    .record(
+      z.string().min(1),
+      z.object({
+        providerId: ProviderIdSchema,
+        model: z.string().min(1).optional(),
+      }),
+    )
+    .optional(),
   schemeIds: z.array(z.string().min(1)).min(1),
   platformPresets: z.array(PlatformPresetSchema).min(1).optional(),
   aspectRatios: z.array(z.string().min(1)).min(1).optional(),

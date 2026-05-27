@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, shell } = require("electron");
+const { app, BrowserWindow, Menu, dialog, shell, session } = require("electron");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -33,7 +33,80 @@ function packagedNextServerPath() {
   return path.join(resourcesRoot, "next", "standalone", "server.js");
 }
 
-function packagedNextEnvironment(serverPath, port) {
+function withNodeEnvProxy(env) {
+  const existingOptions = env.NODE_OPTIONS || "";
+  const nodeOptions = existingOptions.includes("--use-env-proxy")
+    ? existingOptions
+    : `${existingOptions} --use-env-proxy`.trim();
+  return {
+    ...env,
+    NODE_OPTIONS: nodeOptions,
+  };
+}
+
+function mergeNoProxy(existing) {
+  const defaults = ["127.0.0.1", "localhost", "::1"];
+  const parts = String(existing || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return Array.from(new Set([...parts, ...defaults])).join(",");
+}
+
+function proxyEnvironmentFromResolvedProxy(resolvedProxy) {
+  const candidate = String(resolvedProxy || "")
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item && !/^DIRECT$/i.test(item));
+  if (!candidate) return {};
+
+  const match = candidate.match(/^(PROXY|HTTPS|HTTP|SOCKS|SOCKS4|SOCKS5)\s+(.+)$/i);
+  if (!match) return {};
+
+  const proxyType = match[1].toUpperCase();
+  const proxyTarget = match[2].trim();
+  const scheme = proxyType === "HTTPS"
+    ? "https"
+    : proxyType.startsWith("SOCKS")
+      ? "socks"
+      : "http";
+  const proxyUrl = `${scheme}://${proxyTarget}`;
+
+  return {
+    HTTP_PROXY: process.env.HTTP_PROXY || process.env.http_proxy || proxyUrl,
+    HTTPS_PROXY: process.env.HTTPS_PROXY || process.env.https_proxy || proxyUrl,
+    NO_PROXY: mergeNoProxy(process.env.NO_PROXY || process.env.no_proxy),
+  };
+}
+
+async function resolveDesktopProxyEnvironment() {
+  const existingProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+  if (existingProxy) {
+    return withNodeEnvProxy({
+      HTTP_PROXY: process.env.HTTP_PROXY || process.env.http_proxy || existingProxy,
+      HTTPS_PROXY: process.env.HTTPS_PROXY || process.env.https_proxy || existingProxy,
+      NO_PROXY: mergeNoProxy(process.env.NO_PROXY || process.env.no_proxy),
+    });
+  }
+
+  try {
+    const resolvedProxy = await session.defaultSession.resolveProxy("https://generativelanguage.googleapis.com/v1beta/models");
+    const proxyEnv = proxyEnvironmentFromResolvedProxy(resolvedProxy);
+    return Object.keys(proxyEnv).length > 0 ? withNodeEnvProxy(proxyEnv) : {};
+  } catch {
+    return {};
+  }
+}
+
+function desktopRuntimeEnvironment() {
+  const userDataPath = app.getPath("userData");
+  return {
+    POSTER_LAB_RUNTIME_DIR: path.join(userDataPath, "runtime"),
+    POSTER_LAB_LOCAL_VAULT_KEY: `poster-lab-local-vault:${userDataPath}`,
+  };
+}
+
+function packagedNextEnvironment(serverPath, port, extraEnv = {}) {
   const standaloneRoot = path.dirname(serverPath);
   const sharpLibvipsPath = path.join(
     standaloneRoot,
@@ -48,6 +121,8 @@ function packagedNextEnvironment(serverPath, port) {
 
   return {
     ...process.env,
+    ...desktopRuntimeEnvironment(),
+    ...extraEnv,
     ELECTRON_RUN_AS_NODE: "1",
     HOSTNAME: "127.0.0.1",
     NODE_ENV: "production",
@@ -109,12 +184,12 @@ async function resolveNextTarget() {
   throw new Error("No local port is available for the desktop Next service.");
 }
 
-function spawnNextDev(port) {
+function spawnNextDev(port, extraEnv = {}) {
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
   const args = ["run", "dev:next", "--", "--hostname", "127.0.0.1", "--port", String(port)];
   const child = spawn(npmCommand, args, {
     cwd: projectRoot(),
-    env: process.env,
+    env: { ...process.env, ...desktopRuntimeEnvironment(), ...extraEnv },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
@@ -131,7 +206,7 @@ function spawnNextDev(port) {
   nextProcess = child;
 }
 
-function spawnPackagedNext(port) {
+function spawnPackagedNext(port, extraEnv = {}) {
   const serverPath = packagedNextServerPath();
   if (!fs.existsSync(serverPath)) {
     throw new Error(`Packaged Next server is missing: ${serverPath}`);
@@ -139,7 +214,7 @@ function spawnPackagedNext(port) {
 
   const child = spawn(process.execPath, [serverPath], {
     cwd: path.dirname(serverPath),
-    env: packagedNextEnvironment(serverPath, port),
+    env: packagedNextEnvironment(serverPath, port, extraEnv),
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
@@ -156,12 +231,12 @@ function spawnPackagedNext(port) {
   nextProcess = child;
 }
 
-function spawnNextService(port) {
+function spawnNextService(port, extraEnv = {}) {
   if (usesPackagedNext()) {
-    spawnPackagedNext(port);
+    spawnPackagedNext(port, extraEnv);
     return;
   }
-  spawnNextDev(port);
+  spawnNextDev(port, extraEnv);
 }
 
 async function waitForNext(url) {
@@ -212,7 +287,8 @@ function createWindow(url) {
 
 async function startDesktop() {
   const target = await resolveNextTarget();
-  if (target.shouldSpawn) spawnNextService(target.port);
+  const proxyEnv = target.shouldSpawn ? await resolveDesktopProxyEnvironment() : {};
+  if (target.shouldSpawn) spawnNextService(target.port, proxyEnv);
   await waitForNext(target.url);
   createWindow(target.url);
 }

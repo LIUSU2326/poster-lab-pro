@@ -53,8 +53,8 @@ function createModeState(mode) {
     projectBrief: {
       projectName: "Pizza Kitchen Adventures",
       gameDescription: mode.description,
-      focusGuidanceEnabled: true,
-      focusGuidance: mode.direction.helper,
+      focusGuidanceEnabled: false,
+      focusGuidance: "",
     },
     outputSettings: {
       mode: mode.id,
@@ -114,7 +114,7 @@ function createSnapshotModeForm(modeId) {
   }
   return {
     mode: "poster",
-    styleTags: ["cinematic", "game-key-visual"],
+    styleTags: [],
     compositionReferenceStrength: "composition",
   };
 }
@@ -196,7 +196,7 @@ export const workspaceSnapshot = {
   assets: modeSpecs.poster.assets.map((asset, index) => ({
     id: `asset-${index + 1}`,
     projectId: "project-pizza-kitchen",
-    role: index === 1 ? "gameLogo" : index === 3 ? "compositionReference" : "gameCharacter",
+    role: index === 1 ? "gameLogo" : index === 2 ? "background" : index === 3 ? "compositionReference" : "gameCharacter",
     label: asset.label,
     sourceType: "uploaded",
     previewUrl: null,
@@ -214,6 +214,7 @@ export const workspaceSnapshot = {
   schemes,
   queuePlans: [],
   queueSummaries: [],
+  referenceAnalyses: [],
   results,
   archiveRows: results.map((result) => ({
     id: `archive-${result.id}`,

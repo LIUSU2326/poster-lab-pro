@@ -79,6 +79,7 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
   };
 
   const focusItems = splitGuidance(currentValues.focusGuidance);
+  const showFocusEditor = currentValues.focusGuidanceEnabled || focusItems.length > 0;
 
   const setFocusItems = async (items: string[]) => {
     await update("focusGuidance", joinGuidance(items));
@@ -124,47 +125,53 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
         {errors.gameDescription?.message ? <small className="form-error">{errors.gameDescription.message}</small> : null}
       </label>
 
-      <div className={`guidance-box ${currentValues.focusGuidanceEnabled ? "is-enabled" : "is-disabled"}`}>
+      <div className={`guidance-box ${currentValues.focusGuidanceEnabled ? "is-enabled" : "is-disabled"} ${showFocusEditor ? "" : "is-compact"}`}>
         <div>
           <strong>侧重点引导</strong>
           <button type="button" onClick={() => void toggleFocus()}>
-            {currentValues.focusGuidanceEnabled ? "开启" : "关闭"}
+            {currentValues.focusGuidanceEnabled ? "关闭" : "开启"}
           </button>
         </div>
-        <div className="inline-add-row">
-          <input
-            aria-label="添加侧重点"
-            value={focusDraft}
-            disabled={!currentValues.focusGuidanceEnabled}
-            placeholder="输入侧重点，按回车添加"
-            onChange={(event) => setFocusDraft(event.currentTarget.value)}
-            onKeyDown={handleFocusKeyDown}
-          />
-          <button
-            className="mini-solid-button"
-            type="button"
-            disabled={!currentValues.focusGuidanceEnabled || !focusDraft.trim()}
-            onClick={() => void addFocusDraft()}
-          >
-            添加
-          </button>
-        </div>
-        {focusItems.length > 0 ? (
-          <div className="tag-list guidance-tag-list" aria-label="已添加侧重点">
-            {focusItems.map((item) => (
-              <button
-                type="button"
-                key={item}
+        {showFocusEditor ? (
+          <>
+            <div className="inline-add-row">
+              <input
+                aria-label="添加侧重点"
+                value={focusDraft}
                 disabled={!currentValues.focusGuidanceEnabled}
-                onClick={() => void setFocusItems(focusItems.filter((focus) => focus !== item))}
-                title="点击移除"
+                placeholder="输入侧重点，按回车添加"
+                onChange={(event) => setFocusDraft(event.currentTarget.value)}
+                onKeyDown={handleFocusKeyDown}
+              />
+              <button
+                className="mini-solid-button"
+                type="button"
+                disabled={!currentValues.focusGuidanceEnabled || !focusDraft.trim()}
+                onClick={() => void addFocusDraft()}
               >
-                {item}
+                添加
               </button>
-            ))}
-          </div>
+            </div>
+            {focusItems.length > 0 ? (
+              <div className="tag-list guidance-tag-list" aria-label="已添加侧重点">
+                {focusItems.map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    disabled={!currentValues.focusGuidanceEnabled}
+                    onClick={() => void setFocusItems(focusItems.filter((focus) => focus !== item))}
+                    title="点击移除"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <small>添加后会写入方案生成提示词。</small>
+            )}
+          </>
         ) : (
-          <small>添加后会写入方案生成提示词。</small>
+          <small>未启用</small>
         )}
         {errors.focusGuidance?.message ? <small className="form-error">{errors.focusGuidance.message}</small> : null}
       </div>

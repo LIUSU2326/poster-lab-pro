@@ -68,6 +68,18 @@ export const StoredArchiveRowSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+export const StoredReferenceAnalysisSchema = z.object({
+  key: z.string().min(1).max(160),
+  kind: z.enum(["composition", "full", "style"]),
+  role: z.string().min(1).max(80),
+  label: z.string().min(1).max(120),
+  providerId: ProviderIdSchema,
+  model: z.string().min(1).max(160),
+  text: z.string().min(1).max(8000),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
 export const WorkspaceModeStateSchema = z.object({
   mode: ProductionModeSchema,
   projectBrief: ProjectBriefFormSchema,
@@ -100,6 +112,7 @@ export const WorkspaceSnapshotSchema = z.object({
   schemes: z.array(SchemeBriefSchema).default([]),
   queuePlans: z.array(QueuePlanSchema).default([]),
   queueSummaries: z.array(QueueSummarySchema).default([]),
+  referenceAnalyses: z.array(StoredReferenceAnalysisSchema).default([]),
   results: z.array(StoredResultAssetSchema).default([]),
   archiveRows: z.array(StoredArchiveRowSchema).default([]),
 });
@@ -124,6 +137,7 @@ export type StoredProviderConfig = z.infer<typeof StoredProviderConfigSchema>;
 export type StoredAssetRecord = z.infer<typeof StoredAssetRecordSchema>;
 export type StoredResultAsset = z.infer<typeof StoredResultAssetSchema>;
 export type StoredArchiveRow = z.infer<typeof StoredArchiveRowSchema>;
+export type StoredReferenceAnalysis = z.infer<typeof StoredReferenceAnalysisSchema>;
 export type WorkspaceModeState = z.infer<typeof WorkspaceModeStateSchema>;
 export type WorkspaceSnapshotMetadata = z.infer<typeof WorkspaceSnapshotMetadataSchema>;
 export type WorkspaceSnapshot = z.infer<typeof WorkspaceSnapshotSchema>;

@@ -184,6 +184,17 @@ function modelIds(body: unknown): string[] {
     .filter((item): item is string => item.length > 0);
 }
 
+function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids: string[]): boolean {
+  if (ids.length === 0 || ids.includes(defaultModel)) return true;
+  if ((providerId === "openai" || providerId === "aigocode") && defaultModel.startsWith("gpt-image-")) {
+    return ids.some((id) => id.startsWith("gpt-image-"));
+  }
+  if (providerId === "google" && defaultModel.startsWith("gemini-")) {
+    return ids.some((id) => id.startsWith("gemini-"));
+  }
+  return false;
+}
+
 function resultFromStatus(input: {
   providerId: ProviderId;
   statusCode: number;
@@ -328,7 +339,7 @@ export async function runProviderConnectionDiagnostic(input: {
   const startedAt = Date.now();
   const manifest = getProviderManifest(parsed.providerId);
 
-  if (!input.storedConfig || !input.storedConfig.enabled) {
+  if (!input.storedConfig || (!input.storedConfig.enabled && !input.credentialRef)) {
     return result({
       providerId: parsed.providerId,
       ok: false,
@@ -417,7 +428,7 @@ export async function runProviderConnectionDiagnostic(input: {
     }
 
     const ids = parsed.verifyModels ? modelIds(response.body) : [];
-    const defaultModelAvailable = defaultModel ? ids.length === 0 || ids.includes(defaultModel) : undefined;
+    const defaultModelAvailable = defaultModel ? modelFamilyAvailable(parsed.providerId, defaultModel, ids) : undefined;
     const ok = !defaultModel || defaultModelAvailable !== false;
 
     return result({
@@ -448,7 +459,7 @@ export async function runProviderConnectionDiagnostic(input: {
       startedAt,
       message: aborted ? "Provider connection test timed out." : error instanceof Error ? error.message : "Provider connection failed.",
       userMessage: aborted
-        ? "Provider connection test timed out."
+        ? "Provider connection timed out. If this API Key works elsewhere, check whether the desktop runtime is using the same proxy or VPN route."
         : "Provider connection could not be reached from this environment.",
       errorCode: "provider_unavailable",
       retryable: true,

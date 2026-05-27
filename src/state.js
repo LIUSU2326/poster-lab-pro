@@ -20,6 +20,8 @@ export const state = {
   archiveSelection: [],
   archiveExportMessage: "",
   projectLibraryMessage: "",
+  projectLibraryActiveEntryId: "",
+  projectLibraryEntries: /** @type {Array<{ id: string, name: string, description: string, updatedAt: string }>} */ ([]),
   resultViewerOpen: false,
   taskOpen: false,
   settingsOpen: false,
@@ -28,6 +30,7 @@ export const state = {
   provider: "openai",
   providerModelOverrides: /** @type {Record<string, Record<string, string>>} */ ({}),
   providerCustomModels: /** @type {Record<string, string[]>} */ ({}),
+  providerSlotRoutes: /** @type {Record<string, { providerId: string, model?: string }>} */ ({}),
   providerRoutePlan: "standard",
   providerRoutePlans: /** @type {Array<{ id: string, name: string }>} */ ([
     { id: "standard", name: "标准方案" },

@@ -13,10 +13,16 @@ import {
   type QueueTaskKind,
 } from "./contracts";
 
+const ProviderRouteSchema = z.object({
+  providerId: ProviderIdSchema,
+  model: z.string().min(1).optional(),
+});
+
 const QueuePlannerInputSchema = z.object({
   projectId: z.string().min(1),
   mode: ProductionModeSchema,
   providerId: ProviderIdSchema.default("openai"),
+  providerRoutes: z.record(z.string().min(1), ProviderRouteSchema).default({}),
   schemeIds: z.array(z.string().min(1)).min(1),
   platformPresets: z.array(PlatformPresetSchema).min(1).optional(),
   aspectRatios: z.array(z.string().min(1)).min(1).optional(),
@@ -91,6 +97,14 @@ function estimateTaskCost(kind: QueueTaskKind, count = 1): number {
   return 0;
 }
 
+function routeForSlot(parsed: QueuePlannerResolvedInput, slot: string): { providerId: QueuePlannerResolvedInput["providerId"]; model?: string } {
+  const route = parsed.providerRoutes[slot];
+  return {
+    providerId: route?.providerId || parsed.providerId,
+    ...(route?.model ? { model: route.model } : {}),
+  };
+}
+
 function createTask(params: {
   id: string;
   jobId: string;
@@ -138,6 +152,8 @@ function createTask(params: {
 
 export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
   const parsed = QueuePlannerInputSchema.parse(input);
+  const conceptRoute = routeForSlot(parsed, "concept");
+  const imageRoute = routeForSlot(parsed, "image");
   const output = createOutputSettingsDefaults(parsed.mode);
   const postProcessFlags: [QueueTaskKind, boolean][] = [
     ["imageEdit", parsed.includeImageEdit],
@@ -159,7 +175,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
     id: jobId,
     projectId: parsed.projectId,
     mode: parsed.mode,
-    providerId: parsed.providerId,
+    providerId: conceptRoute.providerId,
     status: "queued",
     title: `${parsed.mode} batch production`,
     createdAt,
@@ -172,9 +188,9 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
         id: `${jobId}-brief`,
         jobId,
         mode: parsed.mode,
-        providerId: parsed.providerId,
+        providerId: conceptRoute.providerId,
         kind: "briefGeneration",
-        model: "concept",
+        model: conceptRoute.model || "concept",
       });
   if (briefTask) {
     tasks.push(briefTask);
@@ -191,7 +207,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
           id: `${jobId}-image-${schemeIndex + 1}`,
           jobId,
           mode: parsed.mode,
-          providerId: parsed.providerId,
+          providerId: imageRoute.providerId,
           kind: "imageGeneration",
           dependsOn: briefTask ? [briefTask.id] : [],
           schemeId,
@@ -200,7 +216,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
           height: target.height,
           aspectRatio: target.aspectRatio,
           count: parsed.imagesPerScheme,
-          model: "image",
+          model: imageRoute.model || "image",
         });
     if (imageTask) {
       tasks.push(imageTask);
@@ -209,11 +225,12 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
 
     postProcessFlags.forEach(([kind, enabled]) => {
       if (!enabled) return;
+      const postProcessRoute = routeForSlot(parsed, kind);
       const task = createTask({
         id: `${jobId}-${kind}-${schemeIndex + 1}`,
         jobId,
         mode: parsed.mode,
-        providerId: parsed.providerId,
+        providerId: postProcessRoute.providerId,
         kind,
         dependsOn: imageTask ? [imageTask.id] : [],
         schemeId,
@@ -223,7 +240,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
         aspectRatio: target.aspectRatio,
         count: 1,
         sourceResultId: parsed.sourceResultId || `result-${schemeId}`,
-        model: kind,
+        model: postProcessRoute.model || kind,
       });
       tasks.push(task);
       events.push(createEvent(jobId, "taskQueued", `Queued ${kind} for ${schemeId}.`, task.id));

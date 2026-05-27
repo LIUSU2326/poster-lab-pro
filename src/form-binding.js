@@ -115,8 +115,8 @@ function createProjectBriefDraft(activeMode) {
   return {
     projectName: workspaceSnapshot.project.name,
     gameDescription: activeMode.description,
-    focusGuidanceEnabled: true,
-    focusGuidance: activeMode.direction?.helper || "",
+    focusGuidanceEnabled: false,
+    focusGuidance: "",
   };
 }
 
@@ -179,7 +179,7 @@ function createModeFormDraft(activeMode) {
   }
   return {
     mode: "poster",
-    styleTags: activeMode.styles.slice(0, 2),
+    styleTags: [],
     compositionReferenceStrength: "composition",
   };
 }
@@ -296,7 +296,8 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
     payload: {
       projectId: snapshot.project.id,
       mode: activeMode.id,
-      providerId: state.provider,
+      providerId: providerRouteForSlot("concept").providerId,
+      providerRoutes: getProviderRoutesForSubmission(),
       schemeIds: batchSchemeIds.length > 0 ? batchSchemeIds : [selected.id],
       platformPresets: outputSettings.platformPresets,
       aspectRatios: outputSettings.aspectRatios,
@@ -306,6 +307,39 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
       includeUpscale: false,
       includeBackgroundRemoval: false,
     },
+  };
+}
+
+function providerRouteForSlot(slot) {
+  const route = state.providerSlotRoutes?.[slot] || {};
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const candidateIds = {
+    concept: ["deepseek", "openai", "aigocode", "google", "claude", "qwen"],
+    image: ["openai", "aigocode", "google", "qwen"],
+    styleReference: ["openai", "aigocode", "google", "claude", "qwen"],
+    compositionReference: ["openai", "aigocode", "google", "claude", "qwen"],
+  }[slot] || [state.provider];
+  const configuredProvider = candidateIds.find((providerId) => {
+    const config = snapshot.providerConfigs?.[providerId];
+    return config?.hasApiKey || config?.status === "success";
+  });
+  const supportedCurrentProvider = candidateIds.includes(state.provider) ? state.provider : "";
+  return {
+    providerId: route.providerId || configuredProvider || supportedCurrentProvider || candidateIds[0] || state.provider,
+    ...(route.model ? { model: route.model } : {}),
+  };
+}
+
+function getProviderRoutesForSubmission() {
+  const imageRoute = providerRouteForSlot("image");
+  return {
+    concept: providerRouteForSlot("concept"),
+    image: imageRoute,
+    styleReference: providerRouteForSlot("styleReference"),
+    compositionReference: providerRouteForSlot("compositionReference"),
+    imageEdit: imageRoute,
+    upscale: imageRoute,
+    backgroundRemoval: imageRoute,
   };
 }
 
@@ -324,7 +358,8 @@ export async function submitGenerationDraft(options = {}) {
     mode: activeMode.id,
     schemeId: selected.id,
     schemeTitle: selected.title,
-    providerId: state.provider,
+    providerId: providerRouteForSlot("image").providerId,
+    providerRoutes: getProviderRoutesForSubmission(),
     transport: shouldUseHttpServiceFlow() ? "http" : "static",
     validation,
     promptPackageCreate,

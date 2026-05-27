@@ -86,6 +86,11 @@ export function getActiveGenerationFormValues() {
   const snapshot = getRuntimeWorkspaceSnapshot();
   const modeId = activeModeId();
   const modeState = findModeState(snapshot, modeId);
+  const modeForm = normalizeRuntimeModeForm({
+    ...createModeFormDefaults(modeId),
+    ...(modeState?.modeForm || {}),
+    mode: modeId,
+  });
 
   return {
     mode: modeId,
@@ -105,12 +110,21 @@ export function getActiveGenerationFormValues() {
       ...(modeState?.sloganSettings || {}),
     },
     modeForm: {
-      ...createModeFormDefaults(modeId),
-      ...(modeState?.modeForm || {}),
-      mode: modeId,
+      ...modeForm,
     },
     providerId: state.provider,
     selectedSchemeIds: modeState?.selectedSchemeIds || [],
+  };
+}
+
+function normalizeRuntimeModeForm(modeForm) {
+  if (modeForm?.mode !== "poster") return modeForm;
+  const styleTags = Array.isArray(modeForm.styleTags)
+    ? Array.from(new Set(modeForm.styleTags.map((item) => String(item).trim()).filter(Boolean))).slice(0, 1)
+    : [];
+  return {
+    ...modeForm,
+    styleTags,
   };
 }
 

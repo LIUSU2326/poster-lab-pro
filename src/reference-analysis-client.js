@@ -1,4 +1,4 @@
-import { state } from "./state.js";
+import { getRuntimeWorkspaceSnapshot, setRuntimeWorkspaceSnapshot, state } from "./state.js";
 
 function encodeSegment(value) {
   return encodeURIComponent(String(value));
@@ -20,6 +20,46 @@ async function readEnvelope(response) {
       },
     };
   }
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function commitReferenceAnalysisToWorkspace(key, input, envelope) {
+  if (!envelope?.ok) return;
+  const text = String(envelope.data?.text || "").trim();
+  if (!text) return;
+
+  const updatedAt = nowIso();
+  const snapshot = clone(getRuntimeWorkspaceSnapshot());
+  const previous = Array.isArray(snapshot.referenceAnalyses) ? snapshot.referenceAnalyses : [];
+  const analysis = {
+    key,
+    kind: input.kind || "composition",
+    role: input.role || "compositionReference",
+    label: input.label || "Reference image",
+    providerId: envelope.data?.providerId || input.providerId || state.provider,
+    model: envelope.data?.model || "",
+    text,
+    createdAt: previous.find((item) => item.key === key)?.createdAt || updatedAt,
+    updatedAt,
+  };
+
+  snapshot.referenceAnalyses = [
+    ...previous.filter((item) => item.key !== key),
+    analysis,
+  ].slice(-12);
+  snapshot.metadata = {
+    ...snapshot.metadata,
+    revision: snapshot.metadata.revision + 1,
+    updatedAt,
+  };
+  setRuntimeWorkspaceSnapshot(snapshot, "reference-analysis");
 }
 
 export async function analyzeReferenceImageForWorkbench(input = {}, options = {}) {
@@ -63,6 +103,7 @@ export async function analyzeReferenceImageForWorkbench(input = {}, options = {}
     }),
   });
   const envelope = await readEnvelope(response);
+  commitReferenceAnalysisToWorkspace(key, input, envelope);
 
   state.referenceAnalysis = {
     ...(state.referenceAnalysis || {}),

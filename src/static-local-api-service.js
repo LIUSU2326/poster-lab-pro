@@ -240,6 +240,7 @@ function createQueueTask({
   kind,
   mode,
   providerId,
+  model = null,
   schemeId = null,
   dependsOn = [],
   count = 1,
@@ -271,6 +272,7 @@ function createQueueTask({
       ...(aspectRatio ? { aspectRatio } : {}),
       ...(width ? { width } : {}),
       ...(height ? { height } : {}),
+      ...(model ? { model } : {}),
       count,
     },
     output: { providerResultIds: [], metadata: {} },
@@ -317,7 +319,7 @@ function createQueuePlanPayload(payload) {
     id: jobId,
     projectId: payload.projectId,
     mode: payload.mode,
-    providerId: payload.providerId || "openai",
+    providerId: providerRouteForPayload(payload, "concept").providerId,
     status: "queued",
     title: `${payload.mode} batch production`,
     retryPolicy: { maxAttempts: 2, backoffMs: 1000, retryableErrorCodes: ["provider_unavailable", "rate_limited", "unknown"] },
@@ -336,7 +338,8 @@ function createQueuePlanPayload(payload) {
     jobId,
     kind: "briefGeneration",
     mode: payload.mode,
-    providerId: job.providerId,
+    providerId: providerRouteForPayload(payload, "concept").providerId,
+    model: providerRouteForPayload(payload, "concept").model || "concept",
   });
   tasks.push(briefTask);
 
@@ -350,7 +353,7 @@ function createQueuePlanPayload(payload) {
       jobId,
       kind: "imageGeneration",
       mode: payload.mode,
-      providerId: job.providerId,
+      providerId: providerRouteForPayload(payload, "image").providerId,
       schemeId,
       dependsOn: [briefTask.id],
       count: payload.imagesPerScheme || 1,
@@ -358,6 +361,7 @@ function createQueuePlanPayload(payload) {
       aspectRatio,
       width: size.width,
       height: size.height,
+      model: providerRouteForPayload(payload, "image").model || "image",
     });
     tasks.push(imageTask);
 
@@ -372,13 +376,14 @@ function createQueuePlanPayload(payload) {
         jobId,
         kind,
         mode: payload.mode,
-        providerId: job.providerId,
+        providerId: providerRouteForPayload(payload, kind).providerId,
         schemeId,
         dependsOn: [imageTask.id],
         platformPreset,
         aspectRatio,
         width: size.width,
         height: size.height,
+        model: providerRouteForPayload(payload, kind).model || kind,
       }));
     });
   });
@@ -393,6 +398,14 @@ function createQueuePlanPayload(payload) {
   }));
 
   return { job, tasks, events };
+}
+
+function providerRouteForPayload(payload, slot) {
+  const route = payload.providerRoutes?.[slot] || {};
+  return {
+    providerId: route.providerId || payload.providerId || "openai",
+    model: route.model || "",
+  };
 }
 
 export function createStaticLocalApiService() {
@@ -470,7 +483,8 @@ export async function runStaticGenerationServiceFlow(submission) {
     ? await service.mapProviderRequest({
       promptPackage: promptPackageCreate.data.promptPackage,
       snapshot,
-      providerId: submission.providerId,
+      providerId: submission.providerRoutes?.image?.providerId || submission.providerId,
+      model: submission.providerRoutes?.image?.model,
       kind: "imageGeneration",
       count: submission.queuePlanCreate.payload.imagesPerScheme,
       traceId: submission.traceId,

@@ -1463,6 +1463,19 @@ Classification: MVP workflow refinement.
 - Provider settings should be resizeable from the lower-left corner for dense model and credential workflows.
 - Provider settings list focuses on mainstream model providers and a practical OpenAI-compatible gateway path: OpenAI, AIGoCode, Google AI Studio, DeepSeek, Claude, and Qwen. Experimental Replicate, ComfyUI, and Custom HTTP rows are removed from the primary workbench settings.
 - AIGoCode is treated as an OpenAI-compatible relay provider. Its Base URL stays editable, defaults to the relay `/v1` endpoint, and connection testing uses the model-list diagnostic before any paid generation path.
+- Provider settings must make model source explicit: the selected supplier and Base URL define whether a `gpt-*` model runs through OpenAI official API or an OpenAI-compatible relay such as AIGoCode, so model dropdown labels and route summaries should show both the provider source and model ID.
+- Provider model dropdowns must not carry stale model IDs across suppliers. If a saved/current model is not in the selected provider's catalog or that provider's custom model list, the UI falls back to the first valid provider model instead of labeling another supplier's model as official.
 - Provider routing schemes should support switching, icon-based add/delete actions, and secondary editing through the active scheme name plus model-slot selects. Capability tags are removed from the bottom of the settings sheet until they map to a real workflow action.
 - Sheet resize affordances should be quiet, integrated, and discoverable on hover; avoid heavy corner marks that look like broken window chrome.
 - The top-right generation action is the primary workbench CTA and must visually outrank export, theme, model settings, and text-toggle controls.
+
+## 2026-05-27 Formal Test Surface Cleanup
+
+Classification: MVP usability refinement.
+
+- Project library is a lightweight project switcher, not a dashboard. It stores only game name and game description, supports saving the current form, importing a saved project into the left form, deleting saved records, and closing back to the scheme board.
+- Reference upload cards are preview-first. After upload, the card shows the image and compact extraction/delete actions; explanatory text is hidden unless the action is disabled or returns a result.
+- Style library should use visual preview tiles so style choices are easier to scan without generating costly reference images.
+- Single-size output and suite strategy are mutually exclusive. Unified/independent strategy is shown only for suite output; selecting a single/custom size hides that strategy control.
+- The task drawer should show only actionable status: current submission, validation state, queue progress, cost, elapsed time, and failures. Internal route names and service step traces belong in logs, not the default UI.
+- Provider routing is per task slot. Concept generation, image generation, style recognition, and composition recognition may each choose a different configured provider/model; the currently selected provider in the left rail only edits that provider's credentials and defaults.

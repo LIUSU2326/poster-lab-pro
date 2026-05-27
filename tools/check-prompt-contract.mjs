@@ -53,6 +53,8 @@ for (const token of [
   "getPromptGuardrails",
   "getRequiredAssetSlots",
   "Mode Asset References",
+  "Reference Analysis",
+  "referenceAnalyses",
   "providerReady",
   "isProviderSafeAssetUrl",
 ]) {

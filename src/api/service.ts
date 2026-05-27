@@ -240,6 +240,46 @@ async function updateProviderCredentialMirror(input: {
   };
 }
 
+async function describeProviderCredentialStatus(input: {
+  credentialVault: EncryptedProviderCredentialVault;
+  providerId: z.infer<typeof ProviderCredentialStatusApiRequestSchema>["providerId"];
+  keyRef: string;
+}): Promise<{ status: ProviderCredentialVaultStatus; recoveredInvalidCredential: boolean }> {
+  const status = await input.credentialVault.describe({
+    providerId: input.providerId,
+    keyRef: input.keyRef,
+  });
+
+  if (!status.credentialRef) {
+    return { status, recoveredInvalidCredential: false };
+  }
+
+  const resolved = await input.credentialVault.resolveCredential(status.credentialRef);
+  if (resolved.ok) {
+    return { status, recoveredInvalidCredential: false };
+  }
+
+  const errorText = `${resolved.error.message} ${resolved.error.userMessage}`.toLowerCase();
+  const shouldRecover = resolved.error.code === "auth_failed" && errorText.includes("decrypt");
+  if (!shouldRecover) {
+    return { status, recoveredInvalidCredential: false };
+  }
+
+  await input.credentialVault.revoke({
+    providerId: input.providerId,
+    keyRef: input.keyRef,
+  });
+  const recoveredStatus = await input.credentialVault.describe({
+    providerId: input.providerId,
+    keyRef: input.keyRef,
+  });
+
+  return {
+    status: recoveredStatus,
+    recoveredInvalidCredential: true,
+  };
+}
+
 export function createLocalApiService(options: LocalApiServiceOptions = {}): LocalApiService {
   const repository = options.repository || createMemoryDraftRepository();
   const credentialVault = options.credentialVault || createEncryptedProviderCredentialVault({
@@ -336,10 +376,13 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
     async getProviderCredentialStatus(request) {
       try {
         const parsed = ProviderCredentialStatusApiRequestSchema.parse(request);
-        const status = await credentialVault.describe({
+        const keyRef = providerCredentialKeyRef(parsed);
+        const credentialStatus = await describeProviderCredentialStatus({
+          credentialVault,
           providerId: parsed.providerId,
-          keyRef: providerCredentialKeyRef(parsed),
+          keyRef,
         });
+        const status = credentialStatus.status;
         const mirror = status.configured
           ? await updateProviderCredentialMirror({
               repository,
@@ -349,6 +392,13 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
                 enabled: true,
               },
             })
+          : credentialStatus.recoveredInvalidCredential
+            ? await updateProviderCredentialMirror({
+                repository,
+                workspaceId: parsed.workspaceId,
+                status,
+                clear: true,
+              })
           : { updated: false };
         if ("failure" in mirror && mirror.failure) {
           return ProviderCredentialStatusApiResponseSchema.parse(mirror.failure);
@@ -359,6 +409,7 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
           data: {
             status,
             providerConfigUpdated: mirror.updated,
+            recoveredInvalidCredential: credentialStatus.recoveredInvalidCredential,
           },
           meta: createApiMeta({
             workspaceId: parsed.workspaceId,
@@ -467,6 +518,7 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
           projectId: parsed.projectId,
           mode: parsed.mode,
           providerId: parsed.providerId,
+          providerRoutes: parsed.providerRoutes,
           schemeIds: parsed.schemeIds,
           platformPresets: parsed.platformPresets,
           aspectRatios: parsed.aspectRatios,

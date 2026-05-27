@@ -30,7 +30,12 @@ export function renderArchiveBoard() {
           <button class="archive-export-button" type="button" data-action="export-archive-selection" ${selectedCount > 0 ? "" : "disabled"}>导出选择的图片</button>
         </div>
         ${state.archiveExportMessage ? `<div class="archive-export-note" aria-live="polite">${escapeHtml(state.archiveExportMessage)}</div>` : ""}
-        <div class="archive-table">
+        ${archiveRows.length === 0 ? `
+          <div class="archive-empty" role="status">
+            <strong>暂无归档图片</strong>
+            <small>真实生成完成后，可在这里批量选择并导出图片。</small>
+          </div>
+        ` : `<div class="archive-table">
           <div class="archive-row head">
             <span>选择</span><span>资源</span><span>关联项目</span><span>模型 / 画风</span><span>生成时间</span><span>状态</span><span>操作</span>
           </div>
@@ -60,7 +65,7 @@ export function renderArchiveBoard() {
               </div>
             </div>
           `).join("")}
-        </div>
+        </div>`}
       </div>
     </section>
   `;

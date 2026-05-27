@@ -117,7 +117,7 @@ export function renderConfigPanel(activeMode) {
         <section class="config-section">
           <div class="section-title">
             <span>01 项目</span>
-            <button type="button" data-view="project-library">项目库</button>
+            <button type="button" data-view="project-library">${state.view === "project-library" ? "收起" : "项目库"}</button>
           </div>
           <div
             data-react-brief-section
@@ -236,9 +236,18 @@ function normalizeAssetSlots(modeId, slots) {
   const labels = getModeCopy(modeId).assets;
   return slots.map((slot, index) => ({
     ...slot,
-    label: normalizeAssetLabel(labels[index] || slot.label || `Asset ${index + 1}`),
+    label: normalizeAssetSlotLabel(slot, labels[index] || `Asset ${index + 1}`),
     state: slot.previewUrl ? "已就绪" : index < 2 ? "待上传" : "可选",
   }));
+}
+
+function normalizeAssetSlotLabel(slot, fallbackLabel) {
+  const label = normalizeAssetLabel(slot?.label || fallbackLabel);
+  if (/背景|场景/i.test(label)) return "场景";
+  if (/logo|标识/i.test(label)) return "LOGO";
+  if (/角色|character/i.test(label)) return "角色";
+  if (!slot?.sourceType) return normalizeAssetLabel(fallbackLabel);
+  return label;
 }
 
 function normalizeAssetLabel(label) {
@@ -384,12 +393,14 @@ function renderModeBrief(activeMode, form) {
   }
 
   return `
-    <div class="guidance-box">
+    <div class="guidance-box ${projectBrief.focusGuidance ? "" : "is-compact"}">
       <div>
         <strong>侧重点引导</strong>
         <button type="button">开启</button>
       </div>
-      <input value="${escapeAttribute(projectBrief.focusGuidance || "")}" aria-label="侧重点引导" data-form-field="projectBrief.focusGuidance" />
+      ${projectBrief.focusGuidance
+        ? `<input value="${escapeAttribute(projectBrief.focusGuidance || "")}" aria-label="侧重点引导" data-form-field="projectBrief.focusGuidance" />`
+        : "<small>未启用</small>"}
     </div>
   `;
 }

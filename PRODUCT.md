@@ -9,6 +9,7 @@ Product boundaries:
 - Composition reference uploads show the uploaded image in the reference upload area.
 - Composition extraction exposes two user intents: composition-only recognition and full image-to-prompt recognition for generating similar images.
 - Style reference uploads show their image preview and expose style extraction.
+- Successful composition/style extraction is stored as workspace reference analysis and is included in subsequent prompt packages.
 - Reference extraction controls are gated by configured provider/API readiness and route through the existing provider settings model slots.
 - The extra material-routing status card is removed from the normal left-panel flow.
 - Custom output suites can be created, edited, selected, have sizes added or removed, and be deleted when they are user-created.

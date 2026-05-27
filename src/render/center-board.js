@@ -37,10 +37,17 @@ export function renderCenterBoard(activeMode, selected) {
 function getVisibleBoardSchemes(activeMode, schemes, resultsByScheme) {
   const fixtureIds = new Set((activeMode?.schemes || []).map((scheme) => scheme.id));
   return schemes.filter((scheme) => {
-    if (!fixtureIds.has(scheme.id)) return true;
     const results = resultsByScheme.get(scheme.id) || [];
-    return results.some((result) => isRealGeneratedResult(result));
+    const hasRealResult = results.some((result) => isRealGeneratedResult(result));
+    if (fixtureIds.has(scheme.id) || isSeedWorkspaceScheme(activeMode, scheme)) return hasRealResult;
+    return true;
   });
+}
+
+function isSeedWorkspaceScheme(activeMode, scheme) {
+  const modeId = activeMode?.id || "";
+  return scheme?.id === `scheme-${modeId}-01`
+    || (String(scheme?.id || "").startsWith(`scheme-${modeId}-`) && String(scheme?.brief || "").includes("archive testing"));
 }
 
 function isRealGeneratedResult(result) {
@@ -52,8 +59,8 @@ function isRealGeneratedResult(result) {
 function renderSchemeBoardEmpty(activeMode) {
   return `
     <div class="scheme-plan-empty" role="status">
-      <strong>等待真实 API 生成方案</strong>
-      <small>中间区域的示例卡片已隐藏。配置 API Key 后，从右上角“生成海报”开始真实测试。</small>
+      <strong>等待真实生成</strong>
+      <small>配置 API Key 后，点击右上角生成按钮开始正式测试。</small>
       <button type="button" data-action="open-settings">配置模型与 API Key</button>
     </div>
   `;
@@ -61,71 +68,67 @@ function renderSchemeBoardEmpty(activeMode) {
 
 function renderProjectLibraryBoard(activeMode) {
   const project = getWorkspaceProject();
-  const summary = getWorkspaceSnapshotSummary();
-  const snapshot = state.workspaceSnapshot;
-  const modeStates = Array.isArray(snapshot.modeStates) ? snapshot.modeStates : [];
-  const assets = Array.isArray(snapshot.assets) ? snapshot.assets : [];
-  const updatedAt = summary.updatedAt ? new Date(summary.updatedAt).toLocaleString() : "未记录";
+  const entries = getProjectLibraryEntries(project);
+  const activeEntryId = state.projectLibraryActiveEntryId || "";
 
   return `
     <section class="center-board project-library-board" aria-label="项目库">
       <div class="project-library-hero">
         <div>
           <span>PROJECT LIBRARY</span>
-          <h1>${escapeHtml(project.name || "未命名项目")}</h1>
-          <p>${escapeHtml(project.description || "暂无项目描述。")}</p>
+          <h1>项目库</h1>
+          <p>只保存游戏名称和游戏描述。导入后会快速填入左侧项目表单，不会改动素材、方案或归档结果。</p>
         </div>
-        <div class="project-library-side">
-          <div class="project-library-stats">
-            <strong>${summary.assetCount}</strong><span>素材</span>
-            <strong>${summary.schemeCount}</strong><span>方案</span>
-            <strong>${summary.resultCount}</strong><span>结果</span>
-          </div>
-          <div class="project-library-top-actions">
-            <button class="primary" type="button" data-action="project-library-create">新增项目</button>
-            <button class="danger" type="button" data-action="project-library-delete">删除项目</button>
-          </div>
+        <div class="project-library-top-actions">
+          <button class="primary" type="button" data-action="project-library-save-current">保存当前项目</button>
+          <button type="button" data-view="schemes">收起项目库</button>
         </div>
       </div>
       ${state.projectLibraryMessage ? `<p class="project-library-message">${escapeHtml(state.projectLibraryMessage)}</p>` : ""}
 
       <div class="project-library-grid">
         <article class="project-library-card current">
-          <span>当前项目</span>
+          <span>当前表单</span>
           <strong>${escapeHtml(project.name || "未命名项目")}</strong>
-          <small>版本 ${summary.revision} / 更新 ${escapeHtml(updatedAt)}</small>
+          <p>${escapeHtml(project.description || "暂无项目描述。")}</p>
           <div class="project-library-actions">
-            <button type="button" data-view="schemes">打开项目</button>
-            <button type="button" data-view="archive">查看归档</button>
+            <button type="button" data-action="project-library-save-current">保存到项目库</button>
           </div>
         </article>
-        ${modeStates.map((modeState) => `
-          <article class="project-library-card">
-            <span>${escapeHtml(getModeName(modeState.mode))}</span>
-            <strong>${escapeHtml(modeState.projectBrief?.projectName || project.name || "项目")}</strong>
-            <small>${(modeState.selectedSchemeIds || []).length} 个方案 / ${modeState.outputSettings?.aspectRatios?.slice(0, 3).join("、") || "未设尺寸"}</small>
-            <button type="button" data-mode="${escapeHtml(modeState.mode)}">切换到此模式</button>
+        ${entries.map((entry) => `
+          <article class="project-library-card ${entry.id === activeEntryId ? "active-entry" : ""}">
+            <span>${entry.id === activeEntryId ? "当前记录" : "已保存项目"}</span>
+            <strong>${escapeHtml(entry.name || "未命名项目")}</strong>
+            <p>${escapeHtml(entry.description || "暂无项目描述。")}</p>
+            <small>${escapeHtml(formatProjectEntryDate(entry.updatedAt))}</small>
+            <div class="project-library-actions">
+              <button type="button" data-action="project-library-import" data-project-entry-id="${escapeAttribute(entry.id)}">导入到表单</button>
+              <button class="danger" type="button" data-action="project-library-delete-entry" data-project-entry-id="${escapeAttribute(entry.id)}">删除</button>
+            </div>
           </article>
         `).join("")}
       </div>
-
-      <div class="project-library-assets">
-        <div class="project-library-section-title">
-          <strong>项目素材</strong>
-          <small>素材库管理项目输入，不等同于归档结果。</small>
-        </div>
-        <div class="project-library-asset-grid">
-          ${(assets.length > 0 ? assets : getProjectLibraryFallbackAssets()).map((asset) => `
-            <button class="project-library-asset" type="button" data-action="simulate-asset-upload" data-asset-role="${escapeHtml(asset.role)}" data-asset-label="${escapeAttribute(asset.label)}">
-              <i class="${asset.previewUrl ? "has-preview" : ""}" ${asset.previewUrl ? `style="background-image:url('${escapeAttribute(asset.previewUrl)}')"` : ""}></i>
-              <strong>${escapeHtml(normalizeProjectAssetLabel(asset.label))}</strong>
-              <small>${asset.previewUrl ? "已上传" : "待上传"} / ${escapeHtml(getAssetRoleName(asset.role))}</small>
-            </button>
-          `).join("")}
-        </div>
-      </div>
     </section>
   `;
+}
+
+function getProjectLibraryEntries(project) {
+  const savedEntries = Array.isArray(state.projectLibraryEntries) ? state.projectLibraryEntries : [];
+  if (savedEntries.length > 0) return savedEntries;
+
+  return [{
+    id: project.id || "current-project",
+    name: project.name || "未命名项目",
+    description: project.description || "",
+    updatedAt: state.workspaceSnapshot?.metadata?.updatedAt || "",
+  }];
+}
+
+function formatProjectEntryDate(value) {
+  if (!value) return "未记录更新时间";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "未记录更新时间";
+  return `更新 ${date.toLocaleString()}`;
 }
 
 function renderResultBoard(activeMode) {
@@ -256,15 +259,13 @@ function renderResultViewer() {
       </div>
       <div class="result-viewer-dock">
         <div class="result-viewer-count">
-          <span>生成素材</span>
-          <strong>${Math.max(1, results.findIndex((item) => item.id === result.id) + 1)} / ${results.length}</strong>
+          <span>${escapeHtml(display?.code || scheme?.code || "RESULT")}</span>
+          <strong>${escapeHtml(display?.title || scheme?.title || "生成图片")}</strong>
         </div>
         <div class="result-viewer-specs">
           <span class="mono">${escapeHtml(finalSize)}</span>
           <span class="mono">${escapeHtml(ratio)}</span>
-          <span>${escapeHtml(formatResultStatus(result.status))}</span>
         </div>
-        <button type="button">裁切详情</button>
         ${renderResultActionButton(result, "variant", "生成变体")}
         ${renderResultActionButton(result, "upscale", "高清放大")}
         ${renderResultActionButton(result, "removeBg", "移除背景")}

@@ -83,14 +83,28 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
   deepseek: {
     baseUrl: "",
     defaultModel: "deepseek-v4-flash",
+    modelSlots: {
+      concept: "deepseek-v4-flash",
+    },
   },
   claude: {
     baseUrl: "",
-    defaultModel: "claude-opus-4-1-20250805",
+    defaultModel: "claude-opus-4-7",
+    modelSlots: {
+      concept: "claude-opus-4-7",
+      styleReference: "claude-opus-4-7",
+      compositionReference: "claude-opus-4-7",
+    },
   },
   qwen: {
     baseUrl: "",
     defaultModel: "qwen3.7-max",
+    modelSlots: {
+      concept: "qwen3.7-max",
+      image: "wan2.7-image-pro",
+      styleReference: "qwen3.6-plus",
+      compositionReference: "qwen3.6-plus",
+    },
   },
 };
 
@@ -99,11 +113,8 @@ export function createProjectBriefDefaults(mode: ProductionMode = "poster"): Pro
     projectName: defaultProjectName,
     gameDescription:
       "A hybrid cooking management and wilderness hunting game where chef teams gather rare ingredients for VIP guests.",
-    focusGuidanceEnabled: true,
-    focusGuidance:
-      mode === "icon"
-        ? "Emphasize the main subject and dynamic prop interaction."
-        : "Emphasize the chef squad, monster ingredients, restaurant operation, and adventure tone.",
+    focusGuidanceEnabled: false,
+    focusGuidance: "",
   };
 }
 
@@ -138,7 +149,7 @@ export function createModeFormDefaults(mode: ProductionMode = "poster"): ModeFor
   const defaults: Record<ProductionMode, ModeForm> = {
     poster: {
       mode: "poster",
-      styleTags: ["cinematic", "game-key-visual"],
+      styleTags: [],
       compositionReferenceStrength: "composition",
     },
     collab: {

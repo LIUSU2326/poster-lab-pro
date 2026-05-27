@@ -228,6 +228,30 @@ function formatModeForm(modeState: WorkspaceModeState): string {
   return `Style tags: ${form.styleTags.join(", ")}. Composition reference strength: ${form.compositionReferenceStrength}.`;
 }
 
+function formatReferenceAnalyses(snapshot: WorkspaceSnapshot): string {
+  const analyses = [...(snapshot.referenceAnalyses || [])]
+    .filter((item) => item.text.trim())
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
+  if (analyses.length === 0) return "";
+
+  const labels: Record<string, string> = {
+    style: "Style extraction",
+    composition: "Composition-only extraction",
+    full: "Full image-to-prompt extraction",
+  };
+  return analyses
+    .slice(0, 4)
+    .map((item) => {
+      const text = item.text.length > 1200 ? `${item.text.slice(0, 1200)}...` : item.text;
+      return [
+        `${labels[item.kind] || item.kind}: ${item.label}`,
+        `Provider: ${item.providerId}, model: ${item.model}.`,
+        text,
+      ].join("\n");
+    })
+    .join("\n\n");
+}
+
 function buildSections(input: {
   snapshot: WorkspaceSnapshot;
   mode: ProductionMode;
@@ -314,6 +338,19 @@ function buildSections(input: {
         source: "slogan",
         priority: 70,
         content: sloganText,
+      }),
+    );
+  }
+
+  const referenceAnalysisText = formatReferenceAnalyses(input.snapshot);
+  if (referenceAnalysisText) {
+    sections.push(
+      section({
+        id: "reference-analysis",
+        title: "Reference Analysis",
+        source: "asset",
+        priority: 86,
+        content: referenceAnalysisText,
       }),
     );
   }

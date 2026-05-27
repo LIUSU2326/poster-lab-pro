@@ -96,40 +96,51 @@ export function getModelSlots() {
 export function getArchiveRows() {
   const snapshot = runtimeSnapshot();
 
-  return snapshot.archiveRows.map((row) => {
-    const result = snapshot.results.find((item) => item.id === row.resultAssetId);
-    const scheme = snapshot.schemes.find((item) => item.id === result?.schemeId);
-    const mode = modeSpecs[row.mode];
-    const mockPreviewUrl = typeof result?.metadata?.mockPreviewUrl === "string" ? result.metadata.mockPreviewUrl : "";
-    const previewUrl = mockPreviewUrl
-      || (result?.metadata?.resultFile?.storageKey ? getResultDownloadUrl(result, { inline: true }) : "")
-      || result?.thumbnailUrl
-      || result?.assetUrl
-      || "";
-    const downloadUrl = mockPreviewUrl
-      || (result?.metadata?.resultFile?.storageKey ? getResultDownloadUrl(result) : "")
-      || result?.assetUrl
-      || result?.thumbnailUrl
-      || "";
+  return snapshot.archiveRows
+    .filter((row) => {
+      const result = snapshot.results.find((item) => item.id === row.resultAssetId);
+      return !isDemoResult(result);
+    })
+    .map((row) => {
+      const result = snapshot.results.find((item) => item.id === row.resultAssetId);
+      const scheme = snapshot.schemes.find((item) => item.id === result?.schemeId);
+      const mode = modeSpecs[row.mode];
+      const mockPreviewUrl = typeof result?.metadata?.mockPreviewUrl === "string" ? result.metadata.mockPreviewUrl : "";
+      const previewUrl = mockPreviewUrl
+        || (result?.metadata?.resultFile?.storageKey ? getResultDownloadUrl(result, { inline: true }) : "")
+        || result?.thumbnailUrl
+        || result?.assetUrl
+        || "";
+      const downloadUrl = mockPreviewUrl
+        || (result?.metadata?.resultFile?.storageKey ? getResultDownloadUrl(result) : "")
+        || result?.assetUrl
+        || result?.thumbnailUrl
+        || "";
 
-    return {
-      id: row.id,
-      resultId: row.resultAssetId,
-      title: row.title,
-      project: snapshot.project.name,
-      model: result?.model || row.model,
-      state: archiveStateLabels[row.state] || row.state,
-      status: row.state,
-      type: modeArchiveType[row.mode] || row.mode.toUpperCase(),
-      tone: result?.metadata?.tone || scheme?.source?.tone || mode?.accent || "forest",
-      previewUrl,
-      downloadUrl,
-      width: result?.width || null,
-      height: result?.height || null,
-      createdAt: result?.createdAt || row.createdAt || "",
-      updatedAt: result?.updatedAt || row.updatedAt || "",
-    };
-  });
+      return {
+        id: row.id,
+        resultId: row.resultAssetId,
+        title: row.title,
+        project: snapshot.project.name,
+        model: result?.model || row.model,
+        state: archiveStateLabels[row.state] || row.state,
+        status: row.state,
+        type: modeArchiveType[row.mode] || row.mode.toUpperCase(),
+        tone: result?.metadata?.tone || scheme?.source?.tone || mode?.accent || "forest",
+        previewUrl,
+        downloadUrl,
+        width: result?.width || null,
+        height: result?.height || null,
+        createdAt: result?.createdAt || row.createdAt || "",
+        updatedAt: result?.updatedAt || row.updatedAt || "",
+      };
+    });
+}
+
+function isDemoResult(result) {
+  if (!result) return false;
+  if (result.metadata?.mockPreviewUrl || result.metadata?.source === "mock-provider") return true;
+  return /example\.com/i.test(String(result.thumbnailUrl || result.assetUrl || ""));
 }
 
 export function getWorkspaceSnapshotSummary() {
@@ -153,6 +164,10 @@ export function getAssetSlotsForMode(modeId, fallbackAssets = []) {
   const snapshot = runtimeSnapshot();
   const roles = rolePriorityByMode[modeId] || [];
   const assets = snapshot.assets
+    .map((asset) => ({
+      ...asset,
+      role: normalizeAssetRole(asset),
+    }))
     .filter((asset) => roles.length === 0 || roles.includes(asset.role))
     .sort((a, b) => roles.indexOf(a.role) - roles.indexOf(b.role));
 
@@ -180,5 +195,18 @@ export function getDefaultAssetRoleForMode(modeId) {
 function normalizePreviewUrl(value) {
   const url = typeof value === "string" ? value : "";
   if (!url || /example\.com/i.test(url)) return null;
+  if (/^blob:/i.test(url)) return null;
   return url;
+}
+
+function normalizeAssetRole(asset) {
+  const role = asset?.role || "";
+  const label = String(asset?.label || "");
+  if (role === "gameCharacter" && /背景|场景/i.test(label)) {
+    return "background";
+  }
+  if (role === "gameCharacter" && /logo|标识/i.test(label)) {
+    return "gameLogo";
+  }
+  return role;
 }

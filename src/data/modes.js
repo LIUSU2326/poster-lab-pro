@@ -130,7 +130,7 @@ export const modeSpecs = {
       { title: "角色锁定", text: "Brief 阶段只能使用 [Game Character] 与 [Collab Partner] 占位符。" },
       { title: "安全规则", text: "两个角色必须清晰可见并合理互动，绝不能融合成一个实体。" },
     ],
-    guardrails: ["[Game Character]", "[Collab Partner]", "禁止融合角色", "禁止虚构外貌"],
+    guardrails: ["[Game Character]", "[Collab Partner]", "Do NOT merge characters", "禁止融合角色", "禁止虚构外貌"],
     schemes: [
       {
         id: "collab-01",
@@ -287,7 +287,7 @@ export const modeSpecs = {
       { title: "纯色背景", text: "背景必须是纯黑、纯白、纯绿或单一纯色，不允许复杂场景。" },
       { title: "便于抠图", text: "输出要便于后期抠图，轮廓清晰，边缘干净。" },
     ],
-    guardrails: ["纯色背景", "字标优先", "禁止渐变背景", "便于抠图"],
+    guardrails: ["solid background", "纯色背景", "字标优先", "禁止渐变背景", "便于抠图"],
     schemes: [
       {
         id: "logo-01",
@@ -352,7 +352,7 @@ export const modeSpecs = {
       { title: "主体参考", text: "严格保持上传素材中的核心视觉特征，不虚构无关新角色。" },
       { title: "构图轮循", text: "多张构图参考按方案顺序轮循分配，只学习空间关系和镜头角度。" },
     ],
-    guardrails: ["锁定 1:1", "无文字", "无边框", "直角输出", "满铺画面"],
+    guardrails: ["No text", "锁定 1:1", "无文字", "无边框", "直角输出", "满铺画面"],
     schemes: [
       {
         id: "icon-01",

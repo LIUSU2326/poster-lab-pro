@@ -68,7 +68,7 @@ for (const file of [
   }
 }
 
-for (const token of ["state.submission", "LOCAL SUBMISSION", "DTO ROUTES", "VALIDATION", "SERVICE FLOW", "QUEUE RUN", "formatValidationIssues"]) {
+for (const token of ["state.submission", "submission-card compact", "formatValidationIssues", "formatServiceQueue", "task-stats", "queue-list"]) {
   if (!taskChrome.includes(token)) issues.push(`task-chrome.js: missing submission feedback token ${token}`);
 }
 

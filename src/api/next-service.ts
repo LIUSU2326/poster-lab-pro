@@ -87,9 +87,9 @@ declare global {
 
 function createNextApiSingleton(): NextApiSingleton {
   const repository = createMemoryDraftRepository([createMockWorkspaceSnapshot()]);
-  const runtimeDir = path.join(process.cwd(), "artifacts", "runtime");
+  const runtimeDir = process.env.POSTER_LAB_RUNTIME_DIR || path.join(process.cwd(), "artifacts", "runtime");
   const resultFileStore = createLocalResultFileStore({
-    rootDir: path.join(process.cwd(), "artifacts", "generated-results"),
+    rootDir: path.join(runtimeDir, "..", "generated-results"),
   });
   const credentialVault = createEncryptedProviderCredentialVault({
     masterKey: process.env.POSTER_LAB_LOCAL_VAULT_KEY || `poster-lab-local-dev-vault:${process.cwd()}`,

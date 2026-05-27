@@ -1,4 +1,5 @@
 import { createProviderConfigDefaults } from "../schema/zod-defaults";
+import type { ProviderId } from "../schema/zod";
 import { createBriefPromptPackage, createImagePromptPackage } from "../prompts/builder";
 import { createMockProviderAdapter } from "../providers/mock-adapter";
 import { getProviderManifest } from "../providers/manifests";
@@ -151,12 +152,24 @@ function mappedPromptPackageId(jobId: string, taskId: string) {
   return `queue-${jobId}-${taskId}`;
 }
 
+function providerIdForTask(initialPlan: QueuePlan, task: QueueTask): ProviderId {
+  return task.providerId || initialPlan.job.providerId;
+}
+
+function storedConfigForTask(providerId: ProviderId, options: MockQueueRunOptions): StoredProviderConfig | null {
+  const snapshotConfig = options.snapshot?.providerConfigs?.[providerId];
+  if (snapshotConfig) return snapshotConfig;
+  if (options.storedConfig?.providerId === providerId) return options.storedConfig;
+  return null;
+}
+
 function createBriefMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
+  const providerId = providerIdForTask(initialPlan, task);
   const request = BriefGenerationRequestSchema.parse({
     context: {
       projectId: initialPlan.job.projectId,
       mode: initialPlan.job.mode,
-      providerId: initialPlan.job.providerId,
+      providerId,
       jobId: initialPlan.job.id,
     },
     projectName: initialPlan.job.title,
@@ -169,7 +182,7 @@ function createBriefMappedRequest(initialPlan: QueuePlan, task: QueueTask, model
 
   return ProviderMappedRequestSchema.parse({
     kind: "briefGeneration",
-    providerId: initialPlan.job.providerId,
+    providerId,
     model,
     promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
     request,
@@ -177,11 +190,12 @@ function createBriefMappedRequest(initialPlan: QueuePlan, task: QueueTask, model
 }
 
 function createImageMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
+  const providerId = providerIdForTask(initialPlan, task);
   const request = ImageGenerationRequestSchema.parse({
     context: {
       projectId: initialPlan.job.projectId,
       mode: initialPlan.job.mode,
-      providerId: initialPlan.job.providerId,
+      providerId,
       jobId: initialPlan.job.id,
     },
     schemeId: task.input.schemeId || "mock-scheme",
@@ -196,7 +210,7 @@ function createImageMappedRequest(initialPlan: QueuePlan, task: QueueTask, model
 
   return ProviderMappedRequestSchema.parse({
     kind: "imageGeneration",
-    providerId: initialPlan.job.providerId,
+    providerId,
     model,
     promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
     request,
@@ -204,10 +218,11 @@ function createImageMappedRequest(initialPlan: QueuePlan, task: QueueTask, model
 }
 
 function createImageEditMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
+  const providerId = providerIdForTask(initialPlan, task);
   const base = createImageMappedRequest(initialPlan, task, model);
   return ProviderMappedRequestSchema.parse({
     kind: "imageEdit",
-    providerId: initialPlan.job.providerId,
+    providerId,
     model,
     promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
     request: ImageEditRequestSchema.parse({
@@ -219,16 +234,17 @@ function createImageEditMappedRequest(initialPlan: QueuePlan, task: QueueTask, m
 }
 
 function createUpscaleMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
+  const providerId = providerIdForTask(initialPlan, task);
   return ProviderMappedRequestSchema.parse({
     kind: "upscale",
-    providerId: initialPlan.job.providerId,
+    providerId,
     model,
     promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
     request: UpscaleRequestSchema.parse({
       context: {
         projectId: initialPlan.job.projectId,
         mode: initialPlan.job.mode,
-        providerId: initialPlan.job.providerId,
+        providerId,
         jobId: initialPlan.job.id,
       },
       sourceResultId: task.input.sourceResultId || "mock-result",
@@ -239,16 +255,17 @@ function createUpscaleMappedRequest(initialPlan: QueuePlan, task: QueueTask, mod
 }
 
 function createBackgroundRemovalMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
+  const providerId = providerIdForTask(initialPlan, task);
   return ProviderMappedRequestSchema.parse({
     kind: "backgroundRemoval",
-    providerId: initialPlan.job.providerId,
+    providerId,
     model,
     promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
     request: BackgroundRemovalRequestSchema.parse({
       context: {
         projectId: initialPlan.job.projectId,
         mode: initialPlan.job.mode,
-        providerId: initialPlan.job.providerId,
+        providerId,
         jobId: initialPlan.job.id,
       },
       sourceResultId: task.input.sourceResultId || "mock-result",
@@ -273,6 +290,7 @@ function createSnapshotMappedRequestForTask(
   model: string,
   snapshot: WorkspaceSnapshot,
 ): ProviderMappedRequest | null {
+  const providerId = providerIdForTask(initialPlan, task);
   if (task.kind === "briefGeneration") {
     const promptPackage = createBriefPromptPackage({
       snapshot,
@@ -281,7 +299,7 @@ function createSnapshotMappedRequestForTask(
     return mapPromptPackageToProviderRequest({
       promptPackage,
       snapshot,
-      providerId: initialPlan.job.providerId,
+      providerId,
       kind: "briefGeneration",
       model,
       jobId: initialPlan.job.id,
@@ -301,7 +319,7 @@ function createSnapshotMappedRequestForTask(
     return mapPromptPackageToProviderRequest({
       promptPackage,
       snapshot,
-      providerId: initialPlan.job.providerId,
+      providerId,
       kind: "imageGeneration",
       model,
       count: task.input.count || 1,
@@ -317,23 +335,26 @@ async function executeProviderTask(
   task: QueueTask,
   options: MockQueueRunOptions,
 ): Promise<{ ok: true; providerResultIds: string[]; metadata: Record<string, unknown> } | { ok: false; error: ProviderError }> {
-  const config = createProviderConfigDefaults(initialPlan.job.providerId);
-  const model = resolveTaskModel(task, config, options.storedConfig || null);
+  const providerId = providerIdForTask(initialPlan, task);
+  const storedConfig = storedConfigForTask(providerId, options);
+  const config = createProviderConfigDefaults(providerId);
+  const model = resolveTaskModel(task, config, storedConfig);
   const mappedRequest = options.snapshot
     ? createSnapshotMappedRequestForTask(initialPlan, task, model, options.snapshot)
     : createMappedRequestForTask(initialPlan, task, model);
   if (!mappedRequest) return { ok: true, providerResultIds: [], metadata: {} };
 
-  const manifest = getProviderManifest(initialPlan.job.providerId);
+  const manifest = getProviderManifest(providerId);
   const adapter = options.adapter || createMockProviderAdapter(manifest);
-  const registry = options.registry || ({ [initialPlan.job.providerId]: adapter } as ProviderAdapterRegistry);
-  const useCredentialBoundary = Boolean(options.storedConfig);
-  const response = options.storedConfig
+  const registry = options.registry || ({ [providerId]: adapter } as ProviderAdapterRegistry);
+  const useCredentialBoundary = Boolean(storedConfig);
+  const credentialRef = options.credentialRef?.providerId === providerId ? options.credentialRef : undefined;
+  const response = storedConfig
     ? await executeMappedProviderRequestWithCredentials(
         {
           mappedRequest,
-          storedConfig: options.storedConfig,
-          ...(options.credentialRef ? { credentialRef: options.credentialRef } : {}),
+          storedConfig,
+          ...(credentialRef ? { credentialRef } : {}),
         },
         options.credentialResolver,
         registry,

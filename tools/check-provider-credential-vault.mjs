@@ -269,6 +269,42 @@ async function runRuntimeCheck() {
     ) {
       issues.push("credential status should re-enable provider config when a persisted vault key exists");
     }
+    const staleBackingStore = providers.createMemoryCredentialVaultBackingStore();
+    const staleVault = providers.createEncryptedProviderCredentialVault({
+      masterKey: "old-packaged-build-master-key",
+      store: staleBackingStore,
+      now: () => "2026-05-23T00:00:00.000Z",
+    });
+    await staleVault.save({
+      providerId: "google",
+      keyRef: "workspace-pizza-kitchen:google:default",
+      apiKey: "GOOGLE_STALE_KEY_TEST_PLACEHOLDER",
+    });
+    const repairedRepository = storage.createMemoryDraftRepository([storage.createMockWorkspaceSnapshot()]);
+    const repairedService = api.createLocalApiService({
+      repository: repairedRepository,
+      credentialVault: providers.createEncryptedProviderCredentialVault({
+        masterKey: "new-packaged-build-master-key",
+        store: staleBackingStore,
+      }),
+    });
+    const repairedStatus = await repairedService.getProviderCredentialStatus({
+      workspaceId,
+      providerId: "google",
+    });
+    const repairedSnapshot = await repairedRepository.loadSnapshot(workspaceId);
+    const staleRecord = await staleBackingStore.getRecord("workspace-pizza-kitchen:google:default");
+    if (
+      !repairedStatus.ok ||
+      repairedStatus.data.status.configured ||
+      repairedStatus.data.recoveredInvalidCredential !== true ||
+      staleRecord ||
+      !repairedSnapshot.ok ||
+      repairedSnapshot.snapshot.providerConfigs.google?.hasApiKey !== false ||
+      repairedSnapshot.snapshot.providerConfigs.google?.status !== "idle"
+    ) {
+      issues.push("credential status should clear stale encrypted records that cannot be decrypted by the current desktop vault key");
+    }
     const deleted = await serviceInstance.deleteProviderCredential({
       workspaceId,
       providerId: "openai",

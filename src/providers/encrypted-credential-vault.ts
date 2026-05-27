@@ -290,7 +290,7 @@ export function createEncryptedProviderCredentialVault(
         return {
           ok: false,
           error: createProviderError(parsedRef.providerId, "auth_failed", "Credential could not be decrypted.", {
-            userMessage: "Provider credential could not be decrypted.",
+            userMessage: "Saved provider credential could not be decrypted. Delete the saved Key and save it again.",
           }),
         };
       }

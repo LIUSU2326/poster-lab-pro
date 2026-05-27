@@ -324,6 +324,17 @@ function mockResolverForStoredConfig(config: StoredProviderConfig | null | undef
   ]);
 }
 
+function mockResolverForStoredConfigs(configs: WorkspaceSnapshot["providerConfigs"]): CredentialResolver | undefined {
+  const credentials = Object.values(configs || {})
+    .filter((config): config is StoredProviderConfig => Boolean(config?.hasApiKey))
+    .map((config) => ({
+      providerId: config.providerId,
+      apiKey: `mock-${config.providerId}-queue-runtime-key`,
+      expiresAt: null,
+    }));
+  return credentials.length ? createMemoryCredentialResolver(credentials) : undefined;
+}
+
 export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions) {
   const { repository } = options;
   const now = options.now || (() => new Date().toISOString());
@@ -335,7 +346,10 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
       const initialPlan = findQueuePlan(snapshot, parsed.jobId);
       const storedConfig = providerConfigFor(snapshot, initialPlan.job.providerId);
       const credentialRef = options.credentialRefs?.[initialPlan.job.providerId] || credentialRefFromStoredConfig(storedConfig);
-      const credentialResolver = options.credentialResolver || (options.useMockCredentials === false ? undefined : mockResolverForStoredConfig(storedConfig));
+      const credentialResolver = options.credentialResolver
+        || (options.useMockCredentials === false
+          ? undefined
+          : mockResolverForStoredConfigs(snapshot.providerConfigs) || mockResolverForStoredConfig(storedConfig));
       const runResult = await runMockQueuePlan(initialPlan, {
         snapshot,
         storedConfig,

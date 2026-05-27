@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
-import { uploadWorkbenchAssetFile } from "../asset-library-client.js";
+import { removeWorkbenchAssetsByRoleLabel, uploadWorkbenchAssetFile } from "../asset-library-client.js";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
 import { analyzeReferenceImageForWorkbench } from "../reference-analysis-client.js";
 import { getRuntimeWorkspaceSnapshot, state } from "../state.js";
@@ -58,9 +58,15 @@ const posterStyleLibrary = [
   "轻奢产品",
   "手绘绘本",
 ];
+const styleAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen"]);
 
 function normalizeInitialValues(values: ModeForm): ModeForm {
-  return ModeFormSchema.parse(values);
+  const parsed = ModeFormSchema.parse(values);
+  if (parsed.mode !== "poster") return parsed;
+  return {
+    ...parsed,
+    styleTags: uniqueStrings(parsed.styleTags).slice(0, 1),
+  };
 }
 
 function rotateStrings(items: string[], offset: number): string[] {
@@ -81,15 +87,23 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-function analysisApiReady(): boolean {
+function routeProviderForSlot(slot: string): string {
+  return state.providerSlotRoutes?.[slot]?.providerId || state.provider;
+}
+
+function analysisApiReady(providerId: string): boolean {
   const snapshot = getRuntimeWorkspaceSnapshot();
-  const provider = snapshot.providerConfigs?.[state.provider];
+  const provider = snapshot.providerConfigs?.[providerId];
   return Boolean(
-    state.providerCredential?.configured ||
-    state.providerConnection?.ok ||
+    (state.providerCredential?.providerId === providerId && state.providerCredential?.configured) ||
+    (state.providerConnection?.providerId === providerId && state.providerConnection?.ok) ||
     provider?.hasApiKey ||
     provider?.status === "success",
   );
+}
+
+function styleAnalysisProviderReady(providerId: string): boolean {
+  return styleAnalysisProviderIds.has(providerId);
 }
 
 function latestStylePreview(): string {
@@ -103,6 +117,11 @@ function latestStyleDataUrl(): string {
     .map(([, value]) => value)
     .filter(Boolean)
     .at(-1) || "";
+}
+
+function stylePreviewTone(style: string, index: number): string {
+  const seed = Array.from(style).reduce((total, char) => total + char.charCodeAt(0), index);
+  return `tone-${seed % 8}`;
 }
 
 export function DirectionSection({ mode, initialValues, styles, directionTitle, directionHelper }: DirectionSectionProps) {
@@ -137,12 +156,21 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   );
   const recommendedStyles = rotateStrings(styleLibrary, state.directionLibraryOffset?.[mode] || 0).slice(0, 6);
   const filteredStyles = styleLibrary.filter((style) => style.toLowerCase().includes(search.trim().toLowerCase()));
-  const activeTags = currentValues.mode === "poster" ? currentValues.styleTags : [];
-  const canExtractStyle = Boolean(stylePreview) && analysisApiReady();
+  const activeTags = currentValues.mode === "poster" ? uniqueStrings(currentValues.styleTags).slice(0, 1) : [];
+  const styleProviderId = routeProviderForSlot("styleReference");
+  const canExtractStyle = Boolean(stylePreview) && analysisApiReady(styleProviderId) && styleAnalysisProviderReady(styleProviderId);
+  const styleDisabledReason = stylePreview
+    ? !styleAnalysisProviderReady(styleProviderId)
+      ? "当前供应商不支持图片识别"
+      : !analysisApiReady(styleProviderId)
+        ? "先配置可用的识别 API"
+        : ""
+    : "";
+  const styleNote = styleAnalysisMessage || styleDisabledReason;
 
   const commitPosterTags = async (nextTags: string[]) => {
     if (currentValues.mode !== "poster") return;
-    const safeTags = uniqueStrings(nextTags);
+    const safeTags = uniqueStrings(nextTags).slice(0, 1);
     const nextValues = { ...currentValues, styleTags: safeTags } as ModeForm;
     form.setValue("styleTags", safeTags, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
     await commit(nextValues);
@@ -150,9 +178,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
 
   const toggleStyle = async (chip: string) => {
     if (currentValues.mode !== "poster") return;
-    const nextTags = activeTags.includes(chip)
-      ? activeTags.filter((item) => item !== chip)
-      : [chip];
+    const nextTags = activeTags.includes(chip) ? [] : [chip];
     await commitPosterTags(nextTags);
   };
 
@@ -164,19 +190,20 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       return;
     }
 
-    const previewUrl = URL.createObjectURL(file);
-    setStylePreview(previewUrl);
+    let previewUrl = "";
     setStyleAnalysisMessage("");
     setStyleUploadStatus("画风参考上传中");
     try {
       const dataUrl = await fileToDataUrl(file);
+      previewUrl = dataUrl;
       state.referenceUploadDataUrls = {
         ...(state.referenceUploadDataUrls || {}),
         "styleReference:画风参考": dataUrl,
       };
     } catch {
-      // Keep the local preview even if extracting needs another upload later.
+      previewUrl = URL.createObjectURL(file);
     }
+    setStylePreview(previewUrl);
 
     const result = await uploadWorkbenchAssetFile({
       role: "styleReference",
@@ -192,12 +219,16 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       setStyleAnalysisMessage("请先上传一张画风参考图。");
       return;
     }
+    if (!styleAnalysisProviderReady(styleProviderId)) {
+      setStyleAnalysisMessage("当前供应商不支持画风识别，请切换到 OpenAI、AIGoCode、Google、Claude 或 Qwen。");
+      return;
+    }
     const imageDataUrl = latestStyleDataUrl();
     if (!imageDataUrl) {
       setStyleAnalysisMessage("请重新上传画风参考图后再提取。");
       return;
     }
-    if (!analysisApiReady()) {
+    if (!analysisApiReady(styleProviderId)) {
       setStyleAnalysisMessage("先在「模型与 API Key」里保存并测试可用的画风识别 API。");
       return;
     }
@@ -206,6 +237,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       const result = await analyzeReferenceImageForWorkbench({
         kind: "style",
         role: "styleReference",
+        providerId: styleProviderId,
         label: "画风参考",
         imageDataUrl,
         key: "styleReference:style",
@@ -222,17 +254,25 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
     }
   };
 
+  const deleteStyleReference = () => {
+    removeWorkbenchAssetsByRoleLabel("styleReference");
+    setStylePreview("");
+    setStyleUploadStatus("");
+    setStyleAnalysisMessage("");
+  };
+
   const upload = (
     <StyleReferenceUpload
       title={directionTitle}
       helper={directionHelper}
       status={styleUploadStatus}
       previewUrl={stylePreview}
-      analysisMessage={styleAnalysisMessage}
+      analysisMessage={styleNote}
       canExtract={canExtractStyle}
       inputRef={styleInputRef}
       onChange={handleStyleReferenceChange}
       onExtract={extractStyle}
+      onRemove={deleteStyleReference}
     />
   );
   const styleLibraryDialog = showLibrary && typeof document !== "undefined"
@@ -241,7 +281,10 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
         <div className="style-library-backdrop" aria-hidden="true" onClick={() => setShowLibrary(false)} />
         <div className="style-library-panel" role="dialog" aria-modal="true" aria-label="画风库">
           <div className="style-library-dialog-head">
-            <strong>画风库</strong>
+            <div>
+              <strong>画风库</strong>
+              <small>{activeTags[0] ? `已选 ${activeTags[0]}` : `${filteredStyles.length} 款可选`}</small>
+            </div>
             <button type="button" onClick={() => setShowLibrary(false)}>关闭</button>
           </div>
           <input
@@ -252,14 +295,17 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
             onChange={(event) => setSearch(event.currentTarget.value)}
           />
           <div className="chip-grid style-library-grid" aria-label="画风库">
-            {filteredStyles.map((chip) => (
+            {filteredStyles.map((chip, index) => (
               <button
-                className={activeTags.includes(chip) ? "active" : ""}
+                className={`style-library-option ${activeTags.includes(chip) ? "active" : ""}`}
                 type="button"
                 key={chip}
                 onClick={() => void toggleStyle(chip)}
               >
-                {chip}
+                <span className={`style-library-swatch ${stylePreviewTone(chip, index)}`} aria-hidden="true">
+                  <i />
+                </span>
+                <strong>{chip}</strong>
               </button>
             ))}
           </div>
@@ -440,6 +486,7 @@ function StyleReferenceUpload({
   inputRef,
   onChange,
   onExtract,
+  onRemove,
 }: {
   title: string;
   helper: string;
@@ -450,6 +497,7 @@ function StyleReferenceUpload({
   inputRef: RefObject<HTMLInputElement | null>;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onExtract: () => void;
+  onRemove: () => void;
 }) {
   return (
     <div className={`style-reference-upload ${previewUrl ? "has-preview" : ""}`}>
@@ -464,9 +512,16 @@ function StyleReferenceUpload({
           </span>
         )}
       </button>
-      <button className="mini-solid-button" type="button" onClick={onExtract} disabled={!previewUrl}>
-        提取画风
-      </button>
+      {previewUrl ? (
+        <div className="style-reference-actions">
+          <button className="mini-solid-button" type="button" onClick={onExtract} disabled={!canExtract}>
+            提取画风
+          </button>
+          <button className="reference-remove-button" type="button" onClick={onRemove}>
+            删除
+          </button>
+        </div>
+      ) : null}
       {analysisMessage ? (
         <small className={canExtract ? "reference-ready-note" : "reference-muted-note"}>
           {analysisMessage}

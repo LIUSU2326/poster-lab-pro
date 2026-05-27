@@ -1,4 +1,4 @@
-import { state, ensureSelectedResult, ensureSelectedScheme, queueResultOperation } from './state.js';
+import { state, ensureSelectedResult, ensureSelectedScheme, queueResultOperation, getRuntimeWorkspaceSnapshot } from './state.js';
 import { submitGenerationDraft } from './form-binding.js';
 import { runManualLiveTestForWorkbench } from './manual-live-test-client.js';
 import { runResultOperationForWorkbench } from './result-operation-client.js';
@@ -32,7 +32,11 @@ export function bindEvents(render) {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextView = button.dataset.view;
-      state.view = nextView === "archive" ? "archive" : nextView === "project-library" ? "project-library" : "schemes";
+      state.view = nextView === "archive"
+        ? "archive"
+        : nextView === "project-library"
+          ? state.view === "project-library" ? "schemes" : "project-library"
+          : "schemes";
       render();
     });
   });
@@ -210,10 +214,22 @@ async function handleActionControl(control, event, render) {
     return;
   }
   if (action === "revoke-provider-key") {
-    render();
+    const providerId = control.dataset.providerId || state.provider;
+    state.providerCredential = {
+      ...state.providerCredential,
+      status: "revoking",
+      providerId,
+      error: null,
+    };
+    refreshSettingsLayer(render);
     await revokeProviderCredentialForWorkbench({
-      providerId: control.dataset.providerId || state.provider,
+      providerId,
     });
+    if (state.provider === providerId) {
+      state.providerConnection = getIdleProviderConnection(providerId);
+    }
+    refreshSettingsLayer(render);
+    return;
   }
   if (action === "submit-generation") {
     const submissionPromise = submitGenerationDraft();
@@ -321,11 +337,14 @@ async function handleActionControl(control, event, render) {
     refreshSettingsLayer(render);
     return;
   }
-  if (action === "project-library-create") {
-    state.projectLibraryMessage = "已准备新建项目入口；当前桌面版会先保留现有项目数据。";
+  if (action === "project-library-save-current") {
+    saveCurrentProjectToLibrary();
   }
-  if (action === "project-library-delete") {
-    state.projectLibraryMessage = "删除项目需要二次确认和持久化接口；当前先锁定为安全预览。";
+  if (action === "project-library-import") {
+    importProjectLibraryEntry(control.dataset.projectEntryId || "");
+  }
+  if (action === "project-library-delete-entry") {
+    deleteProjectLibraryEntry(control.dataset.projectEntryId || "");
   }
   if (action === "toggle-task") state.taskOpen = !state.taskOpen;
   if (action === "open-result-viewer") {
@@ -350,6 +369,61 @@ function bindProviderControls(render, root = document) {
   });
 }
 
+function getCurrentProjectLibraryDraft() {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const modeState = Array.isArray(snapshot.modeStates)
+    ? snapshot.modeStates.find((item) => item.mode === state.activeMode)
+    : null;
+  return {
+    id: state.projectLibraryActiveEntryId || `project-${Date.now().toString(36)}`,
+    name: snapshot.project?.name || modeState?.projectBrief?.projectName || "未命名项目",
+    description: modeState?.projectBrief?.gameDescription || snapshot.project?.description || "",
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function saveCurrentProjectToLibrary() {
+  const draft = getCurrentProjectLibraryDraft();
+  const entries = Array.isArray(state.projectLibraryEntries) ? [...state.projectLibraryEntries] : [];
+  const existingIndex = entries.findIndex((entry) => entry.id === draft.id);
+  if (existingIndex >= 0) entries[existingIndex] = draft;
+  else entries.unshift(draft);
+
+  state.projectLibraryEntries = entries.slice(0, 24);
+  state.projectLibraryActiveEntryId = draft.id;
+  state.projectLibraryMessage = "当前项目名称和描述已保存。";
+}
+
+function importProjectLibraryEntry(entryId) {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const entry = (state.projectLibraryEntries || []).find((item) => item.id === entryId)
+    || (entryId === "current-project" || entryId === snapshot.project?.id
+      ? {
+          id: entryId || "current-project",
+          name: snapshot.project?.name || "未命名项目",
+          description: snapshot.project?.description || "",
+          updatedAt: snapshot.metadata?.updatedAt || "",
+        }
+      : null);
+  if (!entry) {
+    state.projectLibraryMessage = "未找到这个项目记录。";
+    return;
+  }
+
+  updateGenerationFormField("projectBrief.projectName", entry.name || "未命名项目");
+  updateGenerationFormField("projectBrief.gameDescription", entry.description || "");
+  state.projectLibraryActiveEntryId = entry.id;
+  state.projectLibraryMessage = "已导入项目名称和描述。";
+  state.view = "schemes";
+}
+
+function deleteProjectLibraryEntry(entryId) {
+  const entries = Array.isArray(state.projectLibraryEntries) ? state.projectLibraryEntries : [];
+  state.projectLibraryEntries = entries.filter((entry) => entry.id !== entryId);
+  if (state.projectLibraryActiveEntryId === entryId) state.projectLibraryActiveEntryId = "";
+  state.projectLibraryMessage = "已删除项目记录，当前表单不会被清空。";
+}
+
 function readProviderSettingsFromSheet(providerId) {
   const baseUrl = document.querySelector(`[data-provider-base-url="${providerId}"]`)?.value?.trim() || "";
   const defaultModel = document.querySelector(`[data-provider-default-model="${providerId}"]`)?.value?.trim() || "";
@@ -367,6 +441,20 @@ function readProviderSettingsFromSheet(providerId) {
 }
 
 function bindProviderModelControls(render, root = document) {
+  root.querySelectorAll("[data-provider-slot-provider]").forEach((control) => {
+    control.addEventListener("change", () => {
+      const slot = control.dataset.providerSlotProvider;
+      if (!slot) return;
+      state.providerSlotRoutes = {
+        ...(state.providerSlotRoutes || {}),
+        [slot]: {
+          providerId: control.value,
+        },
+      };
+      refreshSettingsLayer(render);
+    });
+  });
+
   root.querySelectorAll("[data-provider-default-model]").forEach((control) => {
     control.addEventListener("change", () => {
       const providerId = control.dataset.providerDefaultModel;
@@ -387,6 +475,13 @@ function bindProviderModelControls(render, root = document) {
       const providerId = control.dataset.providerId || state.provider;
       const slot = control.dataset.providerModelSlot;
       if (!slot) return;
+      state.providerSlotRoutes = {
+        ...(state.providerSlotRoutes || {}),
+        [slot]: {
+          providerId,
+          model: control.value,
+        },
+      };
       const overrideKey = getProviderModelOverrideKey(providerId);
       state.providerModelOverrides = {
         ...(state.providerModelOverrides || {}),

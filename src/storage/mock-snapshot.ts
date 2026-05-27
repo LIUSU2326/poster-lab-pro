@@ -74,7 +74,8 @@ function createModeStates() {
 function createProviderSettings() {
   const openai: ProviderConfigForm = {
     ...createProviderConfigDefaults("openai"),
-    apiKey: ["sk", "workspace", "example", "1234"].join("-"),
+    enabled: false,
+    apiKey: "",
   };
   const aigocode: ProviderConfigForm = createProviderConfigDefaults("aigocode");
   const google: ProviderConfigForm = createProviderConfigDefaults("google");
@@ -216,6 +217,7 @@ export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {
     schemes,
     queuePlans,
     queueSummaries: queuePlans.map((plan) => summarizeQueue(plan)),
+    referenceAnalyses: [],
     results: [result],
     archiveRows: [
       StoredArchiveRowSchema.parse({

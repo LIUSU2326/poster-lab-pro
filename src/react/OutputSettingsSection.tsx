@@ -323,23 +323,29 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
             })}
           </div>
 
-          <div className="segmented suite-strategy-row" aria-label="方案策略">
-            <button
-              className={planStrategy === "unified" ? "active" : ""}
-              type="button"
-              onClick={() => setStrategy("unified")}
-            >
-              {mode === "icon" ? "锁定方形" : "统一方案"}
-            </button>
-            <button
-              className={planStrategy === "independent" ? "active" : ""}
-              type="button"
-              disabled={mode === "icon"}
-              onClick={() => setStrategy("independent")}
-            >
-              {mode === "icon" ? "不改尺寸" : "独立方案"}
-            </button>
-          </div>
+          {suiteMode ? (
+            <div className="segmented suite-strategy-row" aria-label="方案策略">
+              <button
+                className={planStrategy === "unified" ? "active" : ""}
+                type="button"
+                onClick={() => setStrategy("unified")}
+              >
+                {mode === "icon" ? "锁定方形" : "统一方案"}
+              </button>
+              <button
+                className={planStrategy === "independent" ? "active" : ""}
+                type="button"
+                disabled={mode === "icon"}
+                onClick={() => setStrategy("independent")}
+              >
+                {mode === "icon" ? "不改尺寸" : "独立方案"}
+              </button>
+            </div>
+          ) : (
+            <div className="single-output-note" role="status">
+              单一尺寸输出中，方案策略不参与本次生成。
+            </div>
+          )}
 
           {suiteManagerDialog}
         </>

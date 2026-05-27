@@ -1,4 +1,3 @@
-import { getLiveGateViewModel, getManualLiveTestViewModel } from '../data/live-gate-view-model.js';
 import { createQueueViewModel } from '../data/queue-view-model.js';
 import { state } from '../state.js';
 
@@ -47,8 +46,6 @@ function formatValidationIssues(validation) {
 
 export function renderTaskChrome(activeMode) {
   const queue = createQueueViewModel(activeMode);
-  const gate = getLiveGateViewModel(activeMode);
-  const liveTest = getManualLiveTestViewModel(activeMode);
   const submission = state.submission;
   const activeOperation = state.resultOperation;
   const operationRows = state.resultOperations || [];
@@ -62,8 +59,6 @@ export function renderTaskChrome(activeMode) {
         <span>${queue.summary.completed} / ${queue.summary.total} 完成</span>
         <span>${submission ? `表单 ${submission.status}` : `阶段 ${queue.summary.currentStage}`}</span>
         <span class="task-fail">${queue.summary.failed} 失败</span>
-        <span class="live-gate-slim ${gate.tone}">安全开关 ${gate.stateLabel} / ${gate.blockerCount}</span>
-        <span class="manual-live-slim ${liveTest.tone}">实机 ${liveTest.status}</span>
         <span class="manual-live-slim ${activeOperation ? "success" : ""}">${activeOperation ? `操作 ${activeOperation.status}` : "无操作"}</span>
         <b>${state.taskOpen ? "收起" : "详情"}</b>
       </button>
@@ -88,51 +83,12 @@ export function renderTaskChrome(activeMode) {
               </div>
             </div>
           ` : ""}
-          <div class="live-gate-context ${gate.tone}">
-            <div>
-              <span>安全开关</span>
-              <strong>${gate.stateLabel}</strong>
-              <small>${gate.helper}</small>
-            </div>
-            <div>
-              <span>模型服务</span>
-              <strong>${gate.providerName}</strong>
-              <small>预估 ${gate.estimatedCostLabel} / 上限 ${gate.maxAcceptedCostLabel}</small>
-            </div>
-            <div>
-              <span>阻断项</span>
-              <strong>${gate.blockerCount}</strong>
-              <small>${gate.blockers.slice(0, 2).map((blocker) => blocker.label).join(" / ") || "已就绪"}</small>
-            </div>
-          </div>
-          <div class="manual-live-context ${liveTest.tone}">
-            <div>
-              <span>手动真实测试</span>
-              <strong>${liveTest.status}</strong>
-              <small>${liveTest.message}</small>
-            </div>
-            <div>
-              <span>任务</span>
-              <strong>${liveTest.jobId || "未准备"}</strong>
-                <small>${liveTest.traceId || "暂无追踪"}</small>
-            </div>
-            <div>
-              <span>结果文件</span>
-              <strong>${liveTest.persistedFileCount}</strong>
-                <small>${liveTest.resultCount} 条结果记录 / 连接 ${liveTest.connectionStatus || "待检查"}</small>
-            </div>
-          </div>
           ${submission ? `
-            <div class="submission-card">
+            <div class="submission-card compact">
               <div>
-                <span>本地提交</span>
+                <span>当前任务</span>
                 <strong>${escapeHtml(submission.schemeTitle)}</strong>
-                <small>${escapeHtml(submission.mode)} / ${escapeHtml(submission.providerId)} / ${escapeHtml(submission.transport || "static")} / ${escapeHtml(submission.traceId)}</small>
-              </div>
-              <div>
-                <span>接口路径</span>
-                <strong>${escapeHtml(submission.promptPackageCreate.routeId)}</strong>
-                <small>${escapeHtml(submission.queuePlanCreate.routeId)}</small>
+                <small>${escapeHtml(submission.providerId)} / ${escapeHtml(submission.transport)} / ${escapeHtml(submission.status)}</small>
               </div>
               <div>
                 <span>校验</span>
@@ -140,12 +96,7 @@ export function renderTaskChrome(activeMode) {
                 <small>${escapeHtml(formatValidationIssues(submission.validation))}</small>
               </div>
               <div>
-                <span>服务流程</span>
-                <strong>${submission.serviceFlow?.ok ? "接口就绪" : submission.status}</strong>
-                <small>${escapeHtml(formatServiceSteps(submission.serviceFlow))}</small>
-              </div>
-              <div>
-                <span>队列执行</span>
+                <span>队列</span>
                 <strong>${envelopeStatus(submission.serviceFlow?.queueRun || submission.serviceFlow?.queuePlanCreate)}</strong>
                 <small>${escapeHtml(formatServiceQueue(submission.serviceFlow))}</small>
               </div>
@@ -176,10 +127,6 @@ export function renderTaskChrome(activeMode) {
                 <i><em style="width:${item.progress}%"></em></i>
               </div>
             `).join("")}
-          </div>
-          <div class="drawer-actions">
-            <button type="button">重试失败项</button>
-            <button type="button">查看日志</button>
           </div>
         </div>
       ` : ""}

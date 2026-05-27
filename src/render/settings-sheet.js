@@ -23,13 +23,13 @@ const providerModelCatalog = {
   deepseek: {
     default: ["deepseek-v4-flash", "deepseek-v4-pro"],
     plan: ["deepseek-v4-flash", "deepseek-v4-pro"],
-    image: ["gpt-image-2", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro"],
-    vision: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-3.1-pro-preview", "gemini-3-pro-preview", "qwen3.6-plus"],
+    image: [],
+    vision: [],
   },
   claude: {
     default: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-opus-4-6"],
     plan: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-opus-4-6"],
-    image: ["gpt-image-2", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro"],
+    image: [],
     vision: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5", "claude-haiku-4-5-20251001"],
   },
   qwen: {
@@ -88,14 +88,78 @@ function getSlotKind(slot) {
   return "plan";
 }
 
-function getModelOptions(providerId, kind, currentValue) {
+function getModelOptions(providerId, kind) {
   const catalog = providerModelCatalog[providerId] || providerModelCatalog.openai;
+  const kindOptions = Array.isArray(catalog[kind]) ? catalog[kind] : catalog.default;
   return uniqueOptions([
-    currentValue,
     ...getProviderCustomModels(providerId),
-    ...(catalog[kind] || catalog.default),
-    ...(catalog.default || []),
+    ...(kindOptions || []),
   ]);
+}
+
+function getModelSelection(providerId, kind, currentValue) {
+  const options = getModelOptions(providerId, kind);
+  const value = options.includes(currentValue) ? currentValue : options[0] || "";
+  return {
+    value,
+    options,
+    unsupported: options.length === 0,
+  };
+}
+
+function getSlotRoute(slotKey, selectedProvider, providers, kind, fallbackModel) {
+  const savedRoute = state.providerSlotRoutes?.[slotKey] || {};
+  const savedProvider = providers.find((candidate) => candidate.id === savedRoute.providerId);
+  const supportsKind = (provider) => provider && getModelOptions(provider.id, kind).length > 0;
+  const configuredProvider = providers.find((candidate) => candidate.status !== "idle" && supportsKind(candidate));
+  const firstSupportedProvider = providers.find((candidate) => supportsKind(candidate));
+  const provider = savedProvider
+    || (supportsKind(selectedProvider) ? selectedProvider : null)
+    || configuredProvider
+    || firstSupportedProvider
+    || selectedProvider
+    || providers[0];
+  const selection = getModelSelection(provider.id, kind, savedRoute.model || fallbackModel);
+  if (selection.value && (savedRoute.providerId !== provider.id || savedRoute.model !== selection.value)) {
+    state.providerSlotRoutes = {
+      ...(state.providerSlotRoutes || {}),
+      [slotKey]: {
+        providerId: provider.id,
+        model: selection.value,
+      },
+    };
+  }
+  return {
+    provider,
+    model: selection.value,
+    selection,
+  };
+}
+
+function providerSourceLabel(provider) {
+  const id = provider?.id || "";
+  if (id === "openai") return "OpenAI 官方";
+  if (id === "aigocode") return "AIGoCode 中转";
+  if (id === "google") return "Google AI Studio";
+  if (id === "deepseek") return "DeepSeek 官方";
+  if (id === "claude") return "Claude 官方";
+  if (id === "qwen") return "Qwen 官方";
+  return provider?.name || "当前供应商";
+}
+
+function providerEndpointKind(provider) {
+  const id = provider?.id || "";
+  if (id === "openai") return "官方 API";
+  if (id === "aigocode") return "OpenAI 兼容中转";
+  if (id === "google") return "Gemini API";
+  if (id === "deepseek") return "OpenAI 兼容 API";
+  if (id === "claude") return "Anthropic API";
+  if (id === "qwen") return "OpenAI 兼容 API";
+  return "自定义 API";
+}
+
+function formatModelOptionLabel(provider, model) {
+  return `${providerSourceLabel(provider)} · ${model}`;
 }
 
 function getRoutePlans() {
@@ -127,16 +191,16 @@ function connectionCopy(connection) {
   return "尚未测试";
 }
 
-function connectionDetail(connection) {
+function connectionDetail(connection, provider) {
   if (!connection || connection.phase === "idle") return "保存 API Key 后可测试模型供应商连接。";
   if (connection.message) return connection.message;
-  if (connection.status === "ready") return "Provider 可用，模型列表可正常读取。";
+  if (connection.status === "ready") return `${providerSourceLabel(provider)} 可用，模型列表可正常读取。`;
   return "连接测试完成，请检查返回状态。";
 }
 
-function modelAvailability(connection) {
+function modelAvailability(connection, provider) {
   if (!connection || connection.phase === "idle") return "";
-  if (typeof connection.modelCount === "number") return `${connection.modelCount} 个模型`;
+  if (typeof connection.modelCount === "number") return `${providerSourceLabel(provider)} 返回 ${connection.modelCount} 个模型`;
   return "";
 }
 
@@ -158,8 +222,8 @@ function credentialFeedback(credential, configured) {
   if (credential?.status === "revoking") {
     return {
       tone: "testing",
-      title: "正在撤销 API Key",
-      detail: "撤销后这个供应商会回到未启用状态。",
+      title: "正在删除 API Key",
+      detail: "删除后这个供应商会回到未启用状态。",
     };
   }
   if (credential?.status === "error") {
@@ -204,9 +268,14 @@ export function renderSettingsSheet() {
   const credentialInfo = credentialFeedback(credential, configured);
   const providerOverrides = getProviderOverrides(selectedProvider.id);
   const selectedDefaultModel = getProviderDefaultModel(selectedProvider);
+  const defaultModelSelection = getModelSelection(selectedProvider.id, "default", selectedDefaultModel);
   const customModels = getProviderCustomModels(selectedProvider.id);
   const routePlans = getRoutePlans();
   const activeRoutePlan = routePlans.find((plan) => plan.id === state.providerRoutePlan) || routePlans[0];
+  const providerSource = providerSourceLabel(selectedProvider);
+  const providerEndpoint = providerEndpointKind(selectedProvider);
+  const providerBaseUrl = selectedProvider.url || "Base URL 未设置";
+  const connectionModelsCopy = modelAvailability(connection, selectedProvider);
 
   return `
     <div class="settings-layer" role="dialog" aria-modal="true" aria-label="模型与 API Key">
@@ -223,11 +292,11 @@ export function renderSettingsSheet() {
           <aside class="provider-list">
             ${providers.map((provider) => {
               const rowCredential = selectedCredentialState(provider.id);
-              const providerModel = getProviderDefaultModel(provider);
+              const providerModel = getModelSelection(provider.id, "default", getProviderDefaultModel(provider)).value || getProviderDefaultModel(provider);
               return `
                 <button class="${provider.id === selectedProvider.id ? "active" : ""}" type="button" data-provider="${provider.id}">
                   <strong>${escapeHtml(provider.name)} ${renderProviderStatus(provider, rowCredential)}</strong>
-                  <small>${escapeHtml(providerModel)}</small>
+                  <small>${escapeHtml(providerSourceLabel(provider))} · ${escapeHtml(providerModel)}</small>
                 </button>
               `;
             }).join("")}
@@ -238,6 +307,11 @@ export function renderSettingsSheet() {
               <div>
                 <span>当前供应商</span>
                 <h3>${escapeHtml(selectedProvider.name)} ${renderProviderStatus(selectedProvider, credential)}</h3>
+                <div class="provider-source-summary" aria-label="当前模型执行通道">
+                  <b>${escapeHtml(providerSource)}</b>
+                  <strong>${escapeHtml(providerEndpoint)}</strong>
+                  <small title="${escapeHtml(providerBaseUrl)}">${escapeHtml(providerBaseUrl)}</small>
+                </div>
               </div>
             </div>
 
@@ -267,13 +341,34 @@ export function renderSettingsSheet() {
                   </svg>
                 </button>
               </div>
-              <div class="provider-credential-feedback ${escapeHtml(credentialInfo.tone)}" aria-live="polite">
-                <strong>${escapeHtml(credentialInfo.title)}</strong>
-                <small>${escapeHtml(credentialInfo.detail)}</small>
+              <div class="provider-credential-feedback credential-status ${escapeHtml(credentialInfo.tone)}" aria-live="polite">
+                <div>
+                  <strong>${escapeHtml(credentialInfo.title)}</strong>
+                  <small>本地加密凭证库 · ${escapeHtml(credentialInfo.detail)}</small>
+                </div>
+                <div class="provider-credential-actions">
+                  <button
+                    type="button"
+                    data-action="refresh-provider-key"
+                    data-provider-id="${escapeHtml(selectedProvider.id)}"
+                    ${credentialBusy ? "disabled" : ""}
+                  >刷新状态</button>
+                  <button
+                    class="danger-text-button credential-delete-button"
+                    type="button"
+                    data-action="revoke-provider-key"
+                    data-provider-id="${escapeHtml(selectedProvider.id)}"
+                    ${credentialBusy || !configured ? "disabled" : ""}
+                  >${credential?.status === "revoking" ? "删除中..." : "删除已保存 Key"}</button>
+                </div>
               </div>
             </section>
 
             <section class="provider-config-card">
+              <div class="provider-card-title">
+                <strong>供应商路由</strong>
+                <small>模型 ID 会通过当前供应商执行</small>
+              </div>
               <div class="provider-field-grid">
                 <label class="field">
                   <span>Base URL</span>
@@ -285,14 +380,17 @@ export function renderSettingsSheet() {
                 </label>
 
                 <label class="field">
-                  <span>默认模型</span>
+                  <span class="field-label-row">默认模型 <b>${escapeHtml(providerSource)}</b></span>
                   <select
                     aria-label="默认模型"
                     data-provider-default-model="${escapeHtml(selectedProvider.id)}"
+                    ${defaultModelSelection.unsupported ? "disabled" : ""}
                   >
-                    ${getModelOptions(selectedProvider.id, "default", selectedDefaultModel)
-                      .map((option) => `<option value="${escapeHtml(option)}" ${option === selectedDefaultModel ? "selected" : ""}>${escapeHtml(option)}</option>`)
-                      .join("")}
+                    ${defaultModelSelection.unsupported
+                      ? `<option value="">当前供应商暂无可用模型</option>`
+                      : defaultModelSelection.options
+                        .map((option) => `<option value="${escapeHtml(option)}" ${option === defaultModelSelection.value ? "selected" : ""}>${escapeHtml(formatModelOptionLabel(selectedProvider, option))}</option>`)
+                        .join("")}
                   </select>
                 </label>
               </div>
@@ -325,9 +423,9 @@ export function renderSettingsSheet() {
             <section class="provider-state-card connection-test-status ${escapeHtml(connectionClass)} ${connectionBusy ? "testing" : ""}" aria-live="polite">
               <div>
                 <strong>${escapeHtml(connectionCopy(connection))}</strong>
-                <small>${escapeHtml(connectionDetail(connection))}</small>
+                <small>${escapeHtml(connectionDetail(connection, selectedProvider))}</small>
               </div>
-              ${modelAvailability(connection) ? `<span>${escapeHtml(modelAvailability(connection))}</span>` : ""}
+              ${connectionModelsCopy ? `<span>${escapeHtml(connectionModelsCopy)}</span>` : ""}
               ${connection?.sampledModels?.length ? `
                 <div class="connection-models">
                   ${connection.sampledModels.slice(0, 5).map((model) => `<span class="mono">${escapeHtml(model)}</span>`).join("")}
@@ -339,8 +437,9 @@ export function renderSettingsSheet() {
             <section class="provider-config-card model-routing">
               <div class="provider-card-title">
                 <strong>配置方案</strong>
-                <small>按任务选择不同模型</small>
+                <small>${escapeHtml(providerSource)} · ${escapeHtml(providerEndpoint)}</small>
               </div>
+              <p class="provider-route-note">每个任务槽都可以单独选择供应商和模型，方案生成和图像生成不再绑定到同一个 API。</p>
               <div class="route-plan-manager" aria-label="配置方案管理">
                 <div class="route-plan-topline">
                   <div class="route-plan-tabs">
@@ -374,13 +473,23 @@ export function renderSettingsSheet() {
                   const slotKey = slot.id || slot.name;
                   const currentValue = providerOverrides[slotKey] || providerOverrides[slot.name] || slot.value;
                   const slotKind = getSlotKind(slot);
-                  const options = getModelOptions(selectedProvider.id, slotKind, currentValue);
+                  const slotRoute = getSlotRoute(slotKey, selectedProvider, providers, slotKind, currentValue);
+                  const routeProvider = slotRoute.provider;
+                  const selection = slotRoute.selection;
                   return `
                   <label class="model-slot">
-                    <span>${escapeHtml(slot.name)}</span>
+                    <div class="model-slot-head">
+                      <span>${escapeHtml(slot.name)}</span>
+                      <b>${escapeHtml(providerSourceLabel(routeProvider))}</b>
+                    </div>
                     <small>${escapeHtml(slot.flow)}</small>
-                    <select aria-label="${escapeHtml(slot.name)}模型" data-provider-model-slot="${escapeHtml(slotKey)}" data-provider-id="${escapeHtml(selectedProvider.id)}">
-                      ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === currentValue ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+                    <select class="slot-provider-select" aria-label="${escapeHtml(slot.name)}供应商" data-provider-slot-provider="${escapeHtml(slotKey)}">
+                      ${providers.map((provider) => `<option value="${escapeHtml(provider.id)}" ${provider.id === routeProvider.id ? "selected" : ""}>${escapeHtml(providerSourceLabel(provider))}</option>`).join("")}
+                    </select>
+                    <select aria-label="${escapeHtml(slot.name)}模型" data-provider-model-slot="${escapeHtml(slotKey)}" data-provider-id="${escapeHtml(routeProvider.id)}" ${selection.unsupported ? "disabled" : ""}>
+                      ${selection.unsupported
+                        ? `<option value="">当前供应商不支持此任务</option>`
+                        : selection.options.map((option) => `<option value="${escapeHtml(option)}" ${option === selection.value ? "selected" : ""}>${escapeHtml(formatModelOptionLabel(routeProvider, option))}</option>`).join("")}
                     </select>
                   </label>
                 `;
@@ -391,7 +500,6 @@ export function renderSettingsSheet() {
             <div class="settings-actions provider-config-actions">
               <button class="solid-button ${credentialBusy ? "loading" : ""}" type="button" data-action="save-provider-key" data-provider-id="${escapeHtml(selectedProvider.id)}" ${credentialBusy ? "disabled" : ""}>${credential?.status === "saving" ? "保存中..." : "保存 API Key"}</button>
               <button class="${connectionBusy ? "loading" : ""}" type="button" data-action="test-provider-connection" data-provider-id="${escapeHtml(selectedProvider.id)}" ${canTest ? "" : "disabled"}>${connectionBusy ? "测试中..." : configured ? "测试连接" : "保存并测试"}</button>
-              <button type="button" data-action="revoke-provider-key" data-provider-id="${escapeHtml(selectedProvider.id)}" ${credentialBusy ? "disabled" : ""}>撤销</button>
             </div>
           </section>
         </div>

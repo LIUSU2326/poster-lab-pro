@@ -327,3 +327,30 @@ export async function simulateWorkbenchAssetUpload(input = {}, options = {}) {
 export function uploadWorkbenchAssetFile(input = {}, options = {}) {
   return simulateWorkbenchAssetUpload(input, options);
 }
+
+export function removeWorkbenchAssetsByRoleLabel(role, label = "") {
+  const snapshot = clone(getRuntimeWorkspaceSnapshot());
+  const nextAssets = snapshot.assets.filter((asset) => {
+    if (asset.role !== role) return true;
+    return label ? asset.label !== label : false;
+  });
+
+  state.referenceUploadDataUrls = Object.fromEntries(
+    Object.entries(state.referenceUploadDataUrls || {}).filter(([key]) => {
+      if (!key.startsWith(`${role}:`)) return true;
+      if (!label) return false;
+      return key !== `${role}:${label}`;
+    }),
+  );
+  state.assetOperation = null;
+
+  setRuntimeWorkspaceSnapshot({
+    ...snapshot,
+    assets: nextAssets,
+    metadata: {
+      ...snapshot.metadata,
+      revision: snapshot.metadata.revision + 1,
+      updatedAt: nowIso(),
+    },
+  }, "static");
+}
