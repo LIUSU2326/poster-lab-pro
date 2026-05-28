@@ -25,8 +25,8 @@ export const promptGuardrailsByMode: Record<ProductionMode, PromptGuardrailRule[
       id: "poster-logo-readable",
       mode: "poster",
       severity: "hard",
-      rule: "Keep the game logo readable and separated from noisy background details.",
-      negativeRule: "Do not bury the logo inside visual clutter.",
+      rule: "If a game logo is provided, keep it readable and separated from noisy background details.",
+      negativeRule: "Do not bury a provided logo inside visual clutter.",
     }),
     rule({
       id: "poster-platform-safe-area",

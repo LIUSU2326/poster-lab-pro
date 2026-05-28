@@ -71,7 +71,7 @@ function renderSchemeBoardEmpty(activeMode) {
   return `
     <div class="scheme-plan-empty" role="status">
       <strong>等待模型配置</strong>
-      <small>配置方案生成、图像生成、画风参考分析和构图参考分析后，再开始正式测试。</small>
+      <small>配置方案生成和图像生成模型后即可开始；画风/构图分析只在上传参考图时使用。</small>
       <button type="button" data-action="open-settings">配置模型与 API Key</button>
     </div>
   `;
@@ -79,7 +79,7 @@ function renderSchemeBoardEmpty(activeMode) {
 
 function requiredModelRoutesReady() {
   const snapshot = state.workspaceSnapshot || {};
-  const requiredSlots = ["concept", "image", "styleReference", "compositionReference"];
+  const requiredSlots = ["concept", "image"];
   return requiredSlots.every((slot) => {
     const route = state.providerSlotRoutes?.[slot] || {};
     const providerId = route.providerId || state.provider;
@@ -349,13 +349,11 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
         </div>
       </header>
 
-      ${state.copyVisible ? `
-        <div class="plan-brief-strip">
-          <strong>${escapeHtml(display.primary)}</strong>
-          <small>${escapeHtml(display.secondary)}</small>
-        </div>
-        ${renderTextBlocks(display)}
-      ` : ""}
+      <div class="plan-brief-strip">
+        <strong>${escapeHtml(display.primary)}</strong>
+        <small>${escapeHtml(display.secondary)}</small>
+      </div>
+      ${state.copyVisible ? renderTextBlocks(display) : ""}
 
       ${renderPlanImageArea(activeMode, scheme, display, schemeResults)}
 

@@ -240,7 +240,7 @@ function languageTargetsFrom(promptPackage: PromptPackage, modeState: WorkspaceM
     SloganLanguageSchema.safeParse(language).success,
   ) as z.infer<typeof SloganLanguageSchema>[];
 
-  return sloganLanguages.length > 0 ? sloganLanguages : ["zh-CN", "en-US"];
+  return sloganLanguages.length > 0 ? sloganLanguages : ["en-US"];
 }
 
 export function mapPromptPackageToBriefRequest(input: {

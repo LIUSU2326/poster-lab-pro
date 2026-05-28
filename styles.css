@@ -9949,6 +9949,202 @@ select:focus-visible,
   grid-template-columns: minmax(220px, 1.1fr) minmax(220px, 1fr) minmax(180px, 0.8fr);
 }
 
+/* 2026-05-28 fix top center view switch text contrast in light/dark themes. */
+.top-view-switch button {
+  color: var(--text-secondary) !important;
+}
+
+.top-view-switch .active {
+  color: var(--text-primary) !important;
+  font-weight: 760;
+}
+
+/* 2026-05-28 quick UI stabilization: provider sheet refresh, output order, copy collapse. */
+.provider-config-sheet .provider-list,
+.provider-config-sheet .provider-detail {
+  contain: layout paint;
+}
+
+.provider-config-sheet .provider-list button {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.scheme-card.plan-card.copy-hidden,
+.scheme-card.plan-card.copy-hidden:first-child {
+  grid-template-rows: 46px 56px minmax(250px, 1fr) 44px;
+  min-height: 448px;
+}
+
+.output-settings-rhf {
+  display: flex;
+  flex-direction: column;
+}
+
+.output-settings-rhf > .field-caption {
+  order: 1;
+}
+
+.output-settings-rhf > .size-grid {
+  order: 2;
+}
+
+.output-settings-rhf > .custom-size-panel,
+.output-settings-rhf > .solid-bg-grid {
+  order: 3;
+}
+
+.output-settings-rhf > .field-caption-row {
+  order: 4;
+}
+
+.output-settings-rhf > .platform-grid {
+  order: 5;
+}
+
+.output-settings-rhf > .suite-strategy-row {
+  order: 6;
+}
+
+.output-settings-rhf > .number-row,
+.output-settings-rhf > .scheme-count-slider,
+.output-settings-rhf > .form-error {
+  order: 7;
+}
+
+.output-settings-rhf > .single-output-note,
+.output-settings-rhf > .output-note {
+  display: none;
+}
+
+.generation-choice-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: oklch(0.2 0.01 250 / 0.28);
+}
+
+.generation-choice-dialog {
+  position: fixed;
+  z-index: 36;
+  top: 50%;
+  left: 50%;
+  width: min(520px, calc(100vw - 40px));
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel-raised), transparent 2%), var(--panel));
+  box-shadow: 0 24px 70px oklch(0.2 0.02 250 / 0.2);
+  padding: 24px;
+}
+
+.generation-choice-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--text-secondary);
+}
+
+.generation-choice-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.generation-choice-dialog h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.generation-choice-dialog p {
+  margin: 10px 0 18px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.generation-choice-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.generation-choice-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--control-bg);
+  color: var(--text-primary);
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.generation-choice-card:hover {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 52%);
+  background: color-mix(in oklch, var(--accent), var(--control-bg) 94%);
+}
+
+.generation-choice-card.primary {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 45%);
+  background: color-mix(in oklch, var(--accent), var(--control-bg) 90%);
+}
+
+.generation-choice-card strong {
+  font-size: 14px;
+}
+
+.generation-choice-card small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 2026-05-27 remove misleading task details drawer; keep only compact status. */
+.task-chrome.compact-only {
+  min-height: 40px;
+}
+
+.task-chrome.compact-only .task-slim-static {
+  cursor: default;
+  grid-template-columns: minmax(120px, 0.8fr) auto minmax(180px, 1fr) auto auto auto;
+}
+
+.task-chrome.compact-only .task-slim-static:hover {
+  background: transparent;
+}
+
+.retry-failed-button {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in oklch, var(--danger), transparent 55%);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--danger), transparent 92%);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.retry-failed-button:hover {
+  border-color: color-mix(in oklch, var(--danger), transparent 25%);
+  background: color-mix(in oklch, var(--danger), transparent 86%);
+}
+
 /* 2026-05-27 scheme copy and slogan controls. */
 .scheme-card.plan-card,
 .scheme-card.plan-card:first-child {
@@ -10077,6 +10273,37 @@ select:focus-visible,
 
 .slogan-global-field input {
   width: 100%;
+}
+
+.language-chip-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.language-chip-row button {
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 760;
+  cursor: pointer;
+  transition: border-color var(--motion-base, 180ms) var(--ease-standard, ease),
+    color var(--motion-base, 180ms) var(--ease-standard, ease),
+    background var(--motion-base, 180ms) var(--ease-standard, ease);
+}
+
+.language-chip-row button:hover {
+  border-color: color-mix(in oklch, var(--accent), transparent 45%);
+  color: var(--text);
+}
+
+.language-chip-row button.active {
+  border-color: color-mix(in oklch, var(--accent), transparent 20%);
+  background: color-mix(in oklch, var(--accent), transparent 88%);
+  color: var(--accent);
 }
 
 /* 2026-05-27 desktop motion pass: calm creative-tool micro interactions. */

@@ -117,7 +117,7 @@ export function createSloganSettingsDefaults() {
   return {
     mode: "auto",
     globalSlogan: "",
-    languages: ["zh-CN", "en-US"],
+    languages: ["en-US"],
   };
 }
 

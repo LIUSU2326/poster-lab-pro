@@ -22,6 +22,37 @@ export function renderShell(activeMode, selected) {
         ${renderTaskChrome(activeMode)}
       </main>
       ${state.settingsOpen ? renderSettingsSheet() : ""}
+      ${state.generationChoiceOpen ? renderGenerationChoiceDialog(activeMode) : ""}
     </div>
+  `;
+}
+
+function renderGenerationChoiceDialog(activeMode) {
+  const modeLabel = {
+    poster: "海报",
+    collab: "联名",
+    announcement: "公告",
+    logo: "Logo",
+    icon: "Icon",
+  }[activeMode?.id] || "方案";
+
+  return `
+    <div class="generation-choice-backdrop" role="presentation" data-action="cancel-generation-choice"></div>
+    <section class="generation-choice-dialog" role="dialog" aria-modal="true" aria-label="选择生成方式">
+      <button class="generation-choice-close" type="button" data-action="cancel-generation-choice" aria-label="关闭">×</button>
+      <span class="generation-choice-kicker">生成方式</span>
+      <h2>已有${modeLabel}方案</h2>
+      <p>选择继续使用当前方案出图，或随机生成一组新的创意方案。旧方案和旧图片都会保留。</p>
+      <div class="generation-choice-actions">
+        <button class="generation-choice-card primary" type="button" data-action="confirm-generation-choice" data-generation-strategy="continue">
+          <strong>基于当前方案继续出图</strong>
+          <small>不刷新现有方案，适合继续补图或重试。</small>
+        </button>
+        <button class="generation-choice-card" type="button" data-action="confirm-generation-choice" data-generation-strategy="regenerate">
+          <strong>重新生成新方案</strong>
+          <small>新增一批方案，不覆盖旧内容。</small>
+        </button>
+      </div>
+    </section>
   `;
 }

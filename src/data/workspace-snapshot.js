@@ -67,7 +67,7 @@ function createModeState(mode) {
     sloganSettings: {
       mode: "auto",
       globalSlogan: "",
-      languages: ["zh-CN", "en-US"],
+      languages: ["en-US"],
     },
     modeForm: createSnapshotModeForm(mode.id),
     selectedSchemeIds: mode.schemes.map((scheme) => scheme.id),

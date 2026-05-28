@@ -1,13 +1,17 @@
 import { z } from "zod";
 import { ProviderConfigFormSchema, type ProviderConfigForm } from "../schema/zod";
 import {
+  BriefGenerationRequestSchema,
   ImageGenerationRequestSchema,
+  ProviderBriefResponseSchema,
   ProviderHealthResponseSchema,
   ProviderImageResponseSchema,
   ProviderResultAssetSchema,
   createProviderError,
+  type BriefGenerationRequest,
   type GenerationProviderAdapter,
   type ImageGenerationRequest,
+  type ProviderBriefResponse,
   type ProviderConfigValidation,
   type ProviderHealthResponse,
   type ProviderImageResponse,
@@ -54,6 +58,24 @@ export const GoogleGenerateContentResponseSchema = z
       .default([]),
   })
   .passthrough();
+
+const GoogleBriefCompletionSchema = z.object({
+  schemes: z.array(
+    z.object({
+      title: z.string().min(1),
+      brief: z.string().min(1),
+      prompt: z.string().min(1),
+      promptZh: z.string().min(1).optional(),
+      promptEn: z.string().min(1).optional(),
+      slogans: z
+        .object({
+          "zh-CN": z.string().min(1).optional(),
+          "en-US": z.string().min(1).optional(),
+        })
+        .default({}),
+    }),
+  ).min(1),
+});
 
 export const GoogleImageTransportRequestSchema = z.object({
   url: z.string().url(),
@@ -107,6 +129,13 @@ function imageModel(request: ImageGenerationRequest, config: ProviderConfigForm)
   return normalizeGoogleImageModel(request.model || config.modelSlots.image || config.defaultModel || "gemini-3-pro-image-preview");
 }
 
+function briefModel(request: BriefGenerationRequest, config: ProviderConfigForm): string {
+  const candidate = request.context.providerId === GOOGLE_PROVIDER_ID
+    ? config.modelSlots.concept || config.defaultModel || "gemini-2.5-flash"
+    : config.defaultModel || "gemini-2.5-flash";
+  return candidate.includes("image") ? "gemini-2.5-flash" : candidate;
+}
+
 function normalizeGoogleImageModel(model: string): string {
   const value = model.trim();
   if (value === "gemini-3.1-flash-image-preview" || value === "gemini-3-flash-image-preview") {
@@ -144,6 +173,52 @@ function imagePrompt(request: ImageGenerationRequest): string {
   return [request.prompt, assetInstruction, sizeInstruction, negativeInstruction].filter(Boolean).join("\n\n");
 }
 
+function briefPrompt(request: BriefGenerationRequest): string {
+  const assets = request.assets.map((asset) => ({
+    role: asset.role,
+    id: asset.id,
+    description: asset.description || "",
+    mimeType: asset.mimeType,
+    hasUrl: Boolean(asset.url),
+  }));
+
+  return [
+    "You are a senior game marketing art director.",
+    "Generate NEW poster design schemes for batch image generation.",
+    "Return JSON only. Do not use markdown.",
+    JSON.stringify({
+      projectName: request.projectName,
+      gameDescription: request.gameDescription,
+      focusGuidance: request.focusGuidance || "",
+      guardrails: request.guardrails,
+      languageTargets: request.languageTargets,
+      schemeCount: request.schemeCount,
+      assets,
+      rules: [
+        "Each scheme must be meaningfully different in composition, visual hook, and campaign angle.",
+        "Do not assume a logo exists unless an asset with role gameLogo is present.",
+        "If no image assets are provided, create concepts from the project description only.",
+        "Keep prompts suitable for game marketing posters.",
+      ],
+      outputShape: {
+        schemes: [
+          {
+            title: "Chinese poster scheme title",
+            brief: "Chinese visual direction and layout plan",
+            prompt: "Image prompt suitable for the selected image model",
+            promptZh: "Chinese image-generation prompt",
+            promptEn: "English image-generation prompt",
+            slogans: {
+              "zh-CN": "Chinese promotional slogan",
+              "en-US": "English promotional slogan",
+            },
+          },
+        ],
+      },
+    }),
+  ].join("\n\n");
+}
+
 function googleAspectRatio(request: ImageGenerationRequest): typeof GOOGLE_IMAGE_ASPECT_RATIOS[number] {
   if ((GOOGLE_IMAGE_ASPECT_RATIOS as readonly string[]).includes(request.aspectRatio)) {
     return request.aspectRatio as typeof GOOGLE_IMAGE_ASPECT_RATIOS[number];
@@ -167,6 +242,13 @@ function googleImageGenerationConfig(model: string, request: ImageGenerationRequ
     imageConfig: {
       aspectRatio: googleAspectRatio(request),
     },
+  };
+}
+
+function googleBriefGenerationConfig(): Record<string, unknown> {
+  return {
+    temperature: 0.85,
+    responseMimeType: "application/json",
   };
 }
 
@@ -241,7 +323,7 @@ function missingConfigResult<T>(config: ProviderConfigForm): ProviderResult<T> {
       `Google live adapter is missing configuration: ${validation.missing.join(", ")}`,
       {
         userMessage: hasMissingApiKey
-          ? "Google AI Studio API key is required before live image generation."
+          ? "Google AI Studio API key is required before live generation."
           : "Google provider configuration is incomplete.",
       },
     ),
@@ -369,6 +451,80 @@ function extractInlineImages(input: {
     .filter((asset): asset is z.infer<typeof ProviderResultAssetSchema> => asset !== null);
 }
 
+function extractText(body: unknown): string {
+  const parsed = GoogleGenerateContentResponseSchema.safeParse(body);
+  if (!parsed.success) return "";
+  return parsed.data.candidates
+    .flatMap((candidate) => candidate.content?.parts || [])
+    .map((part) => part.text || "")
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+function parseBriefText(text: string) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1]?.trim();
+  return GoogleBriefCompletionSchema.parse(JSON.parse(fenced || trimmed));
+}
+
+function normalizeBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchema>, schemeCount: number) {
+  return parsed.schemes.slice(0, schemeCount).map((scheme) => {
+    const promptZh = scheme.promptZh || scheme.prompt;
+    const promptEn = scheme.promptEn || scheme.prompt;
+    return {
+      title: scheme.title,
+      brief: scheme.brief,
+      prompt: scheme.prompt,
+      promptZh,
+      promptEn,
+      slogans: {
+        ...(scheme.slogans["zh-CN"] ? { "zh-CN": scheme.slogans["zh-CN"] } : {}),
+        ...(scheme.slogans["en-US"] ? { "en-US": scheme.slogans["en-US"] } : {}),
+      },
+    };
+  });
+}
+
+function parseBriefResponse(
+  request: BriefGenerationRequest,
+  model: string,
+  body: unknown,
+  elapsedMs: number,
+): ProviderResult<ProviderBriefResponse> {
+  try {
+    const text = extractText(body);
+    if (!text) {
+      return {
+        ok: false,
+        error: createProviderError(GOOGLE_PROVIDER_ID, "invalid_request", "Google brief response did not include text.", {
+          userMessage: "Google returned no usable poster scheme text.",
+        }),
+      };
+    }
+    const parsed = parseBriefText(text);
+    return {
+      ok: true,
+      value: ProviderBriefResponseSchema.parse({
+        providerId: GOOGLE_PROVIDER_ID,
+        model,
+        schemes: normalizeBriefSchemes(parsed, request.schemeCount),
+        usage: {
+          promptTokens: 0,
+          elapsedMs,
+        },
+      }),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: createProviderError(GOOGLE_PROVIDER_ID, "unknown", error instanceof Error ? error.message : "Invalid brief response.", {
+        userMessage: "Google returned a poster scheme format that could not be parsed.",
+      }),
+    };
+  }
+}
+
 function parseImageResponse(
   request: ImageGenerationRequest,
   model: string,
@@ -477,6 +633,46 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
             : "Google live adapter is configured but has no injected transport.",
         }),
       };
+    },
+
+    async generateBrief(request: BriefGenerationRequest, config: ProviderConfigForm): Promise<ProviderResult<ProviderBriefResponse>> {
+      const parsedRequest = BriefGenerationRequestSchema.parse(request);
+      const parsedConfig = ProviderConfigFormSchema.parse(config);
+      const validation = validateGoogleConfig(parsedConfig);
+      if (!validation.ok) return missingConfigResult(parsedConfig);
+      if (!options.transport) return unavailableTransportResult();
+
+      const model = briefModel(parsedRequest, parsedConfig);
+      const startedAt = now();
+      const transportResponse = await options.transport(
+        GoogleImageTransportRequestSchema.parse({
+          url: `${normalizeBaseUrl(parsedConfig)}/models/${encodeURIComponent(model)}:${GOOGLE_GENERATE_CONTENT_METHOD}`,
+          method: "POST",
+          headers: {
+            "x-goog-api-key": parsedConfig.apiKey,
+            "Content-Type": "application/json",
+          },
+          body: {
+            contents: [
+              {
+                parts: [
+                  {
+                    text: briefPrompt(parsedRequest),
+                  },
+                ],
+              },
+            ],
+            generationConfig: googleBriefGenerationConfig(),
+          },
+        }),
+      );
+      const parsedTransportResponse = GoogleImageTransportResponseSchema.parse(transportResponse);
+
+      if (!parsedTransportResponse.ok) {
+        return providerErrorFromStatus(parsedTransportResponse.status, parsedTransportResponse.body);
+      }
+
+      return parseBriefResponse(parsedRequest, model, parsedTransportResponse.body, Math.max(0, now() - startedAt));
     },
 
     async generateImage(request: ImageGenerationRequest, config: ProviderConfigForm): Promise<ProviderResult<ProviderImageResponse>> {

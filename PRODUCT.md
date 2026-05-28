@@ -1,5 +1,21 @@
 # PRODUCT.md
 
+## 2026-05-27 MVP Scope Update: Poster Batch Generation Rules
+
+Poster mode must support a text-only production flow. Users may generate poster schemes and images from project name, project description, slogan settings, output settings, provider routes, and optional focus guidance without uploading any reference image.
+
+Product boundaries:
+
+- Poster assets are optional inputs; uploaded characters, logos, style references, and composition references improve control but do not block generation.
+- The default poster/slogan language is English unless the user explicitly selects another language.
+- When poster schemes already exist, the main generation action must protect prior work by asking whether to continue rendering from current schemes or regenerate fresh schemes.
+- Regenerating schemes creates a new batch and must not delete or overwrite prior schemes, generated images, queue plans, or archive records.
+- Continuing from current schemes skips brief generation and queues image generation for the selected/current scheme set.
+- Concept/planning model routing and image-generation model routing stay separate in provider settings and request payloads.
+- Style/composition reference strength remains a single default behavior for MVP.
+- Local redraw, upscale, and background removal remain single-result actions from the large-image viewer, not automatic batch steps.
+- Failed image tasks should be retryable as a group without rerunning the whole concept brief stage.
+
 ## 2026-05-25 MVP Scope Update: Reference Upload And Suite Editing
 
 Reference images and output suites are production inputs, not decorative form fields. The MVP workbench should let users see uploaded composition and style references immediately, choose the intended extraction depth, and manage custom delivery sizes without leaving the left control panel.

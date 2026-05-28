@@ -440,7 +440,9 @@ export function createPromptPackage(input: PromptBuilderInput): PromptPackage {
   const parsed = PromptBuilderInputSchema.parse(input);
   const mode = parsed.mode || parsed.snapshot.activeMode;
   const modeState = findModeState(parsed.snapshot, mode);
-  const schemeId = parsed.schemeId || parsed.snapshot.schemes.find((item) => item.mode === mode)?.id || null;
+  const schemeId = parsed.target === "brief"
+    ? parsed.schemeId || null
+    : parsed.schemeId || parsed.snapshot.schemes.find((item) => item.mode === mode)?.id || null;
   const platform = createPlatformConstraint({
     modeState,
     ...(parsed.platformPreset ? { platformPreset: parsed.platformPreset } : {}),

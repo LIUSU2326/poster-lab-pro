@@ -11,8 +11,8 @@ export function renderTopbar(activeMode) {
       <div class="project-pill">
         <span></span>
         <div>
-          <small>宣发画布</small>
-          <strong>${escapeHtml(project.name || "游戏项目")}</strong>
+          <small>${modeLabel}工作台</small>
+          <strong>${escapeHtml(project.name || "未命名项目")}</strong>
         </div>
       </div>
       <div class="view-switch top-view-switch" aria-label="主视图">
@@ -20,8 +20,8 @@ export function renderTopbar(activeMode) {
         <button class="${state.view === "archive" ? "active" : ""}" type="button" data-view="archive">归档</button>
       </div>
       <nav class="top-actions" aria-label="全局操作">
-        ${state.view === "archive" ? "" : `<button type="button" data-action="toggle-copy">${state.copyVisible ? "收起文案" : "展示文案"}</button>`}
-        <button type="button" data-action="open-settings">模型与 API Key</button>
+        ${state.view === "archive" ? "" : `<button type="button" data-action="toggle-copy">${state.copyVisible ? "收起文案" : "展开文案"}</button>`}
+        <button type="button" data-action="open-settings">模型与 Key</button>
         <button class="theme-switch ${state.theme}" type="button" data-action="toggle-theme" aria-label="切换亮色或暗色">
           <span class="${state.theme === "light" ? "active" : ""}">亮色</span>
           <span class="${state.theme === "dark" ? "active" : ""}">暗色</span>

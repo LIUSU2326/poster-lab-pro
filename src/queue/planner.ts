@@ -38,6 +38,8 @@ const QueuePlannerInputSchema = z.object({
   includeUpscale: z.boolean().default(false),
   includeBackgroundRemoval: z.boolean().default(false),
   sourceResultId: z.string().min(1).optional(),
+  regenerateSchemes: z.boolean().default(true),
+  batchId: z.string().min(1).max(80).optional(),
 });
 
 type QueuePlannerResolvedInput = z.infer<typeof QueuePlannerInputSchema>;
@@ -164,7 +166,10 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
   const operationSuffix = operationOnly
     ? `-op-${parsed.sourceResultId?.replace(/[^a-zA-Z0-9_-]+/g, "-")}-${Date.now().toString(36)}`
     : "";
-  const jobId = `job-${parsed.mode}-${parsed.projectId}${operationSuffix}`;
+  const batchSuffix = operationOnly
+    ? operationSuffix
+    : `-${(parsed.batchId || Date.now().toString(36)).replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+  const jobId = `job-${parsed.mode}-${parsed.projectId}${batchSuffix}`;
   const createdAt = nowIso();
   const tasks: QueueTask[] = [];
   const events = [createEvent(jobId, "jobCreated", `Created ${parsed.mode} batch queue.`)];
@@ -182,7 +187,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
     updatedAt: createdAt,
   });
 
-  const briefTask = operationOnly
+  const briefTask = operationOnly || !parsed.regenerateSchemes
     ? null
     : createTask({
         id: `${jobId}-brief`,

@@ -151,7 +151,7 @@ export const formSchemas = {
   SloganSettingsForm: {
     mode: { enum: enums.sloganMode, default: "auto" },
     globalSlogan: { type: "string", max: 80, nullable: true },
-    languages: { enumArray: enums.sloganLanguage, default: ["zh-CN", "en-US"] },
+    languages: { enumArray: enums.sloganLanguage, default: ["en-US"] },
   },
 
   ProviderConfigForm: {
@@ -201,7 +201,7 @@ export const formSchemas = {
 };
 
 export const modeAssetRequirements = {
-  poster: ["gameCharacter|background", "gameLogo", "styleReference|compositionReference"],
+  poster: ["gameCharacter?", "background?", "gameLogo?", "styleReference?", "compositionReference?"],
   collab: ["gameCharacter", "collabCharacter", "gameLogo", "brandLogo", "background?"],
   announcement: ["gameCharacter?", "background?", "gameLogo|brandLogo"],
   logo: ["subjectReference?", "gameLogo?"],

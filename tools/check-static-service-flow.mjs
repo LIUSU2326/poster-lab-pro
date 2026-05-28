@@ -44,13 +44,20 @@ if (!promptPackage?.finalPrompt?.includes("Project Context")) {
 }
 
 const mappedRequest = submission?.serviceFlow?.providerRequestMap?.data?.mappedRequest;
-if (mappedRequest?.kind !== "imageGeneration") {
-  issues.push(`expected imageGeneration mapped request, received ${mappedRequest?.kind}`);
+if (mappedRequest?.kind !== "briefGeneration") {
+  issues.push(`expected briefGeneration mapped request, received ${mappedRequest?.kind}`);
 }
 
 const queueSummary = submission?.serviceFlow?.queuePlanCreate?.data?.summary;
 if (!queueSummary || queueSummary.total < 3) {
   issues.push("queue summary is missing or has too few tasks");
+}
+const queueSchemeIds = submission?.queuePlanCreate?.payload?.schemeIds || [];
+if (!queueSchemeIds.every((schemeId) => String(schemeId).startsWith("generated-poster-"))) {
+  issues.push("poster batch should use newly generated scheme ids");
+}
+if (submission?.promptPackageCreate?.payload?.target !== "brief") {
+  issues.push(`poster submission should create a brief prompt package, received ${submission?.promptPackageCreate?.payload?.target}`);
 }
 
 if (submission?.promptPackageCreate?.routeId !== "prompt.package.create") {
@@ -69,15 +76,12 @@ const missingLogoSnapshot = clone(originalSnapshot);
 missingLogoSnapshot.assets = missingLogoSnapshot.assets.filter((asset) => asset.role !== "gameLogo");
 await resetSubmission(missingLogoSnapshot);
 const missingLogoSubmission = await submitGenerationDraft();
-if (missingLogoSubmission?.status !== "invalid") {
-  issues.push(`missing gameLogo should produce invalid submission, received ${missingLogoSubmission?.status}`);
-}
-if (missingLogoSubmission?.serviceFlow?.reason !== "validation_failed") {
-  issues.push("missing required asset should skip service flow execution");
+if (missingLogoSubmission?.status !== "service-ready") {
+  issues.push(`missing optional gameLogo should still produce service-ready submission, received ${missingLogoSubmission?.status}`);
 }
 const missingLogoResult = missingLogoSubmission?.validation?.results?.find((item) => item.name === "promptAssets");
-if (missingLogoResult?.ok !== false || !missingLogoResult.issues?.some((issue) => issue.path.includes("gameLogo"))) {
-  issues.push("missing gameLogo should surface a promptAssets validation issue");
+if (missingLogoResult?.ok !== true) {
+  issues.push("missing optional gameLogo should not surface a promptAssets validation issue");
 }
 
 const blobSnapshot = clone(originalSnapshot);
@@ -88,12 +92,12 @@ blobSnapshot.assets = blobSnapshot.assets.map((asset) => (
 ));
 await resetSubmission(blobSnapshot);
 const blobSubmission = await submitGenerationDraft();
-if (blobSubmission?.status !== "invalid") {
-  issues.push(`blob-only required asset should produce invalid submission, received ${blobSubmission?.status}`);
+if (blobSubmission?.status !== "service-ready") {
+  issues.push(`blob-only optional asset should not block static submission, received ${blobSubmission?.status}`);
 }
 const blobResult = blobSubmission?.validation?.results?.find((item) => item.name === "promptAssets");
-if (blobResult?.ok !== false || !blobResult.issues?.some((issue) => issue.message.includes("provider-unsafe"))) {
-  issues.push("blob-only required asset should surface a provider-unsafe promptAssets issue");
+if (blobResult?.ok !== true) {
+  issues.push("blob-only optional asset should not surface a provider-unsafe promptAssets issue");
 }
 
 await resetSubmission(originalSnapshot);

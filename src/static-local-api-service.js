@@ -115,7 +115,7 @@ function buildPromptPackage(payload) {
   const modeState = findModeState(snapshot, mode);
   if (!modeState) throw new Error(`Missing mode state for ${mode}.`);
 
-  const scheme = findScheme(snapshot, payload.schemeId, mode);
+  const scheme = payload.target === "brief" ? null : findScheme(snapshot, payload.schemeId, mode);
   if (payload.target === "image" && !scheme) throw new Error("Image prompt packages require a scheme.");
 
   const aspectRatio = payload.aspectRatio || modeState.outputSettings.aspectRatios[0] || "1:1";
@@ -306,7 +306,8 @@ function summarizeQueue(queuePlan) {
 
 function createQueuePlanPayload(payload) {
   const createdAt = nowIso();
-  const jobId = `job-${payload.mode}-${payload.projectId}`;
+  const batchId = String(payload.batchId || Date.now().toString(36)).replace(/[^a-zA-Z0-9_-]+/g, "-");
+  const jobId = `job-${payload.mode}-${payload.projectId}-${batchId}`;
   const tasks = [];
   const events = [{
     id: `event-${jobId}-jobCreated-job`,
@@ -333,15 +334,17 @@ function createQueuePlanPayload(payload) {
   const platformPresets = payload.platformPresets?.length ? payload.platformPresets : fallbackPresets;
   const customSize = payload.customSize || modeState?.outputSettings?.customSize || null;
 
-  const briefTask = createQueueTask({
-    id: `${jobId}-brief`,
-    jobId,
-    kind: "briefGeneration",
-    mode: payload.mode,
-    providerId: providerRouteForPayload(payload, "concept").providerId,
-    model: providerRouteForPayload(payload, "concept").model || "concept",
-  });
-  tasks.push(briefTask);
+  const briefTask = payload.regenerateSchemes === false
+    ? null
+    : createQueueTask({
+        id: `${jobId}-brief`,
+        jobId,
+        kind: "briefGeneration",
+        mode: payload.mode,
+        providerId: providerRouteForPayload(payload, "concept").providerId,
+        model: providerRouteForPayload(payload, "concept").model || "concept",
+      });
+  if (briefTask) tasks.push(briefTask);
 
   payload.schemeIds.forEach((schemeId, index) => {
     const rawRatio = aspectRatios[index % aspectRatios.length] || "1:1";
@@ -355,7 +358,7 @@ function createQueuePlanPayload(payload) {
       mode: payload.mode,
       providerId: providerRouteForPayload(payload, "image").providerId,
       schemeId,
-      dependsOn: [briefTask.id],
+      dependsOn: briefTask ? [briefTask.id] : [],
       count: payload.imagesPerScheme || 1,
       platformPreset,
       aspectRatio,
@@ -483,9 +486,13 @@ export async function runStaticGenerationServiceFlow(submission) {
     ? await service.mapProviderRequest({
       promptPackage: promptPackageCreate.data.promptPackage,
       snapshot,
-      providerId: submission.providerRoutes?.image?.providerId || submission.providerId,
-      model: submission.providerRoutes?.image?.model,
-      kind: "imageGeneration",
+      providerId: promptPackageCreate.data.promptPackage.target === "brief"
+        ? submission.providerRoutes?.concept?.providerId || submission.providerId
+        : submission.providerRoutes?.image?.providerId || submission.providerId,
+      model: promptPackageCreate.data.promptPackage.target === "brief"
+        ? submission.providerRoutes?.concept?.model
+        : submission.providerRoutes?.image?.model,
+      kind: promptPackageCreate.data.promptPackage.target === "brief" ? "briefGeneration" : "imageGeneration",
       count: submission.queuePlanCreate.payload.imagesPerScheme,
       traceId: submission.traceId,
     })

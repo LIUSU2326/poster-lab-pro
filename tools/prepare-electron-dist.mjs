@@ -7,6 +7,7 @@ const staticSource = path.join(root, ".next", "static");
 const publicSource = path.join(root, "public");
 const outputRoot = path.join(root, "dist-desktop");
 const nextOutput = path.join(outputRoot, "next", "standalone");
+const standaloneCopyExcludes = new Set(["dist-desktop", "release"]);
 
 function requirePath(target, message) {
   if (!existsSync(target)) {
@@ -22,7 +23,15 @@ requirePath(staticSource, "Missing .next/static. Run npm run build:next first.")
 rmSync(path.join(outputRoot, "next"), { recursive: true, force: true });
 mkdirSync(outputRoot, { recursive: true });
 
-cpSync(standaloneSource, nextOutput, { recursive: true });
+cpSync(standaloneSource, nextOutput, {
+  recursive: true,
+  dereference: true,
+  filter(source) {
+    const relative = path.relative(standaloneSource, source);
+    if (!relative) return true;
+    return !standaloneCopyExcludes.has(relative.split(path.sep)[0]);
+  },
+});
 cpSync(staticSource, path.join(nextOutput, ".next", "static"), { recursive: true });
 
 if (existsSync(publicSource)) {

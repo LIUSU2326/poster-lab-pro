@@ -12,6 +12,8 @@ import { runStaticGenerationServiceFlow } from './static-local-api-service.js';
 import { runHttpGenerationServiceFlow } from './http-generation-service.js';
 import { applyGenerationFormValuesToSnapshot, getActiveGenerationFormValues } from './generation-form-runtime.js';
 
+const generatedBatchSchemePrefix = "generated-poster";
+
 const platformPresetsByMode = {
   poster: ["tiktok", "metaAds"],
   collab: ["metaAds", "tiktok"],
@@ -30,6 +32,10 @@ function nowIso() {
 
 function createTraceId() {
   return `trace-${Date.now().toString(36)}`;
+}
+
+function createBatchId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
 function issue(path, message) {
@@ -135,7 +141,7 @@ function createSloganSettingsDraft() {
   return {
     mode: "auto",
     globalSlogan: "",
-    languages: ["zh-CN", "en-US"],
+    languages: ["en-US"],
   };
 }
 
@@ -188,7 +194,17 @@ function createFallbackModeForm(modeId) {
   return createModeFormDraft(modeSpecs[modeId] || modeSpecs.poster);
 }
 
-export function createBoundWorkspaceSnapshot() {
+function normalizeGenerationOptions(options = {}) {
+  return {
+    ...options,
+    batchId: options.batchId || createBatchId(),
+    schemeStrategy: options.schemeStrategy === "continue" ? "continue" : "regenerate",
+    schemeIds: Array.isArray(options.schemeIds) ? options.schemeIds.filter(Boolean) : [],
+  };
+}
+
+export function createBoundWorkspaceSnapshot(options = {}) {
+  const normalizedOptions = normalizeGenerationOptions(options);
   const activeMode = getActiveMode();
   const selected = getSelectedScheme();
   const formValues = {
@@ -202,8 +218,85 @@ export function createBoundWorkspaceSnapshot() {
   snapshot.activeMode = activeMode.id;
   snapshot.metadata.updatedAt = updatedAt;
   ensureActiveModeSchemesInSnapshot(snapshot, activeMode);
+  preparePosterBatchSchemes(snapshot, activeMode, updatedAt, normalizedOptions);
 
   return snapshot;
+}
+
+function createGeneratedPosterScheme({ snapshot, index, batchId, outputPresets, updatedAt }) {
+  const code = `PO-${String(index + 1).padStart(2, "0")}`;
+  return {
+    id: `${generatedBatchSchemePrefix}-${batchId}-${index + 1}`,
+    projectId: snapshot.project.id,
+    mode: "poster",
+    code,
+    title: `待生成海报方案 ${index + 1}`,
+    brief: "等待 AI 根据项目描述、素材、宣传词和侧重点随机生成新的海报方案。",
+    slogans: {},
+    promptBlocks: [],
+    lockedFields: [],
+    outputPresets,
+    status: "pending",
+    createdAt: updatedAt,
+    updatedAt,
+  };
+}
+
+function getCurrentPosterSchemeIds(snapshot, activeMode, outputSettings, options = {}) {
+  const explicitIds = Array.isArray(options.schemeIds) ? options.schemeIds.filter(Boolean) : [];
+  if (explicitIds.length > 0) return explicitIds;
+
+  const schemeCount = Math.max(1, Math.min(20, Number(outputSettings.schemeCount || 1)));
+  const fixtureIds = new Set((activeMode.schemes || []).map((scheme) => scheme.id));
+  const resultSchemeIds = new Set((snapshot.results || [])
+    .filter((result) => result.mode === "poster")
+    .map((result) => result.schemeId));
+  const posterSchemes = (snapshot.schemes || [])
+    .filter((scheme) => scheme.mode === "poster" && scheme.status !== "pending");
+  const producedSchemes = posterSchemes.filter((scheme) =>
+    !fixtureIds.has(scheme.id) || resultSchemeIds.has(scheme.id),
+  );
+  const candidates = producedSchemes.length > 0 ? producedSchemes : posterSchemes;
+  return candidates.slice(0, schemeCount).map((scheme) => scheme.id);
+}
+
+function preparePosterBatchSchemes(snapshot, activeMode, updatedAt, options = {}) {
+  if (activeMode.id !== "poster") return [];
+
+  const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
+  const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
+  const schemeCount = Math.max(1, Math.min(20, Number(outputSettings.schemeCount || 1)));
+  if (options.schemeStrategy === "continue") {
+    const currentIds = getCurrentPosterSchemeIds(snapshot, activeMode, outputSettings, options);
+    if (currentIds.length > 0) {
+      if (modeState) {
+        modeState.selectedSchemeIds = currentIds;
+        modeState.updatedAt = updatedAt;
+      }
+      return currentIds;
+    }
+  }
+
+  const outputPresets = outputSettings.platformPresets?.length
+    ? outputSettings.platformPresets
+    : platformPresetsByMode.poster;
+  const batchId = options.batchId || createBatchId();
+  const batchSchemes = Array.from({ length: schemeCount }, (_, index) =>
+    createGeneratedPosterScheme({ snapshot, index, batchId, outputPresets, updatedAt }),
+  );
+  const batchIds = batchSchemes.map((scheme) => scheme.id);
+
+  snapshot.schemes = [
+    ...batchSchemes,
+    ...snapshot.schemes.filter((scheme) =>
+      !(scheme.mode === "poster" && String(scheme.id).startsWith(`${generatedBatchSchemePrefix}-`) && scheme.status === "pending"),
+    ),
+  ];
+  if (modeState) {
+    modeState.selectedSchemeIds = batchIds;
+    modeState.updatedAt = updatedAt;
+  }
+  return batchIds;
 }
 
 function ensureActiveModeSchemesInSnapshot(snapshot, activeMode) {
@@ -263,33 +356,53 @@ export function validateBoundFrontendForms(snapshot = createBoundWorkspaceSnapsh
   };
 }
 
-export function buildPromptPackageCreateSubmission(snapshot = createBoundWorkspaceSnapshot()) {
+function getFirstSelectedSchemeId(snapshot, activeMode, selected) {
+  const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
+  const selectedBatchIds = Array.isArray(modeState?.selectedSchemeIds) ? modeState.selectedSchemeIds : [];
+  return selectedBatchIds[0] || selected.id;
+}
+
+export function buildPromptPackageCreateSubmission(snapshot = createBoundWorkspaceSnapshot(), options = {}) {
+  const normalizedOptions = normalizeGenerationOptions(options);
   const activeMode = getActiveMode();
   const selected = getSelectedScheme();
   const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
   const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
+  const schemeId = getFirstSelectedSchemeId(snapshot, activeMode, selected);
+  const selectedSnapshotScheme = snapshot.schemes.find((scheme) => scheme.id === schemeId);
+  const target = activeMode.id === "poster" && (
+    normalizedOptions.schemeStrategy !== "continue" || selectedSnapshotScheme?.status === "pending"
+  ) ? "brief" : "image";
 
   return {
     routeId: "prompt.package.create",
     payload: {
       snapshot,
-      target: "image",
+      target,
       mode: activeMode.id,
-      schemeId: selected.id,
+      ...(target === "image" ? { schemeId } : {}),
       platformPreset: outputSettings.platformPresets[0] || "custom",
       aspectRatio: outputSettings.aspectRatios[0] || "1:1",
     },
   };
 }
 
-export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSnapshot()) {
+export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSnapshot(), options = {}) {
+  const normalizedOptions = normalizeGenerationOptions(options);
   const activeMode = getActiveMode();
   const selected = getSelectedScheme();
   const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
   const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
-  const batchSchemeIds = getModeSchemes()
-    .slice(0, Math.max(1, outputSettings.schemeCount || 1))
-    .map((scheme) => scheme.id);
+  const selectedBatchIds = Array.isArray(modeState?.selectedSchemeIds) ? modeState.selectedSchemeIds : [];
+  const batchSchemeIds = activeMode.id === "poster" && selectedBatchIds.length > 0
+    ? selectedBatchIds
+    : getModeSchemes()
+      .slice(0, Math.max(1, outputSettings.schemeCount || 1))
+      .map((scheme) => scheme.id);
+  const shouldRegenerateSchemes = activeMode.id === "poster"
+    ? normalizedOptions.schemeStrategy !== "continue"
+      || batchSchemeIds.some((schemeId) => snapshot.schemes.find((scheme) => scheme.id === schemeId)?.status === "pending")
+    : true;
 
   return {
     routeId: "queue.plan.create",
@@ -303,6 +416,8 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
       aspectRatios: outputSettings.aspectRatios,
       customSize: outputSettings.customSize || null,
       imagesPerScheme: outputSettings.imagesPerScheme,
+      regenerateSchemes: shouldRegenerateSchemes,
+      batchId: normalizedOptions.batchId,
       includeImageEdit: false,
       includeUpscale: false,
       includeBackgroundRemoval: false,
@@ -360,12 +475,15 @@ function getProviderRoutesForSubmission() {
 }
 
 export async function submitGenerationDraft(options = {}) {
-  const snapshot = createBoundWorkspaceSnapshot();
+  const normalizedOptions = normalizeGenerationOptions(options);
+  const snapshot = createBoundWorkspaceSnapshot(normalizedOptions);
   const validation = validateBoundFrontendForms(snapshot);
-  const promptPackageCreate = buildPromptPackageCreateSubmission(snapshot);
-  const queuePlanCreate = buildQueuePlanCreateSubmission(snapshot);
-  const selected = getSelectedScheme();
+  const promptPackageCreate = buildPromptPackageCreateSubmission(snapshot, normalizedOptions);
+  const queuePlanCreate = buildQueuePlanCreateSubmission(snapshot, normalizedOptions);
+  const selectedId = queuePlanCreate.payload.schemeIds[0];
+  const selected = snapshot.schemes.find((scheme) => scheme.id === selectedId) || getSelectedScheme();
   const activeMode = getActiveMode();
+  if (activeMode.id === "poster" && selected?.id) state.selectedScheme = selected.id;
 
   const submission = {
     status: validation.ok ? "submitting" : "invalid",

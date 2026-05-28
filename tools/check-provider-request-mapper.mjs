@@ -189,8 +189,8 @@ async function runRuntimeCheck() {
       mode: "poster",
       schemeId: "scheme-poster-01",
     });
-    if (blobPrompt.validation.ok) {
-      issues.push("browser-only blob URLs should not pass image prompt validation for required assets");
+    if (!blobPrompt.validation.ok) {
+      issues.push("browser-only optional poster assets should not block image prompt validation");
     }
     try {
       mapperModule.mapPromptPackageToProviderRequest({
@@ -199,9 +199,8 @@ async function runRuntimeCheck() {
         providerId: "openai",
         kind: "imageGeneration",
       });
-      issues.push("provider mapper should reject required blob-only asset references");
-    } catch {
-      // Expected: image generation must not proceed with browser-only required assets.
+    } catch (error) {
+      issues.push(`provider mapper should allow optional blob-only poster references, received ${error instanceof Error ? error.message : "error"}`);
     }
 
     const missingSnapshot = {
@@ -213,8 +212,8 @@ async function runRuntimeCheck() {
       mode: "poster",
       schemeId: "scheme-poster-01",
     });
-    if (missingPrompt.validation.ok || !missingPrompt.validation.errors.some((error) => error.includes("gameLogo"))) {
-      issues.push("missing required asset roles should be reported in image prompt validation");
+    if (!missingPrompt.validation.ok || missingPrompt.validation.errors.some((error) => error.includes("gameLogo"))) {
+      issues.push("missing optional poster logo should not be reported as an image prompt validation error");
     }
   } finally {
     const resolved = path.resolve(outDir);

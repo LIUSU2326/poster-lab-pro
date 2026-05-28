@@ -225,6 +225,8 @@ export const QueuePlanCreateApiRequestSchema = z.object({
   includeUpscale: z.boolean().default(false),
   includeBackgroundRemoval: z.boolean().default(false),
   sourceResultId: z.string().min(1).optional(),
+  regenerateSchemes: z.boolean().default(true),
+  batchId: z.string().min(1).max(80).optional(),
 });
 
 export const QueuePlanCreateApiResponseSchema = z.union([

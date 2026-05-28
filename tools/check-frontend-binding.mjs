@@ -68,8 +68,8 @@ for (const file of [
   }
 }
 
-for (const token of ["state.submission", "submission-card compact", "formatValidationIssues", "formatServiceQueue", "task-stats", "queue-list"]) {
-  if (!taskChrome.includes(token)) issues.push(`task-chrome.js: missing submission feedback token ${token}`);
+for (const removedToken of ["submission-card compact", "formatValidationIssues", "formatServiceQueue", "task-stats", "queue-list", "data-action=\"toggle-task\""]) {
+  if (taskChrome.includes(removedToken)) issues.push(`task-chrome.js: removed details drawer token should stay absent: ${removedToken}`);
 }
 
 if (!workspaceSnapshot.includes("modeForm")) {

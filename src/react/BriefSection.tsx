@@ -29,7 +29,7 @@ function normalizeInitialValues(values: ProjectBriefForm): ProjectBriefForm {
 
 function looksLikeMojibake(value: string | undefined): boolean {
   if (!value) return false;
-  return /[锟絔鏉╅弰閻ㄦ稉閸氬缁涙禒瑜版い閹绘笟闂刔]/.test(value);
+  return /[閿熺禂閺夆晠寮伴柣銊︾▔闁告艾顩肩紒娑欑鐟滅増銇勯柟缁樼瑹闂傚垟]/.test(value);
 }
 
 function splitGuidance(value: string | undefined): string[] {
@@ -44,7 +44,7 @@ function joinGuidance(items: string[]): string {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean))).join("\n");
 }
 
-export function BriefSection({ modeShort, revision, assetCount, initialValues }: BriefSectionProps) {
+export function BriefSection({ initialValues }: BriefSectionProps) {
   const defaults = useMemo(() => normalizeInitialValues(initialValues), [initialValues]);
   const form = useForm<ProjectBriefForm>({
     resolver: zodResolver(ProjectBriefFormSchema) as Resolver<ProjectBriefForm>,
@@ -110,11 +110,6 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
         {errors.projectName?.message ? <small className="form-error">{errors.projectName.message}</small> : null}
       </label>
 
-      <div className="brief-meta-line">
-        <span>{modeShort}</span>
-        <small>版本 {revision} / {assetCount} 个素材</small>
-      </div>
-
       <label className="brief-field">
         <span>项目描述</span>
         <textarea
@@ -139,7 +134,7 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
                 aria-label="添加侧重点"
                 value={focusDraft}
                 disabled={!currentValues.focusGuidanceEnabled}
-                placeholder="输入侧重点，按回车添加"
+                placeholder="输入重点，按回车添加"
                 onChange={(event) => setFocusDraft(event.currentTarget.value)}
                 onKeyDown={handleFocusKeyDown}
               />
@@ -167,7 +162,7 @@ export function BriefSection({ modeShort, revision, assetCount, initialValues }:
                 ))}
               </div>
             ) : (
-              <small>添加后会写入方案生成提示词。</small>
+              <small>未添加</small>
             )}
           </>
         ) : (

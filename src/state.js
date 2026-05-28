@@ -25,6 +25,7 @@ export const state = {
   resultViewerOpen: false,
   taskOpen: false,
   settingsOpen: false,
+  generationChoiceOpen: false,
   settingsWidth: 1060,
   settingsHeight: 820,
   provider: "openai",

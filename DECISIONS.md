@@ -1,5 +1,21 @@
 # DECISIONS.md
 
+## D086: Poster Generation Supports Text-Only And Batch-Safe Reruns
+
+Status: accepted
+
+Context: Poster generation previously treated some uploaded assets and generated placeholders as if they were required for every run. The user confirmed that a normal workflow must allow project-description-only generation, and that clicking the generation button after schemes exist must not accidentally refresh or overwrite prior schemes and images.
+
+Decision: Poster mode treats all visual assets as optional control inputs. The main poster CTA defaults to a fresh random scheme batch only when there is no prior production; once current schemes/results exist, the UI asks whether to continue rendering the current schemes or regenerate a new batch. Fresh batches use unique batch ids so queue plans, result ids, and archive records do not collide with prior work. Continuing from current schemes skips brief generation and queues image generation only.
+
+Impact:
+
+- Poster brief prompt packages may have no scheme id and no uploaded assets.
+- Queue planning gets explicit `regenerateSchemes` and `batchId` inputs.
+- Provider routing keeps concept/planning and image generation slots separate.
+- Default slogan/poster language is English unless the user selects additional languages.
+- Retry-all-failed image generation can reuse current schemes without rerunning concept planning.
+
 ## D085: Workbench Defaults To Chinese UI With Restrained Graphite/Sage Themes
 
 Status: accepted

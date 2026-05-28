@@ -414,7 +414,7 @@ export function AssetsSection({
                 onClick={() => openFilePicker(role, slot.label)}
                 disabled={isPending}
                 aria-busy={pendingKey === key}
-                aria-label={`${slot.label}，${status}`}
+                aria-label={`${slot.label}：${status}`}
               >
                 <i className={displayPreviewUrl ? "asset-preview" : undefined}>
                   {displayPreviewUrl ? (
@@ -448,65 +448,7 @@ export function AssetsSection({
         </button>
       ) : null}
 
-      <div className={`reference-upload-card ${displayReferencePreview ? "has-preview" : ""}`}>
-        <button
-          className="reference-upload-main"
-          type="button"
-          data-upload-drop="reference"
-          onClick={() => openFilePicker(referenceRole, referenceLabel, true)}
-          disabled={isPending}
-          aria-busy={pendingKey?.startsWith(`${referenceRole}:`)}
-        >
-          <span className="reference-thumb" aria-hidden="true">
-            {displayReferencePreview ? (
-              <img
-                className="reference-preview-image"
-                src={displayReferencePreview}
-                alt=""
-                onError={() => setBrokenPreviewUrls((current) => ({ ...current, [displayReferencePreview]: true }))}
-              />
-            ) : null}
-          </span>
-          {displayReferencePreview ? null : (
-            <span>
-              <strong>{referenceLabel}</strong>
-              <small>{pendingKey?.startsWith(`${referenceRole}:`) ? "上传中" : "上传图片后选择识别方式"}</small>
-            </span>
-          )}
-        </button>
-        {displayReferencePreview ? (
-          <>
-            <div className="reference-analysis-tools">
-              <button
-                type="button"
-                onClick={() => runReferenceExtraction("composition")}
-                disabled={!canExtractReference}
-                title={referenceDisabledReason || undefined}
-              >
-                仅识别构图
-              </button>
-              <button
-                type="button"
-                onClick={() => runReferenceExtraction("full")}
-                disabled={!canExtractReference}
-                title={referenceDisabledReason || undefined}
-              >
-                完整识别
-              </button>
-            </div>
-            <button className="reference-remove-button" type="button" onClick={deleteReferenceUpload}>
-              删除参考图
-            </button>
-          </>
-        ) : null}
-        {referenceNote ? (
-          <small className={canExtractReference ? "reference-ready-note" : "reference-muted-note"}>
-            {referenceNote}
-          </small>
-        ) : null}
-      </div>
-
-      <div className="asset-category-panel">
+      <div className="asset-category-panel asset-category-panel-primary">
         <strong>新增素材类别</strong>
         <div className="inline-add-row">
           <input
@@ -533,9 +475,65 @@ export function AssetsSection({
               </button>
             ))}
           </div>
-        ) : (
-          <small>新增后会出现在上方素材卡片，可直接点击上传。</small>
-        )}
+        ) : null}
+      </div>
+
+      <div className={`reference-upload-card ${displayReferencePreview ? "has-preview" : ""}`}>
+        <button
+          className="reference-upload-main"
+          type="button"
+          data-upload-drop="reference"
+          onClick={() => openFilePicker(referenceRole, referenceLabel, true)}
+          disabled={isPending}
+          aria-busy={pendingKey?.startsWith(`${referenceRole}:`)}
+        >
+          <span className="reference-thumb" aria-hidden="true">
+            {displayReferencePreview ? (
+              <img
+                className="reference-preview-image"
+                src={displayReferencePreview}
+                alt=""
+                onError={() => setBrokenPreviewUrls((current) => ({ ...current, [displayReferencePreview]: true }))}
+              />
+            ) : null}
+          </span>
+          {displayReferencePreview ? null : (
+            <span>
+              <strong>{referenceLabel}</strong>
+              <small>{pendingKey?.startsWith(`${referenceRole}:`) ? "上传中" : "上传构图或风格参考"}</small>
+            </span>
+          )}
+        </button>
+        {displayReferencePreview ? (
+          <>
+            <div className="reference-analysis-tools">
+              <button
+                type="button"
+                onClick={() => runReferenceExtraction("composition")}
+                disabled={!canExtractReference}
+                title={referenceDisabledReason || undefined}
+              >
+                识别构图
+              </button>
+              <button
+                type="button"
+                onClick={() => runReferenceExtraction("full")}
+                disabled={!canExtractReference}
+                title={referenceDisabledReason || undefined}
+              >
+                完整识别
+              </button>
+            </div>
+            <button className="reference-remove-button" type="button" onClick={deleteReferenceUpload}>
+              删除参考图
+            </button>
+          </>
+        ) : null}
+        {referenceNote ? (
+          <small className={canExtractReference ? "reference-ready-note" : "reference-muted-note"}>
+            {referenceNote}
+          </small>
+        ) : null}
       </div>
     </div>
   );

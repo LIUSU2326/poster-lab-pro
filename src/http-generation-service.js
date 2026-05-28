@@ -98,9 +98,13 @@ export async function runHttpGenerationServiceFlow(submission, options = {}) {
     ? await service.mapProviderRequest(workspaceId, {
       promptPackage: promptPackageCreate.data.promptPackage,
       snapshot,
-      providerId: submission.providerRoutes?.image?.providerId || submission.providerId,
-      model: submission.providerRoutes?.image?.model,
-      kind: "imageGeneration",
+      providerId: promptPackageCreate.data.promptPackage.target === "brief"
+        ? submission.providerRoutes?.concept?.providerId || submission.providerId
+        : submission.providerRoutes?.image?.providerId || submission.providerId,
+      model: promptPackageCreate.data.promptPackage.target === "brief"
+        ? submission.providerRoutes?.concept?.model
+        : submission.providerRoutes?.image?.model,
+      kind: promptPackageCreate.data.promptPackage.target === "brief" ? "briefGeneration" : "imageGeneration",
       count: submission.queuePlanCreate.payload.imagesPerScheme,
       traceId: submission.traceId,
     })

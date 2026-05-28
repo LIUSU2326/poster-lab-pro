@@ -154,7 +154,7 @@ export const SloganSettingsFormSchema = z
   .object({
     mode: SloganModeSchema.default("auto"),
     globalSlogan: z.string().max(80).optional(),
-    languages: z.array(SloganLanguageSchema).min(1).default(["zh-CN", "en-US"]),
+    languages: z.array(SloganLanguageSchema).min(1).default(["en-US"]),
   })
   .superRefine((value, ctx) => {
     if (value.mode === "global" && !value.globalSlogan?.trim()) {

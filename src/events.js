@@ -235,18 +235,60 @@ async function handleActionControl(control, event, render) {
     return;
   }
   if (action === "submit-generation") {
+    let generationOptions = {};
     if (control.dataset.schemeId) {
       state.selectedScheme = control.dataset.schemeId;
       state.selectedSchemeVariants = {
         ...(state.selectedSchemeVariants || {}),
         [control.dataset.schemeId]: state.selectedSchemeVariants?.[control.dataset.schemeId] || 0,
       };
+      generationOptions = {
+        schemeStrategy: "continue",
+        schemeIds: [control.dataset.schemeId],
+      };
+    } else {
+      if (state.activeMode === "poster" && hasExistingPosterProduction()) {
+        state.generationChoiceOpen = true;
+        render();
+        return;
+      }
+      generationOptions = {
+        schemeStrategy: "regenerate",
+      };
     }
-    const submissionPromise = submitGenerationDraft();
+    const submissionPromise = submitGenerationDraft(generationOptions);
     state.view = "schemes";
     state.taskOpen = false;
     render();
     await submissionPromise;
+  }
+  if (action === "retry-failed-images") {
+    const failedSchemeIds = getFailedImageSchemeIds();
+    if (failedSchemeIds.length === 0) return;
+    const submissionPromise = submitGenerationDraft({
+      schemeStrategy: "continue",
+      schemeIds: failedSchemeIds,
+      retryFailedOnly: true,
+    });
+    state.view = "schemes";
+    state.taskOpen = false;
+    render();
+    await submissionPromise;
+  }
+  if (action === "confirm-generation-choice") {
+    const strategy = control.dataset.generationStrategy === "regenerate" ? "regenerate" : "continue";
+    state.generationChoiceOpen = false;
+    const submissionPromise = submitGenerationDraft({ schemeStrategy: strategy });
+    state.view = "schemes";
+    state.taskOpen = false;
+    render();
+    await submissionPromise;
+    return;
+  }
+  if (action === "cancel-generation-choice") {
+    state.generationChoiceOpen = false;
+    render();
+    return;
   }
   if (action === "test-provider-route-plan") {
     await testCurrentProviderRoutePlan(render);
@@ -360,7 +402,6 @@ async function handleActionControl(control, event, render) {
   if (action === "project-library-delete-entry") {
     deleteProjectLibraryEntry(control.dataset.projectEntryId || "");
   }
-  if (action === "toggle-task") state.taskOpen = !state.taskOpen;
   if (action === "open-result-viewer") {
     if (control.dataset.resultId) {
       state.selectedResult = control.dataset.resultId;
@@ -375,6 +416,27 @@ async function handleActionControl(control, event, render) {
   }
   event.stopPropagation();
   render();
+}
+
+function hasExistingPosterProduction() {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const hasGeneratedScheme = (snapshot.schemes || []).some((scheme) =>
+    scheme.mode === "poster"
+      && scheme.status !== "pending"
+      && !String(scheme.id || "").startsWith("poster-"),
+  );
+  const hasPosterResult = (snapshot.results || []).some((result) => result.mode === "poster");
+  return hasGeneratedScheme || hasPosterResult;
+}
+
+function getFailedImageSchemeIds() {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const plans = (snapshot.queuePlans || []).filter((plan) => plan.job?.mode === state.activeMode);
+  const plan = plans[plans.length - 1];
+  if (!plan) return [];
+  return Array.from(new Set((plan.tasks || [])
+    .filter((task) => task.kind === "imageGeneration" && task.status === "failed" && task.input?.schemeId)
+    .map((task) => task.input.schemeId)));
 }
 
 function getSlotLabel(slotKey) {
@@ -655,6 +717,7 @@ function removeProviderModelOverrideValue(providerId, modelId) {
 async function handleProviderControl(button, render) {
   const providerId = button.dataset.provider;
   if (!providerId) return;
+  if (state.provider === providerId && state.settingsOpen) return;
 
   state.provider = providerId;
   if (!state.settingsOpen) {
@@ -662,14 +725,6 @@ async function handleProviderControl(button, render) {
     return;
   }
 
-  state.providerCredential = {
-    status: "loading",
-    providerId,
-    masked: "",
-    configured: false,
-    updatedAt: null,
-    error: null,
-  };
   state.providerConnection = getIdleProviderConnection(providerId);
   refreshSettingsLayer(render);
 
@@ -702,18 +757,39 @@ function refreshSettingsLayer(render) {
   const detailScrollTop = current.querySelector(".provider-detail")?.scrollTop || 0;
   const wrapper = document.createElement("div");
   wrapper.innerHTML = renderSettingsSheet().trim();
-  current.replaceWith(wrapper.firstElementChild);
+  const nextLayer = wrapper.firstElementChild;
+  const currentSheet = current.querySelector(".settings-sheet");
+  const currentBody = current.querySelector(".settings-body");
+  const currentProviderList = current.querySelector(".provider-list");
+  const currentProviderDetail = current.querySelector(".provider-detail");
+  const nextSheet = nextLayer?.querySelector?.(".settings-sheet");
+  const nextBody = nextLayer?.querySelector?.(".settings-body");
+  const nextProviderList = nextLayer?.querySelector?.(".provider-list");
+  const nextProviderDetail = nextLayer?.querySelector?.(".provider-detail");
 
-  const nextLayer = document.querySelector(".settings-layer");
-  const nextDetail = nextLayer?.querySelector(".provider-detail");
+  if (currentSheet && nextSheet) {
+    currentSheet.setAttribute("style", nextSheet.getAttribute("style") || "");
+  }
+
+  if (currentProviderList && nextProviderList && currentProviderDetail && nextProviderDetail) {
+    currentProviderList.replaceWith(nextProviderList);
+    currentProviderDetail.replaceWith(nextProviderDetail);
+  } else if (currentBody && nextBody) {
+    currentBody.replaceWith(nextBody);
+  } else if (nextLayer) {
+    current.replaceWith(nextLayer);
+  }
+
+  const activeLayer = document.querySelector(".settings-layer");
+  const nextDetail = activeLayer?.querySelector(".provider-detail");
   if (nextDetail) nextDetail.scrollTop = detailScrollTop;
 
-  if (nextLayer) {
-    bindActionControls(render, nextLayer);
-    bindKeyRevealControls(nextLayer);
-    bindProviderControls(render, nextLayer);
-    bindProviderModelControls(render, nextLayer);
-    bindSettingsResize(nextLayer);
+  if (activeLayer) {
+    const rebindRoot = activeLayer.querySelector(".settings-body") || activeLayer;
+    bindActionControls(render, rebindRoot);
+    bindKeyRevealControls(rebindRoot);
+    bindProviderControls(render, rebindRoot);
+    bindProviderModelControls(render, rebindRoot);
   }
 }
 

@@ -127,7 +127,6 @@ export function renderConfigPanel(activeMode) {
           <div data-brief-section-fallback>
             <button class="project-chip" type="button">
               <span>${escapeHtml(projectBrief.projectName || project.name || "Game launch")}</span>
-              <small>${copy.short} / 版本 ${snapshotSummary.revision} / ${snapshotSummary.assetCount} 个素材</small>
             </button>
             <textarea aria-label="项目描述" data-form-field="projectBrief.gameDescription">${escapeHtml(briefDescription)}</textarea>
             ${renderModeBrief(activeMode, form)}
@@ -427,10 +426,17 @@ function renderSloganSettings(form) {
   const settings = form.sloganSettings || {};
   const mode = settings.mode || "auto";
   const globalSlogan = settings.globalSlogan || "";
+  const languages = Array.isArray(settings.languages) && settings.languages.length > 0 ? settings.languages : ["en-US"];
   const options = [
     ["auto", "自动"],
     ["global", "全局"],
     ["off", "关闭"],
+  ];
+  const languageOptions = [
+    ["en-US", "英文"],
+    ["zh-CN", "中文"],
+    ["ja-JP", "日文"],
+    ["ko-KR", "韩文"],
   ];
 
   return `
@@ -461,6 +467,17 @@ function renderSloganSettings(form) {
       ` : `
         <small>${mode === "off" ? "生成提示词时不写入宣传词。" : "由模型根据当前方案生成宣传词。"}</small>
       `}
+      <div class="language-chip-row" aria-label="海报语言">
+        ${languageOptions.map(([value, label]) => `
+          <button
+            class="${languages.includes(value) ? "active" : ""}"
+            type="button"
+            data-form-choice="sloganSettings.languages"
+            data-choice-value="${value}"
+            data-choice-multi="true"
+          >${label}</button>
+        `).join("")}
+      </div>
     </div>
   `;
 }

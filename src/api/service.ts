@@ -532,6 +532,8 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
           includeImageEdit: parsed.includeImageEdit,
           includeUpscale: parsed.includeUpscale,
           includeBackgroundRemoval: parsed.includeBackgroundRemoval,
+          regenerateSchemes: parsed.regenerateSchemes,
+          ...(parsed.batchId ? { batchId: parsed.batchId } : {}),
           ...(parsed.sourceResultId ? { sourceResultId: parsed.sourceResultId } : {}),
         });
         const summary = summarizeQueue(queuePlan);
