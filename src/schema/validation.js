@@ -16,13 +16,16 @@ function assertNonEmptyString(value, path, issues) {
   }
 }
 
-function assertStringArray(value, path, issues, { minItems = 0 } = {}) {
+function assertStringArray(value, path, issues, { minItems = 0, maxItems = Infinity } = {}) {
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
     issues.push(issue(path, "Expected an array of strings."));
     return;
   }
   if (value.length < minItems) {
     issues.push(issue(path, `Expected at least ${minItems} item(s).`));
+  }
+  if (value.length > maxItems) {
+    issues.push(issue(path, `Expected at most ${maxItems} item(s).`));
   }
 }
 
@@ -70,7 +73,7 @@ export function validateOutputSettingsForm(mode, data) {
 export function validateSloganSettingsForm(data) {
   const issues = [];
   assertEnum(data?.mode, enums.sloganMode, "mode", issues);
-  assertStringArray(data?.languages, "languages", issues, { minItems: 1 });
+  assertStringArray(data?.languages, "languages", issues, { minItems: 1, maxItems: 1 });
   for (const language of data?.languages || []) {
     assertEnum(language, enums.sloganLanguage, `languages.${language}`, issues);
   }

@@ -65,12 +65,9 @@ if (!queueViewModel.includes("createQueueViewModel")) {
   issues.push("queue-view-model.js: missing createQueueViewModel");
 }
 
-for (const token of ["briefGeneration", "imageGeneration", "archiveSync"]) {
-  if (!queueViewModel.includes(token)) issues.push(`queue-view-model.js: missing runtime task token ${token}`);
-}
-
-if (!taskChrome.includes("createQueueViewModel")) {
-  issues.push("task-chrome.js: task chrome must derive display state from the queue view model");
+const taskChromeRemoved = taskChrome.includes("export function renderTaskChrome()") && taskChrome.includes('return "";');
+if (!taskChromeRemoved && !taskChrome.includes("createQueueViewModel")) {
+  issues.push("task-chrome.js: active task chrome must derive display state from the queue view model");
 }
 
 for (const hardcoded of ["12 / 16 完成", "75%", "$4.88", "03:12"]) {

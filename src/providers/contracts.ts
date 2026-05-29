@@ -81,9 +81,10 @@ export const BriefGenerationRequestSchema = z.object({
   projectName: z.string().min(1).max(80),
   gameDescription: z.string().min(1).max(2000),
   focusGuidance: z.string().max(500).optional(),
+  creativeDirection: z.string().max(4000).optional(),
   assets: z.array(ProviderAssetReferenceSchema).default([]),
   guardrails: ProviderModeGuardrailSchema,
-  languageTargets: z.array(SloganLanguageSchema).min(1),
+  languageTargets: z.array(SloganLanguageSchema).min(1).max(1),
   schemeCount: z.number().int().min(1).max(20),
 });
 

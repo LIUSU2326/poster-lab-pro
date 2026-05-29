@@ -157,17 +157,20 @@ function assetsForPromptMode(snapshot: WorkspaceSnapshot, mode: ProductionMode):
 
 function createSlogans(snapshot: WorkspaceSnapshot, modeState: WorkspaceModeState, schemeId: string | null) {
   const scheme = schemeId ? snapshot.schemes.find((item) => item.id === schemeId) : undefined;
+  const targetLanguage = modeState.sloganSettings.languages[0] || "en-US";
   if (modeState.sloganSettings.mode === "off") {
     return {};
   }
 
   if (modeState.sloganSettings.mode === "global" && modeState.sloganSettings.globalSlogan) {
-    return Object.fromEntries(
-      modeState.sloganSettings.languages.map((language) => [language, modeState.sloganSettings.globalSlogan]),
-    ) as Partial<Record<SloganLanguage, string>>;
+    return {
+      [targetLanguage]: modeState.sloganSettings.globalSlogan,
+    } as Partial<Record<SloganLanguage, string>>;
   }
 
-  return scheme?.slogans || {};
+  return scheme?.slogans?.[targetLanguage]
+    ? { [targetLanguage]: scheme.slogans[targetLanguage] } as Partial<Record<SloganLanguage, string>>
+    : {};
 }
 
 function formatBrand(snapshot: WorkspaceSnapshot): string {
@@ -212,7 +215,20 @@ function formatAssetInventory(assets: PromptAssetBinding[], mode: ProductionMode
       })
     : ["- No mode-relevant assets are currently bound."];
 
-  return [`Required slots: ${requiredText}.`, ...assetLines].join("\n");
+  const characterAssets = assets.filter((asset) => asset.role === "gameCharacter");
+  const collabAssets = assets.filter((asset) => asset.role === "collabCharacter");
+  const multiCharacterRule = characterAssets.length > 1
+    ? [
+        "Multi-character rule: each gameCharacter asset is a separate independent character, not alternate images of one character.",
+        "When the poster concept can support a group composition, include multiple uploaded game characters as distinct characters and preserve each one's appearance.",
+        "Do not merge, average, or swap visual traits between separate character references.",
+      ].join(" ")
+    : "";
+  const multiCollabRule = collabAssets.length > 1
+    ? "Collab character rule: each collabCharacter asset is a separate independent partner character. Keep them distinct and never merge identities."
+    : "";
+
+  return [`Required slots: ${requiredText}.`, multiCharacterRule, multiCollabRule, ...assetLines].filter(Boolean).join("\n");
 }
 
 function formatModeForm(modeState: WorkspaceModeState): string {

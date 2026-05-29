@@ -14,7 +14,7 @@ const modeCopy = {
     label: "海报",
     short: "海报",
     description: "休闲解谜 RPG 上线批量方案，保持主视觉清晰、裁切安全、可用于商店与广告位。",
-    cta: "生成海报批次",
+    cta: "生成方案批次",
     styles: [
       "精致休闲奇幻", "电影感奖励揭示", "角色反应组合", "商店头图裁切", "国潮厚涂", "低多边形",
       "像素复古", "欧美写实", "赛博霓虹", "水彩绘本", "厚涂奇幻", "黏土定格",
@@ -208,7 +208,7 @@ export function renderConfigPanel(activeMode) {
       </div>
 
       <div class="config-action">
-        <button class="primary-button wide" type="button" data-action="submit-generation">${copy.cta}</button>
+        <button class="primary-button wide" type="button" data-action="generate-schemes">${copy.cta}</button>
       </div>
     </aside>
   `;
@@ -474,7 +474,6 @@ function renderSloganSettings(form) {
             type="button"
             data-form-choice="sloganSettings.languages"
             data-choice-value="${value}"
-            data-choice-multi="true"
           >${label}</button>
         `).join("")}
       </div>

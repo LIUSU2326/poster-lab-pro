@@ -1,5 +1,12 @@
 # ROADMAP.md
 
+## 2026-05-28 MVP Flow Correction
+
+- Slogan language selection is single-target per batch, not multi-select.
+- Multiple character uploads in the same role represent independent characters for group-poster planning.
+- Failed image tasks need a one-click retry-all path that continues from existing schemes.
+- Size stabilization uses native provider dimensions first, then local close-ratio normalization when needed.
+
 ## 2026-05-24 Implementation Update: Electron Desktop Shell
 
 ### MVP Implementation Step

@@ -59,12 +59,12 @@ const providerDefaults = {
   },
   google: {
     baseUrl: "",
-    defaultModel: "gemini-3-pro-image-preview",
+    defaultModel: "gemini-2.5-flash-image",
     modelSlots: {
-      concept: "gemini-3.1-pro-preview",
-      image: "gemini-3-pro-image-preview",
-      styleReference: "gemini-3.1-pro-preview",
-      compositionReference: "gemini-3.1-pro-preview",
+      concept: "gemini-2.5-flash",
+      image: "gemini-2.5-flash-image",
+      styleReference: "gemini-2.5-flash",
+      compositionReference: "gemini-2.5-flash",
     },
   },
   deepseek: {

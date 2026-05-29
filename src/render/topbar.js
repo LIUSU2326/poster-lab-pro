@@ -5,6 +5,8 @@ export function renderTopbar(activeMode) {
   const project = getWorkspaceProject();
   const summary = getWorkspaceSnapshotSummary();
   const modeLabel = getModeLabel(activeMode.id);
+  const failedImageCount = getFailedImageTaskCount(activeMode.id);
+  const canRenderImages = activeMode.id !== "poster" || hasRenderableSchemes(activeMode.id);
 
   return `
     <header class="topbar" data-workspace-revision="${escapeHtml(summary.revision)}" data-workspace-assets="${escapeHtml(summary.assetCount)}">
@@ -27,7 +29,8 @@ export function renderTopbar(activeMode) {
           <span class="${state.theme === "dark" ? "active" : ""}">暗色</span>
         </button>
         <button type="button" data-view="archive">导出</button>
-        <button class="primary-button generate-primary" type="button" data-action="submit-generation">
+        ${failedImageCount > 0 ? `<button class="retry-failed-button" type="button" data-action="retry-failed-images">重试失败 ${failedImageCount}</button>` : ""}
+        <button class="primary-button generate-primary" type="button" data-action="submit-generation" ${canRenderImages ? "" : "disabled"}>
           <svg class="top-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M8 5v14l11-7-11-7Z"></path>
           </svg>
@@ -36,6 +39,23 @@ export function renderTopbar(activeMode) {
       </nav>
     </header>
   `;
+}
+
+function hasRenderableSchemes(modeId) {
+  const snapshot = state.workspaceSnapshot || {};
+  return (snapshot.schemes || []).some((scheme) =>
+    scheme.mode === modeId
+      && scheme.status !== "pending"
+      && !String(scheme.id || "").startsWith(`scheme-${modeId}-`),
+  );
+}
+
+function getFailedImageTaskCount(modeId) {
+  const snapshot = state.workspaceSnapshot || {};
+  const plans = (snapshot.queuePlans || []).filter((plan) => plan.job?.mode === modeId);
+  const plan = plans[plans.length - 1];
+  if (!plan) return 0;
+  return (plan.tasks || []).filter((task) => task.kind === "imageGeneration" && task.status === "failed").length;
 }
 
 function getModeLabel(modeId) {

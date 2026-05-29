@@ -7779,7 +7779,9 @@ select {
 
 .scheme-plan-empty button:hover {
   border-color: color-mix(in oklch, var(--accent), transparent 36%);
-  color: var(--accent-ink);
+  background: color-mix(in oklch, var(--panel), var(--accent) 10%);
+  color: var(--ink);
+  box-shadow: 0 8px 18px color-mix(in oklch, var(--accent), transparent 84%);
 }
 
 .scheme-card.plan-card,
@@ -9949,6 +9951,141 @@ select:focus-visible,
   grid-template-columns: minmax(220px, 1.1fr) minmax(220px, 1fr) minmax(180px, 0.8fr);
 }
 
+/* 2026-05-28 scheme-first flow and card cleanup. */
+.scheme-plan-empty {
+  display: none !important;
+}
+
+.top-actions .generate-primary:disabled,
+.top-actions button.generate-primary:disabled,
+.top-actions .primary-button.generate-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  box-shadow: none !important;
+}
+
+.scheme-card.plan-card,
+.scheme-card.plan-card:first-child {
+  display: grid !important;
+  align-content: start !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 22px 22px 18px !important;
+  gap: 13px !important;
+  overflow: hidden;
+}
+
+.scheme-card.plan-card.copy-visible,
+.scheme-card.plan-card.copy-visible:first-child {
+  grid-template-rows: auto auto minmax(88px, auto) minmax(156px, auto) auto !important;
+}
+
+.scheme-card.plan-card.copy-hidden,
+.scheme-card.plan-card.copy-hidden:first-child {
+  grid-template-rows: auto auto minmax(156px, auto) auto !important;
+}
+
+.plan-card header {
+  min-height: 0 !important;
+}
+
+.plan-card header h2 {
+  max-width: 100% !important;
+  margin: 0;
+  font-size: 17px !important;
+  line-height: 1.35 !important;
+}
+
+.plan-brief-strip {
+  min-height: 0 !important;
+  padding: 13px 14px !important;
+}
+
+.plan-brief-strip strong,
+.plan-brief-strip small {
+  display: block;
+}
+
+.plan-brief-strip strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheme-copy-details {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 8px !important;
+  min-height: 0 !important;
+}
+
+.scheme-copy-field,
+.scheme-copy-field:nth-child(3),
+.scheme-copy-field:nth-child(4),
+.scheme-copy-field:nth-child(5) {
+  grid-column: auto !important;
+}
+
+.scheme-copy-field p {
+  max-height: 48px !important;
+}
+
+.plan-image-frame {
+  min-height: 0 !important;
+}
+
+.plan-image-frame.has-image {
+  height: 168px !important;
+  min-height: 168px !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+}
+
+.plan-image-frame img {
+  display: block;
+}
+
+.plan-preview-actions {
+  top: 10px !important;
+  right: 10px !important;
+  bottom: auto !important;
+  left: auto !important;
+  opacity: 1 !important;
+}
+
+.plan-image-size {
+  left: 10px !important;
+  bottom: 10px !important;
+}
+
+.plan-card footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  height: auto !important;
+  min-height: 40px !important;
+  align-self: auto !important;
+  padding-top: 10px !important;
+  border-top: 1px solid color-mix(in oklch, var(--line), transparent 36%) !important;
+}
+
+.version-pager {
+  display: flex !important;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 6px !important;
+}
+
+.version-pager button {
+  flex: 0 0 auto;
+}
+
+.plan-card .render-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 /* 2026-05-28 fix top center view switch text contrast in light/dark themes. */
 .top-view-switch button {
   color: var(--text-secondary) !important;
@@ -10143,6 +10280,21 @@ select:focus-visible,
 .retry-failed-button:hover {
   border-color: color-mix(in oklch, var(--danger), transparent 25%);
   background: color-mix(in oklch, var(--danger), transparent 86%);
+}
+
+.top-actions .retry-failed-button {
+  min-width: auto;
+  height: 34px;
+  border-color: color-mix(in oklch, var(--danger), transparent 48%);
+  background: color-mix(in oklch, var(--danger), transparent 93%);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.top-actions .retry-failed-button:hover {
+  border-color: color-mix(in oklch, var(--danger), transparent 20%);
+  background: color-mix(in oklch, var(--danger), transparent 87%);
+  color: var(--danger);
 }
 
 /* 2026-05-27 scheme copy and slogan controls. */

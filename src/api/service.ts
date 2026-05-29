@@ -529,6 +529,7 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
           aspectRatios: parsed.aspectRatios,
           customSize: parsed.customSize,
           imagesPerScheme: parsed.imagesPerScheme,
+          includeImageGeneration: parsed.includeImageGeneration,
           includeImageEdit: parsed.includeImageEdit,
           includeUpscale: parsed.includeUpscale,
           includeBackgroundRemoval: parsed.includeBackgroundRemoval,

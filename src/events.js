@@ -234,6 +234,16 @@ async function handleActionControl(control, event, render) {
     refreshSettingsLayer(render);
     return;
   }
+  if (action === "generate-schemes") {
+    const submissionPromise = submitGenerationDraft({
+      schemeStrategy: "regenerate",
+      renderImages: false,
+    });
+    state.view = "schemes";
+    state.taskOpen = false;
+    render();
+    await submissionPromise;
+  }
   if (action === "submit-generation") {
     let generationOptions = {};
     if (control.dataset.schemeId) {
@@ -245,15 +255,16 @@ async function handleActionControl(control, event, render) {
       generationOptions = {
         schemeStrategy: "continue",
         schemeIds: [control.dataset.schemeId],
+        renderImages: true,
       };
     } else {
-      if (state.activeMode === "poster" && hasExistingPosterProduction()) {
-        state.generationChoiceOpen = true;
+      if (state.activeMode === "poster" && !hasExistingPosterProduction()) {
         render();
         return;
       }
       generationOptions = {
-        schemeStrategy: "regenerate",
+        schemeStrategy: "continue",
+        renderImages: true,
       };
     }
     const submissionPromise = submitGenerationDraft(generationOptions);
@@ -278,7 +289,10 @@ async function handleActionControl(control, event, render) {
   if (action === "confirm-generation-choice") {
     const strategy = control.dataset.generationStrategy === "regenerate" ? "regenerate" : "continue";
     state.generationChoiceOpen = false;
-    const submissionPromise = submitGenerationDraft({ schemeStrategy: strategy });
+    const submissionPromise = submitGenerationDraft({
+      schemeStrategy: strategy,
+      renderImages: strategy === "continue",
+    });
     state.view = "schemes";
     state.taskOpen = false;
     render();

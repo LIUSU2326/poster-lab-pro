@@ -200,6 +200,7 @@ function normalizeGenerationOptions(options = {}) {
     batchId: options.batchId || createBatchId(),
     schemeStrategy: options.schemeStrategy === "continue" ? "continue" : "regenerate",
     schemeIds: Array.isArray(options.schemeIds) ? options.schemeIds.filter(Boolean) : [],
+    renderImages: options.renderImages !== false,
   };
 }
 
@@ -371,7 +372,9 @@ export function buildPromptPackageCreateSubmission(snapshot = createBoundWorkspa
   const schemeId = getFirstSelectedSchemeId(snapshot, activeMode, selected);
   const selectedSnapshotScheme = snapshot.schemes.find((scheme) => scheme.id === schemeId);
   const target = activeMode.id === "poster" && (
-    normalizedOptions.schemeStrategy !== "continue" || selectedSnapshotScheme?.status === "pending"
+    !normalizedOptions.renderImages
+    || normalizedOptions.schemeStrategy !== "continue"
+    || selectedSnapshotScheme?.status === "pending"
   ) ? "brief" : "image";
 
   return {
@@ -416,6 +419,7 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
       aspectRatios: outputSettings.aspectRatios,
       customSize: outputSettings.customSize || null,
       imagesPerScheme: outputSettings.imagesPerScheme,
+      includeImageGeneration: normalizedOptions.renderImages,
       regenerateSchemes: shouldRegenerateSchemes,
       batchId: normalizedOptions.batchId,
       includeImageEdit: false,

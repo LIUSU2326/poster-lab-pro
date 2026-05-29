@@ -59,13 +59,12 @@ for (const token of [
   if (!staticService.includes(token)) issues.push(`static-local-api-service.js: missing ${token}`);
 }
 
-for (const file of [
-  ["topbar.js", topbar],
-  ["config-panel.js", configPanel],
-]) {
-  if (!file[1].includes('data-action="submit-generation"')) {
-    issues.push(`${file[0]}: primary generation button must use submit-generation action`);
-  }
+if (!topbar.includes('data-action="submit-generation"')) {
+  issues.push("topbar.js: image generation button must use submit-generation action");
+}
+
+if (!configPanel.includes('data-action="generate-schemes"')) {
+  issues.push("config-panel.js: left batch button must use generate-schemes action");
 }
 
 for (const removedToken of ["submission-card compact", "formatValidationIssues", "formatServiceQueue", "task-stats", "queue-list", "data-action=\"toggle-task\""]) {

@@ -173,6 +173,7 @@ export function resolveProviderModel(input: {
 function toProviderAssetReference(
   binding: PromptAssetBinding,
   snapshot: WorkspaceSnapshot,
+  roleIndex: number,
 ): ProviderAssetReference {
   const asset = snapshot.assets.find((item) => item.id === binding.assetId);
   const candidateUrl = binding.url || asset?.previewUrl || null;
@@ -181,6 +182,7 @@ function toProviderAssetReference(
     `binding=${binding.binding}`,
     binding.required ? "required" : "optional",
     binding.placeholder ? `placeholder=${binding.placeholder}` : "",
+    ["gameCharacter", "collabCharacter"].includes(binding.role) ? `independentCharacterIndex=${roleIndex}` : "",
     binding.storageKey ? `storageKey=${binding.storageKey}` : asset?.storageKey ? `storageKey=${asset.storageKey}` : "",
     binding.providerReady ? "providerReady=true" : "providerReady=false",
   ]
@@ -200,7 +202,19 @@ export function assetsFromPromptPackage(
   promptPackage: PromptPackage,
   snapshot: WorkspaceSnapshot,
 ): ProviderAssetReference[] {
-  return promptPackage.assets.map((asset) => toProviderAssetReference(asset, snapshot));
+  const roleCounters = new Map<string, number>();
+  return promptPackage.assets.map((asset) => {
+    const nextIndex = (roleCounters.get(asset.role) || 0) + 1;
+    roleCounters.set(asset.role, nextIndex);
+    return toProviderAssetReference(asset, snapshot, nextIndex);
+  });
+}
+
+function creativeDirectionFromPromptPackage(promptPackage: PromptPackage): string {
+  return promptPackage.sections
+    .map((section) => `## ${section.title}\n${section.content}`)
+    .join("\n\n")
+    .slice(0, 4000);
 }
 
 function assertPromptPackageReadyForProvider(promptPackage: PromptPackage): void {
@@ -234,13 +248,15 @@ function languageTargetsFrom(promptPackage: PromptPackage, modeState: WorkspaceM
   typeof SloganLanguageSchema
 >[] {
   const configured = modeState.sloganSettings.languages;
-  if (configured.length > 0) return configured;
+  const configuredLanguage = configured[0];
+  if (configuredLanguage) return [configuredLanguage];
 
   const sloganLanguages = Object.keys(promptPackage.slogans).filter((language) =>
     SloganLanguageSchema.safeParse(language).success,
   ) as z.infer<typeof SloganLanguageSchema>[];
+  const sloganLanguage = sloganLanguages[0];
 
-  return sloganLanguages.length > 0 ? sloganLanguages : ["en-US"];
+  return sloganLanguage ? [sloganLanguage] : ["en-US"];
 }
 
 export function mapPromptPackageToBriefRequest(input: {
@@ -272,6 +288,7 @@ export function mapPromptPackageToBriefRequest(input: {
     projectName: modeState.projectBrief.projectName || input.snapshot.project.name,
     gameDescription: modeState.projectBrief.gameDescription || input.snapshot.project.description,
     ...(focusGuidance ? { focusGuidance } : {}),
+    creativeDirection: creativeDirectionFromPromptPackage(input.promptPackage),
     assets: assetsFromPromptPackage(input.promptPackage, input.snapshot),
     guardrails: modeGuardrails(input.promptPackage.mode),
     languageTargets: languageTargetsFrom(input.promptPackage, modeState),

@@ -34,6 +34,7 @@ const QueuePlannerInputSchema = z.object({
     .nullable()
     .optional(),
   imagesPerScheme: z.number().int().min(1).max(8).default(1),
+  includeImageGeneration: z.boolean().default(true),
   includeImageEdit: z.boolean().default(false),
   includeUpscale: z.boolean().default(false),
   includeBackgroundRemoval: z.boolean().default(false),
@@ -122,6 +123,7 @@ function createTask(params: {
   count?: number;
   model?: string;
   sourceResultId?: string;
+  schemeIds?: string[];
 }): QueueTask {
   const providerCapability = providerCapabilityForTask(params.kind);
   return QueueTaskSchema.parse({
@@ -136,6 +138,7 @@ function createTask(params: {
     mode: params.mode,
     input: {
       schemeId: params.schemeId,
+      schemeIds: params.schemeIds,
       sourceResultId: params.sourceResultId,
       platformPreset: params.platformPreset,
       width: params.width,
@@ -196,6 +199,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
         providerId: conceptRoute.providerId,
         kind: "briefGeneration",
         model: conceptRoute.model || "concept",
+        schemeIds: parsed.schemeIds,
       });
   if (briefTask) {
     tasks.push(briefTask);
@@ -206,7 +210,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
     const ratio = aspectRatios[schemeIndex % aspectRatios.length] || "1:1";
     const target = inferDimensions(ratio, parsed.customSize);
     const platformPreset = platformPresets[schemeIndex % platformPresets.length] || "custom";
-    const imageTask = operationOnly
+    const imageTask = operationOnly || !parsed.includeImageGeneration
       ? null
       : createTask({
           id: `${jobId}-image-${schemeIndex + 1}`,

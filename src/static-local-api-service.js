@@ -58,6 +58,11 @@ function findModeState(snapshot, mode) {
   return snapshot.modeStates.find((item) => item.mode === mode);
 }
 
+function selectedSloganLanguage(snapshot, mode) {
+  const languages = findModeState(snapshot, mode)?.sloganSettings?.languages;
+  return Array.isArray(languages) && languages.length > 0 ? languages[0] : "en-US";
+}
+
 function findScheme(snapshot, schemeId, mode) {
   return snapshot.schemes.find((item) => item.id === schemeId) ||
     snapshot.schemes.find((item) => item.mode === mode);
@@ -138,14 +143,21 @@ function buildPromptPackage(payload) {
     mode,
     schemeId: scheme?.id || null,
     sections,
-    assets: snapshot.assets.map((asset) => ({
-      assetId: asset.id,
-      role: asset.role,
-      label: asset.label,
-      binding: asset.role === "gameLogo" ? "logoLock" : "subjectReference",
-      required: ["gameCharacter", "gameLogo", "subjectReference"].includes(asset.role),
-      placeholder: null,
-    })),
+    assets: snapshot.assets.map((asset) => {
+      const url = asset.providerUrl || asset.previewUrl || asset.url || asset.assetUrl || null;
+      return {
+        assetId: asset.id,
+        role: asset.role,
+        label: asset.label,
+        binding: asset.role === "gameLogo" ? "logoLock" : "subjectReference",
+        required: ["gameCharacter", "gameLogo", "subjectReference"].includes(asset.role),
+        placeholder: null,
+        ...(isSafeProviderUrl(url) ? { url } : {}),
+        ...(asset.mimeType ? { mimeType: asset.mimeType } : {}),
+        ...(asset.storageKey ? { storageKey: asset.storageKey } : {}),
+        providerReady: isSafeProviderUrl(url),
+      };
+    }),
     platform: {
       platformPreset,
       aspectRatio,
@@ -172,6 +184,42 @@ function resolveModel(snapshot, providerId, slot) {
   return config?.modelSlots?.[slot] || config?.defaultModel || (slot === "image" ? "gpt-image-2" : "gpt-5.5");
 }
 
+function isSafeProviderUrl(url) {
+  return typeof url === "string" && /^(https?:|data:)/i.test(url);
+}
+
+function creativeDirectionFromPromptPackage(promptPackage) {
+  return (promptPackage.sections || [])
+    .map((section) => `## ${section.title}\n${section.content}`)
+    .join("\n\n")
+    .slice(0, 4000);
+}
+
+function providerAssetReferencesFromPromptPackage(promptPackage, snapshot) {
+  const roleCounters = new Map();
+  return (promptPackage.assets || []).map((binding) => {
+    const assetId = binding.assetId || binding.id;
+    const asset = (snapshot.assets || []).find((item) => item.id === assetId);
+    const roleIndex = (roleCounters.get(binding.role) || 0) + 1;
+    roleCounters.set(binding.role, roleIndex);
+    const url = binding.url || asset?.providerUrl || asset?.previewUrl || asset?.url || asset?.assetUrl || null;
+    return {
+      id: assetId,
+      role: binding.role,
+      ...(binding.mimeType || asset?.mimeType ? { mimeType: binding.mimeType || asset?.mimeType } : {}),
+      ...(isSafeProviderUrl(url) ? { url } : {}),
+      description: [
+        binding.label || asset?.label || assetId,
+        `binding=${binding.binding || "subjectReference"}`,
+        binding.required ? "required" : "optional",
+        ["gameCharacter", "collabCharacter"].includes(binding.role) ? `independentCharacterIndex=${roleIndex}` : "",
+        binding.storageKey || asset?.storageKey ? `storageKey=${binding.storageKey || asset?.storageKey}` : "",
+        isSafeProviderUrl(url) ? "providerReady=true" : "providerReady=false",
+      ].filter(Boolean).join("; "),
+    };
+  });
+}
+
 function mapProviderRequestPayload(payload) {
   const kind = payload.kind || (payload.promptPackage.target === "brief" ? "briefGeneration" : "imageGeneration");
   const model = payload.model || resolveModel(payload.snapshot, payload.providerId, kind === "imageGeneration" ? "image" : "concept");
@@ -194,9 +242,10 @@ function mapProviderRequestPayload(payload) {
         },
         projectName: payload.snapshot.project.name,
         gameDescription: payload.snapshot.project.description,
-        assets: payload.promptPackage.assets,
+        creativeDirection: creativeDirectionFromPromptPackage(payload.promptPackage),
+        assets: providerAssetReferencesFromPromptPackage(payload.promptPackage, payload.snapshot),
         guardrails: payload.promptPackage.guardrails,
-        languageTargets: ["zh-CN", "en-US"],
+        languageTargets: [selectedSloganLanguage(payload.snapshot, payload.promptPackage.mode)],
         schemeCount: findModeState(payload.snapshot, payload.promptPackage.mode)?.outputSettings.schemeCount || 1,
       },
     };
@@ -214,7 +263,7 @@ function mapProviderRequestPayload(payload) {
       },
       schemeId: payload.promptPackage.schemeId,
       prompt: payload.promptPackage.finalPrompt,
-      assets: payload.promptPackage.assets,
+      assets: providerAssetReferencesFromPromptPackage(payload.promptPackage, payload.snapshot),
       platformPreset: payload.promptPackage.platform.platformPreset,
       aspectRatio: payload.promptPackage.platform.aspectRatio,
       width: payload.promptPackage.platform.width,
@@ -248,6 +297,7 @@ function createQueueTask({
   aspectRatio = null,
   width = null,
   height = null,
+  schemeIds = null,
 }) {
   const providerCapability = ["briefGeneration", "imageGeneration", "imageEdit", "upscale", "backgroundRemoval"].includes(kind)
     ? kind
@@ -268,6 +318,7 @@ function createQueueTask({
     progress: 0,
     input: {
       ...(schemeId ? { schemeId } : {}),
+      ...(Array.isArray(schemeIds) && schemeIds.length ? { schemeIds } : {}),
       ...(platformPreset ? { platformPreset } : {}),
       ...(aspectRatio ? { aspectRatio } : {}),
       ...(width ? { width } : {}),
@@ -343,6 +394,7 @@ function createQueuePlanPayload(payload) {
         mode: payload.mode,
         providerId: providerRouteForPayload(payload, "concept").providerId,
         model: providerRouteForPayload(payload, "concept").model || "concept",
+        schemeIds: payload.schemeIds,
       });
   if (briefTask) tasks.push(briefTask);
 
@@ -351,7 +403,9 @@ function createQueuePlanPayload(payload) {
     const size = customSize || inferSize(rawRatio);
     const aspectRatio = customSize ? `${customSize.width}x${customSize.height}` : rawRatio;
     const platformPreset = platformPresets[index % platformPresets.length] || "custom";
-    const imageTask = createQueueTask({
+    const imageTask = payload.includeImageGeneration === false
+      ? null
+      : createQueueTask({
       id: `${jobId}-image-${index + 1}`,
       jobId,
       kind: "imageGeneration",
@@ -366,7 +420,7 @@ function createQueuePlanPayload(payload) {
       height: size.height,
       model: providerRouteForPayload(payload, "image").model || "image",
     });
-    tasks.push(imageTask);
+    if (imageTask) tasks.push(imageTask);
 
     [
       ["imageEdit", payload.includeImageEdit],
@@ -381,7 +435,7 @@ function createQueuePlanPayload(payload) {
         mode: payload.mode,
         providerId: providerRouteForPayload(payload, kind).providerId,
         schemeId,
-        dependsOn: [imageTask.id],
+        dependsOn: imageTask ? [imageTask.id] : [],
         platformPreset,
         aspectRatio,
         width: size.width,

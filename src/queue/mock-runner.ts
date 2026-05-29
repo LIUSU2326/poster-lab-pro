@@ -184,7 +184,7 @@ function createBriefMappedRequest(initialPlan: QueuePlan, task: QueueTask, model
     gameDescription: `Queue brief context for ${initialPlan.job.mode}.`,
     assets: [],
     guardrails: modeGuardrails(initialPlan.job.mode),
-    languageTargets: ["zh-CN", "en-US"],
+    languageTargets: ["en-US"],
     schemeCount: 1,
   });
 
@@ -413,11 +413,16 @@ function cloneWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot 
 }
 
 function imageSchemeIds(plan: QueuePlan): string[] {
-  return Array.from(new Set(
+  const imageTaskIds = Array.from(new Set(
     plan.tasks
       .filter((task) => task.kind === "imageGeneration" && typeof task.input.schemeId === "string")
       .map((task) => String(task.input.schemeId)),
   ));
+  if (imageTaskIds.length > 0) return imageTaskIds;
+  const briefTask = plan.tasks.find((task) => task.kind === "briefGeneration");
+  return Array.isArray(briefTask?.input.schemeIds)
+    ? briefTask.input.schemeIds.map((id) => String(id)).filter(Boolean)
+    : [];
 }
 
 function promptBlock(title: string, text: unknown) {
@@ -438,11 +443,12 @@ function sloganValue(value: unknown): string | undefined {
 
 function schemeSlogans(source: Record<string, unknown>, current: WorkspaceSnapshot["schemes"][number] | null) {
   const raw = source.slogans && typeof source.slogans === "object" ? source.slogans as Record<string, unknown> : {};
-  return {
-    ...(sloganValue(raw["zh-CN"]) ? { "zh-CN": sloganValue(raw["zh-CN"]) } : {}),
-    ...(sloganValue(raw["en-US"]) ? { "en-US": sloganValue(raw["en-US"]) } : {}),
-    ...(!sloganValue(raw["zh-CN"]) && !sloganValue(raw["en-US"]) ? current?.slogans || {} : {}),
-  };
+  const slogans = Object.fromEntries(
+    ["zh-CN", "en-US", "ja-JP", "ko-KR"]
+      .map((language) => [language, sloganValue(raw[language])] as const)
+      .filter((entry): entry is readonly [string, string] => Boolean(entry[1])),
+  );
+  return Object.keys(slogans).length > 0 ? slogans : current?.slogans || {};
 }
 
 function applyBriefSchemesToSnapshot(

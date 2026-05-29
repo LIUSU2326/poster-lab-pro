@@ -57,24 +57,7 @@ function isRealGeneratedResult(result) {
 }
 
 function renderSchemeBoardEmpty(activeMode) {
-  const modelReady = requiredModelRoutesReady();
-  if (modelReady) {
-    return `
-      <div class="scheme-plan-empty" role="status">
-        <strong>准备生成方案</strong>
-        <small>模型与 API Key 已配置。点击生成后，这里会显示真实方案和图片结果。</small>
-        <button type="button" data-action="submit-generation">${escapeHtml(activeMode?.cta || "生成")}</button>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="scheme-plan-empty" role="status">
-      <strong>等待模型配置</strong>
-      <small>配置方案生成和图像生成模型后即可开始；画风/构图分析只在上传参考图时使用。</small>
-      <button type="button" data-action="open-settings">配置模型与 API Key</button>
-    </div>
-  `;
+  return "";
 }
 
 function requiredModelRoutesReady() {
@@ -162,6 +145,7 @@ function renderResultBoard(activeMode) {
   const readyCount = results.filter((result) => result.status === "ready").length;
   const storedCount = results.filter((result) => getResultPreviewUrl(result)).length;
   const failedCount = results.filter((result) => result.status === "failed").length;
+  const failedImageCount = getFailedImageTaskCount(activeMode.id);
 
   return `
     <section class="center-board result-board" aria-label="结果画板">
@@ -171,6 +155,11 @@ function renderResultBoard(activeMode) {
           <strong>${results.length} 项结果</strong>
           <small>${readyCount} 项可用 / ${storedCount} 个本地文件 / ${failedCount} 项失败。点击图片查看大图与编辑操作。</small>
         </div>
+        ${failedImageCount > 0 ? `
+          <div class="result-toolbar-actions">
+            <button class="retry-failed-button" type="button" data-action="retry-failed-images">重试全部失败图片 ${failedImageCount}</button>
+          </div>
+        ` : ""}
       </div>
       ${results.length === 0 ? renderResultEmpty(activeMode) : `
         <div class="result-grid">
@@ -180,6 +169,14 @@ function renderResultBoard(activeMode) {
     </section>
     ${state.resultViewerOpen ? renderResultViewer() : ""}
   `;
+}
+
+function getFailedImageTaskCount(modeId) {
+  const snapshot = state.workspaceSnapshot || {};
+  const plans = (snapshot.queuePlans || []).filter((plan) => plan.job?.mode === modeId);
+  const plan = plans[plans.length - 1];
+  if (!plan) return 0;
+  return (plan.tasks || []).filter((task) => task.kind === "imageGeneration" && task.status === "failed").length;
 }
 
 function getProjectLibraryFallbackAssets() {
@@ -531,14 +528,10 @@ function renderVisualBlocks(activeMode, scheme, display) {
 }
 
 function renderTextBlocks(display) {
-  const slogan = [display.primary, display.secondary].filter(Boolean).join(" / ");
   return `
     <div class="scheme-copy-details">
-      ${renderSchemeCopyField("海报标题", display.title)}
-      ${renderSchemeCopyField("宣传标语", slogan)}
-      ${renderSchemeCopyField("中文提示词", display.promptZh || display.prompt)}
-      ${renderSchemeCopyField("英文提示词", display.promptEn || display.prompt)}
       ${renderSchemeCopyField("视觉方向", display.brief)}
+      ${renderSchemeCopyField("生图提示词", display.promptZh || display.promptEn || display.prompt)}
     </div>
   `;
 }

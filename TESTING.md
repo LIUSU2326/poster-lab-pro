@@ -1,5 +1,25 @@
 # TESTING.md
 
+## 2026-05-28 Generation Flow Rule Update
+
+Poster generation checks:
+
+- Verify the left control-panel batch action creates brief/scheme tasks only and no image-generation tasks.
+- Verify the top-right Generate Poster action and scheme-card Render Image action continue from ready schemes and create image tasks.
+- Verify a brief-only queue updates the intended pending scheme ids instead of falling back to fixture scheme ids.
+- Verify Google/Nano image generation requests include uploaded local/data reference images as inline provider parts when available.
+- Verify scheme card copy-hidden and copy-visible states do not overlap image previews, variant buttons, or render buttons.
+- Verify poster mode can create new schemes with no uploaded assets.
+- Verify `styleReference`, `compositionReference`, and `gameLogo` are optional for poster batches and only strengthen the prompt when present.
+- Verify the slogan language control stores exactly one selected language, defaulting to English.
+- Verify provider brief requests send exactly one `languageTargets` entry and generated schemes keep slogans for that language only.
+- Verify multiple uploaded `gameCharacter` assets are described as independent characters, not alternate looks for one character.
+- Verify failed image tasks expose a one-click retry-all action that retries failed image tasks without rerunning the brief stage.
+- Verify size stabilization keeps provider-native dimensions when exact, applies local resize only for close aspect-ratio matches, and records post-processing metadata.
+- Verify queue checks allow the intentionally removed bottom task chrome while still validating queue contracts and runtime feedback.
+
+Real provider tests remain manual and opt-in because image calls can spend provider credits. Automated checks should prefer fake transports and stored snapshots.
+
 ## 2026-05-24 Electron Desktop Shell Testing Update
 
 Electron Desktop Shell checks:

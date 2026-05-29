@@ -1,5 +1,25 @@
 # PRODUCT.md
 
+## 2026-05-28 MVP Scope Update: Scheme-First Poster Production
+
+Poster production separates concept planning from image rendering:
+
+- The left control-panel batch action creates a fresh random set of poster design schemes only.
+- Image rendering starts from the top-right Generate Poster action or from a scheme card Render Image action.
+- The empty center board should stay quiet after model setup; it should not keep a persistent prompt card on screen.
+- Generated images must be grounded in uploaded game assets when those assets exist. Local/data image references are passed to image-capable providers as image parts, not only as text URLs.
+- Scheme generation receives the current creative direction, selected style tags, output constraints, and reference analysis so image prompts are based on the user's configured production intent.
+
+## 2026-05-28 MVP Scope Update: Language, Character References, Size Stabilization, And Retry
+
+Poster production now uses a stricter MVP flow for batch reliability:
+
+- Slogan language is single-select. Default is English, and users may switch to Chinese, Japanese, or Korean, but one batch targets one slogan language.
+- Multiple uploaded character assets are treated as multiple independent game characters. The prompt flow should use several uploaded characters in a group poster when composition allows, and must not merge them into one character identity.
+- Poster generation remains valid with no uploaded images; uploaded assets only improve control.
+- Image size handling is native-first. Providers that can honor the requested dimensions should do so directly; when a provider returns a close-ratio image with `dataUrl`, the app may normalize to the requested platform size locally with `sharp`, without additional AI token or provider cost.
+- Failed image-generation tasks need a visible "retry all failed images" path that reuses existing schemes instead of rerunning the full brief stage.
+
 ## 2026-05-27 MVP Scope Update: Poster Batch Generation Rules
 
 Poster mode must support a text-only production flow. Users may generate poster schemes and images from project name, project description, slogan settings, output settings, provider routes, and optional focus guidance without uploading any reference image.
@@ -7,7 +27,7 @@ Poster mode must support a text-only production flow. Users may generate poster 
 Product boundaries:
 
 - Poster assets are optional inputs; uploaded characters, logos, style references, and composition references improve control but do not block generation.
-- The default poster/slogan language is English unless the user explicitly selects another language.
+- The default poster/slogan language is English unless the user explicitly selects one other target language.
 - When poster schemes already exist, the main generation action must protect prior work by asking whether to continue rendering from current schemes or regenerate fresh schemes.
 - Regenerating schemes creates a new batch and must not delete or overwrite prior schemes, generated images, queue plans, or archive records.
 - Continuing from current schemes skips brief generation and queues image generation for the selected/current scheme set.

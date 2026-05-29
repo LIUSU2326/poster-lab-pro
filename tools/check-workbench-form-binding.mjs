@@ -169,7 +169,12 @@ async function runRuntimeCheck() {
   const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/data/workspace-snapshot.js")).href);
   const { state, ensureSelectedScheme, setRuntimeWorkspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/state.js")).href);
   const { getActiveGenerationFormValues, replaceGenerationFormField, updateGenerationFormField, setGenerationFormChoice } = await import(pathToFileURL(path.join(root, "src/generation-form-runtime.js")).href);
-  const { createBoundWorkspaceSnapshot, validateBoundFrontendForms, buildQueuePlanCreateSubmission } = await import(pathToFileURL(path.join(root, "src/form-binding.js")).href);
+  const {
+    createBoundWorkspaceSnapshot,
+    validateBoundFrontendForms,
+    buildPromptPackageCreateSubmission,
+    buildQueuePlanCreateSubmission,
+  } = await import(pathToFileURL(path.join(root, "src/form-binding.js")).href);
 
   const snapshot = JSON.parse(JSON.stringify(workspaceSnapshot));
   state.activeMode = "poster";
@@ -229,6 +234,18 @@ async function runRuntimeCheck() {
   const queueSubmission = buildQueuePlanCreateSubmission(bound);
   if (queueSubmission.payload.imagesPerScheme !== 3) {
     issues.push("queue plan payload should read imagesPerScheme from bound form state");
+  }
+  const schemeOnlyPrompt = buildPromptPackageCreateSubmission(bound, { renderImages: false });
+  const schemeOnlyQueue = buildQueuePlanCreateSubmission(bound, { renderImages: false });
+  if (schemeOnlyPrompt.payload.target !== "brief") {
+    issues.push("scheme-only generation should create a brief prompt package");
+  }
+  if (schemeOnlyQueue.payload.includeImageGeneration !== false) {
+    issues.push("scheme-only generation should not queue image generation");
+  }
+  const renderQueue = buildQueuePlanCreateSubmission(bound, { schemeStrategy: "continue" });
+  if (renderQueue.payload.includeImageGeneration !== true) {
+    issues.push("render generation should queue image generation by default");
   }
 }
 

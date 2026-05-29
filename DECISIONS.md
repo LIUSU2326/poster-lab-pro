@@ -1,5 +1,36 @@
 # DECISIONS.md
 
+## D088: Poster Production Is Scheme-First And Uses Image References
+
+Status: accepted
+
+Context: The left-side batch CTA was queuing image tasks immediately, which made old image results appear unexpectedly and made it easy to confuse scheme generation with final rendering. Google/Nano image generation also received uploaded assets as text metadata, but not as inline image references.
+
+Decision: The left batch CTA now regenerates poster schemes only. Top-level Generate Poster and per-card Render Image continue from ready schemes and queue image generation. Queue planning supports `includeImageGeneration` so a brief-only batch can update scheme cards without image tasks. Provider brief requests include creative direction from the prompt package. Google image-capable requests attach local/data uploaded assets as inline image parts when available, while preserving text metadata for all providers.
+
+Impact:
+
+- Users can safely generate new random schemes without spending image calls or changing existing result images.
+- Top-level and per-card render actions are the only normal paths that create image-generation tasks.
+- Brief-only queues still carry target scheme ids so generated brief content updates the intended scheme cards.
+- Uploaded characters, logos, bosses, and other assets can be sent as actual image references to Google/Nano-capable models.
+
+## D087: Poster Batches Use One Slogan Language And Independent Character References
+
+Status: accepted
+
+Context: Multi-language slogans and multi-image character uploads created ambiguity in the generation flow. A single image should not mix multiple slogan languages by default, and multiple character uploads in a game poster usually mean several distinct characters rather than alternate shots of one character.
+
+Decision: The workbench keeps one selected slogan language per batch, defaulting to English. Multiple `gameCharacter` assets are passed through prompt and provider request metadata as independent character references, and prompts instruct providers to include several uploaded characters as distinct characters when the poster composition supports it. Failed image tasks get a visible retry-all action that continues from current schemes. Output size handling stays native-first, with local close-ratio normalization through `sharp` when provider output needs platform-ready dimensions.
+
+Impact:
+
+- `sloganSettings.languages` is normalized to one language for UI, prompt packages, and provider requests.
+- Brief providers should return slogans only for the selected language.
+- Prompt asset metadata records role-local character indexes for character references.
+- Retry-all-failed image generation reuses existing schemes and does not rerun the full brief stage.
+- Local size normalization records `outputProcessing` metadata and does not consume extra AI tokens.
+
 ## D086: Poster Generation Supports Text-Only And Batch-Safe Reruns
 
 Status: accepted
@@ -13,7 +44,7 @@ Impact:
 - Poster brief prompt packages may have no scheme id and no uploaded assets.
 - Queue planning gets explicit `regenerateSchemes` and `batchId` inputs.
 - Provider routing keeps concept/planning and image generation slots separate.
-- Default slogan/poster language is English unless the user selects additional languages.
+- Default slogan/poster language is English unless the user selects one other target language.
 - Retry-all-failed image generation can reuse current schemes without rerunning concept planning.
 
 ## D085: Workbench Defaults To Chinese UI With Restrained Graphite/Sage Themes

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from "react";
 import { removeWorkbenchAssetsByRoleLabel, uploadWorkbenchAssetFile } from "../asset-library-client.js";
 import { analyzeReferenceImageForWorkbench } from "../reference-analysis-client.js";
 import { getRuntimeWorkspaceSnapshot, state } from "../state.js";
@@ -247,13 +247,13 @@ export function AssetsSection({
     }
   };
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const target = pickerTargetRef.current;
-    const files = Array.from(event.currentTarget.files || []);
-    if (!target || files.length === 0) return;
-
+  const handleFilesForTarget = async (
+    target: { role: string; label: string; multiple: boolean },
+    files: File[],
+  ) => {
+    if (files.length === 0) return;
     const selectedFiles = target.multiple ? files : files.slice(0, 1);
-    for (const [index, file] of selectedFiles.entries()) {
+    for (const file of selectedFiles) {
       if (!acceptedImageTypes.includes(file.type)) {
         setOperation({
           status: "error",
@@ -274,7 +274,7 @@ export function AssetsSection({
         });
         continue;
       }
-      const label = target.multiple && selectedFiles.length > 1 ? `${target.label} ${index + 1}` : target.label;
+      const label = target.label;
       const key = `${target.role}:${label}`;
       let previewUrl = "";
       try {
@@ -290,6 +290,32 @@ export function AssetsSection({
       setLocalPreviews((current) => ({ ...current, [key]: previewUrl }));
       await uploadMetadata(target.role, label, file, previewUrl);
     }
+  };
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const target = pickerTargetRef.current;
+    const files = Array.from(event.currentTarget.files || []);
+    if (!target || files.length === 0) return;
+    await handleFilesForTarget(target, files);
+    event.currentTarget.value = "";
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDrop = async (
+    event: DragEvent<HTMLElement>,
+    role: string,
+    label: string,
+    multiple = true,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isPending) return;
+    await handleFilesForTarget({ role, label, multiple }, Array.from(event.dataTransfer.files || []));
   };
 
   const addCategory = () => {
@@ -394,6 +420,7 @@ export function AssetsSection({
         className="asset-file-input"
         type="file"
         accept={acceptedImageTypes.join(",")}
+        multiple
         onChange={handleFileChange}
         data-asset-file-input
       />
@@ -411,7 +438,9 @@ export function AssetsSection({
               <button
                 className="asset-slot-upload"
                 type="button"
-                onClick={() => openFilePicker(role, slot.label)}
+                onClick={() => openFilePicker(role, slot.label, true)}
+                onDragOver={handleDragOver}
+                onDrop={(event) => handleDrop(event, role, slot.label, true)}
                 disabled={isPending}
                 aria-busy={pendingKey === key}
                 aria-label={`${slot.label}：${status}`}
@@ -484,6 +513,8 @@ export function AssetsSection({
           type="button"
           data-upload-drop="reference"
           onClick={() => openFilePicker(referenceRole, referenceLabel, true)}
+          onDragOver={handleDragOver}
+          onDrop={(event) => handleDrop(event, referenceRole, referenceLabel, true)}
           disabled={isPending}
           aria-busy={pendingKey?.startsWith(`${referenceRole}:`)}
         >

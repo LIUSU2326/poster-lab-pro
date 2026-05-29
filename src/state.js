@@ -28,10 +28,15 @@ export const state = {
   generationChoiceOpen: false,
   settingsWidth: 1060,
   settingsHeight: 820,
-  provider: "openai",
+  provider: "deepseek",
   providerModelOverrides: /** @type {Record<string, Record<string, string>>} */ ({}),
   providerCustomModels: /** @type {Record<string, string[]>} */ ({}),
-  providerSlotRoutes: /** @type {Record<string, { providerId: string, model?: string }>} */ ({}),
+  providerSlotRoutes: /** @type {Record<string, { providerId: string, model?: string }>} */ ({
+    concept: { providerId: "deepseek", model: "deepseek-v4-flash" },
+    image: { providerId: "google", model: "gemini-2.5-flash-image" },
+    styleReference: { providerId: "google", model: "gemini-2.5-flash" },
+    compositionReference: { providerId: "google", model: "gemini-2.5-flash" },
+  }),
   providerRoutePlan: "standard",
   providerRoutePlans: /** @type {Array<{ id: string, name: string }>} */ ([
     { id: "standard", name: "标准方案" },
@@ -323,14 +328,19 @@ function adaptRuntimeScheme(activeMode, scheme, snapshot, index) {
   const promptEn = findSchemePromptBlock(scheme.promptBlocks, ["english prompt", "英文提示词", "prompt en"]);
   const visualBrief = findSchemePromptBlock(scheme.promptBlocks, ["视觉方向", "visual direction"]);
   const promptText = promptZh || promptEn || scheme.promptBlocks?.map((block) => `${block.title}: ${block.text}`).join("\n") || scheme.brief;
+  const selectedLanguage = Array.isArray(modeState?.sloganSettings?.languages) && modeState.sloganSettings.languages.length > 0
+    ? modeState.sloganSettings.languages[0]
+    : "en-US";
+  const sloganValues = Object.values(scheme.slogans || {}).filter((value) => typeof value === "string" && value.trim());
+  const primarySlogan = scheme.slogans?.[selectedLanguage] || scheme.slogans?.["en-US"] || scheme.slogans?.["zh-CN"] || sloganValues[0] || "宣传词待生成";
 
   return {
     id: scheme.id,
     code: scheme.code,
     title: scheme.title,
     brief: visualBrief || scheme.brief,
-    zh: scheme.slogans?.["zh-CN"] || scheme.slogans?.["en-US"] || "宣传词待生成",
-    en: scheme.slogans?.["en-US"] || scheme.slogans?.["zh-CN"] || "宣传词待生成",
+    zh: primarySlogan,
+    en: scheme.outputPresets?.length ? scheme.outputPresets.join(" / ") : activeMode.outputSizes?.[0] || "自定义",
     platform: scheme.outputPresets?.length ? scheme.outputPresets.join(" / ") : activeMode.outputSizes?.[0] || "自定义",
     locked: scheme.lockedFields?.length ? scheme.lockedFields : activeMode.guardrails.slice(0, 2),
     status,

@@ -23,6 +23,7 @@ const GOOGLE_PROVIDER_ID = "google" as const;
 const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 export const GOOGLE_GENERATE_CONTENT_METHOD = "generateContent";
 const GOOGLE_IMAGE_ASPECT_RATIOS = ["1:1", "3:4", "4:3", "9:16", "16:9"] as const;
+const SUPPORTED_SLOGAN_LANGUAGES = ["zh-CN", "en-US", "ja-JP", "ko-KR"] as const;
 
 const GoogleInlineDataSchema = z
   .object({
@@ -39,6 +40,8 @@ const GooglePartSchema = z
     inline_data: GoogleInlineDataSchema.optional(),
   })
   .passthrough();
+
+type GoogleRequestPart = z.infer<typeof GooglePartSchema>;
 
 export const GoogleGenerateContentResponseSchema = z
   .object({
@@ -68,10 +71,7 @@ const GoogleBriefCompletionSchema = z.object({
       promptZh: z.string().min(1).optional(),
       promptEn: z.string().min(1).optional(),
       slogans: z
-        .object({
-          "zh-CN": z.string().min(1).optional(),
-          "en-US": z.string().min(1).optional(),
-        })
+        .partialRecord(z.enum(SUPPORTED_SLOGAN_LANGUAGES), z.string().min(1))
         .default({}),
     }),
   ).min(1),
@@ -164,6 +164,9 @@ function imagePrompt(request: ImageGenerationRequest): string {
           return `- ${parts.join("; ")}`;
         }),
         "Do not invent details that conflict with locked character, logo, or brand references.",
+        request.assets.filter((asset) => asset.role === "gameCharacter").length > 1
+          ? "Multiple gameCharacter references are separate characters. Include them as distinct characters when the composition supports a group poster; do not merge their appearances."
+          : "",
       ].join("\n")
     : "";
   const negativeInstruction = request.negativePrompt?.trim()
@@ -173,7 +176,75 @@ function imagePrompt(request: ImageGenerationRequest): string {
   return [request.prompt, assetInstruction, sizeInstruction, negativeInstruction].filter(Boolean).join("\n\n");
 }
 
+function parseDataUrl(url: string): { mimeType: string; data: string } | null {
+  const match = url.match(/^data:([^;,]+);base64,(.+)$/s);
+  if (!match) return null;
+  return {
+    mimeType: match[1] || "image/png",
+    data: match[2] || "",
+  };
+}
+
+function isLocalReferenceUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname)
+      && parsed.pathname.includes("/uploads/");
+  } catch {
+    return false;
+  }
+}
+
+async function inlineDataFromAsset(asset: ImageGenerationRequest["assets"][number] | BriefGenerationRequest["assets"][number]) {
+  const url = asset.url || "";
+  if (!url) return null;
+  const dataUrl = parseDataUrl(url);
+  if (dataUrl?.data) return dataUrl;
+  if (!isLocalReferenceUrl(url) || typeof globalThis.fetch !== "function") return null;
+
+  try {
+    const response = await globalThis.fetch(url);
+    if (!response.ok) return null;
+    const mimeType = response.headers.get("content-type") || asset.mimeType || "image/png";
+    const bytes = await response.arrayBuffer();
+    return {
+      mimeType,
+      data: Buffer.from(bytes).toString("base64"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function referencePartsForAssets(
+  assets: ImageGenerationRequest["assets"] | BriefGenerationRequest["assets"],
+): Promise<GoogleRequestPart[]> {
+  const parts: GoogleRequestPart[] = [];
+  for (const asset of assets) {
+    parts.push({
+      text: [
+        `Reference asset ${asset.role}: ${asset.id}.`,
+        asset.description || "",
+        asset.url ? "Use the following image reference when provided." : "",
+      ].filter(Boolean).join(" "),
+    });
+    const inlineData = await inlineDataFromAsset(asset);
+    if (inlineData?.data) {
+      parts.push({ inlineData });
+    }
+  }
+  return parts;
+}
+
+async function imagePromptParts(request: ImageGenerationRequest): Promise<GoogleRequestPart[]> {
+  return [
+    { text: imagePrompt(request) },
+    ...await referencePartsForAssets(request.assets),
+  ];
+}
+
 function briefPrompt(request: BriefGenerationRequest): string {
+  const targetLanguage = request.languageTargets[0] || "en-US";
   const assets = request.assets.map((asset) => ({
     role: asset.role,
     id: asset.id,
@@ -190,6 +261,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
       projectName: request.projectName,
       gameDescription: request.gameDescription,
       focusGuidance: request.focusGuidance || "",
+      creativeDirection: request.creativeDirection || "",
       guardrails: request.guardrails,
       languageTargets: request.languageTargets,
       schemeCount: request.schemeCount,
@@ -198,7 +270,10 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "Each scheme must be meaningfully different in composition, visual hook, and campaign angle.",
         "Do not assume a logo exists unless an asset with role gameLogo is present.",
         "If no image assets are provided, create concepts from the project description only.",
+        "If multiple assets share role gameCharacter, each one is an independent character. Use multiple characters in group compositions when appropriate, without merging or averaging appearances.",
+        `Return exactly one slogan language: ${targetLanguage}.`,
         "Keep prompts suitable for game marketing posters.",
+        "Respect creativeDirection for selected styles, output sizes, composition/reference analysis, and prompt constraints.",
       ],
       outputShape: {
         schemes: [
@@ -206,17 +281,23 @@ function briefPrompt(request: BriefGenerationRequest): string {
             title: "Chinese poster scheme title",
             brief: "Chinese visual direction and layout plan",
             prompt: "Image prompt suitable for the selected image model",
-            promptZh: "Chinese image-generation prompt",
-            promptEn: "English image-generation prompt",
-            slogans: {
-              "zh-CN": "Chinese promotional slogan",
-              "en-US": "English promotional slogan",
+              promptZh: "Chinese image-generation prompt",
+              promptEn: "English image-generation prompt",
+              slogans: {
+                [targetLanguage]: "Promotional slogan in the selected target language",
+              },
             },
-          },
         ],
       },
     }),
   ].join("\n\n");
+}
+
+async function briefPromptParts(request: BriefGenerationRequest): Promise<GoogleRequestPart[]> {
+  return [
+    { text: briefPrompt(request) },
+    ...await referencePartsForAssets(request.assets),
+  ];
 }
 
 function googleAspectRatio(request: ImageGenerationRequest): typeof GOOGLE_IMAGE_ASPECT_RATIOS[number] {
@@ -468,7 +549,7 @@ function parseBriefText(text: string) {
   return GoogleBriefCompletionSchema.parse(JSON.parse(fenced || trimmed));
 }
 
-function normalizeBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchema>, schemeCount: number) {
+function normalizeBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchema>, schemeCount: number, targetLanguage: string) {
   return parsed.schemes.slice(0, schemeCount).map((scheme) => {
     const promptZh = scheme.promptZh || scheme.prompt;
     const promptEn = scheme.promptEn || scheme.prompt;
@@ -478,10 +559,11 @@ function normalizeBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchem
       prompt: scheme.prompt,
       promptZh,
       promptEn,
-      slogans: {
-        ...(scheme.slogans["zh-CN"] ? { "zh-CN": scheme.slogans["zh-CN"] } : {}),
-        ...(scheme.slogans["en-US"] ? { "en-US": scheme.slogans["en-US"] } : {}),
-      },
+      slogans: Object.fromEntries(
+        SUPPORTED_SLOGAN_LANGUAGES
+          .filter((language) => language === targetLanguage && scheme.slogans[language])
+          .map((language) => [language, scheme.slogans[language]]),
+      ),
     };
   });
 }
@@ -508,7 +590,7 @@ function parseBriefResponse(
       value: ProviderBriefResponseSchema.parse({
         providerId: GOOGLE_PROVIDER_ID,
         model,
-        schemes: normalizeBriefSchemes(parsed, request.schemeCount),
+        schemes: normalizeBriefSchemes(parsed, request.schemeCount, request.languageTargets[0] || "en-US"),
         usage: {
           promptTokens: 0,
           elapsedMs,
@@ -644,6 +726,7 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
 
       const model = briefModel(parsedRequest, parsedConfig);
       const startedAt = now();
+      const parts = await briefPromptParts(parsedRequest);
       const transportResponse = await options.transport(
         GoogleImageTransportRequestSchema.parse({
           url: `${normalizeBaseUrl(parsedConfig)}/models/${encodeURIComponent(model)}:${GOOGLE_GENERATE_CONTENT_METHOD}`,
@@ -655,11 +738,7 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
           body: {
             contents: [
               {
-                parts: [
-                  {
-                    text: briefPrompt(parsedRequest),
-                  },
-                ],
+                parts,
               },
             ],
             generationConfig: googleBriefGenerationConfig(),
@@ -684,6 +763,7 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
 
       const model = imageModel(parsedRequest, parsedConfig);
       const startedAt = now();
+      const parts = await imagePromptParts(parsedRequest);
       const transportResponse = await options.transport(
         GoogleImageTransportRequestSchema.parse({
           url: `${normalizeBaseUrl(parsedConfig)}/models/${encodeURIComponent(model)}:${GOOGLE_GENERATE_CONTENT_METHOD}`,
@@ -695,11 +775,7 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
           body: {
             contents: [
               {
-                parts: [
-                  {
-                    text: imagePrompt(parsedRequest),
-                  },
-                ],
+                parts,
               },
             ],
             generationConfig: googleImageGenerationConfig(model, parsedRequest),

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
+import { useMemo, useRef, useState, type ChangeEvent, type DragEvent, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { removeWorkbenchAssetsByRoleLabel, uploadWorkbenchAssetFile } from "../asset-library-client.js";
@@ -214,8 +214,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
     await commitPosterTags(nextTags);
   };
 
-  const handleStyleReferenceChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
+  const handleStyleReferenceFile = async (file?: File) => {
     if (!file) return;
     if (!acceptedImageTypes.includes(file.type)) {
       setStyleUploadStatus("仅支持 PNG、JPG、WebP 图片。");
@@ -245,6 +244,23 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       previewUrl,
     });
     setStyleUploadStatus(result.ok ? "画风参考已加入项目素材库" : "画风参考上传失败");
+  };
+
+  const handleStyleReferenceChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    await handleStyleReferenceFile(event.currentTarget.files?.[0]);
+    event.currentTarget.value = "";
+  };
+
+  const handleStyleReferenceDragOver = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleStyleReferenceDrop = async (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await handleStyleReferenceFile(Array.from(event.dataTransfer.files || [])[0]);
   };
 
   const extractStyle = async () => {
@@ -308,6 +324,8 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       onExtract={extractStyle}
       onRemove={deleteStyleReference}
       onPreviewError={() => setStylePreviewBroken(true)}
+      onDragOver={handleStyleReferenceDragOver}
+      onDrop={handleStyleReferenceDrop}
     />
   );
   const styleLibraryDialog = showLibrary && typeof document !== "undefined"
@@ -523,6 +541,8 @@ function StyleReferenceUpload({
   onExtract,
   onRemove,
   onPreviewError,
+  onDragOver,
+  onDrop,
 }: {
   title: string;
   helper: string;
@@ -535,10 +555,18 @@ function StyleReferenceUpload({
   onExtract: () => void;
   onRemove: () => void;
   onPreviewError: () => void;
+  onDragOver: (event: DragEvent<HTMLElement>) => void;
+  onDrop: (event: DragEvent<HTMLElement>) => void;
 }) {
   return (
     <div className={`style-reference-upload ${previewUrl ? "has-preview" : ""}`}>
-      <button className="style-reference-main" type="button" onClick={() => inputRef.current?.click()}>
+      <button
+        className="style-reference-main"
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
         <span className="style-reference-preview" aria-hidden="true">
           {previewUrl ? <img className="style-preview-image" src={previewUrl} alt="" onError={onPreviewError} /> : null}
         </span>

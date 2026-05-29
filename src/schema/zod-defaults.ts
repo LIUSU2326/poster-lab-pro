@@ -72,10 +72,10 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
   },
   google: {
     baseUrl: "",
-    defaultModel: "gemini-3-pro-image-preview",
+    defaultModel: "gemini-2.5-flash-image",
     modelSlots: {
       concept: "gemini-2.5-flash",
-      image: "gemini-3-pro-image-preview",
+      image: "gemini-2.5-flash-image",
       styleReference: "gemini-2.5-flash",
       compositionReference: "gemini-2.5-flash",
     },

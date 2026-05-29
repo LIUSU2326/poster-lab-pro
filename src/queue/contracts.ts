@@ -74,6 +74,7 @@ export const QueueCostSchema = z.object({
 
 export const QueueTaskInputSchema = z.object({
   schemeId: z.string().min(1).optional(),
+  schemeIds: z.array(z.string().min(1)).optional(),
   sourceResultId: z.string().min(1).optional(),
   platformPreset: PlatformPresetSchema.optional(),
   aspectRatio: z.string().min(1).optional(),

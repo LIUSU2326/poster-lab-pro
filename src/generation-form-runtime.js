@@ -106,10 +106,10 @@ export function getActiveGenerationFormValues() {
       gameDescription: modeState?.projectBrief?.gameDescription || snapshot.project.description || getActiveMode().description,
     },
     outputSettings,
-    sloganSettings: {
+    sloganSettings: normalizeRuntimeSloganSettings({
       ...createSloganSettingsDefaults(),
       ...(modeState?.sloganSettings || {}),
-    },
+    }),
     modeForm: {
       ...modeForm,
     },
@@ -149,6 +149,16 @@ function normalizeRuntimeModeForm(modeForm) {
   return {
     ...modeForm,
     styleTags,
+  };
+}
+
+function normalizeRuntimeSloganSettings(settings) {
+  const languages = Array.isArray(settings?.languages)
+    ? settings.languages.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+  return {
+    ...settings,
+    languages: [languages[0] || "en-US"],
   };
 }
 
@@ -201,7 +211,9 @@ export function setGenerationFormChoice(path, rawValue, options = {}) {
   const multi = options.multi === true;
   const value = parseFieldValue(path, rawValue);
 
-  if (multi) {
+  if (path === "sloganSettings.languages") {
+    setPath(modeState, path, [value]);
+  } else if (multi) {
     const list = Array.isArray(current) ? [...current] : [];
     const next = list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
     const allowEmpty = path === "modeForm.styleTags";
@@ -228,7 +240,7 @@ export function applyGenerationFormValuesToSnapshot(snapshot, values) {
   nextSnapshot.project.description = values.projectBrief.gameDescription;
   modeState.projectBrief = clone(values.projectBrief);
   modeState.outputSettings = clone(values.outputSettings);
-  modeState.sloganSettings = clone(values.sloganSettings);
+  modeState.sloganSettings = normalizeRuntimeSloganSettings(clone(values.sloganSettings));
   modeState.modeForm = clone(values.modeForm);
   modeState.selectedSchemeIds = clone(values.selectedSchemeIds || []);
   modeState.updatedAt = nowIso();

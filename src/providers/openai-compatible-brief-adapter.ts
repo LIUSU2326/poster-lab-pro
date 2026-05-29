@@ -75,6 +75,8 @@ const BriefCompletionSchema = z.object({
   ).min(1),
 });
 
+const SUPPORTED_SLOGAN_LANGUAGES = ["zh-CN", "en-US", "ja-JP", "ko-KR"] as const;
+
 export type OpenAICompatibleChatTransportRequest = z.infer<typeof OpenAICompatibleChatTransportRequestSchema>;
 export type OpenAICompatibleChatTransportResponse = z.infer<typeof OpenAICompatibleChatTransportResponseSchema>;
 export type OpenAICompatibleChatTransport = (
@@ -171,6 +173,7 @@ function statusError<T>(providerId: ProviderId, status: number, body: unknown): 
 }
 
 function buildBriefMessages(request: BriefGenerationRequest) {
+  const targetLanguage = request.languageTargets[0] || "en-US";
   const assets = request.assets.map((asset) => ({
     role: asset.role,
     id: asset.id,
@@ -187,6 +190,8 @@ function buildBriefMessages(request: BriefGenerationRequest) {
         "Return JSON only. No markdown, no commentary.",
         "Each scheme must include title, brief, prompt, promptZh, promptEn, and slogans.",
         "promptZh must be a Chinese image-generation prompt. promptEn must be an English image-generation prompt.",
+        "languageTargets contains exactly one target slogan language. Return slogans only for that selected language.",
+        "If multiple assets share role gameCharacter, each one is an independent game character reference. Plan them as separate characters in group compositions when possible; never merge their appearances.",
       ].join(" "),
     },
     {
@@ -196,10 +201,19 @@ function buildBriefMessages(request: BriefGenerationRequest) {
         projectName: request.projectName,
         gameDescription: request.gameDescription,
         focusGuidance: request.focusGuidance || "",
+        creativeDirection: request.creativeDirection || "",
         guardrails: request.guardrails,
         languageTargets: request.languageTargets,
         schemeCount: request.schemeCount,
         assets,
+        rules: [
+          "Generate NEW random poster schemes for this batch.",
+          "Do not assume a logo exists unless an asset with role gameLogo is present.",
+          "If no image assets are provided, create concepts from project description and focus guidance only.",
+          "Use multiple gameCharacter assets as separate characters when the campaign composition supports it.",
+          "Respect creativeDirection for selected style tags, output sizes, composition/reference analysis, and prompt constraints.",
+          `Return exactly one slogan language: ${targetLanguage}.`,
+        ],
         outputShape: {
           schemes: [
             {
@@ -209,8 +223,7 @@ function buildBriefMessages(request: BriefGenerationRequest) {
               promptZh: "Chinese image prompt",
               promptEn: "English image prompt",
               slogans: {
-                "zh-CN": "Chinese promotional slogan",
-                "en-US": "English promotional slogan",
+                [targetLanguage]: "Promotional slogan in the selected target language",
               },
             },
           ],
@@ -236,14 +249,15 @@ function parseBriefContent(content: string) {
   return BriefCompletionSchema.parse(JSON.parse(fenced || trimmed));
 }
 
-function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, schemeCount: number) {
+function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, schemeCount: number, targetLanguage: string) {
   return parsed.schemes.slice(0, schemeCount).map((scheme) => {
     const promptZh = scheme.promptZh || scheme.prompt;
     const promptEn = scheme.promptEn || scheme.prompt;
-    const slogans = {
-      ...(scheme.slogans["zh-CN"] ? { "zh-CN": scheme.slogans["zh-CN"] } : {}),
-      ...(scheme.slogans["en-US"] ? { "en-US": scheme.slogans["en-US"] } : {}),
-    };
+    const slogans = Object.fromEntries(
+      SUPPORTED_SLOGAN_LANGUAGES
+        .filter((language) => language === targetLanguage && scheme.slogans[language])
+        .map((language) => [language, scheme.slogans[language]]),
+    );
     return {
       title: scheme.title,
       brief: scheme.brief,
@@ -327,7 +341,7 @@ export function createOpenAICompatibleBriefAdapter(options: OpenAICompatibleBrie
           value: ProviderBriefResponseSchema.parse({
             providerId,
             model,
-            schemes: normalizeSchemes(parsedBrief, parsedRequest.schemeCount),
+            schemes: normalizeSchemes(parsedBrief, parsedRequest.schemeCount, parsedRequest.languageTargets[0] || "en-US"),
             usage: {
               promptTokens: response.usage?.prompt_tokens || response.usage?.total_tokens || 0,
               elapsedMs: Math.max(0, now() - startedAt),
