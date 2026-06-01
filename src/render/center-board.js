@@ -13,6 +13,7 @@ import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/worksp
 
 export function renderCenterBoard(activeMode, selected) {
   if (state.view === "archive") return renderArchiveBoard();
+  if (state.view === "results") return renderResultBoard(activeMode);
   if (state.view === "project-library") return renderProjectLibraryBoard(activeMode);
 
   const schemes = getModeSchemes();

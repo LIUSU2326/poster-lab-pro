@@ -10,9 +10,12 @@ export function renderTopbar(activeMode) {
   const modeLabel = getModeLabel(activeMode.id);
   const liveGate = getLiveGateViewModel(activeMode);
   const failedImageCount = getFailedImageTaskCount(activeMode.id);
+  const resultCount = getModeResultCount(activeMode.id);
+  const selectedScheme = getSelectedRenderableScheme(activeMode.id);
   const canRenderImages = activeMode.id === "poster" || hasRenderableSchemes(activeMode.id);
   const imageGeneration = getImageGenerationStatus(activeMode);
   const generatingImages = imageGeneration.active;
+  const selectedSchemeRenderDisabled = !selectedScheme || generatingImages;
 
   return `
     <header class="topbar" data-workspace-revision="${escapeHtml(summary.revision)}" data-workspace-assets="${escapeHtml(summary.assetCount)}">
@@ -31,10 +34,11 @@ export function renderTopbar(activeMode) {
       </div>
       <div class="view-switch top-view-switch" aria-label="主视图">
         <button class="${state.view === "schemes" ? "active" : ""}" type="button" data-view="schemes">方案</button>
+        <button class="${state.view === "results" ? "active" : ""}" type="button" data-view="results">结果${resultCount > 0 ? ` ${escapeHtml(resultCount)}` : ""}</button>
         <button class="${state.view === "archive" ? "active" : ""}" type="button" data-view="archive">归档</button>
       </div>
       <nav class="top-actions" aria-label="全局操作">
-        ${state.view === "archive" ? "" : `<button type="button" data-action="toggle-copy">${state.copyVisible ? "收起文案" : "展开文案"}</button>`}
+        ${state.view === "archive" || state.view === "results" ? "" : `<button type="button" data-action="toggle-copy">${state.copyVisible ? "收起文案" : "展开文案"}</button>`}
         <button type="button" data-action="open-settings">模型与 Key</button>
         <button class="live-gate-chip ${liveGate.tone}" type="button" data-action="toggle-task" aria-label="实机安全">
           <i aria-hidden="true"></i>
@@ -47,6 +51,16 @@ export function renderTopbar(activeMode) {
         </button>
         <button type="button" data-view="archive">导出</button>
         ${failedImageCount > 0 ? `<button class="retry-failed-button" type="button" data-action="retry-failed-images">重试失败 ${failedImageCount}</button>` : ""}
+        ${selectedScheme ? `
+          <button
+            class="selected-render-button"
+            type="button"
+            data-action="submit-generation"
+            data-scheme-id="${escapeHtml(selectedScheme.id)}"
+            title="只基于当前选中的方案出图"
+            ${selectedSchemeRenderDisabled ? "disabled" : ""}
+          >当前方案出图</button>
+        ` : ""}
         <button class="primary-button generate-primary ${generatingImages ? "loading" : ""}" type="button" data-action="submit-generation" ${canRenderImages && !generatingImages ? "" : "disabled"}>
           ${generatingImages ? `
             <span class="button-spinner" aria-hidden="true"></span>
@@ -66,11 +80,26 @@ export function renderTopbar(activeMode) {
 function hasRenderableSchemes(modeId) {
   const snapshot = state.workspaceSnapshot || {};
   return (snapshot.schemes || []).some((scheme) =>
-    scheme.mode === modeId
-      && scheme.status !== "pending"
-      && !String(scheme.id || "").startsWith(`${modeId}-`)
-      && !String(scheme.id || "").startsWith(`scheme-${modeId}-`),
+    isRenderableScheme(modeId, scheme),
   );
+}
+
+function getSelectedRenderableScheme(modeId) {
+  const snapshot = state.workspaceSnapshot || {};
+  const selected = (snapshot.schemes || []).find((scheme) => scheme.id === state.selectedScheme);
+  return selected && isRenderableScheme(modeId, selected) ? selected : null;
+}
+
+function isRenderableScheme(modeId, scheme) {
+  return scheme?.mode === modeId
+    && scheme.status !== "pending"
+    && !String(scheme.id || "").startsWith(`${modeId}-`)
+    && !String(scheme.id || "").startsWith(`scheme-${modeId}-`);
+}
+
+function getModeResultCount(modeId) {
+  const snapshot = state.workspaceSnapshot || {};
+  return (snapshot.results || []).filter((result) => result.mode === modeId).length;
 }
 
 function getFailedImageTaskCount(modeId) {

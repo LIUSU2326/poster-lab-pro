@@ -15,9 +15,12 @@ const binding = read("src/form-binding.js");
 const staticService = read("src/static-local-api-service.js");
 const events = read("src/events.js");
 const topbar = read("src/render/topbar.js");
+const centerBoard = read("src/render/center-board.js");
 const configPanel = read("src/render/config-panel.js");
 const taskChrome = read("src/render/task-chrome.js");
 const workspaceSnapshot = read("src/data/workspace-snapshot.js");
+const stateSource = read("src/state.js");
+const styles = read("styles.css");
 
 for (const token of [
   "createBoundWorkspaceSnapshot",
@@ -61,6 +64,37 @@ for (const token of [
 
 if (!topbar.includes('data-action="submit-generation"')) {
   issues.push("topbar.js: image generation button must use submit-generation action");
+}
+
+for (const token of [
+  'data-view="results"',
+  "selected-render-button",
+  "getSelectedRenderableScheme",
+  "data-scheme-id",
+]) {
+  if (!topbar.includes(token)) issues.push(`topbar.js: missing current-result workflow token ${token}`);
+}
+
+for (const token of [
+  'state.view === "results"',
+  "renderResultBoard",
+  "result-board",
+]) {
+  if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
+}
+
+if (!events.includes('nextView === "results"')) {
+  issues.push("events.js: data-view handler must support the results view");
+}
+if (!stateSource.includes('view === "results"') || !stateSource.includes('state.view = "results"')) {
+  issues.push("state.js: URL view handling must preserve results view");
+}
+
+for (const token of [
+  "repeat(3, minmax(68px, 1fr))",
+  ".top-actions .selected-render-button",
+]) {
+  if (!styles.includes(token)) issues.push(`styles.css: missing result/current render UI token ${token}`);
 }
 
 if (!configPanel.includes('data-action="generate-schemes"')) {

@@ -34,8 +34,8 @@ export function bindEvents(render) {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextView = button.dataset.view;
-      state.view = nextView === "archive"
-        ? "archive"
+      state.view = nextView === "archive" || nextView === "results" || nextView === "schemes"
+        ? nextView
         : nextView === "project-library"
           ? state.view === "project-library" ? "schemes" : "project-library"
           : "schemes";

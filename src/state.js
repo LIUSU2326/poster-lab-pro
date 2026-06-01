@@ -136,7 +136,8 @@ export function applyPrototypeStateFromUrl() {
   if (theme === "dark" || theme === "light") state.theme = theme;
   if (view === "archive") state.view = "archive";
   if (view === "project-library") state.view = "project-library";
-  if (view === "schemes" || view === "text" || view === "results") state.view = "schemes";
+  if (view === "results") state.view = "results";
+  if (view === "schemes" || view === "text") state.view = "schemes";
   if (view === "text") state.copyVisible = true;
   if (modeSpecs[mode]) state.activeMode = mode;
   if (api === "http" || api === "static") state.apiMode = api;

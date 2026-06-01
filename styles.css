@@ -12421,7 +12421,7 @@ select:focus-visible,
   all: unset;
   box-sizing: border-box !important;
   display: inline-grid !important;
-  grid-template-columns: repeat(2, minmax(72px, 1fr)) !important;
+  grid-template-columns: repeat(3, minmax(68px, 1fr)) !important;
   align-items: center !important;
   flex: 0 0 auto !important;
   gap: 3px !important;
@@ -12493,6 +12493,18 @@ select:focus-visible,
 .top-actions .generate-primary {
   flex: 0 0 auto !important;
   min-width: 142px !important;
+}
+
+.top-actions .selected-render-button {
+  border-color: color-mix(in oklch, var(--accent), transparent 58%) !important;
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 68%) !important;
+  color: var(--text-primary) !important;
+  font-weight: 820 !important;
+}
+
+.top-actions .selected-render-button:hover {
+  border-color: color-mix(in oklch, var(--accent), transparent 30%) !important;
+  background: color-mix(in oklch, var(--accent-soft), var(--panel-lift) 54%) !important;
 }
 
 /* 2026-05-30 responsive scheme board: avoid card clipping on MacBook-sized viewports. */
