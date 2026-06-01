@@ -200,11 +200,47 @@ function normalizeGenerationOptions(options = {}) {
     batchId: options.batchId || createBatchId(),
     schemeStrategy: options.schemeStrategy === "continue" ? "continue" : "regenerate",
     schemeIds: Array.isArray(options.schemeIds) ? options.schemeIds.filter(Boolean) : [],
+    sourceResultId: typeof options.sourceResultId === "string" && options.sourceResultId ? options.sourceResultId : "",
+    outputOverrides: normalizeOutputOverrides(options.outputOverrides),
     schemeCountOverride: Number.isFinite(Number(options.schemeCountOverride))
       ? Math.max(1, Math.min(20, Number(options.schemeCountOverride)))
       : null,
     renderImages: options.renderImages !== false,
   };
+}
+
+function normalizeOutputOverrides(overrides = {}) {
+  const normalized = {};
+  if (Array.isArray(overrides.platformPresets) && overrides.platformPresets.length > 0) {
+    normalized.platformPresets = overrides.platformPresets.filter(Boolean);
+  }
+  if (Array.isArray(overrides.aspectRatios) && overrides.aspectRatios.length > 0) {
+    normalized.aspectRatios = overrides.aspectRatios.filter(Boolean);
+  }
+  if (overrides.customSize && Number.isFinite(Number(overrides.customSize.width)) && Number.isFinite(Number(overrides.customSize.height))) {
+    normalized.customSize = {
+      width: Math.max(256, Math.min(8192, Math.round(Number(overrides.customSize.width)))),
+      height: Math.max(256, Math.min(8192, Math.round(Number(overrides.customSize.height)))),
+    };
+  }
+  if (Number.isFinite(Number(overrides.imagesPerScheme))) {
+    normalized.imagesPerScheme = Math.max(1, Math.min(8, Math.round(Number(overrides.imagesPerScheme))));
+  }
+  return normalized;
+}
+
+function applyOutputOverrides(snapshot, modeId, overrides, updatedAt) {
+  if (!overrides || Object.keys(overrides).length === 0) return;
+  const modeState = snapshot.modeStates.find((item) => item.mode === modeId);
+  if (!modeState) return;
+  modeState.outputSettings = {
+    ...modeState.outputSettings,
+    ...(overrides.platformPresets ? { platformPresets: overrides.platformPresets } : {}),
+    ...(overrides.aspectRatios ? { aspectRatios: overrides.aspectRatios } : {}),
+    ...(overrides.customSize ? { customSize: overrides.customSize } : {}),
+    ...(overrides.imagesPerScheme ? { imagesPerScheme: overrides.imagesPerScheme } : {}),
+  };
+  modeState.updatedAt = updatedAt;
 }
 
 export function createBoundWorkspaceSnapshot(options = {}) {
@@ -222,6 +258,7 @@ export function createBoundWorkspaceSnapshot(options = {}) {
   snapshot.activeMode = activeMode.id;
   snapshot.metadata.updatedAt = updatedAt;
   ensureActiveModeSchemesInSnapshot(snapshot, activeMode);
+  applyOutputOverrides(snapshot, activeMode.id, normalizedOptions.outputOverrides, updatedAt);
   preparePosterBatchSchemes(snapshot, activeMode, updatedAt, normalizedOptions);
 
   return snapshot;
@@ -429,6 +466,7 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
       includeImageGeneration: normalizedOptions.renderImages,
       regenerateSchemes: shouldRegenerateSchemes,
       batchId: normalizedOptions.batchId,
+      ...(normalizedOptions.sourceResultId ? { sourceResultId: normalizedOptions.sourceResultId } : {}),
       includeImageEdit: false,
       includeUpscale: false,
       includeBackgroundRemoval: false,

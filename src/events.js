@@ -310,6 +310,34 @@ async function handleActionControl(control, event, render) {
     render();
     return;
   }
+  if (action === "regenerate-result") {
+    const resultId = control.dataset.resultId || state.selectedResult || "";
+    const result = findRuntimeResult(resultId);
+    if (!result?.schemeId) return;
+
+    state.selectedResult = result.id;
+    state.selectedResultUserSet = true;
+    state.selectedScheme = result.schemeId;
+    state.resultViewerOpen = false;
+
+    const submissionPromise = submitGenerationDraft({
+      schemeStrategy: "continue",
+      schemeIds: [result.schemeId],
+      sourceResultId: result.id,
+      schemeCountOverride: 1,
+      outputOverrides: outputOverridesForResult(result),
+      renderImages: true,
+    });
+    state.view = "results";
+    state.taskOpen = false;
+    render();
+    finishSubmission(await submissionPromise);
+    selectNewestResultForScheme(result.schemeId, result.id);
+    state.view = "results";
+    state.resultViewerOpen = Boolean(state.selectedResult);
+    render();
+    return;
+  }
   if (action === "submit-generation") {
     let generationOptions = {};
     if (control.dataset.schemeId) {
@@ -563,6 +591,37 @@ function hasExistingPosterProduction() {
   );
   const hasPosterResult = (snapshot.results || []).some((result) => result.mode === "poster");
   return hasGeneratedScheme || hasPosterResult;
+}
+
+function findRuntimeResult(resultId) {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  return (snapshot.results || []).find((result) => result.id === resultId) || null;
+}
+
+function outputOverridesForResult(result) {
+  const width = Math.round(Number(result.width || 0));
+  const height = Math.round(Number(result.height || 0));
+  const hasValidSize = width >= 256 && width <= 8192 && height >= 256 && height <= 8192;
+  return {
+    platformPresets: [result.platformPreset || "custom"],
+    aspectRatios: hasValidSize ? [`${width}x${height}`] : ["16:9"],
+    ...(hasValidSize ? { customSize: { width, height } } : {}),
+    imagesPerScheme: 1,
+  };
+}
+
+function selectNewestResultForScheme(schemeId, previousResultId = "") {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const candidates = (snapshot.results || [])
+    .filter((result) => result.schemeId === schemeId && result.id !== previousResultId)
+    .sort((left, right) => {
+      const rightTime = Date.parse(right.updatedAt || right.createdAt || "");
+      const leftTime = Date.parse(left.updatedAt || left.createdAt || "");
+      return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
+    });
+  if (!candidates[0]) return;
+  state.selectedResult = candidates[0].id;
+  state.selectedResultUserSet = true;
 }
 
 function finishSubmission(submission) {

@@ -247,6 +247,34 @@ async function runRuntimeCheck() {
   if (renderQueue.payload.includeImageGeneration !== true) {
     issues.push("render generation should queue image generation by default");
   }
+  const regenerateBound = createBoundWorkspaceSnapshot({
+    schemeStrategy: "continue",
+    schemeIds: [bound.schemes[0].id],
+    sourceResultId: "result-original-size",
+    outputOverrides: {
+      platformPresets: ["custom"],
+      aspectRatios: ["1920x1080"],
+      customSize: { width: 1920, height: 1080 },
+      imagesPerScheme: 1,
+    },
+  });
+  const regenerateQueue = buildQueuePlanCreateSubmission(regenerateBound, {
+    schemeStrategy: "continue",
+    schemeIds: [bound.schemes[0].id],
+    sourceResultId: "result-original-size",
+    outputOverrides: {
+      platformPresets: ["custom"],
+      aspectRatios: ["1920x1080"],
+      customSize: { width: 1920, height: 1080 },
+      imagesPerScheme: 1,
+    },
+  });
+  if (regenerateQueue.payload.sourceResultId !== "result-original-size") {
+    issues.push("result regeneration should preserve sourceResultId in queue payload");
+  }
+  if (regenerateQueue.payload.imagesPerScheme !== 1 || regenerateQueue.payload.customSize?.width !== 1920 || regenerateQueue.payload.customSize?.height !== 1080) {
+    issues.push("result regeneration should lock original result size and single-image output");
+  }
 }
 
 await runRuntimeCheck();
