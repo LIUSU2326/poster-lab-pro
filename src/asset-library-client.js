@@ -357,8 +357,13 @@ function removeAssetsFromSnapshot(snapshot, role, label, options = {}) {
     removedIds.add(asset.id);
     return false;
   });
+  const nextReferenceAnalyses = (snapshot.referenceAnalyses || []).filter((analysis) => {
+    if (analysis.role !== role) return true;
+    if (!label) return false;
+    return analysis.label !== label && !String(analysis.key || "").startsWith(`${role}:`);
+  });
 
-  if (removedIds.size === 0) {
+  if (removedIds.size === 0 && nextReferenceAnalyses.length === (snapshot.referenceAnalyses || []).length) {
     return {
       changed: false,
       snapshot,
@@ -384,6 +389,7 @@ function removeAssetsFromSnapshot(snapshot, role, label, options = {}) {
             logos: (snapshot.brandKit.logos || []).filter((assetId) => !removedIds.has(assetId)),
           }
         : snapshot.brandKit,
+      referenceAnalyses: nextReferenceAnalyses,
       metadata: {
         ...snapshot.metadata,
         revision: snapshot.metadata.revision + 1,
@@ -415,7 +421,15 @@ async function runRemoveWorkbenchAssetsByRoleLabel(role, label = "", options = {
     Object.entries(state.referenceUploadDataUrls || {}).filter(([key]) => {
       if (!key.startsWith(`${role}:`)) return true;
       if (!label) return false;
-      return key !== `${role}:${label}`;
+      return false;
+    }),
+  );
+  state.referenceAnalysis = Object.fromEntries(
+    Object.entries(state.referenceAnalysis || {}).filter(([key, value]) => {
+      const matchesRole = key.startsWith(`${role}:`) || value?.role === role;
+      if (!matchesRole) return true;
+      if (!label) return false;
+      return value?.label !== label && !key.startsWith(`${role}:`);
     }),
   );
 

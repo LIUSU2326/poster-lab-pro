@@ -28,6 +28,8 @@ for (const token of [
   "commitAssetRecord",
   "listWorkspaceAssets",
   "loadWorkspaceSnapshotForWorkbench",
+  "referenceAnalyses",
+  "referenceAnalysis",
 ]) {
   if (!assetClient.includes(token)) issues.push(`asset-library-client.js: missing ${token}`);
 }
@@ -347,6 +349,31 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
   serverSnapshot = {
     ...snapshot,
     assets: [...snapshot.assets, oldLogo, oldBoss],
+    referenceAnalyses: [
+      ...(snapshot.referenceAnalyses || []),
+      {
+        key: "gameLogo:style",
+        kind: "style",
+        role: "gameLogo",
+        label: "游戏 Logo",
+        providerId: "google",
+        model: "gemini-check",
+        text: "Old logo style analysis should be removed with the logo asset.",
+        createdAt: "2026-05-21T00:00:00.000Z",
+        updatedAt: "2026-05-21T00:00:00.000Z",
+      },
+      {
+        key: "prop:composition",
+        kind: "composition",
+        role: "prop",
+        label: "Boss",
+        providerId: "google",
+        model: "gemini-check",
+        text: "Old boss composition analysis should be removed with the boss asset.",
+        createdAt: "2026-05-21T00:00:00.000Z",
+        updatedAt: "2026-05-21T00:00:00.000Z",
+      },
+    ],
     metadata: {
       ...snapshot.metadata,
       revision: snapshot.metadata.revision + 1,
@@ -354,6 +381,16 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
     },
   };
   setRuntimeWorkspaceSnapshot(serverSnapshot, "http");
+  state.referenceUploadDataUrls = {
+    "gameLogo:style": "data:image/png;base64,OLDLOGO",
+    "prop:composition": "data:image/png;base64,OLDBOSS",
+    "styleReference:style": "data:image/png;base64,KEEP",
+  };
+  state.referenceAnalysis = {
+    "gameLogo:style": { status: "ready", role: "gameLogo", label: "游戏 Logo" },
+    "prop:composition": { status: "ready", role: "prop", label: "Boss" },
+    "styleReference:style": { status: "ready", role: "styleReference", label: "Keep" },
+  };
   calls.length = 0;
 
   const logoDelete = await removeWorkbenchAssetsByRoleLabel(
@@ -372,6 +409,18 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
   }
   if (serverSnapshot.assets.some((asset) => asset.id === oldLogo.id || asset.id === oldBoss.id)) {
     issues.push("deleted logo and boss assets should be removed from the persisted workspace snapshot");
+  }
+  if ((serverSnapshot.referenceAnalyses || []).some((analysis) => analysis.key === "gameLogo:style" || analysis.key === "prop:composition")) {
+    issues.push("deleted logo and boss reference analyses should be removed from the persisted workspace snapshot");
+  }
+  if (state.referenceUploadDataUrls["gameLogo:style"] || state.referenceUploadDataUrls["prop:composition"]) {
+    issues.push("deleted logo and boss upload data URLs should be cleared from local state");
+  }
+  if (state.referenceAnalysis["gameLogo:style"] || state.referenceAnalysis["prop:composition"]) {
+    issues.push("deleted logo and boss reference analysis state should be cleared locally");
+  }
+  if (!state.referenceUploadDataUrls["styleReference:style"] || !state.referenceAnalysis["styleReference:style"]) {
+    issues.push("unrelated reference analysis state should be preserved when deleting other asset roles");
   }
   const deleteSaveCalls = calls.filter((call) => call.url.endsWith(`/api/workspaces/${snapshot.metadata.workspaceId}/snapshot`));
   if (deleteSaveCalls.length < 2) {
@@ -399,6 +448,9 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
   }
   if (getRuntimeWorkspaceSnapshot().assets.some((asset) => asset.id === oldLogo.id || asset.id === oldBoss.id)) {
     issues.push("deleted logo and boss assets should not reappear after a later asset upload reloads the snapshot");
+  }
+  if ((getRuntimeWorkspaceSnapshot().referenceAnalyses || []).some((analysis) => analysis.key === "gameLogo:style" || analysis.key === "prop:composition")) {
+    issues.push("deleted logo and boss reference analyses should not reappear after a later asset upload reloads the snapshot");
   }
 }
 
