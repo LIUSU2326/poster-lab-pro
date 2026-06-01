@@ -15,6 +15,7 @@ const pkg = read("package.json");
 const nextConfig = read("next.config.mjs");
 const main = read("electron/main.cjs");
 const prepare = read("tools/prepare-electron-dist.mjs");
+const mac = read("tools/pack-electron-mac.mjs");
 const portable = read("tools/pack-electron-portable.mjs");
 const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
@@ -57,6 +58,10 @@ if (!prepare.includes(".dll")) {
 
 for (const token of ["release", "win-unpacked", "productName", "resources", "POSTER_LAB_PORTABLE_READY"]) {
   if (!portable.includes(token)) issues.push(`tools/pack-electron-portable.mjs: missing ${token}`);
+}
+
+for (const token of ["CFBundleShortVersionString", "CFBundleVersion", "pkg.version", "POSTER_LAB_MAC_READY"]) {
+  if (!mac.includes(token)) issues.push(`tools/pack-electron-mac.mjs: missing ${token}`);
 }
 
 for (const [file, source] of [

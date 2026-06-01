@@ -39,6 +39,8 @@ function patchInfoPlist(filePath) {
     CFBundleIconFile: appIconName,
     CFBundleIdentifier: bundleId,
     CFBundleName: productName,
+    CFBundleShortVersionString: pkg.version,
+    CFBundleVersion: pkg.version,
   };
 
   for (const [key, value] of Object.entries(replacements)) {

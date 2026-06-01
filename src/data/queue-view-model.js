@@ -11,23 +11,31 @@ const statusLabels = {
 
 const stageLabels = {
   planning: "方案规划",
+  waitingDependency: "等待依赖",
+  waitingProvider: "等待模型",
   providerCall: "模型调用",
+  validating: "校验结果",
   postProcessing: "后处理",
   persisting: "保存结果",
+  done: "完成",
   complete: "完成",
 };
 
-function parseSchemeProgress(value) {
-  const match = String(value || "0/0").match(/(\d+)\s*\/\s*(\d+)/);
-  if (!match) return { completed: 0, total: 0 };
-  return {
-    completed: Number(match[1]),
-    total: Number(match[2]),
-  };
-}
+const errorCodeLabels = {
+  missing_config: "配置缺失",
+  unsupported_capability: "能力不支持",
+  invalid_request: "请求无效",
+  provider_unavailable: "模型暂不可用",
+  rate_limited: "触发限流",
+  auth_failed: "鉴权失败",
+  quota_exceeded: "额度不足",
+  unknown: "未知错误",
+};
 
-function formatActualCost(value, currency = "USD") {
-  return typeof value === "number" ? `${currency} ${value.toFixed(2)}` : "真实成本未返回";
+function formatCost({ estimatedCost, actualCost, currency = "USD" }) {
+  if (typeof actualCost === "number") return `实际 ${currency} ${actualCost.toFixed(2)}`;
+  if (typeof estimatedCost === "number") return `预计 ${currency} ${estimatedCost.toFixed(2)}`;
+  return "费用待定";
 }
 
 function formatDuration(ms) {
@@ -38,8 +46,14 @@ function formatDuration(ms) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-function createRow({ kind, label, detail, status, progress, actualCost, currency, elapsedMs, stage }) {
+function normalizeProgress(value) {
+  return Math.max(0, Math.min(100, Math.round(value || 0)));
+}
+
+function createRow({ taskId, kind, label, detail, status, progress, estimatedCost, actualCost, currency, elapsedMs, stage, error, attempts, maxAttempts }) {
+  const safeProgress = normalizeProgress(progress);
   return {
+    taskId,
     kind,
     label,
     detail,
@@ -47,9 +61,18 @@ function createRow({ kind, label, detail, status, progress, actualCost, currency
     state: statusLabels[status] || status,
     stage,
     stageLabel: stageLabels[stage] || stage,
-    progress: Math.max(0, Math.min(100, Math.round(progress))),
-    cost: formatActualCost(actualCost, currency),
+    progress: safeProgress,
+    progressLabel: `${safeProgress}%`,
+    cost: formatCost({ estimatedCost, actualCost, currency }),
     time: formatDuration(elapsedMs),
+    failure: failureFromTask({
+      id: taskId,
+      kind,
+      status,
+      attempts,
+      maxAttempts,
+      error,
+    }),
   };
 }
 
@@ -67,10 +90,16 @@ export function createQueueViewModel(activeMode) {
       queued: 0,
       progress: 0,
       currentStage: "暂无任务",
-      costLabel: "真实成本未返回",
-      estimatedCost: "真实成本未返回",
+      progressLabel: "0/0 · 0%",
+      costLabel: "费用待定",
+      estimatedCost: "费用待定",
       elapsed: "等待",
       failureAction: "无当前失败",
+      failureMessage: "",
+      failureCode: "",
+      failureCount: 0,
+      retryableFailureCount: 0,
+      failures: [],
     },
   };
 }
@@ -91,24 +120,37 @@ function createRuntimeQueueViewModel(activeMode) {
   const actualCost = typeof storedSummary?.actualCost === "number"
     ? storedSummary.actualCost
     : null;
+  const estimatedCost = typeof storedSummary?.estimatedCost === "number"
+    ? storedSummary.estimatedCost
+    : plan.tasks.reduce((sum, task) => sum + (task.cost?.estimatedCost || 0), 0);
+  const currency = plan.tasks.find((task) => task.cost?.currency)?.cost?.currency || "USD";
   const elapsedMs = storedSummary?.elapsedMs ?? plan.tasks.reduce((sum, task) => sum + (task.elapsedMs || 0), 0);
 
   const rows = plan.tasks.map((task) => createRow({
+    taskId: task.id,
     kind: task.kind,
     label: formatTaskKind(task.kind),
-    detail: task.input?.schemeId || task.jobId,
+    detail: task.input?.schemeId || task.input?.sourceResultId || task.jobId,
     status: task.status,
     progress: task.progress || (task.status === "succeeded" ? 100 : 0),
+    estimatedCost: task.cost?.estimatedCost,
     actualCost: task.cost?.actualCost,
     currency: task.cost?.currency,
     elapsedMs: task.elapsedMs || 0,
     stage: task.stage,
+    error: task.error,
+    attempts: task.attempts,
+    maxAttempts: task.maxAttempts,
   }));
 
+  const failures = plan.tasks
+    .map((task) => failureFromTask(task))
+    .filter(Boolean);
   const activeRow = rows.find((row) => row.status === "running") ||
     rows.find((row) => row.status === "failed") ||
     rows.find((row) => row.status === "queued" || row.status === "blocked") ||
     rows[rows.length - 1];
+  const firstFailure = failures[0] || null;
 
   return {
     rows,
@@ -119,27 +161,55 @@ function createRuntimeQueueViewModel(activeMode) {
       running,
       queued,
       progress,
-      currentStage: activeRow?.label || plan.job.title,
-      costLabel: formatActualCost(actualCost),
-      estimatedCost: formatActualCost(actualCost),
+      currentStage: formatCurrentStage(activeRow, plan.job),
+      progressLabel: `${completed}/${total} · ${normalizeProgress(progress)}%`,
+      costLabel: formatCost({ estimatedCost, actualCost, currency }),
+      estimatedCost: formatCost({ estimatedCost, actualCost: null, currency }),
       elapsed: formatDuration(elapsedMs),
-      failureAction: failed > 0 ? "查看失败任务" : "无当前失败",
+      failureAction: failed > 0 ? "重试失败图片或检查模型配置" : "无当前失败",
+      failureMessage: firstFailure?.userMessage || "",
+      failureCode: firstFailure?.codeLabel || "",
+      failureCount: failures.length,
+      retryableFailureCount: failures.filter((failure) => failure.retryable).length,
+      failures,
     },
   };
 }
 
-function getModeShort(modeId) {
+function formatCurrentStage(activeRow, job) {
+  if (!activeRow) return job?.title || "暂无任务";
+  if (activeRow.status === "failed") return `${activeRow.label}失败`;
+  if (activeRow.status === "running") return activeRow.stageLabel || activeRow.label;
+  if (activeRow.status === "queued" || activeRow.status === "blocked") return `等待${activeRow.label}`;
+  return activeRow.stageLabel || activeRow.label || job?.title || "任务队列";
+}
+
+function failureFromTask(task) {
+  if (!task?.error) return null;
+  const code = task.error.code || "unknown";
   return {
-    poster: "海报",
-    collab: "联名",
-    announcement: "公告",
-    logo: "标识",
-    icon: "图标",
-  }[modeId] || "批量";
+    taskId: task.id,
+    kind: task.kind,
+    code,
+    codeLabel: errorCodeLabels[code] || code,
+    retryable: Boolean(task.error.retryable),
+    attempts: Number(task.attempts || 0),
+    maxAttempts: Number(task.maxAttempts || 0),
+    userMessage: task.error.userMessage || task.error.message || "任务失败，请检查模型配置或稍后重试。",
+  };
 }
 
 function formatTaskKind(kind) {
-  return String(kind || "Task")
+  const labels = {
+    briefGeneration: "方案生成",
+    imageGeneration: "图片渲染",
+    imageEdit: "图片编辑",
+    upscale: "高清放大",
+    backgroundRemoval: "背景移除",
+    archiveSync: "结果入库",
+    export: "导出",
+  };
+  return labels[kind] || String(kind || "Task")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());

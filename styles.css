@@ -4351,6 +4351,8 @@ input[type="range"] {
   .task-stats,
   .submission-card,
   .queue-row,
+  .queue-context-head,
+  .queue-context-meta,
   .live-gate-context,
   .manual-live-context,
   .result-operation-context {
@@ -4449,6 +4451,8 @@ input[type="range"] {
   .task-stats,
   .submission-card,
   .queue-row,
+  .queue-context-head,
+  .queue-context-meta,
   .live-gate-context,
   .manual-live-context,
   .result-operation-context {
@@ -10282,6 +10286,159 @@ select:focus-visible,
 
 .task-chrome.compact-only .task-slim-static:hover {
   background: transparent;
+}
+
+.queue-context {
+  display: grid;
+  gap: 8px;
+  margin: 0 14px 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in oklch, var(--border-default, var(--line)), transparent 14%);
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--panel-lift, var(--panel-raised)), transparent 18%);
+}
+
+.queue-context.warning {
+  border-color: color-mix(in oklch, var(--danger), transparent 52%);
+  background: color-mix(in oklch, var(--danger-soft), var(--panel) 82%);
+}
+
+.queue-context.success {
+  border-color: color-mix(in oklch, var(--success), transparent 56%);
+  background: color-mix(in oklch, var(--success-soft), var(--panel) 84%);
+}
+
+.queue-context-head,
+.queue-context-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.queue-context-head div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.queue-context-head span,
+.queue-context-meta small,
+.queue-row-mini span,
+.queue-failure span,
+.queue-empty {
+  color: var(--text-tertiary, var(--muted));
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.queue-context-head strong {
+  overflow: hidden;
+  color: var(--text-primary, var(--text));
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-context-head b {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 840;
+}
+
+.queue-context-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.queue-context-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-mini-list {
+  display: grid;
+  gap: 6px;
+}
+
+.queue-row-mini {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  min-width: 0;
+}
+
+.queue-row-mini strong {
+  color: var(--text-secondary, var(--text-2));
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.queue-row-mini.failed strong,
+.queue-context.warning .queue-context-head b {
+  color: var(--danger);
+}
+
+.queue-row-mini.running strong,
+.queue-context.success .queue-context-head b {
+  color: var(--success);
+}
+
+.queue-row-mini small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--text-tertiary, var(--muted));
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-mini-progress {
+  grid-column: 1 / -1;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--border-default, var(--line)), transparent 34%);
+}
+
+.queue-mini-progress em {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.queue-failure,
+.queue-empty {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.queue-failure {
+  padding: 8px;
+  border: 1px solid color-mix(in oklch, var(--danger), transparent 58%);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--danger-soft), transparent 12%);
+  color: var(--text-secondary, var(--text-2));
+  font-size: 12px;
+}
+
+.queue-failure span {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--danger);
+}
+
+.queue-context-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.queue-retry {
+  height: 28px;
 }
 
 .retry-failed-button {

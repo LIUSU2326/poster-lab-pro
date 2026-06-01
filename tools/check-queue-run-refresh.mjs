@@ -20,6 +20,7 @@ const apiService = read("src/api/service.ts");
 const runRoute = read("app/api/workspaces/[workspaceId]/queue-plans/[jobId]/run/route.ts");
 const queueViewModel = read("src/data/queue-view-model.js");
 const taskChrome = read("src/render/task-chrome.js");
+const styles = read("styles.css");
 const pkg = read("package.json");
 
 for (const token of [
@@ -61,12 +62,33 @@ for (const token of [
   "createRuntimeQueueViewModel",
   "snapshot.queuePlans",
   "snapshot.queueSummaries",
+  "progressLabel",
+  "failureMessage",
+  "retryableFailureCount",
+  "waitingProvider",
+  "formatCost",
 ]) {
   if (!queueViewModel.includes(token)) issues.push(`queue-view-model.js: missing runtime queue token ${token}`);
 }
 
-if (!taskChrome.includes("renderTaskChrome")) {
-  issues.push("task-chrome.js: missing compact task chrome renderer");
+for (const token of [
+  "renderTaskChrome",
+  "queue-context",
+  "queue-row-mini",
+  "queue-failure",
+  "retry-failed-images",
+]) {
+  if (!taskChrome.includes(token)) issues.push(`task-chrome.js: missing compact task chrome token ${token}`);
+}
+
+for (const token of [
+  ".queue-context",
+  ".queue-context-meta",
+  ".queue-row-mini",
+  ".queue-mini-progress",
+  ".queue-failure",
+]) {
+  if (!styles.includes(token)) issues.push(`styles.css: missing queue feedback style ${token}`);
 }
 
 if (!pkg.includes("queue-refresh:check")) {
@@ -252,6 +274,73 @@ async function runRuntimeCheck() {
   const queue = createQueueViewModel(modeSpecs.poster);
   if (queue.summary.completed !== 1 || queue.summary.total !== 1) {
     issues.push("queue view model should read completed queue state from runtime snapshot");
+  }
+  if (queue.summary.progressLabel !== "1/1 · 100%") {
+    issues.push("queue view model should expose a readable progress label");
+  }
+  if (!queue.summary.costLabel.includes("预计 USD 0.24")) {
+    issues.push("queue view model should expose estimated cost before actual provider usage returns");
+  }
+
+  const failedPlan = {
+    job: {
+      ...queuePlan.job,
+      id: "job-http-refresh-failed-check",
+      status: "partial",
+      title: "HTTP refresh failed check",
+    },
+    tasks: [
+      {
+        ...queuePlan.tasks[0],
+        id: "task-http-refresh-failed-image",
+        jobId: "job-http-refresh-failed-check",
+        kind: "imageGeneration",
+        status: "failed",
+        stage: "providerCall",
+        progress: 35,
+        attempts: 2,
+        maxAttempts: 2,
+        input: { schemeId: "scheme-poster-01", platformPreset: "tiktok", width: 1080, height: 1920, model: "gpt-image-1" },
+        error: {
+          providerId: "openai",
+          code: "provider_unavailable",
+          retryable: true,
+          message: "Provider is overloaded.",
+          userMessage: "模型暂时繁忙，请稍后重试。",
+        },
+        cost: { currency: "USD", estimatedCost: 0.24, actualCost: null },
+      },
+    ],
+  };
+  setRuntimeWorkspaceSnapshot({
+    ...flow.workspaceReload.data.snapshot,
+    queuePlans: [failedPlan],
+    queueSummaries: [{
+      jobId: failedPlan.job.id,
+      total: 1,
+      queued: 0,
+      running: 0,
+      completed: 0,
+      failed: 1,
+      cancelled: 0,
+      progress: 35,
+      estimatedCost: 0.24,
+      actualCost: null,
+      elapsedMs: 23000,
+    }],
+  }, "http");
+  const failedQueue = createQueueViewModel(modeSpecs.poster);
+  if (failedQueue.summary.failed !== 1 || failedQueue.summary.failureCount !== 1) {
+    issues.push("queue view model should expose failed queue counts");
+  }
+  if (failedQueue.summary.retryableFailureCount !== 1) {
+    issues.push("queue view model should expose retryable failure counts");
+  }
+  if (!failedQueue.summary.failureMessage.includes("模型暂时繁忙")) {
+    issues.push("queue view model should expose provider user-facing failure messages");
+  }
+  if (!failedQueue.rows[0]?.cost.includes("预计 USD 0.24")) {
+    issues.push("queue task rows should expose estimated cost labels");
   }
 }
 
