@@ -54,6 +54,8 @@ for (const token of [
   ".scheme-card[data-scheme-id]",
   "data-result-filter",
   "goto-result-scheme",
+  "generationChoiceOpen",
+  'action === "confirm-generation-choice"',
   'action === "regenerate-result"',
   "deleteResultForWorkbench",
   'action === "delete-result"',

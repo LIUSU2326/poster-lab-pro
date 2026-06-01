@@ -366,6 +366,10 @@ async function handleActionControl(control, event, render) {
           schemeStrategy: "regenerate",
           renderImages: true,
         };
+      } else if (state.activeMode === "poster") {
+        state.generationChoiceOpen = true;
+        render();
+        return;
       } else {
         generationOptions = {
           schemeStrategy: "continue",
