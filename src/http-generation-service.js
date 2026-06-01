@@ -113,7 +113,10 @@ export async function runHttpGenerationServiceFlow(submission, options = {}) {
     ? await service.createQueuePlan(workspaceId, submission.queuePlanCreate.payload)
     : providerRequestMap;
   const queueRun = queuePlanCreate.ok
-    ? await service.runQueuePlan(workspaceId, queuePlanCreate.data.queuePlan.job.id, { archiveResults: true })
+    ? await service.runQueuePlan(workspaceId, queuePlanCreate.data.queuePlan.job.id, {
+      archiveResults: true,
+      ...(options.liveExecution ? { liveExecution: options.liveExecution } : {}),
+    })
     : queuePlanCreate;
   const workspaceReload = queueRun.ok && queueRun.data?.workspace
     ? {

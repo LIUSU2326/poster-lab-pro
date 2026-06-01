@@ -15,7 +15,10 @@ export function renderTopbar(activeMode) {
   const canRenderImages = activeMode.id === "poster" || hasRenderableSchemes(activeMode.id);
   const imageGeneration = getImageGenerationStatus(activeMode);
   const generatingImages = imageGeneration.active;
-  const selectedSchemeRenderDisabled = !selectedScheme || generatingImages;
+  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
+  const liveBlockedTitle = liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "";
+  const selectedSchemeRenderDisabled = !selectedScheme || generatingImages || liveBlocked;
+  const runMode = getRunModeViewModel(liveGate);
 
   return `
     <header class="topbar" data-workspace-revision="${escapeHtml(summary.revision)}" data-workspace-assets="${escapeHtml(summary.assetCount)}">
@@ -45,9 +48,9 @@ export function renderTopbar(activeMode) {
           <span>实机安全</span>
           <strong>${escapeHtml(liveGate.stateLabel)}</strong>
         </button>
-        <span class="run-mode-chip ${state.apiMode === "http" ? "live" : "test"}" aria-label="当前运行模式">
-          <b>${state.apiMode === "http" ? "实机通道" : "测试模式"}</b>
-          <small>${state.apiMode === "http" ? escapeHtml(liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定") : "不调用模型"}</small>
+        <span class="run-mode-chip ${escapeHtml(runMode.tone)}" aria-label="当前运行模式">
+          <b>${escapeHtml(runMode.label)}</b>
+          <small>${escapeHtml(runMode.detail)}</small>
         </span>
         <button class="theme-switch ${state.theme}" type="button" data-action="toggle-theme" aria-label="切换亮色或暗色">
           <span class="${state.theme === "light" ? "active" : ""}">亮色</span>
@@ -61,11 +64,17 @@ export function renderTopbar(activeMode) {
             type="button"
             data-action="submit-generation"
             data-scheme-id="${escapeHtml(selectedScheme.id)}"
-            title="只基于当前选中的方案出图"
+            title="${escapeHtml(liveBlockedTitle || "只基于当前选中的方案出图")}"
             ${selectedSchemeRenderDisabled ? "disabled" : ""}
           >当前方案出图</button>
         ` : ""}
-        <button class="primary-button generate-primary ${generatingImages ? "loading" : ""}" type="button" data-action="submit-generation" ${canRenderImages && !generatingImages ? "" : "disabled"}>
+        <button
+          class="primary-button generate-primary ${generatingImages ? "loading" : ""}"
+          type="button"
+          data-action="submit-generation"
+          title="${escapeHtml(liveBlockedTitle)}"
+          ${canRenderImages && !generatingImages && !liveBlocked ? "" : "disabled"}
+        >
           ${generatingImages ? `
             <span class="button-spinner" aria-hidden="true"></span>
             <span>生成中</span>
@@ -79,6 +88,28 @@ export function renderTopbar(activeMode) {
       </nav>
     </header>
   `;
+}
+
+function getRunModeViewModel(liveGate) {
+  if (state.apiMode !== "http") {
+    return {
+      tone: "test",
+      label: "测试模式",
+      detail: "不调用模型",
+    };
+  }
+  if (liveGate.allowed) {
+    return {
+      tone: "live",
+      label: "实机已授权",
+      detail: liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定",
+    };
+  }
+  return {
+    tone: "local",
+    label: "本地服务",
+    detail: `实机关闭 · ${liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定"}`,
+  };
 }
 
 function hasRenderableSchemes(modeId) {

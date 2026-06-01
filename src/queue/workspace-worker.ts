@@ -18,6 +18,7 @@ import {
   type CredentialResolver,
   type ProviderCredentialRef,
 } from "../providers/credentials";
+import { evaluateLiveExecutionGate, LiveExecutionSafetyInputSchema } from "./live-execution-gate";
 import { getProviderManifest } from "../providers/manifests";
 import type { ProviderAdapterRegistry } from "../providers/executor";
 import type { LocalResultFileStore, ResultStoredFileMetadata } from "../results/file-store";
@@ -45,6 +46,9 @@ export const WorkspaceQueueWorkerInputSchema = z.object({
   workspaceId: z.string().min(1),
   jobId: z.string().min(1),
   archiveResults: z.boolean().default(true),
+  liveExecution: LiveExecutionSafetyInputSchema.extend({
+    enabled: z.boolean().default(false),
+  }).optional(),
 });
 
 export const WorkspaceQueueWorkerResultSchema = z.object({
@@ -66,6 +70,7 @@ export type WorkspaceQueueWorkerOptions = {
   providerRegistry?: ProviderAdapterRegistry;
   resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
   useMockCredentials?: boolean;
+  requireLiveExecutionGate?: boolean;
 };
 
 function cloneSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
@@ -521,6 +526,33 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
         || (!useMockCredentials
           ? undefined
           : mockResolverForStoredConfigs(snapshot.providerConfigs) || mockResolverForStoredConfig(storedConfig));
+      if (options.requireLiveExecutionGate) {
+        const liveExecution = parsed.liveExecution || {
+          enabled: false,
+          estimatedCost: summarizeQueue(initialPlan).estimatedCost || 0,
+          maxAcceptedCost: 0,
+          confirmations: {
+            liveRun: false,
+            providerCost: false,
+            externalProvider: false,
+            resultStorage: false,
+          },
+        };
+        const gate = evaluateLiveExecutionGate({
+          providerId: initialPlan.job.providerId,
+          enabled: liveExecution.enabled,
+          estimatedCost: liveExecution.estimatedCost,
+          maxAcceptedCost: liveExecution.maxAcceptedCost,
+          confirmations: liveExecution.confirmations,
+          credentialReady: Boolean(credentialRef && credentialResolver),
+          transportReady: Boolean(options.providerRegistry),
+          resultStorageReady: Boolean(options.resultFileStore),
+        });
+        if (!gate.allowed) {
+          const blockerCodes = gate.blockers.map((blocker) => blocker.code).join(", ");
+          throw new Error(`Live provider execution blocked by safety gate: ${blockerCodes || gate.message}`);
+        }
+      }
       const runResult = await runMockQueuePlan(initialPlan, {
         snapshot,
         storedConfig,

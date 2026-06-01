@@ -29,6 +29,7 @@ for (const token of [
   "mapProviderRequest",
   "createQueuePlan",
   "runQueuePlan",
+  "liveExecution",
   "loadWorkspaceSnapshot",
   "fetchImpl",
 ]) {
@@ -191,7 +192,18 @@ async function runRuntimeCheck() {
     },
   };
 
-  const flow = await runHttpGenerationServiceFlow(submission, { fetchImpl: fakeFetch });
+  const liveExecution = {
+    enabled: true,
+    estimatedCost: 0.2,
+    maxAcceptedCost: 1,
+    confirmations: {
+      liveRun: true,
+      providerCost: true,
+      externalProvider: true,
+      resultStorage: true,
+    },
+  };
+  const flow = await runHttpGenerationServiceFlow(submission, { fetchImpl: fakeFetch, liveExecution });
   if (!flow.ok || flow.transport !== "http") issues.push("HTTP flow should return ok with transport=http");
   const expectedOrder = ["/snapshot", "/prompts", "/provider-requests", "/queue-plans", "/run"];
   expectedOrder.forEach((suffix, index) => {
@@ -199,6 +211,9 @@ async function runRuntimeCheck() {
   });
   if (calls.length !== 5) issues.push("HTTP generation service should use queue-run workspace payload without an extra final reload when available");
   if (calls.some((call) => call.method !== "POST")) issues.push("HTTP generation service should use POST for the normal generation flow");
+  if (JSON.stringify(calls.find((call) => call.url.endsWith("/run"))?.body?.liveExecution) !== JSON.stringify(liveExecution)) {
+    issues.push("HTTP flow should forward live execution gate payload into queue-run requests");
+  }
   if (flow.queueRun?.data?.resultCount !== 4) issues.push("HTTP flow should expose queue run result count");
   if (!flow.workspaceReload?.ok || flow.workspaceReload.data?.snapshot?.queuePlans?.[0]?.job?.id !== "job-http-check") {
     issues.push("HTTP flow should refresh the frontend workspace from the queue-run response when available");

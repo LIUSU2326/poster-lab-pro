@@ -8,6 +8,7 @@ const path = require("node:path");
 const APP_NAME = "Poster Lab Pro";
 const DEFAULT_PORT = 3000;
 const WORKSPACE_HEALTH_PATH = "/api/workspaces/workspace-pizza-kitchen";
+const SHELL_HEALTH_PATH = "/";
 const PACKAGED_ICON_PATH = path.join(process.resourcesPath || "", "poster-lab-pro.png");
 
 let mainWindow = null;
@@ -152,11 +153,11 @@ function baseUrlForPort(port) {
   return `http://127.0.0.1:${port}`;
 }
 
-function requestOk(url, timeoutMs = 1200) {
+function requestOk(url, timeoutMs = 1200, statusOk = (statusCode) => statusCode >= 200 && statusCode < 500) {
   return new Promise((resolve) => {
     const request = http.get(url, { timeout: timeoutMs }, (response) => {
       response.resume();
-      resolve(response.statusCode >= 200 && response.statusCode < 500);
+      resolve(statusOk(response.statusCode || 0));
     });
     request.on("timeout", () => {
       request.destroy();
@@ -191,7 +192,7 @@ async function resolveNextTarget() {
     const port = requestedPort + offset;
     const url = baseUrlForPort(port);
     const healthUrl = `${url}${WORKSPACE_HEALTH_PATH}`;
-    if (canReuseExistingService && await requestOk(healthUrl, 500)) {
+    if (canReuseExistingService && await requestOk(healthUrl, 500, (statusCode) => statusCode >= 200 && statusCode < 300)) {
       return { url, port, shouldSpawn: false };
     }
     if (await portAvailable(port)) {
@@ -259,11 +260,24 @@ function spawnNextService(port, extraEnv = {}) {
 
 async function waitForNext(url) {
   const healthUrl = `${url}${WORKSPACE_HEALTH_PATH}`;
+  const shellUrl = `${url}${SHELL_HEALTH_PATH}`;
   for (let attempt = 0; attempt < 80; attempt += 1) {
-    if (await requestOk(healthUrl, 1000)) return;
+    const shellReady = await requestOk(shellUrl, 1000, (statusCode) => statusCode >= 200 && statusCode < 300);
+    const workspaceReady = await requestOk(healthUrl, 1000, (statusCode) => statusCode >= 200 && statusCode < 300);
+    if (shellReady && workspaceReady) return;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error("Timed out waiting for the local Next service.");
+}
+
+async function configureLocalSessionProxy() {
+  try {
+    await session.defaultSession.setProxy({
+      proxyBypassRules: "<local>;127.0.0.1;localhost;::1",
+    });
+  } catch (error) {
+    console.warn(`[desktop] Failed to configure local proxy bypass: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function createWindow(url) {
@@ -299,6 +313,22 @@ function createWindow(url) {
       event.preventDefault();
       shell.openExternal(targetUrl);
     }
+  });
+
+  let loadRetryCount = 0;
+  mainWindow.webContents.on("did-fail-load", (_event, _errorCode, _errorDescription, validatedUrl, isMainFrame) => {
+    if (!isMainFrame || !String(validatedUrl || "").startsWith(url) || loadRetryCount >= 6) return;
+    loadRetryCount += 1;
+    const retryDelayMs = 350 * loadRetryCount;
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.loadURL(url);
+      }
+    }, retryDelayMs);
+  });
+
+  mainWindow.webContents.on("did-finish-load", () => {
+    loadRetryCount = 0;
   });
 
   mainWindow.loadURL(url);
@@ -370,6 +400,7 @@ async function startDesktop() {
   const proxyEnv = target.shouldSpawn ? await resolveDesktopProxyEnvironment() : {};
   if (target.shouldSpawn) spawnNextService(target.port, proxyEnv);
   await waitForNext(target.url);
+  await configureLocalSessionProxy();
   createWindow(target.url);
 }
 

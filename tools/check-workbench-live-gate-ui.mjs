@@ -43,6 +43,8 @@ for (const token of [
   "data-live-toggle",
   "data-live-cost-cap",
   "setLiveGateValue",
+  "generationActionRequiresLiveGate",
+  "live_gate_blocked",
 ]) {
   if (!eventsSource.includes(token)) issues.push(`events.js: missing live gate interaction token ${token}`);
 }
@@ -67,7 +69,8 @@ for (const [name, source, tokens] of [
   ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "toggle-task", "costSummaryLabel"]],
   ["inspector.js", inspectorSource, ["live-gate-inspector", "实机安全闸"]],
   ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关"]],
-  ["center-board.js", centerBoardSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
+  ["center-board.js", centerBoardSource, ["getLiveGateViewModel", "liveBlocked", "先通过实机安全闸"]],
+  ["task-chrome.js", taskChromeSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
   ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "data-live-toggle", "data-live-cost-cap", "实机安全闸", "预计数量"]],
   ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim", "live-gate-metric small"]],
 ]) {

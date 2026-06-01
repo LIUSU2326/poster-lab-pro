@@ -36,6 +36,9 @@ for (const token of [
   "createMemoryCredentialResolver",
   "credentialResolver",
   "credentialRefs",
+  "requireLiveExecutionGate",
+  "evaluateLiveExecutionGate",
+  "Live provider execution blocked by safety gate",
   "StorageRepository",
   "mergeQueuePlans",
   "mergeQueueSummaries",
@@ -212,6 +215,24 @@ async function runRuntimeCheck() {
     }
     if (!loaded.snapshot.queueSummaries.some((summary) => summary.jobId === plan.job.id && summary.progress === 100)) {
       issues.push("saved workspace should include updated queue summary");
+    }
+
+    const gatedRepository = storage.createMemoryDraftRepository([snapshot]);
+    const gatedWorker = queue.createWorkspaceQueueWorker({
+      repository: gatedRepository,
+      requireLiveExecutionGate: true,
+    });
+    let gatedBlocked = false;
+    try {
+      await gatedWorker.run({
+        workspaceId: snapshot.metadata.workspaceId,
+        jobId: plan.job.id,
+      });
+    } catch (error) {
+      gatedBlocked = String(error instanceof Error ? error.message : error).includes("Live provider execution blocked by safety gate");
+    }
+    if (!gatedBlocked) {
+      issues.push("queue worker should block live provider runs unless the safety gate payload is allowed");
     }
 
     const mixedProviderPlan = queue.createBatchQueuePlan({

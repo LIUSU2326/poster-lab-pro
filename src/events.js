@@ -6,6 +6,8 @@ import { deleteResultForWorkbench } from './result-management-client.js';
 import { simulateWorkbenchAssetUpload } from './asset-library-client.js';
 import { clearGeneratedSchemesForWorkbench, deleteGeneratedSchemeForWorkbench, resetGeneratedSchemeForWorkbench } from './scheme-management-client.js';
 import { getArchiveRows } from './data/workspace-adapters.js';
+import { modeSpecs } from './data/modes.js';
+import { getLiveGateViewModel } from './data/live-gate-view-model.js';
 import { setGenerationFormChoice, updateGenerationFormField } from './generation-form-runtime.js';
 import {
   loadProviderCredentialStatusForWorkbench,
@@ -149,6 +151,19 @@ async function handleActionControl(control, event, render) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   const action = control.dataset.action;
+  if (generationActionRequiresLiveGate(action)) {
+    const gate = getBlockedGenerationLiveGate();
+    if (gate) {
+      state.submission = createLocalServiceError(
+        "live_gate_blocked",
+        gate.blockers?.[0]?.message || "请先开启并通过实机安全闸，再调用真实模型服务。",
+      );
+      state.taskOpen = true;
+      state.settingsOpen = true;
+      render();
+      return;
+    }
+  }
   if (action === "toggle-theme") state.theme = state.theme === "light" ? "dark" : "light";
   if (action === "toggle-copy") state.copyVisible = !state.copyVisible;
   if (action === "toggle-task") {
@@ -584,6 +599,24 @@ async function handleActionControl(control, event, render) {
   }
   event.stopPropagation();
   render();
+}
+
+function generationActionRequiresLiveGate(action) {
+  return [
+    "generate-schemes",
+    "refresh-scheme",
+    "regenerate-result",
+    "submit-generation",
+    "retry-failed-images",
+    "confirm-generation-choice",
+  ].includes(action);
+}
+
+function getBlockedGenerationLiveGate() {
+  if (state.apiMode !== "http") return null;
+  const activeMode = modeSpecs[state.activeMode] || modeSpecs.poster;
+  const gate = getLiveGateViewModel(activeMode);
+  return gate.allowed ? null : gate;
 }
 
 function hasExistingPosterProduction() {

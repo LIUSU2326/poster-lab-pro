@@ -2622,6 +2622,14 @@ input[type="range"] {
   line-height: 1.5;
 }
 
+.result-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .scheme-card {
   position: relative;
   display: grid;
@@ -7886,6 +7894,14 @@ select {
   line-height: 1.55;
 }
 
+.scheme-plan-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .scheme-plan-empty button {
   min-height: 34px;
   margin-top: 4px;
@@ -10074,7 +10090,7 @@ select:focus-visible,
 
 /* 2026-05-28 scheme-first flow and card cleanup. */
 .scheme-plan-empty {
-  display: none !important;
+  display: grid !important;
 }
 
 .top-actions .generate-primary:disabled,
@@ -12622,6 +12638,11 @@ select:focus-visible,
 .top-actions .run-mode-chip.live {
   border-color: color-mix(in oklch, var(--warning), transparent 54%) !important;
   background: color-mix(in oklch, var(--warning-soft), var(--panel) 78%) !important;
+}
+
+.top-actions .run-mode-chip.local {
+  border-color: color-mix(in oklch, var(--accent), transparent 64%) !important;
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 78%) !important;
 }
 
 .top-actions .run-mode-chip.test {

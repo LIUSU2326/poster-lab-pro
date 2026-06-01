@@ -11,6 +11,7 @@ import { saveLocalSubmissionDraft } from './local-draft-store.js';
 import { runStaticGenerationServiceFlow } from './static-local-api-service.js';
 import { runHttpGenerationServiceFlow } from './http-generation-service.js';
 import { applyGenerationFormValuesToSnapshot, getActiveGenerationFormValues } from './generation-form-runtime.js';
+import { getLiveGateViewModel } from './data/live-gate-view-model.js';
 
 const generatedBatchSchemePrefix = "generated-poster";
 
@@ -44,6 +45,42 @@ function issue(path, message) {
 
 function shouldUseHttpServiceFlow() {
   return state.apiMode === "http";
+}
+
+function createLiveExecutionPayload(activeMode) {
+  const gate = getLiveGateViewModel(activeMode);
+  return {
+    gate,
+    liveExecution: {
+      enabled: gate.allowed,
+      estimatedCost: gate.estimatedCost,
+      maxAcceptedCost: gate.maxAcceptedCost,
+      confirmations: {
+        liveRun: Boolean(state.liveGate.confirmations.liveRun),
+        providerCost: Boolean(state.liveGate.confirmations.providerCost),
+        externalProvider: Boolean(state.liveGate.confirmations.externalProvider),
+        resultStorage: Boolean(state.liveGate.confirmations.resultStorage),
+      },
+    },
+  };
+}
+
+function createLiveGateBlockedServiceFlow(gate) {
+  return {
+    ok: false,
+    reason: "live_gate_blocked",
+    transport: "http",
+    error: {
+      name: "LiveGateBlocked",
+      message: gate.blockers?.[0]?.message || "请先开启并通过实机安全闸，再调用真实模型服务。",
+      details: {
+        blockers: gate.blockers || [],
+        stateLabel: gate.stateLabel,
+        estimatedCost: gate.estimatedCost,
+        maxAcceptedCost: gate.maxAcceptedCost,
+      },
+    },
+  };
 }
 
 function parseAssetRequirement(expression) {
@@ -540,6 +577,7 @@ export async function submitGenerationDraft(options = {}) {
   const selected = snapshot.schemes.find((scheme) => scheme.id === selectedId) || getSelectedScheme();
   const activeMode = getActiveMode();
   const selectedSchemeId = selected?.id || selectedId;
+  const liveExecutionPayload = createLiveExecutionPayload(activeMode);
   if (activeMode.id === "poster" && selectedSchemeId) state.selectedScheme = selectedSchemeId;
 
   const submission = {
@@ -561,9 +599,23 @@ export async function submitGenerationDraft(options = {}) {
   state.submission = submission;
 
   if (validation.ok) {
+    if (shouldUseHttpServiceFlow() && !liveExecutionPayload.gate.allowed) {
+      const serviceFlow = createLiveGateBlockedServiceFlow(liveExecutionPayload.gate);
+      state.submission = {
+        ...submission,
+        status: "service-error",
+        transport: "http",
+        serviceFlow,
+      };
+      saveLocalSubmissionDraft(state.submission);
+      return state.submission;
+    }
     try {
       const serviceFlow = shouldUseHttpServiceFlow()
-        ? await runHttpGenerationServiceFlow(submission, options)
+        ? await runHttpGenerationServiceFlow(submission, {
+          ...options,
+          liveExecution: liveExecutionPayload.liveExecution,
+        })
         : await runStaticGenerationServiceFlow(submission);
       if (serviceFlow.workspaceReload?.ok && serviceFlow.workspaceReload.data?.snapshot) {
         setRuntimeWorkspaceSnapshot(serviceFlow.workspaceReload.data.snapshot, serviceFlow.transport || "http");

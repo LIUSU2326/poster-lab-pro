@@ -88,6 +88,7 @@ export type LocalApiServiceOptions = {
   credentialVault?: EncryptedProviderCredentialVault;
   providerRegistry?: ProviderAdapterRegistry;
   resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl" | "deleteStoredFile">;
+  requireLiveExecutionGate?: boolean;
 };
 
 export type LocalApiService = {
@@ -309,6 +310,7 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
       : {}),
     ...(options.providerRegistry ? { providerRegistry: options.providerRegistry } : {}),
     ...(options.resultFileStore ? { resultFileStore: options.resultFileStore } : {}),
+    ...(options.requireLiveExecutionGate ? { requireLiveExecutionGate: true } : {}),
   });
 
   return {

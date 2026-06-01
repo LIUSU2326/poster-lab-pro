@@ -7,6 +7,7 @@ import {
   getWorkspaceSnapshotSummary,
 } from '../data/workspace-adapters.js';
 import { getBatchSchemeGenerationStatus } from '../data/generation-activity.js';
+import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
 import { getActiveGenerationFormValues } from '../generation-form-runtime.js';
 import { state } from '../state.js';
 
@@ -93,6 +94,10 @@ export function renderConfigPanel(activeMode) {
   const direction = getDirectionPayload(activeMode.id);
   const outputSizes = getOutputSizes(activeMode.id, activeMode.outputSizes);
   const briefDescription = projectBrief.gameDescription || project.description || copy.description;
+  const liveGate = getLiveGateViewModel(activeMode);
+  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
+  const generationDisabled = batchStatus.active || liveBlocked;
+  const generationTitle = liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "";
 
   return `
     <aside class="config-panel" aria-label="生产配置">
@@ -213,7 +218,13 @@ export function renderConfigPanel(activeMode) {
       </div>
 
       <div class="config-action">
-        <button class="primary-button wide ${batchStatus.active ? "loading has-progress" : ""}" type="button" data-action="generate-schemes" ${batchStatus.active ? "disabled" : ""}>
+        <button
+          class="primary-button wide ${batchStatus.active ? "loading has-progress" : ""}"
+          type="button"
+          data-action="generate-schemes"
+          title="${escapeAttribute(generationTitle)}"
+          ${generationDisabled ? "disabled" : ""}
+        >
           ${batchStatus.active ? `<span class="button-spinner" aria-hidden="true"></span><span>方案生成中</span><strong>${batchStatus.completed}/${batchStatus.total}</strong>` : copy.cta}
         </button>
         ${batchStatus.active ? `

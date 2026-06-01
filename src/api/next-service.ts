@@ -159,6 +159,7 @@ function createNextApiSingleton(): NextApiSingleton {
       credentialVault,
       providerRegistry: createQueueProviderRegistry(fetch),
       resultFileStore,
+      requireLiveExecutionGate: true,
     }),
     providerDiagnosticService: createProviderDiagnosticService({
       repository,

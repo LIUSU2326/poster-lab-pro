@@ -8,7 +8,7 @@
 } from '../state.js';
 import { renderArchiveBoard } from './archive-board.js';
 import { resolveResultOperationRoute } from '../provider-capabilities.js';
-import { getManualLiveTestViewModel } from '../data/live-gate-view-model.js';
+import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
 import { getImageGenerationStatus, getSchemeGenerationStatus } from '../data/generation-activity.js';
 import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/workspace-adapters.js';
 
@@ -60,7 +60,32 @@ function isRealGeneratedResult(result) {
 }
 
 function renderSchemeBoardEmpty(activeMode) {
-  return "";
+  const modeLabel = getModeLabel(activeMode.id);
+  const modelReady = requiredModelRoutesReady();
+  const liveGate = getLiveGateViewModel(activeMode);
+  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
+  return `
+    <div class="scheme-plan-empty" role="status">
+      <span>${escapeHtml(getModeAbbrev(activeMode.id))}</span>
+      <strong>还没有可展示的${escapeHtml(modeLabel)}方案</strong>
+      <small>${escapeHtml(modelReady
+        ? liveBlocked
+          ? "左侧配置已就绪，但真实模型调用需要先通过实机安全闸。"
+          : "左侧配置已经就绪。先生成一组方案，再选择具体方案出图。"
+        : "先检查模型与 Key，再生成方案批次。已有上传素材会作为视觉参考进入方案与生图链路。"
+      )}</small>
+      <div class="scheme-plan-empty-actions">
+        <button
+          class="primary-button"
+          type="button"
+          data-action="generate-schemes"
+          title="${escapeAttribute(liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "")}"
+          ${liveBlocked ? "disabled" : ""}
+        >生成方案批次</button>
+        ${modelReady ? "" : `<button type="button" data-action="open-settings">检查模型与 Key</button>`}
+      </div>
+    </div>
+  `;
 }
 
 function requiredModelRoutesReady() {
@@ -232,19 +257,32 @@ function getProjectLibraryFallbackAssets() {
 }
 
 function renderResultEmpty(activeMode) {
-  const manual = getManualLiveTestViewModel(activeMode);
+  const modeLabel = getModeLabel(activeMode.id);
+  const hasSchemes = getModeSchemes().some((scheme) => !isSeedWorkspaceScheme(activeMode, scheme));
+  const liveGate = getLiveGateViewModel(activeMode);
+  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
+  const helper = hasSchemes
+    ? liveBlocked
+      ? "已有方案可用于出图。先通过实机安全闸，再调用真实模型服务生成图片。"
+      : "已有方案可用于出图。继续生成后，这里会显示图片、尺寸、模型输出和下载操作。"
+    : liveBlocked
+      ? `还没有${modeLabel}方案。先通过实机安全闸，再生成方案与图片。`
+      : `还没有${modeLabel}方案。可以直接生成${modeLabel}，系统会先出方案再进入图片渲染。`;
   return `
     <div class="result-empty">
       <span>${getModeAbbrev(activeMode.id)}</span>
       <strong>还没有生成素材</strong>
-      <small>${escapeHtml(manual.disabled ? manual.firstBlocker || "请先完成实机安全闸。" : "运行一次实机测试或批量任务后，这里会显示图片、尺寸、模型输出和下载操作。")}</small>
-      <button
-        class="primary-button"
-        type="button"
-        data-action="run-manual-live-test"
-        title="${escapeHtml(manual.disabled ? manual.firstBlocker : manual.label)}"
-        ${manual.disabled ? "disabled" : ""}
-      >${escapeHtml(manual.label)}</button>
+      <small>${escapeHtml(helper)}</small>
+      <div class="result-empty-actions">
+        <button
+          class="primary-button"
+          type="button"
+          data-action="submit-generation"
+          title="${escapeAttribute(liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "")}"
+          ${liveBlocked ? "disabled" : ""}
+        >生成${escapeHtml(modeLabel)}</button>
+        <button type="button" data-view="schemes">${hasSchemes ? "查看已有方案" : "回到方案"}</button>
+      </div>
     </div>
   `;
 }
@@ -878,6 +916,16 @@ function localizeSchemePrompt(value) {
     return "该提示词块作为项目上下文保存，不会由界面重新生成。";
   }
   return text.replace(/^Storage:\s*/i, "存档提示词：");
+}
+
+function getModeLabel(modeId) {
+  return {
+    poster: "海报",
+    collab: "联名",
+    announcement: "公告",
+    logo: "标识",
+    icon: "图标",
+  }[modeId] || "批次";
 }
 
 function getModeAbbrev(modeId) {
