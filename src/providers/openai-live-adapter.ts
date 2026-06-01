@@ -91,6 +91,39 @@ function imageModel(request: ImageGenerationRequest, config: ProviderConfigForm)
   return request.model || config.modelSlots.image || config.defaultModel || "gpt-image-2";
 }
 
+function modeQualityInstruction(request: ImageGenerationRequest): string {
+  switch (request.context.mode) {
+    case "icon":
+      return [
+        "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
+        "Composition bar: perfect 1:1 square, full-bleed icon framing, no text, no logo lettering, no captions, no UI copy, and no poster scene complexity.",
+      ].join(" ");
+    case "logo":
+      return [
+        "Quality bar: premium game logo/mark system, readable wordmark or emblem construction, crisp bevel/material finish, clean silhouette, and brand-safe typography.",
+        "Composition bar: logo/wordmark is primary on a clean solid-color background when requested; props, characters, or uploaded logo references may influence motifs but must not become a poster scene.",
+        "Logo text safety: do not invent fake replacement lettering for uploaded logo references; preserve exact spelling only when reliable, otherwise design a clean copy-safe mark or blank wordmark treatment.",
+      ].join(" ");
+    case "announcement":
+      return [
+        "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, and polished UI/event art direction.",
+        "Composition bar: uploaded subjects support the announcement surface without covering headline or key copy.",
+      ].join(" ");
+    case "collab":
+      return [
+        "Quality bar: premium collaboration campaign visual with two identities kept separate but unified by shared lighting, materials, scene, and interaction story.",
+        "Composition bar: dual-character and dual-logo balance without merging identities or creating fake hybrid marks.",
+      ].join(" ");
+    case "poster":
+    default:
+      return [
+        "Quality bar: premium game campaign key visual polish adapted to the active art style.",
+        "Use cinematic lighting, layered foreground/midground/background depth, refined material detail, crisp focal hierarchy, polished color grading, and campaign-ready logo/slogan safe areas.",
+        "Poster integrated KV style lock: generate a stylized illustrated game world matching the uploaded character art direction by description. Use rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant appetizing colors, fantasy edible-world terrain, expressive character acting, and a clear hero-vs-BOSS story moment. Use the full requested canvas as artwork. Do not use photorealistic pizza macro photography, realistic 3D food render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames.",
+      ].join(" ");
+  }
+}
+
 function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterMode = request.context.mode === "poster";
   const assetInstruction = request.assets.length
@@ -125,11 +158,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
     ? `Avoid: ${request.negativePrompt.trim()}`
     : "";
   const qualityInstruction = [
-    "Quality bar: premium game key art / AAA-level marketing poster polish adapted to the active art style.",
-    "Use cinematic lighting, layered foreground/midground/background depth, refined material detail, crisp focal hierarchy, polished color grading, and campaign-ready logo/slogan safe areas.",
-    hasPosterMode
-      ? "Poster integrated KV style lock: generate a stylized illustrated game world matching the uploaded character art direction by description. Use rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant appetizing colors, fantasy edible-world terrain, expressive character acting, and a clear hero-vs-BOSS story moment. Use the full requested canvas as artwork. Do not use photorealistic pizza macro photography, realistic 3D food render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames."
-      : "",
+    modeQualityInstruction(request),
     "Avoid flat collage, cheap clip-art, generic replacement characters, duplicated asset copies, and conflicting photorealistic backgrounds.",
   ].join(" ");
   return [request.prompt, qualityInstruction, assetInstruction, negativeInstruction].filter(Boolean).join("\n\n");

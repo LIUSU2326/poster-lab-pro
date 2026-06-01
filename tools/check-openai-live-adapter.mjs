@@ -36,6 +36,10 @@ for (const token of [
   "Bearer",
   "b64_json",
   "data:image/png;base64",
+  "modeQualityInstruction",
+  "brand-safe typography",
+  "no poster scene complexity",
+  "Logo text safety",
 ]) {
   if (!adapter.includes(token)) issues.push(`openai-live-adapter.ts: missing ${token}`);
 }
@@ -216,6 +220,44 @@ async function runRuntimeCheck() {
     }
     if (!String(capturedRequest?.body?.prompt || "").includes("Avoid: low quality typography")) {
       issues.push("OpenAI adapter should append negative prompt guidance to text prompt");
+    }
+
+    let capturedLogoRequest;
+    const logoAdapter = providers.createOpenAILiveImageAdapter({
+      transport: async (request) => {
+        capturedLogoRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: { data: [{ b64_json: "ZmFrZS1sb2dvLWJ5dGVz" }] },
+        };
+      },
+    });
+    const logoRequest = providers.ImageGenerationRequestSchema.parse({
+      ...imageRequest,
+      context: {
+        ...imageRequest.context,
+        mode: "logo",
+      },
+      schemeId: "scheme-logo-01",
+      prompt: "Create a readable game logo wordmark.",
+      negativePrompt: "fake lettering",
+      assets: [
+        {
+          id: "asset-uploaded-logo",
+          role: "gameLogo",
+          description: "semanticRole=brandLogo; fusion=brand continuity reference",
+        },
+      ],
+      platformPreset: "custom",
+      aspectRatio: "1:1",
+      width: 1024,
+      height: 1024,
+    });
+    const logoResult = await logoAdapter.generateImage(logoRequest, baseConfig);
+    const logoPrompt = String(capturedLogoRequest?.body?.prompt || "");
+    if (!logoResult.ok || !logoPrompt.includes("logo/wordmark is primary") || !logoPrompt.includes("do not invent fake replacement lettering")) {
+      issues.push("OpenAI logo prompt should use logo-specific quality and fake-lettering safety rules");
     }
 
     let missingKeyTransportCalls = 0;
