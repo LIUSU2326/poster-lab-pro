@@ -38,6 +38,8 @@ for (const token of [
   "AssetListApiRequestSchema",
   "ResultDownloadDescribeApiRequestSchema",
   "ResultDownloadDescribeApiResponseSchema",
+  "ResultDeleteApiRequestSchema",
+  "ResultDeleteApiResponseSchema",
   "apiRouteContracts",
   "getApiRouteContract",
 ]) {
@@ -61,6 +63,7 @@ for (const routeId of [
   "asset.record.commit",
   "asset.library.list",
   "result.download.describe",
+  "result.delete",
 ]) {
   if (!contracts.includes(routeId)) issues.push(`contracts.ts: missing route id ${routeId}`);
 }

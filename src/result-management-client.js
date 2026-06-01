@@ -39,6 +39,29 @@ async function postJson(path, payload, options = {}) {
   }
 }
 
+async function deleteJson(path, options = {}) {
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  if (typeof fetchImpl !== "function") {
+    throw new Error("Workspace result deletion requires fetch.");
+  }
+
+  const response = await fetchImpl(path, {
+    method: "DELETE",
+  });
+
+  try {
+    return await response.json();
+  } catch {
+    return {
+      ok: false,
+      error: {
+        code: "bad_response",
+        message: "Result delete route returned an unreadable response.",
+      },
+    };
+  }
+}
+
 function touchSnapshot(snapshot) {
   const updatedAt = nowIso();
   return {
@@ -96,6 +119,23 @@ export async function deleteResultForWorkbench(input = {}, options = {}) {
     return {
       ok: false,
       error: { message: "找不到要删除的结果。" },
+    };
+  }
+
+  const usesHttp = state.workspaceLoadStatus === "http" || state.apiMode === "http";
+  if (usesHttp) {
+    const workspaceId = snapshot.metadata.workspaceId;
+    const envelope = await deleteJson(
+      `/api/workspaces/${encodeSegment(workspaceId)}/results/${encodeSegment(resultId)}`,
+      options,
+    );
+    if (envelope.ok) {
+      const nextSnapshot = envelope.data?.snapshot || touchSnapshot(removeResultReferences(snapshot, [resultId]));
+      applySnapshot(nextSnapshot, "http");
+    }
+    return {
+      ...envelope,
+      transport: "http",
     };
   }
 

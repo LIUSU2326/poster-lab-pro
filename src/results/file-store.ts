@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
@@ -37,6 +37,7 @@ export type LocalResultFileStoreOptions = {
 export type LocalResultFileStore = {
   storeDataUrl(input: ResultFileStoreDataUrlInput): Promise<ResultStoredFileMetadata>;
   readStoredFile(storageKey: string): Promise<ResultStoredFileRead>;
+  deleteStoredFile(storageKey: string): Promise<boolean>;
   resolvePath(storageKey: string): string;
 };
 
@@ -156,6 +157,18 @@ export function createLocalResultFileStore(options: LocalResultFileStoreOptions)
         storageKey,
         bytes,
       });
+    },
+
+    async deleteStoredFile(storageKey) {
+      const targetPath = assertSafePath(rootDir, storageKey);
+      try {
+        await stat(targetPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+        throw error;
+      }
+      await rm(targetPath, { force: true });
+      return true;
     },
 
     resolvePath(storageKey) {

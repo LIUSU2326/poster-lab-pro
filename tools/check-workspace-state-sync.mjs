@@ -144,9 +144,48 @@ async function run() {
     queueSummaries: [],
   };
 
-  const fakeFetch = async (url, init) => {
+  const fakeFetch = async (url, init = {}) => {
+    const method = init.method || "GET";
     const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
-    if (String(url).endsWith(`/api/workspaces/${serverSnapshot.metadata.workspaceId}/snapshot`)) {
+    if (method === "DELETE" && String(url).endsWith(`/api/workspaces/${serverSnapshot.metadata.workspaceId}/results/${resultA.id}`)) {
+      const deletedAt = "2026-06-01T00:10:00.000Z";
+      serverSnapshot = {
+        ...serverSnapshot,
+        results: serverSnapshot.results.filter((result) => result.id !== resultA.id),
+        archiveRows: serverSnapshot.archiveRows.filter((row) => row.resultAssetId !== resultA.id),
+        metadata: {
+          ...serverSnapshot.metadata,
+          revision: serverSnapshot.metadata.revision + 1,
+          updatedAt: deletedAt,
+        },
+      };
+      return {
+        async json() {
+          return {
+            ok: true,
+            data: {
+              summary: {
+                workspaceId: serverSnapshot.metadata.workspaceId,
+                projectId: serverSnapshot.project.id,
+                projectName: serverSnapshot.project.name,
+                activeMode: serverSnapshot.activeMode,
+                revision: serverSnapshot.metadata.revision,
+                assetCount: serverSnapshot.assets.length,
+                schemeCount: serverSnapshot.schemes.length,
+                resultCount: serverSnapshot.results.length,
+                runningQueueCount: 0,
+                updatedAt: serverSnapshot.metadata.updatedAt,
+              },
+              snapshot: serverSnapshot,
+              deletedResultId: resultA.id,
+              deletedArchiveRowCount: 1,
+              deletedFile: true,
+            },
+          };
+        },
+      };
+    }
+    if (method === "POST" && String(url).endsWith(`/api/workspaces/${serverSnapshot.metadata.workspaceId}/snapshot`)) {
       serverSnapshot = body?.snapshot || serverSnapshot;
       return {
         async json() {

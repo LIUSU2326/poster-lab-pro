@@ -12,7 +12,7 @@ import { summarizeQueue } from "../queue/contracts";
 import { createAssetLibraryService } from "../assets/library-service";
 import { createWorkspaceQueueWorker } from "../queue/workspace-worker";
 import { createResultDownloadDescriptor } from "../results/download-descriptor";
-import type { LocalResultFileStore } from "../results/file-store";
+import { ResultStoredFileMetadataSchema, type LocalResultFileStore } from "../results/file-store";
 import {
   createMemoryDraftRepository,
   type StorageRepository,
@@ -42,6 +42,8 @@ import {
   QueuePlanCreateApiResponseSchema,
   QueuePlanRunApiRequestSchema,
   QueuePlanRunApiResponseSchema,
+  ResultDeleteApiRequestSchema,
+  ResultDeleteApiResponseSchema,
   ResultDownloadDescribeApiRequestSchema,
   ResultDownloadDescribeApiResponseSchema,
   WorkspaceSnapshotLoadRequestSchema,
@@ -71,6 +73,8 @@ import {
   type QueuePlanCreateApiResponse,
   type QueuePlanRunApiRequest,
   type QueuePlanRunApiResponse,
+  type ResultDeleteApiRequest,
+  type ResultDeleteApiResponse,
   type ResultDownloadDescribeApiRequest,
   type ResultDownloadDescribeApiResponse,
   type WorkspaceSnapshotLoadRequest,
@@ -83,7 +87,7 @@ export type LocalApiServiceOptions = {
   repository?: StorageRepository;
   credentialVault?: EncryptedProviderCredentialVault;
   providerRegistry?: ProviderAdapterRegistry;
-  resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
+  resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl" | "deleteStoredFile">;
 };
 
 export type LocalApiService = {
@@ -100,6 +104,7 @@ export type LocalApiService = {
   commitAssetRecord(request: AssetCommitApiRequest): Promise<AssetCommitApiResponse>;
   listWorkspaceAssets(request: AssetListApiRequest): Promise<AssetListApiResponse>;
   describeResultDownload(request: ResultDownloadDescribeApiRequest): Promise<ResultDownloadDescribeApiResponse>;
+  deleteResult(request: ResultDeleteApiRequest): Promise<ResultDeleteApiResponse>;
 };
 
 let traceSequence = 0;
@@ -180,6 +185,12 @@ function workspaceIdFromUnknown(request: unknown): string | undefined {
   if (!request || typeof request !== "object") return undefined;
   const candidate = (request as { workspaceId?: unknown }).workspaceId;
   return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
+}
+
+function resultFileMetadataFromUnknown(value: unknown): { storageKey: string } | null {
+  if (!value || typeof value !== "object") return null;
+  const parsed = ResultStoredFileMetadataSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 async function updateProviderCredentialMirror(input: {
@@ -702,6 +713,72 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
       } catch (error) {
         const workspaceId = workspaceIdFromUnknown(request);
         return ResultDownloadDescribeApiResponseSchema.parse(
+          failureFromError(error, {
+            ...(workspaceId ? { workspaceId } : {}),
+          }),
+        );
+      }
+    },
+
+    async deleteResult(request) {
+      try {
+        const parsed = ResultDeleteApiRequestSchema.parse(request);
+        const loaded = await repository.loadSnapshot(parsed.workspaceId);
+
+        if (!loaded.ok) {
+          return ResultDeleteApiResponseSchema.parse(storageLoadFailure(loaded, parsed.workspaceId));
+        }
+
+        const result = loaded.snapshot.results.find((candidate) => candidate.id === parsed.resultId);
+        if (!result) {
+          return ResultDeleteApiResponseSchema.parse(
+            createFailure({
+              code: "not_found",
+              workspaceId: parsed.workspaceId,
+              revision: loaded.snapshot.metadata.revision,
+              message: `Result ${parsed.resultId} was not found.`,
+            }),
+          );
+        }
+
+        const resultFile = resultFileMetadataFromUnknown(result.metadata?.resultFile);
+        let deletedFile = false;
+        if (resultFile?.storageKey && options.resultFileStore?.deleteStoredFile) {
+          deletedFile = await options.resultFileStore.deleteStoredFile(resultFile.storageKey);
+        }
+
+        const updatedAt = new Date().toISOString();
+        const nextSnapshot = {
+          ...loaded.snapshot,
+          results: loaded.snapshot.results.filter((candidate) => candidate.id !== parsed.resultId),
+          archiveRows: loaded.snapshot.archiveRows.filter((row) => row.resultAssetId !== parsed.resultId),
+          metadata: {
+            ...loaded.snapshot.metadata,
+            revision: loaded.snapshot.metadata.revision + 1,
+            updatedAt,
+          },
+        };
+        const deletedArchiveRowCount = loaded.snapshot.archiveRows.length - nextSnapshot.archiveRows.length;
+        const saved = await repository.saveSnapshot(nextSnapshot);
+
+        return ResultDeleteApiResponseSchema.parse({
+          ok: true,
+          data: {
+            summary: saved.snapshot,
+            snapshot: nextSnapshot,
+            deletedResultId: parsed.resultId,
+            deletedArchiveRowCount,
+            deletedFile,
+            ...(resultFile?.storageKey ? { deletedStorageKey: resultFile.storageKey } : {}),
+          },
+          meta: createApiMeta({
+            workspaceId: parsed.workspaceId,
+            revision: nextSnapshot.metadata.revision,
+          }),
+        });
+      } catch (error) {
+        const workspaceId = workspaceIdFromUnknown(request);
+        return ResultDeleteApiResponseSchema.parse(
           failureFromError(error, {
             ...(workspaceId ? { workspaceId } : {}),
           }),

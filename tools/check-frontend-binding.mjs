@@ -61,6 +61,9 @@ for (const token of [
 
 for (const token of [
   "deleteResultForWorkbench",
+  "deleteJson",
+  "DELETE",
+  "/results/",
   "removeResultReferences",
   "archiveRows",
   "setRuntimeWorkspaceSnapshot",

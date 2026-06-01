@@ -44,6 +44,7 @@ export const ApiRouteIdSchema = z.enum([
   "asset.record.commit",
   "asset.library.list",
   "result.download.describe",
+  "result.delete",
 ]);
 
 export const ApiErrorCodeSchema = z.enum([
@@ -326,6 +327,25 @@ export const ResultDownloadDescribeApiResponseSchema = z.union([
   ApiFailureEnvelopeSchema,
 ]);
 
+export const ResultDeleteApiRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+  resultId: z.string().min(1),
+});
+
+export const ResultDeleteApiResponseSchema = z.union([
+  apiSuccessEnvelope(
+    z.object({
+      summary: WorkspaceSnapshotSummarySchema,
+      snapshot: WorkspaceSnapshotSchema,
+      deletedResultId: z.string().min(1),
+      deletedArchiveRowCount: z.number().int().min(0),
+      deletedFile: z.boolean(),
+      deletedStorageKey: z.string().min(1).optional(),
+    }),
+  ),
+  ApiFailureEnvelopeSchema,
+]);
+
 export const ApiRouteMetadataSchema = z.object({
   routeId: ApiRouteIdSchema,
   method: ApiHttpMethodSchema,
@@ -370,6 +390,8 @@ export type AssetListApiRequest = z.infer<typeof AssetListApiRequestSchema>;
 export type AssetListApiResponse = z.infer<typeof AssetListApiResponseSchema>;
 export type ResultDownloadDescribeApiRequest = z.infer<typeof ResultDownloadDescribeApiRequestSchema>;
 export type ResultDownloadDescribeApiResponse = z.infer<typeof ResultDownloadDescribeApiResponseSchema>;
+export type ResultDeleteApiRequest = z.infer<typeof ResultDeleteApiRequestSchema>;
+export type ResultDeleteApiResponse = z.infer<typeof ResultDeleteApiResponseSchema>;
 
 export type ApiRouteContract = {
   routeId: ApiRouteId;
@@ -491,6 +513,13 @@ export const apiRouteContracts = {
     path: "/api/workspaces/:workspaceId/results/:resultId/download",
     requestSchema: ResultDownloadDescribeApiRequestSchema,
     responseSchema: ResultDownloadDescribeApiResponseSchema,
+  },
+  resultDelete: {
+    routeId: "result.delete",
+    method: "DELETE",
+    path: "/api/workspaces/:workspaceId/results/:resultId",
+    requestSchema: ResultDeleteApiRequestSchema,
+    responseSchema: ResultDeleteApiResponseSchema,
   },
 } satisfies Record<string, ApiRouteContract>;
 

@@ -26,6 +26,7 @@ const routes = {
   assetLibrary: read("app/api/workspaces/[workspaceId]/assets/route.ts"),
   assetUploadPlan: read("app/api/workspaces/[workspaceId]/assets/upload-plan/route.ts"),
   assetBinaryUpload: read("app/api/workspaces/[workspaceId]/assets/upload-binary/route.ts"),
+  resultDelete: read("app/api/workspaces/[workspaceId]/results/[resultId]/route.ts"),
   resultDownload: read("app/api/workspaces/[workspaceId]/results/[resultId]/download/route.ts"),
 };
 
@@ -55,6 +56,7 @@ const routeExpectations = [
   ["assetLibrary", "listWorkspaceAssets", "nextLocalApiService"],
   ["assetLibrary", "commitAssetRecord", "nextLocalApiService"],
   ["assetUploadPlan", "createAssetUploadPlan", "nextLocalApiService"],
+  ["resultDelete", "deleteResult", "nextLocalApiService"],
   ["resultDownload", "describeResultDownload", "nextLocalApiService"],
 ];
 

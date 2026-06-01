@@ -30,6 +30,7 @@ for (const token of [
   "createLocalResultFileStore",
   "storeDataUrl",
   "readStoredFile",
+  "deleteStoredFile",
   "resolvePath",
   "sha256-",
   "assertSafePath",
@@ -180,6 +181,22 @@ async function runRuntimeCheck() {
       issues.push("result file store should read back stored bytes");
     }
 
+    const resolvedPath = store.resolvePath(metadata.storageKey);
+    if (!path.resolve(resolvedPath).startsWith(path.resolve(resultRoot))) {
+      issues.push("result file store resolved path should stay under root");
+    }
+
+    const deletedFile = await store.deleteStoredFile(metadata.storageKey);
+    if (!deletedFile || existsSync(resolvedPath)) {
+      issues.push("result file store should delete stored files by storage key");
+    }
+    try {
+      await store.readStoredFile(metadata.storageKey);
+      issues.push("result file store should not read a deleted stored file");
+    } catch {
+      // Expected after deletion.
+    }
+
     const sharp = (await import("sharp")).default;
     const solidDataUrl = async (width, height, background) => {
       const bytes = await sharp({
@@ -223,11 +240,6 @@ async function runRuntimeCheck() {
     }
     if (overlayResult.overlays.length !== 3 || overlayResult.processing?.strategy !== "uploadedAssetOverlay") {
       issues.push("poster asset overlay processing should apply character, BOSS, and logo assets");
-    }
-
-    const resolvedPath = store.resolvePath(metadata.storageKey);
-    if (!path.resolve(resolvedPath).startsWith(path.resolve(resultRoot))) {
-      issues.push("result file store resolved path should stay under root");
     }
 
     const snapshot = storage.createMockWorkspaceSnapshot();
