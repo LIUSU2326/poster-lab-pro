@@ -21,12 +21,16 @@ import {
   posterIdentitySafeMotionRule,
   posterLogoSingleUseLock,
   posterKvArchitectureBriefSlots,
+  posterKvArchitectureDiversityRequirement,
   posterKvArchitectureDirective,
   posterKvArchitectureSlotSeed,
   posterKvAssetCountsFromAssets,
   posterKvBriefAugmentation,
+  posterSchemeBlueprintRequirement,
+  posterStaticSchemeLanguageBan,
   posterSubjectAccessoryStrictnessLock,
 } from "./poster-kv-architectures";
+import { sanitizePosterSchemeText } from "./poster-scheme-sanitizer";
 import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "../prompts/slogan-policy";
 
 const CHAT_COMPLETIONS_PATH = "/chat/completions";
@@ -221,7 +225,7 @@ function buildBriefMessages(request: BriefGenerationRequest) {
         "Do not write schemes that preserve the exact uploaded front-facing/static pose. Identity is locked, but posture should become a new performance: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact, landing dust, or foreshortened prop/tool angle.",
         "For uploaded BOSS/key-subject assets, plan a threat performance rather than a scaled-up sticker: lunge, brace, swing, burst through a doorway, land with dust, or react to impact while preserving the uploaded silhouette and signature details.",
         "Never make a scheme depend on static standee staging such as the hero simply standing on a divider and the BOSS merely pressing in from one side. Convert those ideas into a trailer moment with sprinting, blocking, sliding, impact, doorway/portal burst, or weapon/prop collision.",
-        "Forbidden static placeholder verbs when uploaded protagonists or BOSS references are present: do not write '[Game Character 1] stands', 'stands heroically', 'is placed', 'is located', '站在', '英勇地站在', '位于', or '从一侧压迫'. Use active verbs such as sprint, block, slide, leap, brace, collide, lunge, strike, burst, or recoil.",
+        posterStaticSchemeLanguageBan(),
         "When uploaded character/BOSS/logo assets are present, image prompts must use placeholders such as [Game Character 1], [Game Character 2], [Boss], and [Game Logo] instead of describing hair, face, clothes, gender, skin, colors, or exact logo lettering.",
         "If a placeholder needs a role noun, use generic role language only. Do not attach descriptive appearance clauses to placeholders; the uploaded image reference defines identity and visual details.",
         "Never ask the image model to add age, beard, mustache, hairstyle changes, costume changes, body-type changes, or generic chef/person redesigns to uploaded characters.",
@@ -252,6 +256,7 @@ function buildBriefMessages(request: BriefGenerationRequest) {
           "Treat focusGuidance as a soft creative lens, not a literal mandatory scene. If it mentions giant pizza, giant food, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the architecture; do not make every scheme a flat pizza-floor battlefield.",
           "Every scheme brief must include a concrete shot blueprint: foreground framing, uploaded hero performance, BOSS pressure, world context, logo/copy safe area, and camera angle.",
           "Every scheme brief must include a production design blueprint: camera height/lens feel/perspective, foreground-midground-background layers, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and typography/logo integration.",
+          posterSchemeBlueprintRequirement(),
           "For every uploaded asset, explicitly honor its semantic duty. Protagonists carry performance; antagonists carry threat/scale; brandLogo assets stay readable and scene-integrated; prop assets become used story objects; environment assets guide world design; styleReference controls rendering; compositionReference controls layout only.",
           "For uploaded brandLogo/gameLogo assets, render the exact logo visual design and letterform rhythm only when spelling can stay accurate. Do not ask the image model to invent look-alike words, substitute letters, or create a fake replacement logo; use a polished blank logo-safe sign/title plate if exact spelling cannot be guaranteed.",
           posterLogoSingleUseLock(),
@@ -262,6 +267,7 @@ function buildBriefMessages(request: BriefGenerationRequest) {
           "Every image prompt must include a KV quality self-check: one-second readability, strong thumbnail silhouette, obvious story conflict, layered depth, directional lighting, and no cheap sticker collage.",
           "Each scheme should have one coherent story scene, strong focal hierarchy, layered depth, cinematic lighting, polished color grading, and campaign-ready logo/slogan safe areas.",
           "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-pizza-landscape concept unless the assigned slot itself asks for giant food terrain.",
+          posterKvArchitectureDiversityRequirement(),
           "Use divergent story-composition archetypes across the batch, such as boss encounter, kitchen siege, ingredient heist, wilderness chase, restaurant defense, portal discovery, victory feast, caravan expedition, VIP demand versus ingredient hunt, or staff-training-to-boss-fight contrast.",
           "Do not default to a simple horizontal scene with heroes standing left and right on a pizza surface. Giant food can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
           "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",
@@ -271,7 +277,7 @@ function buildBriefMessages(request: BriefGenerationRequest) {
           posterSubjectAccessoryStrictnessLock(),
           "Do not write back-facing-only or looking-away hero staging. Uploaded character faces must be readable in front view, 3/4 front view, or strong profile.",
           "Do not preserve the exact uploaded static pose as the final performance. Keep identity, but ask for a new body line, stride, block, leap, recoil, swing, contact point, or foreshortened prop/tool angle.",
-          "Forbidden static placeholder verbs when uploaded protagonists or BOSS references are present: do not write '[Game Character 1] stands', 'stands heroically', 'is placed', 'is located', '站在', '英勇地站在', '位于', or '从一侧压迫'. Use active verbs such as sprint, block, slide, leap, brace, collide, lunge, strike, burst, or recoil.",
+          posterStaticSchemeLanguageBan(),
           "The BOSS prompt must describe a real threat action or physical reaction, not a still mascot pose enlarged beside the scene.",
           "If a scheme uses a split-world divider, the hero must actively cross, block on, slide along, leap from, or collide with that divider; the BOSS must lunge, strike, burst through, or recoil from impact rather than simply stand on the opposite side.",
           "Never add age shifts, beard/mustache, hairstyle changes, costume changes, body-type changes, or generic chef/person redesigns to uploaded character placeholders.",
@@ -445,8 +451,11 @@ function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request
   const seed = request.context.traceId || request.context.jobId || `${Date.now()}`;
   const assetCounts = posterKvAssetCountsFromAssets(request.assets);
   return parsed.schemes.slice(0, request.schemeCount).map((scheme, index) => {
-    const promptZh = scheme.promptZh || scheme.prompt;
-    const promptEn = scheme.promptEn || scheme.prompt;
+    const title = sanitizePosterSchemeText(scheme.title) || scheme.title;
+    const brief = sanitizePosterSchemeText(scheme.brief) || scheme.brief;
+    const prompt = sanitizePosterSchemeText(scheme.prompt) || scheme.prompt;
+    const promptZh = sanitizePosterSchemeText(scheme.promptZh || scheme.prompt) || prompt;
+    const promptEn = sanitizePosterSchemeText(scheme.promptEn || scheme.prompt) || prompt;
     const architectureSeed = posterKvArchitectureSlotSeed(seed, index);
     const architectureBrief = posterKvBriefAugmentation(architectureSeed);
     const architecturePrompt = posterKvArchitectureDirective({
@@ -465,9 +474,9 @@ function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request
             language,
             brandTerms: [request.projectName],
             contextText: [
-              scheme.title,
-              scheme.brief,
-              scheme.prompt,
+              title,
+              brief,
+              prompt,
               promptZh,
               promptEn,
             ].join("\n"),
@@ -476,9 +485,9 @@ function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request
         }),
     );
     return {
-      title: scheme.title,
-      brief: `${architectureBrief}\n${cinematicBrief}\n${scheme.brief}`.slice(0, 1800),
-      prompt: `${scheme.prompt}\n\n${architecturePrompt}`.slice(0, 12000),
+      title,
+      brief: `${architectureBrief}\n${cinematicBrief}\n${brief}`.slice(0, 1800),
+      prompt: `${prompt}\n\n${architecturePrompt}`.slice(0, 12000),
       promptZh: `${promptZh}\n\n${architecturePrompt}`.slice(0, 12000),
       promptEn: `${promptEn}\n\n${architecturePrompt}`.slice(0, 12000),
       slogans,

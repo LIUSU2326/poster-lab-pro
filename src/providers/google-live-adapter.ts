@@ -32,12 +32,16 @@ import {
   posterIdentitySafeMotionRule,
   posterLogoSingleUseLock,
   posterKvArchitectureBriefSlots,
+  posterKvArchitectureDiversityRequirement,
   posterKvArchitectureDirective,
   posterKvArchitectureSlotSeed,
   posterKvAssetCountsFromAssets,
   posterKvBriefAugmentation,
+  posterSchemeBlueprintRequirement,
+  posterStaticSchemeLanguageBan,
   posterSubjectAccessoryStrictnessLock,
 } from "./poster-kv-architectures";
+import { sanitizePosterSchemeText } from "./poster-scheme-sanitizer";
 import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "../prompts/slogan-policy";
 
 const GOOGLE_PROVIDER_ID = "google" as const;
@@ -626,6 +630,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "If focusGuidance mentions giant pizza, giant food, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the scene architecture. Do not default every scheme to a flat pizza-floor battlefield.",
         "Every scheme brief must include a concrete shot blueprint: foreground framing, uploaded hero performance, BOSS pressure, world context, logo/copy safe area, and camera angle.",
         "Every scheme brief must include a production design blueprint: camera height/lens feel/perspective, foreground-midground-background layers, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and typography/logo integration.",
+        posterSchemeBlueprintRequirement(),
         "For every uploaded asset, infer semantic duty from semanticRole, original role, label, and description. Do not write logic as if only gameCharacter, prop, and gameLogo can matter.",
         "Asset duty examples: protagonist assets carry identity/performance; antagonist assets carry threat/scale; brandLogo assets stay readable and scene-integrated; prop assets become used story objects; environment assets guide world design; styleReference controls rendering; compositionReference controls layout only.",
         posterCinematicKvQualityDirective(),
@@ -637,6 +642,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "Each scheme must target premium game key art / campaign key visual polish while respecting the active uploaded or selected art style.",
         "Plan one coherent story scene with one clear focal hierarchy, layered depth, cinematic lighting, polished color grading, and campaign-ready logo/slogan safe areas.",
         "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-pizza-landscape concept unless the assigned slot itself asks for giant food terrain.",
+        posterKvArchitectureDiversityRequirement(),
         "Use divergent story-composition archetypes across the batch, such as boss encounter, kitchen siege, ingredient heist, wilderness chase, restaurant defense, portal discovery, victory feast, caravan expedition, VIP demand versus ingredient hunt, or staff-training-to-boss-fight contrast.",
         "Do not default to a simple horizontal scene with heroes standing left and right on a pizza surface. Giant food can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
         "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",
@@ -647,7 +653,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "Do not write a scheme where uploaded playable characters are only back-facing, hidden, tiny, or looking away. Their faces, expressions, body language, and signature props must be readable in front view, 3/4 front view, or strong profile.",
         posterHeroPerformanceScaleLock(),
         posterSubjectAccessoryStrictnessLock(),
-        "Forbidden static placeholder verbs when uploaded protagonists or BOSS references are present: do not write '[Game Character 1] stands', 'stands heroically', 'is placed', 'is located', '站在', '英勇地站在', '位于', or '从一侧压迫'. Use active verbs such as sprint, block, slide, leap, brace, collide, lunge, strike, burst, or recoil.",
+        posterStaticSchemeLanguageBan(),
         "For image prompts with uploaded identity, subject, BOSS, prop, or logo references, do NOT describe their exact physical appearance, clothing, gender, skin color, hair, logo lettering, or anatomy. Use placeholders such as [Game Character 1], [Boss], [Game Logo], [Prop 1], or [Key Subject 1], and describe only semantic duty, action, power effects, camera, composition, and environment interaction.",
         "If a placeholder needs a role noun, use generic role language only. Do not attach descriptive appearance clauses to placeholders; the image reference, not the generated brief text, defines identity and visual details.",
         "When describing a placeholder's action, do not name a specific uploaded tool, weapon, costume, face, or body feature in text. Say the placeholder uses its uploaded signature prop/tool only if visible in the reference, and let the image reference define what that prop/tool is.",
@@ -1061,8 +1067,11 @@ function normalizeBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchem
   const targetLanguage = request.languageTargets[0] || "en-US";
   const seed = request.context.traceId || request.context.jobId || `${Date.now()}`;
   return parsed.schemes.slice(0, request.schemeCount).map((scheme, index) => {
-    const promptZh = scheme.promptZh || scheme.prompt;
-    const promptEn = scheme.promptEn || scheme.prompt;
+    const title = sanitizePosterSchemeText(scheme.title) || scheme.title;
+    const brief = sanitizePosterSchemeText(scheme.brief) || scheme.brief;
+    const prompt = sanitizePosterSchemeText(scheme.prompt) || scheme.prompt;
+    const promptZh = sanitizePosterSchemeText(scheme.promptZh || scheme.prompt) || prompt;
+    const promptEn = sanitizePosterSchemeText(scheme.promptEn || scheme.prompt) || prompt;
     const architectureSeed = posterKvArchitectureSlotSeed(seed, index);
     const architectureBrief = posterKvBriefAugmentation(architectureSeed);
     const architecturePrompt = posterKvArchitectureDirective({
@@ -1071,9 +1080,9 @@ function normalizeBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchem
     });
     const cinematicBrief = "电影级强化：方案必须具备明确镜头语言、主光/逆光/体积光、粒子/VFX、前中后景纵深、可读角色表演、环境 set-piece 和一个可被理解的故事瞬间。";
     return {
-      title: scheme.title,
-      brief: `${architectureBrief}\n${cinematicBrief}\n${scheme.brief}`.slice(0, 1800),
-      prompt: `${scheme.prompt}\n\n${architecturePrompt}`.slice(0, 12000),
+      title,
+      brief: `${architectureBrief}\n${cinematicBrief}\n${brief}`.slice(0, 1800),
+      prompt: `${prompt}\n\n${architecturePrompt}`.slice(0, 12000),
       promptZh: `${promptZh}\n\n${architecturePrompt}`.slice(0, 12000),
       promptEn: `${promptEn}\n\n${architecturePrompt}`.slice(0, 12000),
       slogans: Object.fromEntries(
@@ -1087,9 +1096,9 @@ function normalizeBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchem
               language,
               brandTerms: [request.projectName],
               contextText: [
-                scheme.title,
-                scheme.brief,
-                scheme.prompt,
+                title,
+                brief,
+                prompt,
                 promptZh,
                 promptEn,
               ].join("\n"),

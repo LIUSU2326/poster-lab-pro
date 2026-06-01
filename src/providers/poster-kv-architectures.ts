@@ -87,6 +87,72 @@ const POSTER_KV_ARCHITECTURES: PosterKvArchitecture[] = [
       "Use low-angle perspective, foreground weapon/food framing, backlight, rim light, dust/smoke, sauce arcs, cheese stretch trails, and environmental reaction to create a premium campaign climax.",
     ].join(" "),
   },
+  {
+    titleZh: "餐厅防守围城 KV",
+    titleEn: "Restaurant defense siege KV",
+    briefZh: "把餐厅或厨房当作被围攻的据点：前景是门槛、柜台、烤炉火光和飞散食材，角色正在阻挡或反击，BOSS/敌方压力从门外或窗外逼近。",
+    directive: [
+      "Use a restaurant defense siege composition.",
+      "The kitchen/restaurant is a defendable stronghold with doorway, counter, oven, window, barricade, order board, and warm practical light.",
+      "The uploaded playable roster must actively defend, brace, block, throw, pull, or counterattack from foreground/midground contact points.",
+      "The BOSS threat pushes in through an entrance, window, broken wall, or exterior path with debris, smoke, ingredient projectiles, and rim light tying both sides together.",
+    ].join(" "),
+  },
+  {
+    titleZh: "荒野食材追逐 KV",
+    titleEn: "Wild ingredient chase KV",
+    briefZh: "用横向或纵深运动表现追逐：角色沿着披萨山谷、番茄河、奶酪桥或食材峡谷高速前进，BOSS 在后方追击或侧面突袭，形成明确运动轨迹。",
+    directive: [
+      "Use a wild ingredient chase composition with a strong motion path.",
+      "Build a readable route through edible terrain: sauce river, cheese bridge, tomato cliffs, mushroom forest, oven-lit canyon, or ingredient market road.",
+      "The uploaded playable roster must be running, sliding, riding, jumping, dodging, or reaching for a story object with readable face and action silhouette.",
+      "The BOSS must chase, ambush, burst from terrain, or collide with the route; motion blur, dust, sauce trails, flying ingredients, and foreground occlusion must follow the chase direction.",
+    ].join(" "),
+  },
+  {
+    titleZh: "传送门发现 KV",
+    titleEn: "Portal discovery adventure KV",
+    briefZh: "表现角色发现或开启通向食材荒野的传送门：烤炉、菜单、招牌或厨房墙面成为发光入口，Boss 或危险轮廓在门后显现，画面更偏冒险启程。",
+    directive: [
+      "Use a portal discovery adventure composition.",
+      "A kitchen object such as oven, menu board, sign, pantry door, or glowing countertop becomes the portal into the wild ingredient world.",
+      "The uploaded playable roster should open, lean into, brace against, or step through the portal with readable wonder, fear, or determination.",
+      "The BOSS or threat silhouette must be visible beyond the portal with atmospheric depth, backlight, particles, and environmental color spill crossing into the kitchen.",
+    ].join(" "),
+  },
+  {
+    titleZh: "胜利战利品 Trophy KV",
+    titleEn: "Victory trophy payoff KV",
+    briefZh: "表现胜利刚刚发生后的战利品瞬间：角色站在被制服的 Boss/巨大食材旁，前景是奖杯式料理、发光食材或餐厅订单成果，仍保留动作余波和场景故事。",
+    directive: [
+      "Use a victory trophy payoff composition, not a static celebration poster.",
+      "Show the aftermath seconds after action: dust settling, sauce still arcing, cheese stretching, steam rising, broken terrain, and the BOSS/giant ingredient visibly defeated or restrained exactly once.",
+      "The uploaded playable roster must still have performance: planting a foot, lifting a story prop, pulling a rope, bracing from impact, or presenting the trophy dish with readable expression.",
+      "The logo/copy area should feel like a campaign title moment integrated into a trophy board, banner, carved sign, oven glow, or restaurant celebration element.",
+    ].join(" "),
+  },
+  {
+    titleZh: "巨物压迫微缩冒险 KV",
+    titleEn: "Giant-scale pressure micro-adventure KV",
+    briefZh: "用巨型披萨、厨具、食材或餐厅物件制造微缩冒险压迫感：角色很小但必须在前景足够可读，Boss/障碍形成巨物威胁和强透视。",
+    directive: [
+      "Use a giant-scale pressure micro-adventure composition with forced perspective.",
+      "Create a massive object world: oversized pizza crust cliffs, giant utensil bridge, oven machinery, sauce waterfall, cheese ravine, or ingredient canyon.",
+      "At least one uploaded playable character must remain large enough to read identity and action even inside the scale fantasy; do not reduce the hero to a tiny dot.",
+      "The BOSS or main obstacle must create physical pressure through shadow, falling debris, blocked path, shockwave, or looming contact, with strong foreground-midground-background depth.",
+    ].join(" "),
+  },
+  {
+    titleZh: "订单压力爆发 KV",
+    titleEn: "VIP order pressure eruption KV",
+    briefZh: "把经营压力转成动作场面：VIP 订单、厨房计时器、菜单牌或 UI 任务目标变成场景事件，角色在爆发的厨房和荒野威胁之间完成关键料理或防守。",
+    directive: [
+      "Use a VIP order pressure eruption composition that translates restaurant management into action.",
+      "A readable in-world order board, timer shape, delivery route, VIP table silhouette, or kitchen task object triggers the conflict without becoming cluttered UI text.",
+      "The uploaded playable roster must cook, defend, carry, pull, dodge, or strike while the BOSS/threat interrupts the service flow.",
+      "Use practical oven light, timer glow, steam, flour dust, sauce splashes, and ingredient debris to make the business-pressure story cinematic rather than a plain battle scene.",
+    ].join(" "),
+  },
 ];
 
 function positiveModulo(value: number, divisor: number): number {
@@ -171,6 +237,18 @@ export function posterSubjectAccessoryStrictnessLock(): string {
   return "Uploaded subject accessory lock: do not give protagonists or BOSS new shields, weapons, armor, tools, facial features, costume parts, horns, crowns, or props just because a scheme mentions them. If that object is not visibly present in the uploaded reference, reinterpret the action through body movement, camera, environment, particles, or existing visible uploaded props only.";
 }
 
+export function posterStaticSchemeLanguageBan(): string {
+  return "Static scheme language ban: scheme briefs and prompts must not rely on static placeholder staging such as '[Game Character 1] stands', 'stands heroically', 'is placed', 'is located', 'faces off', '站在', '英勇地站在', '位于', '摆放', '对峙', or '从一侧压迫'. Use active verbs such as sprint, block, slide, leap, brace, collide, lunge, strike, burst, recoil, defend, chase, discover, or restrain.";
+}
+
+export function posterSchemeBlueprintRequirement(): string {
+  return "Scheme blueprint requirement: every generated poster scheme must explicitly carry camera/lens/perspective, foreground-midground-background layers, key/fill/rim lighting, physical action contact point, environmental reaction/VFX, one logo treatment location, and slogan/copy treatment or copy-safe fallback.";
+}
+
+export function posterKvArchitectureDiversityRequirement(): string {
+  return "KV architecture diversity requirement: across a batch, do not repeat the same diagonal split-world or side-view battlefield solution. Use the assigned architecture slot as the visible structural idea, and if a diagonal divider appears it must be an active collision/action path rather than a static line with subjects parked on each side.";
+}
+
 export function posterCinematicKvQualityDirective(): string {
   return [
     "## AAAAAAAAAAA Cinematic Game KV Quality Override",
@@ -186,6 +264,9 @@ export function posterCinematicKvQualityDirective(): string {
     posterIdentitySafeMotionRule(),
     posterHeroPerformanceScaleLock(),
     posterSubjectAccessoryStrictnessLock(),
+    posterStaticSchemeLanguageBan(),
+    posterSchemeBlueprintRequirement(),
+    posterKvArchitectureDiversityRequirement(),
     "Environment set-piece: build a memorable cinematic location with architecture or terrain: oven portal, restaurant interior under siege, kitchen counter battlefield, cliff/canyon of ingredients, tunnel/doorway breach, market demand area, giant utensil foreground, or split-world kitchen-vs-wildlands stage.",
     "Composition polish: use foreground-midground-background staging, overlapping silhouettes, leading lines, triangular focal hierarchy, controlled negative space for logo, and a strong thumbnail read at 10% size.",
     "Finish: painterly/cel hybrid polish, rich material texture, crisp focal detail, controlled background complexity, atmospheric depth, cast/contact shadows, occlusion, cinematic bloom, tasteful lens flare, subtle depth of field, and final color grading. Raise the uploaded cartoon style to premium cinematic campaign art.",
@@ -221,6 +302,9 @@ export function posterKvArchitectureDirective(input: {
     "Reference identity lock: the uploaded images are the source of truth. The prompt may change action, pose, expression, angle, lighting, and scene integration only. Do not change age, hair color, hairstyle, costume, body proportions, species, tool identity, or add facial hair/extra features not visible in the uploaded reference.",
     "Reference pose release: do not treat the uploaded still image as the final pose. Preserve identity, silhouette, and signature props, but repaint the hero/BOSS with a new performance such as 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, landing impact, or foreshortened prop/tool angle.",
     "Static scheme action rewrite: if an older or generated scheme says the hero stands on a divider and the BOSS presses from one side, reinterpret it as an active trailer moment: the hero sprints, blocks, slides, leaps, or collides with the divider while the BOSS lunges, swings, bursts through, lands, or recoils from impact.",
+    posterStaticSchemeLanguageBan(),
+    posterSchemeBlueprintRequirement(),
+    posterKvArchitectureDiversityRequirement(),
     "Semantic asset duty lock: do not hard-code only three asset categories. Protagonists carry performance, antagonists carry pressure, logos carry brand readability, props become story triggers, environments shape the set piece, style references shape rendering, and composition references shape layout only.",
     posterLogoSingleUseLock(),
     posterSubjectAccessoryStrictnessLock(),

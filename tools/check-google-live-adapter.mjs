@@ -48,6 +48,9 @@ for (const token of [
   "Reference pose release",
   "BOSS performance lock",
   "Static scheme action rewrite",
+  "posterHeroPerformanceScaleLock",
+  "posterLogoSingleUseLock",
+  "posterSubjectAccessoryStrictnessLock",
   "Contact and occlusion audit",
   "Subject scale and weight requirement",
   "do not invent look-alike words",
@@ -55,6 +58,7 @@ for (const token of [
   "large secondary campaign object",
   "scene-derived",
   "Avoid generic three-part lists",
+  "sanitizePosterSchemeText",
 ]) {
   if (!adapter.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
 }
