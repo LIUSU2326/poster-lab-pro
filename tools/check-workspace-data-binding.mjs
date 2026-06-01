@@ -21,6 +21,7 @@ const configPanel = read("src/render/config-panel.js");
 const topbar = read("src/render/topbar.js");
 const adapters = read("src/data/workspace-adapters.js");
 const binding = read("src/form-binding.js");
+const schemaModels = read("src/schema/models.js");
 const pkg = read("package.json");
 
 for (const token of [
@@ -59,6 +60,12 @@ for (const [fileName, source, token] of [
 
 if (!pkg.includes("workspace-data:check")) {
   issues.push("package.json: missing workspace-data:check script");
+}
+if (!schemaModels.includes("subjectReference|gameCharacter|prop|gameLogo")) {
+  issues.push("models.js: icon mode should accept subject, character, prop, or logo as primary icon reference");
+}
+if (!adapters.includes('icon: ["subjectReference", "gameCharacter", "prop", "gameLogo"')) {
+  issues.push("workspace-adapters.js: icon asset ordering should prioritize all primary icon reference roles");
 }
 
 for (const [fileName, source] of [

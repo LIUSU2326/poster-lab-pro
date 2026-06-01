@@ -52,6 +52,7 @@ export const PromptBuilderInputSchema = z.object({
 export type PromptBuilderInput = z.infer<typeof PromptBuilderInputSchema>;
 type SloganLanguage = z.infer<typeof SloganLanguageSchema>;
 const FINAL_PROMPT_MAX_CHARS = 12000;
+const ICON_PRIMARY_ASSET_ROLES = new Set(["subjectReference", "gameCharacter", "prop", "gameLogo"]);
 const SECTION_CONTENT_MAX_CHARS = 4000;
 
 function clampSectionContent(content: string): string {
@@ -224,7 +225,7 @@ function createAssetBinding(asset: StoredAssetRecord, mode: ProductionMode): Pro
       : mode === "collab" && asset.role === "collabCharacter"
         ? "[Collab Partner]"
         : null;
-  const roleIsRequired = getRequiredAssetSlots(mode).some((slot) => slot.role === asset.role);
+  const roleIsRequired = isRequiredAssetRoleForPrompt(mode, asset.role);
   const url = assetUrl(asset);
 
   return PromptAssetBindingSchema.parse({
@@ -239,6 +240,15 @@ function createAssetBinding(asset: StoredAssetRecord, mode: ProductionMode): Pro
     storageKey: asset.storageKey,
     providerReady: isProviderSafeAssetUrl(url),
   });
+}
+
+function isIconPrimaryAssetRole(role: string): boolean {
+  return ICON_PRIMARY_ASSET_ROLES.has(role);
+}
+
+function isRequiredAssetRoleForPrompt(mode: ProductionMode, role: string): boolean {
+  if (mode === "icon") return isIconPrimaryAssetRole(role);
+  return getRequiredAssetSlots(mode).some((slot) => slot.role === role);
 }
 
 function assignPosterAssetPlaceholders(assets: PromptAssetBinding[], mode: ProductionMode): PromptAssetBinding[] {
@@ -262,9 +272,14 @@ function assetsForPromptMode(snapshot: WorkspaceSnapshot, mode: ProductionMode):
   const modeAssets = snapshot.assets
     .filter((asset) => asset.projectId === snapshot.project.id && allowedRoles.has(asset.role));
   const realRoles = new Set(modeAssets.filter((asset) => !isDemoAsset(asset)).map((asset) => asset.role));
+  const hasRealIconPrimary = mode === "icon" && modeAssets.some((asset) =>
+    !isDemoAsset(asset) && isIconPrimaryAssetRole(asset.role),
+  );
   const hasRealAssets = realRoles.size > 0;
   const candidates = hasRealAssets
-    ? modeAssets.filter((asset) => !isDemoAsset(asset) || (!realRoles.has(asset.role) && requiredRoles.has(asset.role)))
+    ? modeAssets.filter((asset) =>
+        !isDemoAsset(asset) || (!hasRealIconPrimary && !realRoles.has(asset.role) && requiredRoles.has(asset.role)),
+      )
     : modeAssets;
   return dedupeLatestPromptAssets(candidates).sort((left, right) => {
     const leftDemo = isDemoAsset(left) ? 1 : 0;
@@ -272,6 +287,24 @@ function assetsForPromptMode(snapshot: WorkspaceSnapshot, mode: ProductionMode):
     if (leftDemo !== rightDemo) return leftDemo - rightDemo;
     return dateValue(left.createdAt) - dateValue(right.createdAt);
   });
+}
+
+function assetsForRequiredSlot(params: {
+  mode: ProductionMode;
+  slotRole: string;
+  assets: PromptAssetBinding[];
+}): PromptAssetBinding[] {
+  if (params.mode === "icon" && params.slotRole === "subjectReference") {
+    return params.assets.filter((asset) => isIconPrimaryAssetRole(asset.role));
+  }
+  return params.assets.filter((asset) => asset.role === params.slotRole);
+}
+
+function requiredSlotLabel(mode: ProductionMode, slot: ReturnType<typeof getRequiredAssetSlots>[number]): string {
+  if (mode === "icon" && slot.role === "subjectReference") {
+    return "Icon primary subject (subjectReference, gameCharacter, prop, or gameLogo)";
+  }
+  return `${slot.label} (${slot.role})`;
 }
 
 function createSlogans(snapshot: WorkspaceSnapshot, modeState: WorkspaceModeState, schemeId: string | null) {
@@ -740,9 +773,13 @@ function validatePromptPackage(params: {
   if (hardRules.length === 0) errors.push("Prompt package has no hard guardrails.");
 
   for (const slot of getRequiredAssetSlots(params.mode)) {
-    const roleAssets = params.assets.filter((asset) => asset.role === slot.role);
+    const roleAssets = assetsForRequiredSlot({
+      mode: params.mode,
+      slotRole: slot.role,
+      assets: params.assets,
+    });
     if (roleAssets.length === 0) {
-      const issue = `Missing required asset: ${slot.label} (${slot.role}).`;
+      const issue = `Missing required asset: ${requiredSlotLabel(params.mode, slot)}.`;
       if (params.target === "image") errors.push(issue);
       else warnings.push(issue);
       continue;
@@ -752,8 +789,8 @@ function validatePromptPackage(params: {
     if (!hasProviderReadyReference) {
       const hasPlaceholderUrl = roleAssets.some((asset) => isExampleAssetUrl(asset.url));
       const issue = hasPlaceholderUrl
-        ? `Required asset still points to a demo placeholder URL and cannot be sent as a visual reference: ${slot.label} (${slot.role}). Re-upload the real image asset.`
-        : `Required asset is not provider-ready: ${slot.label} (${slot.role}).`;
+        ? `Required asset still points to a demo placeholder URL and cannot be sent as a visual reference: ${requiredSlotLabel(params.mode, slot)}. Re-upload the real image asset.`
+        : `Required asset is not provider-ready: ${requiredSlotLabel(params.mode, slot)}.`;
       if (params.target === "image") errors.push(issue);
       else warnings.push(issue);
     }

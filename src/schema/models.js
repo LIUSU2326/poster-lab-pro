@@ -205,7 +205,7 @@ export const modeAssetRequirements = {
   collab: ["gameCharacter", "collabCharacter", "gameLogo", "brandLogo", "background?"],
   announcement: ["gameCharacter?", "background?", "gameLogo|brandLogo"],
   logo: ["subjectReference?", "gameLogo?"],
-  icon: ["subjectReference", "compositionReference?", "styleReference?"],
+  icon: ["subjectReference|gameCharacter|prop|gameLogo", "compositionReference?", "styleReference?"],
 };
 
 export const implementationNotes = [
