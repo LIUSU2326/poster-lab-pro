@@ -80,8 +80,9 @@ for (const token of ["isProviderSafeAssetUrl", "assertPromptPackageReadyForProvi
 }
 
 for (const token of [
-  "posterAssetSemanticRole",
-  "posterAssetFusionStrategy",
+  "assetSemanticRole",
+  "assetFusionStrategy",
+  "modeAssetFusionDirective",
   "shouldUsePosterScenePlateFallback",
   "AI integrated redraw",
   "isExampleAssetUrl",

@@ -1,9 +1,12 @@
 import { z } from "zod";
 import {
+  assetFusionStrategy,
+  assetSemanticInventory,
+  assetSemanticRole,
   isPosterIntegratedReferenceAsset,
+  modeAssetFusionDirective,
   posterAssetFusionStrategy,
   posterAssetReferenceName,
-  posterAssetSemanticInventory,
   posterAssetSemanticRole,
   type PosterAssetSemanticRole,
 } from "../assets/semantic-roles";
@@ -194,12 +197,42 @@ function normalizeGoogleImageModel(model: string): string {
 function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterMode = request.context.mode === "poster";
   const hasPosterReferenceAssets = hasPosterMode && request.assets.some((asset) => isPosterIntegratedReferenceAsset(asset));
-  const posterAssetInventory = hasPosterMode ? posterAssetSemanticInventory(request.assets) : "";
+  const assetInventory = request.assets.length ? assetSemanticInventory(request.assets, { mode: request.context.mode }) : "";
+  const fusionDirective = modeAssetFusionDirective(request.context.mode, request.assets);
+  const modeQualityInstruction = (() => {
+    if (request.context.mode === "icon") {
+      return [
+        "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
+        "Composition bar: perfect 1:1 square, full-bleed icon framing, no text, no logo lettering, no captions, no UI copy, no poster scene complexity.",
+      ].join(" ");
+    }
+    if (request.context.mode === "logo") {
+      return [
+        "Quality bar: premium game logo/mark system, readable wordmark or emblem construction, crisp bevel/material finish, clean silhouette, and brand-safe typography.",
+        "Composition bar: logo/wordmark is primary on a clean solid-color background when requested; props or characters may influence motifs but must not become a poster scene.",
+      ].join(" ");
+    }
+    if (request.context.mode === "announcement") {
+      return [
+        "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, and polished UI/event art direction.",
+        "Composition bar: uploaded subjects support the announcement surface without covering headline or key copy.",
+      ].join(" ");
+    }
+    if (request.context.mode === "collab") {
+      return [
+        "Quality bar: premium collaboration campaign visual with two identities kept separate but unified by shared lighting, materials, scene, and interaction story.",
+        "Composition bar: dual-character and dual-logo balance without merging identities or creating fake hybrid marks.",
+      ].join(" ");
+    }
+    return [
+      "Quality bar: premium game campaign key visual polish adapted to the active art style, with cinematic lighting, layered depth, refined materials, crisp focal detail, and strong silhouette hierarchy.",
+      "Composition bar: one coherent story scene, one clear hero focal point, readable logo/slogan safe area, foreground-midground-background separation, and no sticker-collage feeling.",
+    ].join(" ");
+  })();
   const sizeInstruction = [
     `Target output: ${request.width}x${request.height}, aspect ratio ${request.aspectRatio}, platform ${request.platformPreset}.`,
     "The provider may return a native canvas size; compose for this crop target and keep important content inside safe margins.",
-    "Quality bar: premium game campaign key visual polish adapted to the active art style, with cinematic lighting, layered depth, refined materials, crisp focal detail, and strong silhouette hierarchy.",
-    "Composition bar: one coherent story scene, one clear hero focal point, readable logo/slogan safe area, foreground-midground-background separation, and no sticker-collage feeling.",
+    modeQualityInstruction,
     request.aspectRatio === "9:16"
       ? "Compose as a tall mobile game poster, not a centered square flyer."
       : "Respect the requested platform crop and keep key text inside the safe area.",
@@ -247,38 +280,39 @@ function imagePrompt(request: ImageGenerationRequest): string {
         "Provider asset constraints:",
         hasPosterMode
           ? "For poster mode, the reference images are binding identity and brand inputs. Use them visibly as integrated, living in-world poster subjects, not as unchanged pasted stickers."
-          : "The reference images below are binding visual inputs, not loose inspiration. The final image must visibly use uploaded assets when those roles are present.",
+          : "The reference images below are binding visual inputs, not loose inspiration. Use them according to the current mode's semantic duty and redraw/simplify them inside the generated result rather than pasting unchanged pixels.",
         hasPosterMode
           ? "Use each uploaded protagonist, antagonist/key subject, brand logo, prop, and environment reference according to its semantic duty. Keep identity consistent while changing pose, expression, action, lighting, scale, and perspective for a vivid KV moment. Do not create large/small duplicate copies."
-          : "Use each uploaded character, BOSS, and logo as one integrated in-world appearance. Do not create duplicate large/small copies, alternate redraws, or sticker-like pasted versions of the same asset.",
+          : "Use each uploaded asset once according to its role unless the mode explicitly asks for variants. Do not create duplicate large/small copies, alternate redraws, or sticker-like pasted versions of the same asset.",
         "Treat uploaded character images as locked model sheets for identity: face, hair, proportions, costume, colors, original tool/prop, line weight, and silhouette. The pose and expression should become more dynamic for the poster; do not preserve the exact same front-facing reference pose unless no other identity-safe pose is possible.",
         "Identity lock means no new facial hair, age shift, body-type shift, hairstyle swap, costume swap, or generic chef redesign. If a character reference is a small chibi/mascot, keep that exact chibi/mascot identity while only changing pose and expression.",
-        posterAssetInventory ? `Uploaded asset semantic duties:\n${posterAssetInventory}` : "",
-        request.assets.some((asset) => posterAssetSemanticRole(asset) === "styleReference")
+        fusionDirective,
+        assetInventory ? `Uploaded asset semantic duties:\n${assetInventory}` : "",
+        request.assets.some((asset) => assetSemanticRole(asset) === "styleReference")
           ? "A styleReference image is present. It has priority over selected style tags and character-derived style for rendering, palette, lighting, and finish."
           : "",
         ...request.assets.map((asset) => {
-          const semanticRole = posterAssetSemanticRole(asset);
+          const semanticRole = assetSemanticRole(asset);
           const parts = [
             `${asset.role}: ${asset.id}`,
             `semanticRole=${semanticRole}`,
-            `fusion=${posterAssetFusionStrategy(asset)}`,
+            `fusion=${assetFusionStrategy(asset, { mode: request.context.mode })}`,
             asset.description,
             asset.url ? `referenceUrl=${asset.url}` : "",
           ].filter(Boolean);
           return `- ${parts.join("; ")}`;
         }),
         "Do not invent details that conflict with locked character, logo, or brand references.",
-        request.assets.some((asset) => posterAssetSemanticRole(asset) === "antagonist")
+        request.assets.some((asset) => assetSemanticRole(asset) === "antagonist")
           ? "A BOSS/key subject reference is present. Include it as a visible antagonist or key creature while preserving its uploaded silhouette, crown, mouth, eye, teeth, tongue, and color blocks rather than replacing it with a generic monster."
           : "",
-        request.assets.some((asset) => posterAssetSemanticRole(asset) === "brandLogo")
+        request.assets.some((asset) => assetSemanticRole(asset) === "brandLogo")
           ? "A gameLogo reference is present. Allocate one readable logo-safe treatment. Use the exact uploaded logo/wordmark only if letterforms can stay accurate; otherwise leave a polished blank logo-safe plate/sign. Do not redraw a different logo, invent look-alike words, substitute letters, or add a second logo."
           : "",
-        request.assets.filter((asset) => posterAssetSemanticRole(asset) === "protagonist").length > 1
+        request.assets.filter((asset) => assetSemanticRole(asset) === "protagonist").length > 1
           ? "Multiple gameCharacter references are separate characters. Include them as distinct characters when the composition supports a group poster; do not merge their appearances."
           : "",
-        request.assets.some((asset) => posterAssetSemanticRole(asset) === "protagonist")
+        request.assets.some((asset) => assetSemanticRole(asset) === "protagonist")
           ? "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic chef heroes, random human mascots, or replacement player characters."
           : "",
       ].join("\n")
@@ -588,11 +622,25 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
       "Failure to match reference identities while making them feel alive inside the scene is unacceptable.",
     ].join("\n")
     : "";
+  const finalGenericFusionRule = !isPosterWithReferences && request.assets.length > 0
+    ? [
+      "[REFERENCE FUSION RULE]",
+      modeAssetFusionDirective(request.context.mode, request.assets),
+      "The inline visual references above override loose text guesses. Preserve each reference according to its semantic duty while adapting it to the current mode's visual goal.",
+      request.context.mode === "icon"
+        ? "Icon mode requires a clean 1:1 square, one dominant subject, ABSOLUTELY NO TEXT, minimal background detail, high contrast, and 64px readability."
+        : "",
+      request.context.mode === "logo"
+        ? "Logo mode requires wordmark readability and brand system clarity. Do not turn the result into a cinematic scene, and do not invent fake replacement lettering for uploaded logo references."
+        : "",
+    ].filter(Boolean).join("\n")
+    : "";
   return [
     ...referenceParts,
     { text: imagePrompt(request) },
     ...(finalPlateRule ? [{ text: finalPlateRule }] : []),
     ...(finalIdentityRule ? [{ text: finalIdentityRule }] : []),
+    ...(finalGenericFusionRule ? [{ text: finalGenericFusionRule }] : []),
   ];
 }
 

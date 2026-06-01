@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { ProviderIdSchema, SloganLanguageSchema, type ProviderId, type ProductionMode } from "../schema/zod";
 import {
+  assetCompactConstraint,
+  assetFusionStrategy,
+  assetSemanticInventory,
+  assetSemanticRole,
   isPosterIntegratedReferenceAsset,
-  posterAssetCompactConstraint,
-  posterAssetFusionStrategy,
   posterAssetReferenceName,
-  posterAssetSemanticInventory,
-  posterAssetSemanticRole,
+  modeAssetFusionDirective,
   type PosterAssetSemanticRole,
 } from "../assets/semantic-roles";
 import { PromptPackageSchema, type PromptAssetBinding, type PromptPackage } from "../prompts/contracts";
@@ -154,8 +155,8 @@ function isExampleAssetUrl(url: string | null | undefined): boolean {
   }
 }
 
-function roleConstraint(binding: PromptAssetBinding): string {
-  return posterAssetCompactConstraint(binding);
+function roleConstraint(binding: PromptAssetBinding, mode: ProductionMode): string {
+  return assetCompactConstraint(binding, { mode });
 }
 
 function findModeState(snapshot: WorkspaceSnapshot, mode: ProductionMode): WorkspaceModeState {
@@ -213,19 +214,20 @@ function toProviderAssetReference(
   binding: PromptAssetBinding,
   snapshot: WorkspaceSnapshot,
   roleIndex: number,
+  mode: ProductionMode,
 ): ProviderAssetReference {
   const asset = snapshot.assets.find((item) => item.id === binding.assetId);
   const candidateUrl = binding.url || assetUrl(asset);
-  const semanticRole = posterAssetSemanticRole(binding);
+  const semanticRole = assetSemanticRole(binding);
   const description = [
     binding.label,
     `semanticRole=${semanticRole}`,
     `binding=${binding.binding}`,
-    `constraint=${roleConstraint(binding)}`,
+    `constraint=${roleConstraint(binding, mode)}`,
     binding.required ? "required" : "optional",
     binding.placeholder ? `placeholder=${binding.placeholder}` : "",
     ["gameCharacter", "collabCharacter"].includes(binding.role) ? `independentCharacterIndex=${roleIndex}` : "",
-    `fusion=${posterAssetFusionStrategy(binding)}`,
+    `fusion=${assetFusionStrategy(binding, { mode })}`,
     binding.storageKey ? `storageKey=${binding.storageKey}` : asset?.storageKey ? `storageKey=${asset.storageKey}` : "",
     binding.providerReady ? "providerReady=true" : "providerReady=false",
   ]
@@ -249,7 +251,7 @@ export function assetsFromPromptPackage(
   return promptPackage.assets.map((asset) => {
     const nextIndex = (roleCounters.get(asset.role) || 0) + 1;
     roleCounters.set(asset.role, nextIndex);
-    return toProviderAssetReference(asset, snapshot, nextIndex);
+    return toProviderAssetReference(asset, snapshot, nextIndex, promptPackage.mode);
   });
 }
 
@@ -404,15 +406,15 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage)
   const guardrails = promptPackage.guardrails
     .map((item) => `${item.severity.toUpperCase()}: ${item.rule}`)
     .join("\n");
-  const hasStyleReference = promptPackage.assets.some((asset) => posterAssetSemanticRole(asset) === "styleReference");
-  const hasCharacterReference = promptPackage.assets.some((asset) => posterAssetSemanticRole(asset) === "protagonist");
+  const hasStyleReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "styleReference");
+  const hasCharacterReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "protagonist");
   const styleRule = hasStyleReference
     ? "Visual style lock: match the uploaded styleReference image for rendering, palette, lighting, line quality, and material finish. Do not drift into photorealistic food photography unless the styleReference itself is photorealistic."
     : hasCharacterReference
       ? "Visual style lock: match the uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, bright appetizing colors, and premium mobile-game key-art polish. Do not use photorealistic food photography, realistic 3D product render, camera macro food shot, or stock-photo background."
       : "Visual style lock: use a stylized game campaign illustration style, not photorealistic food photography, unless the user explicitly selected a realistic style.";
   const semanticGroups = promptPackage.assets.reduce((groups, asset) => {
-    const semanticRole = posterAssetSemanticRole(asset);
+    const semanticRole = assetSemanticRole(asset);
     groups.set(semanticRole, [...(groups.get(semanticRole) || []), asset]);
     return groups;
   }, new Map<PosterAssetSemanticRole, PromptAssetBinding[]>());
@@ -422,7 +424,8 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage)
   const sloganTargets = Object.entries(promptPackage.slogans)
     .map(([language, slogan]) => `${language}: ${slogan}`)
     .join("\n");
-  const assetRoleInventory = posterAssetSemanticInventory(promptPackage.assets);
+  const assetRoleInventory = assetSemanticInventory(promptPackage.assets, { mode: promptPackage.mode });
+  const fusionDirective = modeAssetFusionDirective(promptPackage.mode, promptPackage.assets);
   const referenceMap = [
     characters.length > 0
       ? [
@@ -480,6 +483,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage)
     ],
     flexibleBlocks: [
       { text: architectureBlock, maxChars: 3200, minChars: 900 },
+      { text: fusionDirective ? `## Universal Asset Fusion Contract\n${fusionDirective}` : "", maxChars: 900, minChars: 260 },
       { text: supportingSectionText ? `## Workspace Creative Direction\n${supportingSectionText}` : sectionText, maxChars: 1200, minChars: 300 },
     ],
     closingBlocks: [

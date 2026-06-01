@@ -1,4 +1,6 @@
-export type PosterAssetSemanticRole =
+import type { ProductionMode } from "../schema/zod";
+
+export type AssetSemanticRole =
   | "protagonist"
   | "antagonist"
   | "brandLogo"
@@ -9,13 +11,20 @@ export type PosterAssetSemanticRole =
   | "keySubject"
   | "supportingAsset";
 
-export type PosterAssetSemanticInput = {
+export type AssetSemanticInput = {
   role: string;
   label?: string | null | undefined;
   description?: string | null | undefined;
   binding?: string | null | undefined;
   placeholder?: string | null | undefined;
 };
+
+export type AssetFusionOptions = {
+  mode?: ProductionMode;
+};
+
+export type PosterAssetSemanticRole = AssetSemanticRole;
+export type PosterAssetSemanticInput = AssetSemanticInput;
 
 const BOSS_REFERENCE_RE = /\bBOSS\b|boss|antagonist|enemy|monster|creature|villain|首领|魔王|怪物|怪兽|敌人|宝箱怪/i;
 const HERO_REFERENCE_RE = /\bhero\b|protagonist|playable|player|character|mascot|avatar|chef|主角|角色|人物|英雄|玩家|厨师/i;
@@ -25,7 +34,7 @@ const ENVIRONMENT_REFERENCE_RE = /\bbackground\b|scene|environment|level|map|wor
 const STYLE_REFERENCE_RE = /\bstyle\b|palette|rendering|finish|moodboard|画风|风格|色板|渲染/i;
 const COMPOSITION_REFERENCE_RE = /\bcomposition\b|layout|framing|camera|构图|布局|版式|镜头/i;
 
-function searchableText(asset: PosterAssetSemanticInput): string {
+function searchableText(asset: AssetSemanticInput): string {
   return [
     asset.role,
     asset.label || "",
@@ -35,11 +44,15 @@ function searchableText(asset: PosterAssetSemanticInput): string {
   ].join(" ");
 }
 
-export function isPosterBossLikeAsset(asset: PosterAssetSemanticInput): boolean {
+export function isBossLikeAsset(asset: AssetSemanticInput): boolean {
   return BOSS_REFERENCE_RE.test(searchableText(asset));
 }
 
-export function posterAssetSemanticRole(asset: PosterAssetSemanticInput): PosterAssetSemanticRole {
+export function isPosterBossLikeAsset(asset: PosterAssetSemanticInput): boolean {
+  return isBossLikeAsset(asset);
+}
+
+export function assetSemanticRole(asset: AssetSemanticInput): AssetSemanticRole {
   const role = asset.role;
   const binding = asset.binding || "";
   const text = searchableText(asset);
@@ -52,27 +65,39 @@ export function posterAssetSemanticRole(asset: PosterAssetSemanticInput): Poster
     return "brandLogo";
   }
   if (role === "gameCharacter" || role === "collabCharacter" || binding === "identityLock" || HERO_REFERENCE_RE.test(text)) {
-    return isPosterBossLikeAsset(asset) ? "antagonist" : "protagonist";
+    return isBossLikeAsset(asset) ? "antagonist" : "protagonist";
   }
-  if (isPosterBossLikeAsset(asset)) return "antagonist";
+  if (isBossLikeAsset(asset)) return "antagonist";
   if (role === "background" || binding === "backgroundReference" || ENVIRONMENT_REFERENCE_RE.test(text)) return "environment";
   if (role === "prop" || PROP_REFERENCE_RE.test(text)) return "prop";
   if (role === "subjectReference" || binding === "subjectReference") return "keySubject";
   return "supportingAsset";
 }
 
-export function isPosterIdentityAsset(asset: PosterAssetSemanticInput): boolean {
-  const semanticRole = posterAssetSemanticRole(asset);
+export function posterAssetSemanticRole(asset: PosterAssetSemanticInput): PosterAssetSemanticRole {
+  return assetSemanticRole(asset);
+}
+
+export function isIdentityAsset(asset: AssetSemanticInput): boolean {
+  const semanticRole = assetSemanticRole(asset);
   return semanticRole === "protagonist" || semanticRole === "antagonist" || semanticRole === "keySubject";
 }
 
-export function isPosterIntegratedReferenceAsset(asset: PosterAssetSemanticInput): boolean {
-  const semanticRole = posterAssetSemanticRole(asset);
+export function isPosterIdentityAsset(asset: PosterAssetSemanticInput): boolean {
+  return isIdentityAsset(asset);
+}
+
+export function isIntegratedReferenceAsset(asset: AssetSemanticInput): boolean {
+  const semanticRole = assetSemanticRole(asset);
   return semanticRole !== "styleReference" && semanticRole !== "compositionReference";
 }
 
-export function posterAssetSemanticTitle(role: PosterAssetSemanticRole): string {
-  const titles: Record<PosterAssetSemanticRole, string> = {
+export function isPosterIntegratedReferenceAsset(asset: PosterAssetSemanticInput): boolean {
+  return isIntegratedReferenceAsset(asset);
+}
+
+export function assetSemanticTitle(role: AssetSemanticRole): string {
+  const titles: Record<AssetSemanticRole, string> = {
     protagonist: "playable protagonist / hero identity",
     antagonist: "antagonist / BOSS threat",
     brandLogo: "brand logo / wordmark",
@@ -86,9 +111,12 @@ export function posterAssetSemanticTitle(role: PosterAssetSemanticRole): string 
   return titles[role];
 }
 
-export function posterAssetFusionStrategy(asset: PosterAssetSemanticInput): string {
-  const semanticRole = posterAssetSemanticRole(asset);
-  switch (semanticRole) {
+export function posterAssetSemanticTitle(role: PosterAssetSemanticRole): string {
+  return assetSemanticTitle(role);
+}
+
+function posterFusionStrategy(role: AssetSemanticRole): string {
+  switch (role) {
     case "protagonist":
       return "preserve face, hair, costume, proportions, palette, line quality, and signature props; redraw as a living in-world actor with a new line of action instead of the exact front-facing reference pose, using changed pose/expression/camera/lighting, clear foot/hand contact points, cast/contact shadows, rim light, foreground occlusion, and VFX overlap";
     case "antagonist":
@@ -110,8 +138,122 @@ export function posterAssetFusionStrategy(asset: PosterAssetSemanticInput): stri
   }
 }
 
-export function posterAssetCompactConstraint(asset: PosterAssetSemanticInput): string {
-  const semanticRole = posterAssetSemanticRole(asset);
+function iconFusionStrategy(role: AssetSemanticRole): string {
+  switch (role) {
+    case "brandLogo":
+      return "use as brand style or mark reference only when it can stay clean at small sizes; do not render logo text in icon mode unless it is a simple non-letter symbol";
+    case "styleReference":
+      return "control icon rendering style, palette, material finish, and edge treatment";
+    case "compositionReference":
+      return "control square icon framing, subject scale, and silhouette balance only";
+    case "prop":
+    case "keySubject":
+    case "protagonist":
+    case "antagonist":
+      return "preserve the subject identity and simplify it into one bold app/game icon silhouette with high contrast, minimal background, no text, and readable form at 64px";
+    case "environment":
+    case "supportingAsset":
+      return "use only as secondary mood, palette, or simple shape support; never clutter the icon or compete with the single main subject";
+  }
+}
+
+function logoFusionStrategy(role: AssetSemanticRole): string {
+  switch (role) {
+    case "brandLogo":
+      return "use as brand continuity, lettering rhythm, color, and silhouette reference; prioritize readable wordmark construction and avoid fake replacement text when exact spelling cannot be controlled";
+    case "prop":
+    case "keySubject":
+      return "extract symbolic shapes, materials, or motifs into the logo mark or badge while keeping the wordmark primary";
+    case "styleReference":
+      return "guide bevels, materials, lighting, palette, and finish for the logo system";
+    case "compositionReference":
+      return "guide lockup balance and clear space only, not scene content";
+    case "protagonist":
+    case "antagonist":
+    case "environment":
+    case "supportingAsset":
+      return "use as secondary brand-world motif only; do not turn logo mode into a character scene or poster";
+  }
+}
+
+function announcementFusionStrategy(role: AssetSemanticRole): string {
+  switch (role) {
+    case "brandLogo":
+      return "place as a clean brand lockup or UI panel mark without fake text or clutter";
+    case "protagonist":
+    case "antagonist":
+    case "keySubject":
+      return "preserve identity while staging as a guide, presenter, event subject, or supporting visual around the announcement surface; do not cover the readable title/copy zone";
+    case "environment":
+      return "use as event/world backdrop or in-game UI panel material while maintaining strong text safety";
+    case "styleReference":
+      return "guide overall UI/event rendering style and color mood";
+    case "compositionReference":
+      return "guide panel layout, copy safe area, and subject grouping only";
+    case "prop":
+    case "supportingAsset":
+      return "use as event ornament or story cue only if it supports the announcement hierarchy";
+  }
+}
+
+function collabFusionStrategy(role: AssetSemanticRole): string {
+  switch (role) {
+    case "brandLogo":
+      return "keep each brand/logo identity separate but visually unified through shared lighting, materials, framing, and scene context; do not merge two logos into one fake mark";
+    case "protagonist":
+    case "antagonist":
+    case "keySubject":
+      return "preserve each uploaded identity as a separate entity with a clear relationship or interaction; do not merge, average, swap traits, or create a hybrid";
+    case "prop":
+    case "environment":
+    case "supportingAsset":
+      return "use as shared-world bridge, event prop, or environment cue that connects the two sides without overwhelming either identity";
+    case "styleReference":
+      return "guide the unified collaboration rendering style while preserving each IP identity";
+    case "compositionReference":
+      return "guide dual-subject balance, logo spacing, and interaction layout only";
+  }
+}
+
+export function assetFusionStrategy(asset: AssetSemanticInput, options: AssetFusionOptions = {}): string {
+  const semanticRole = assetSemanticRole(asset);
+  switch (options.mode) {
+    case "icon":
+      return iconFusionStrategy(semanticRole);
+    case "logo":
+      return logoFusionStrategy(semanticRole);
+    case "announcement":
+      return announcementFusionStrategy(semanticRole);
+    case "collab":
+      return collabFusionStrategy(semanticRole);
+    case "poster":
+    default:
+      return posterFusionStrategy(semanticRole);
+  }
+}
+
+export function posterAssetFusionStrategy(asset: PosterAssetSemanticInput): string {
+  return assetFusionStrategy(asset, { mode: "poster" });
+}
+
+export function assetCompactConstraint(asset: AssetSemanticInput, options: AssetFusionOptions = {}): string {
+  const semanticRole = assetSemanticRole(asset);
+  if (options.mode === "icon") {
+    if (semanticRole === "styleReference") return "style reference; control icon finish";
+    if (semanticRole === "compositionReference") return "composition reference; square framing only";
+    return "icon identity reference; redraw as one bold text-free small-size-readable subject";
+  }
+  if (options.mode === "logo") {
+    if (semanticRole === "brandLogo") return "brand/wordmark reference; preserve readable brand rhythm or reserve copy-safe fallback";
+    return "logo motif reference; influence mark shape/material without becoming a scene";
+  }
+  if (options.mode === "announcement") {
+    return `${assetSemanticTitle(semanticRole)}; support readable announcement hierarchy and text-safe layout`;
+  }
+  if (options.mode === "collab") {
+    return `${assetSemanticTitle(semanticRole)}; keep identities separate and scene-unified`;
+  }
+
   switch (semanticRole) {
     case "protagonist":
       return "identity reference; redraw dynamically as integrated hero, not sticker";
@@ -134,9 +276,13 @@ export function posterAssetCompactConstraint(asset: PosterAssetSemanticInput): s
   }
 }
 
-export function posterAssetReferenceName(asset: PosterAssetSemanticInput, semanticIndex: number): string {
+export function posterAssetCompactConstraint(asset: PosterAssetSemanticInput): string {
+  return assetCompactConstraint(asset, { mode: "poster" });
+}
+
+export function assetReferenceName(asset: AssetSemanticInput, semanticIndex: number): string {
   if (asset.placeholder) return asset.placeholder;
-  const semanticRole = posterAssetSemanticRole(asset);
+  const semanticRole = assetSemanticRole(asset);
   switch (semanticRole) {
     case "protagonist":
       return `[Game Character ${semanticIndex}]`;
@@ -159,14 +305,44 @@ export function posterAssetReferenceName(asset: PosterAssetSemanticInput, semant
   }
 }
 
-export function posterAssetSemanticInventory(assets: PosterAssetSemanticInput[]): string {
-  const semanticCounters = new Map<PosterAssetSemanticRole, number>();
+export function posterAssetReferenceName(asset: PosterAssetSemanticInput, semanticIndex: number): string {
+  return assetReferenceName(asset, semanticIndex);
+}
+
+export function assetSemanticInventory(assets: AssetSemanticInput[], options: AssetFusionOptions = {}): string {
+  const semanticCounters = new Map<AssetSemanticRole, number>();
   return assets.map((asset) => {
-    const semanticRole = posterAssetSemanticRole(asset);
+    const semanticRole = assetSemanticRole(asset);
     const nextIndex = (semanticCounters.get(semanticRole) || 0) + 1;
     semanticCounters.set(semanticRole, nextIndex);
-    const name = posterAssetReferenceName(asset, nextIndex);
+    const name = assetReferenceName(asset, nextIndex);
     const label = asset.label ? ` label="${asset.label}"` : "";
-    return `- ${name}: semanticRole=${semanticRole} (${posterAssetSemanticTitle(semanticRole)}); sourceRole=${asset.role}${label}; fusionStrategy=${posterAssetFusionStrategy(asset)}.`;
+    return `- ${name}: semanticRole=${semanticRole} (${assetSemanticTitle(semanticRole)}); sourceRole=${asset.role}${label}; fusionStrategy=${assetFusionStrategy(asset, options)}.`;
   }).join("\n");
+}
+
+export function posterAssetSemanticInventory(assets: PosterAssetSemanticInput[]): string {
+  return assetSemanticInventory(assets, { mode: "poster" });
+}
+
+export function modeAssetFusionDirective(
+  mode: ProductionMode,
+  assets: AssetSemanticInput[],
+): string {
+  if (assets.length === 0) return "";
+  const inventory = assetSemanticInventory(assets, { mode });
+  const common = [
+    "Universal asset fusion contract: uploaded assets are semantic visual references, not sticker layers.",
+    "Default pipeline: AI integrated redraw. Preserve identity/brand/style duties from references while redrawing or simplifying them for the current mode's visual goal.",
+    "Fallback overlay is only acceptable after a failed integrated redraw or missing critical identity/logo, never as the default composition path.",
+    inventory ? `Semantic asset map:\n${inventory}` : "",
+  ];
+  const modeRule: Record<ProductionMode, string> = {
+    poster: "Poster target: cinematic game KV with story action, environment interaction, light/shadow/VFX integration, and no flat collage feeling.",
+    icon: "Icon target: 1:1 square, ABSOLUTELY NO TEXT, one strong subject silhouette, minimal background, high contrast, readable at 64px, and no copied static asset pose.",
+    logo: "Logo target: readable wordmark/mark system with brand feel first. Uploaded logos are brand references, not permission to generate fake look-alike text; reserve copy-safe fallback when spelling is uncertain.",
+    announcement: "Announcement target: text-safe in-game event/UI layout first. Uploaded subjects support the announcement and must not cover the headline/copy area or produce garbled text.",
+    collab: "Collab target: separate identities and logos unified by one scene. Do not merge characters or logos into hybrids; show a relationship or interaction story.",
+  };
+  return [...common, modeRule[mode]].filter(Boolean).join("\n");
 }

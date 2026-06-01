@@ -7,12 +7,13 @@ import {
 } from "../schema/zod";
 import { getModeAssetSlots, getRequiredAssetSlots } from "../assets/slot-definitions";
 import {
-  posterAssetCompactConstraint,
-  posterAssetFusionStrategy,
+  assetCompactConstraint,
+  assetFusionStrategy,
+  assetSemanticInventory,
+  assetSemanticRole,
+  modeAssetFusionDirective,
   posterAssetReferenceName,
-  posterAssetSemanticInventory,
-  posterAssetSemanticRole,
-  type PosterAssetSemanticRole,
+  type AssetSemanticRole,
 } from "../assets/semantic-roles";
 import { WorkspaceSnapshotSchema, type StoredAssetRecord, type WorkspaceModeState, type WorkspaceSnapshot } from "../storage/contracts";
 import {
@@ -199,8 +200,8 @@ function dedupeLatestPromptAssets(assets: StoredAssetRecord[]): StoredAssetRecor
   return [...bySlot.values()];
 }
 
-function roleInstruction(asset: PromptAssetBinding): string {
-  return `${posterAssetCompactConstraint(asset)}; ${posterAssetFusionStrategy(asset)}`;
+function roleInstruction(asset: PromptAssetBinding, mode: ProductionMode): string {
+  return `${assetCompactConstraint(asset, { mode })}; ${assetFusionStrategy(asset, { mode })}`;
 }
 
 function createAssetBinding(asset: StoredAssetRecord, mode: ProductionMode): PromptAssetBinding {
@@ -242,9 +243,9 @@ function createAssetBinding(asset: StoredAssetRecord, mode: ProductionMode): Pro
 
 function assignPosterAssetPlaceholders(assets: PromptAssetBinding[], mode: ProductionMode): PromptAssetBinding[] {
   if (mode !== "poster") return assets;
-  const semanticCounters = new Map<PosterAssetSemanticRole, number>();
+  const semanticCounters = new Map<AssetSemanticRole, number>();
   return assets.map((asset) => {
-    const semanticRole = posterAssetSemanticRole(asset);
+    const semanticRole = assetSemanticRole(asset);
     const nextIndex = (semanticCounters.get(semanticRole) || 0) + 1;
     semanticCounters.set(semanticRole, nextIndex);
     const placeholder = posterAssetReferenceName(asset, nextIndex);
@@ -362,22 +363,23 @@ function formatAssetInventory(assets: PromptAssetBinding[], mode: ProductionMode
     ? assets.map((asset) => {
         const urlState = asset.providerReady ? "provider-ready URL" : asset.url ? "browser/local preview only" : "no URL";
         const placeholder = asset.placeholder ? ` placeholder=${asset.placeholder}` : "";
-        return `- ${asset.label}: sourceRole=${asset.role}, semanticRole=${posterAssetSemanticRole(asset)}, binding=${asset.binding}, required=${asset.required}, ${urlState}, assetId=${asset.assetId}${placeholder}. Fusion: ${roleInstruction(asset)}.`;
+        return `- ${asset.label}: sourceRole=${asset.role}, semanticRole=${assetSemanticRole(asset)}, binding=${asset.binding}, required=${asset.required}, ${urlState}, assetId=${asset.assetId}${placeholder}. Fusion: ${roleInstruction(asset, mode)}.`;
       })
     : ["- No mode-relevant assets are currently bound."];
 
   const semanticGroups = assets.reduce((groups, asset) => {
-    const semanticRole = posterAssetSemanticRole(asset);
+    const semanticRole = assetSemanticRole(asset);
     groups.set(semanticRole, [...(groups.get(semanticRole) || []), asset]);
     return groups;
-  }, new Map<PosterAssetSemanticRole, PromptAssetBinding[]>());
+  }, new Map<AssetSemanticRole, PromptAssetBinding[]>());
   const characterAssets = semanticGroups.get("protagonist") || [];
   const collabAssets = assets.filter((asset) => asset.role === "collabCharacter");
   const logoAssets = semanticGroups.get("brandLogo") || [];
   const bossAssets = semanticGroups.get("antagonist") || [];
   const propAssets = semanticGroups.get("prop") || [];
   const environmentAssets = semanticGroups.get("environment") || [];
-  const semanticInventory = posterAssetSemanticInventory(assets);
+  const fusionDirective = modeAssetFusionDirective(mode, assets);
+  const semanticInventory = assetSemanticInventory(assets, { mode });
   const posterAssetContract = mode === "poster" && assets.length > 0
     ? [
         "Asset usage contract: uploaded input/reference assets are binding visual constraints with semantic poster duties, not loose inspiration and not local sticker overlays.",
@@ -407,7 +409,7 @@ function formatAssetInventory(assets: PromptAssetBinding[], mode: ProductionMode
     ? "Collab character rule: each collabCharacter asset is a separate independent partner character. Keep them distinct and never merge identities."
     : "";
 
-  return [`Required slots: ${requiredText}.`, posterAssetContract, rosterLockRule, multiCharacterRule, multiCollabRule, ...assetLines].filter(Boolean).join("\n");
+  return [`Required slots: ${requiredText}.`, fusionDirective, posterAssetContract, rosterLockRule, multiCharacterRule, multiCollabRule, ...assetLines].filter(Boolean).join("\n");
 }
 
 function formatModeForm(modeState: WorkspaceModeState): string {
@@ -443,9 +445,9 @@ function formatFocusGuidancePolicy(modeState: WorkspaceModeState): string {
 function formatPosterQualityDirection(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
   if (modeState.mode !== "poster") return "";
 
-  const hasUploadedStyle = assets.some((asset) => posterAssetSemanticRole(asset) === "styleReference");
+  const hasUploadedStyle = assets.some((asset) => assetSemanticRole(asset) === "styleReference");
   const hasSelectedStyle = modeState.modeForm.mode === "poster" && modeState.modeForm.styleTags.length > 0;
-  const hasProtagonistReference = assets.some((asset) => posterAssetSemanticRole(asset) === "protagonist");
+  const hasProtagonistReference = assets.some((asset) => assetSemanticRole(asset) === "protagonist");
   const styleConstraint = hasUploadedStyle || hasSelectedStyle || hasProtagonistReference
     ? "Keep the active style source intact, but raise the finish level: richer lighting, deeper value range, cleaner silhouettes, refined materials, and premium game-marketing polish."
     : "Choose a premium game-marketing art direction with cinematic lighting and strong market readability.";
@@ -508,8 +510,8 @@ function formatPosterTypographyDirection(slogans: Partial<Record<SloganLanguage,
 function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
   if (modeState.mode !== "poster" || modeState.modeForm.mode !== "poster") return "";
 
-  const styleAssets = assets.filter((asset) => posterAssetSemanticRole(asset) === "styleReference");
-  const characterAssets = assets.filter((asset) => posterAssetSemanticRole(asset) === "protagonist");
+  const styleAssets = assets.filter((asset) => assetSemanticRole(asset) === "styleReference");
+  const characterAssets = assets.filter((asset) => assetSemanticRole(asset) === "protagonist");
   const selectedStyle = modeState.modeForm.styleTags[0]?.trim() || "";
   const priorityRule = [
     "Style priority order:",

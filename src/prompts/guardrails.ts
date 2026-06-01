@@ -112,8 +112,8 @@ export const promptGuardrailsByMode: Record<ProductionMode, PromptGuardrailRule[
       id: "logo-wordmark-first",
       mode: "logo",
       severity: "hard",
-      rule: "The 3D game wordmark is the primary subject and must dominate the composition.",
-      negativeRule: "Do not make scenery, characters, or props more important than the wordmark.",
+      rule: "The game wordmark, mark, or badge is the primary subject and must dominate the composition with readable brand construction.",
+      negativeRule: "Do not make scenery, characters, or props more important than the wordmark/mark system.",
     }),
     rule({
       id: "logo-pure-background",
@@ -121,6 +121,13 @@ export const promptGuardrailsByMode: Record<ProductionMode, PromptGuardrailRule[
       severity: "hard",
       rule: "Use a pure solid-color background suitable for clean cutout and later compositing.",
       negativeRule: "No complex environment, gradient background, noisy lighting, or scene depth.",
+    }),
+    rule({
+      id: "logo-reference-brand-continuity",
+      mode: "logo",
+      severity: "hard",
+      rule: "If an uploaded logo exists, use it as brand continuity for shape, rhythm, color, and style; preserve exact spelling only when reliable, otherwise design a clean copy-safe mark or blank wordmark treatment without fake replacement text.",
+      negativeRule: "Do not generate fake look-alike words, substitute letters, or repeat the uploaded logo as a pasted sticker.",
     }),
   ],
   icon: [
@@ -142,8 +149,8 @@ export const promptGuardrailsByMode: Record<ProductionMode, PromptGuardrailRule[
       id: "icon-subject-fidelity",
       mode: "icon",
       severity: "hard",
-      rule: "Stay faithful to uploaded subject references and emphasize the user-selected visual focus.",
-      negativeRule: "Do not invent unrelated characters or replace the uploaded subject identity.",
+      rule: "Stay faithful to uploaded subject references while redrawing/simplifying them into one strong high-contrast icon subject readable at 64px.",
+      negativeRule: "Do not invent unrelated characters, replace the uploaded subject identity, paste the original asset as a sticker, or keep a cluttered poster-like scene.",
     }),
   ],
 };
