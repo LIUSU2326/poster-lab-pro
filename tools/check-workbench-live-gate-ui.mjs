@@ -53,13 +53,14 @@ for (const token of [
   "missing_live_confirmation",
   "cost_limit_exceeded",
   "missing_runtime_credential",
+  "costSummaryLabel",
 ]) {
   if (!viewModelSource.includes(token)) issues.push(`live-gate-view-model.js: missing ${token}`);
 }
 
 for (const [name, source, tokens] of [
   ["config-panel.js", configSource, ["模型、Key 与实机状态在顶部统一查看"]],
-  ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "toggle-task"]],
+  ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "toggle-task", "costSummaryLabel"]],
   ["inspector.js", inspectorSource, ["live-gate-inspector", "实机安全闸"]],
   ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关"]],
   ["center-board.js", centerBoardSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
@@ -120,6 +121,9 @@ try {
   const allowedGate = getLiveGateViewModel(modeSpecs.poster);
   if (allowedGate.status !== "allowed" || !allowedGate.allowed || allowedGate.blockerCount !== 0) {
     issues.push("confirmed live gate should become allowed with no blockers");
+  }
+  if (!allowedGate.costSummaryLabel.includes("上限")) {
+    issues.push("live gate should expose a cost summary label with accepted cap");
   }
 
   state.liveGate.maxAcceptedCost = 0.01;

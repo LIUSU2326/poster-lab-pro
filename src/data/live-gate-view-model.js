@@ -164,6 +164,7 @@ export function getLiveGateViewModel(activeMode) {
     estimatedCostLabel: costKnown ? formatCurrency(estimatedCost) : "预估 $0.05",
     maxAcceptedCost,
     maxAcceptedCostLabel: formatCurrency(maxAcceptedCost),
+    costSummaryLabel: `${costKnown ? formatCurrency(estimatedCost) : "预估 $0.05"} / 上限 ${formatCurrency(maxAcceptedCost)}`,
     blockerCount: blockers.length,
     blockers,
     confirmations: confirmationRows.map((row) => ({

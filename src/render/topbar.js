@@ -47,7 +47,7 @@ export function renderTopbar(activeMode) {
         </button>
         <span class="run-mode-chip ${state.apiMode === "http" ? "live" : "test"}" aria-label="当前运行模式">
           <b>${state.apiMode === "http" ? "实机通道" : "测试模式"}</b>
-          <small>${state.apiMode === "http" ? escapeHtml(liveGate.estimatedCostLabel || "费用待定") : "不调用模型"}</small>
+          <small>${state.apiMode === "http" ? escapeHtml(liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定") : "不调用模型"}</small>
         </span>
         <button class="theme-switch ${state.theme}" type="button" data-action="toggle-theme" aria-label="切换亮色或暗色">
           <span class="${state.theme === "light" ? "active" : ""}">亮色</span>

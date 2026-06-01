@@ -93,6 +93,7 @@ for (const token of [
   "data-scheme-id",
   "run-mode-chip",
   "liveGate.estimatedCostLabel",
+  "liveGate.costSummaryLabel",
 ]) {
   if (!topbar.includes(token)) issues.push(`topbar.js: missing current-result workflow token ${token}`);
 }
