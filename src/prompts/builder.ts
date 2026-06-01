@@ -522,6 +522,55 @@ function formatPosterQualityDirection(modeState: WorkspaceModeState, assets: Pro
   ].join("\n");
 }
 
+function formatModeQualityDirection(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
+  if (modeState.mode === "poster") return formatPosterQualityDirection(modeState, assets);
+
+  const fusionDirective = modeAssetFusionDirective(modeState.mode, assets);
+  const sharedRules = [
+    "Mode quality target: use uploaded assets as semantic visual references for AI integrated redraw, not as pasted sticker layers.",
+    fusionDirective,
+    "Preserve each asset's assigned semantic duty from the Mode Asset References section while adapting it to this mode's visual goal.",
+  ].filter(Boolean).join("\n");
+
+  if (modeState.mode === "icon") {
+    return [
+      sharedRules,
+      "Icon quality target: premium game/app icon, perfect 1:1 square, one single dominant subject, bold readable silhouette, high contrast, minimal background, crisp focal detail, and readable at 64px.",
+      "Icon asset handling: uploaded character, prop, BOSS-like subject, or logo reference can become the main icon subject, but it must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
+      "Icon exclusions: ABSOLUTELY NO TEXT, no logo lettering, no captions, no UI copy, no poster scene complexity, no multi-character battle scene, no white border, no rounded container, and no copied static asset pose.",
+    ].join("\n");
+  }
+
+  if (modeState.mode === "logo") {
+    return [
+      sharedRules,
+      "Logo quality target: readable wordmark/mark system is the primary subject, with clean silhouette, premium material finish, strong brand rhythm, and a pure solid-color background suitable for later compositing.",
+      "Logo asset handling: uploaded logos are brand continuity references for shape, color, letter rhythm, and style. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or blank wordmark treatment without fake replacement text.",
+      "Logo exclusions: do not turn logo mode into a poster scene, character scene, product render, landscape, or sticker collage. Do not invent look-alike words, substitute letters, repeat the uploaded logo as a pasted sticker, or let props/characters dominate the wordmark.",
+    ].join("\n");
+  }
+
+  if (modeState.mode === "announcement") {
+    return [
+      sharedRules,
+      "Announcement quality target: readable in-game announcement/event visual with clear title hierarchy, deliberate copy-safe area, polished UI/event art direction, and quiet enough background for later text placement.",
+      "Announcement asset handling: uploaded characters or key subjects can act as guide/presenter/event support around the announcement surface; uploaded logos should be small clean lockups; backgrounds and UI screenshots guide panel material and spacing.",
+      "Announcement exclusions: do not cover the headline/copy zone, do not turn the image into a battle poster, do not generate garbled operational text, fake title words, repeated watermark logos, or busy effects behind copy.",
+    ].join("\n");
+  }
+
+  if (modeState.mode === "collab") {
+    return [
+      sharedRules,
+      "Collab quality target: premium collaboration campaign visual where both identities stay separate but feel unified through one scene, shared lighting, matching materials, clear interaction story, and balanced brand presence.",
+      "Collab asset handling: [Game Character] and [Collab Partner] must remain separate visible entities. Keep each uploaded character/logo identity independent; show relationship through exchanged props, mirrored actions, shared set piece, or in-world event staging.",
+      "Collab exclusions: do not merge characters, average traits, swap identities, create a hybrid mascot, fuse two logos into one fake mark, paste logos side-by-side without a story, or let one brand erase the other.",
+    ].join("\n");
+  }
+
+  return sharedRules;
+}
+
 function formatPosterTypographyDirection(slogans: Partial<Record<SloganLanguage, string>>): string {
   const sloganText = Object.entries(slogans)
     .map(([language, slogan]) => `${language}: ${slogan}`)
@@ -708,14 +757,15 @@ function buildSections(input: {
     }),
   ];
 
-  if (input.mode === "poster") {
+  const qualityDirection = formatModeQualityDirection(input.modeState, input.assets);
+  if (qualityDirection) {
     sections.push(
       section({
-        id: "poster-quality",
-        title: "Poster Quality Bar",
+        id: input.mode === "poster" ? "poster-quality" : "mode-quality",
+        title: input.mode === "poster" ? "Poster Quality Bar" : "Mode Quality Bar",
         source: "mode",
         priority: 94,
-        content: formatPosterQualityDirection(input.modeState, input.assets),
+        content: qualityDirection,
       }),
     );
   }

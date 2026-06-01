@@ -59,6 +59,12 @@ for (const token of [
   "scene-derived",
   "Avoid generic three-part lists",
   "sanitizePosterSchemeText",
+  "Icon reference lock",
+  "Logo reference lock",
+  "Announcement reference lock",
+  "Collab reference lock",
+  "Brand icon rule",
+  "Brand collab rule",
 ]) {
   if (!adapter.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
 }

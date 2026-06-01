@@ -14,6 +14,11 @@ import {
   type ProviderResult,
 } from "./contracts";
 import { getProviderManifest } from "./manifests";
+import {
+  assetFusionStrategy,
+  assetSemanticRole,
+  modeAssetFusionDirective,
+} from "../assets/semantic-roles";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
@@ -126,29 +131,32 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
 
 function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterMode = request.context.mode === "poster";
+  const fusionDirective = request.assets.length ? modeAssetFusionDirective(request.context.mode, request.assets) : "";
+  const referenceInstruction = modeReferenceInstruction(request);
+  const protagonistInstruction = modeSpecificProtagonistInstruction(request);
+  const brandLogoInstruction = modeSpecificBrandLogoInstruction(request);
   const assetInstruction = request.assets.length
       ? [
         "Uploaded asset constraints:",
         hasPosterMode
           ? "For poster mode, generate the final integrated game campaign KV when the model can use the provided reference details. Uploaded characters, BOSS/key subject, and logo are identity/model-sheet anchors, not static stickers."
-          : "Treat listed assets as binding visual references. If the provider cannot ingest the images directly, follow their role descriptions as strictly as possible.",
+          : "Treat listed assets as binding semantic visual references for the active mode. If the provider cannot ingest the images directly, follow their role descriptions and fusion strategies as strictly as possible.",
         hasPosterMode
           ? "Characters and BOSS may change pose, expression, action, camera angle, lighting, and perspective, but must preserve recognizable identity. Use each uploaded character, BOSS/key subject, and logo once; no duplicate large/small copies."
-          : "Use each uploaded character, BOSS/key subject, and logo once as an integrated in-world element. Do not create duplicate large/small copies or sticker-like pasted versions of the same asset.",
+          : referenceInstruction,
+        fusionDirective,
         request.assets.some((asset) => asset.role === "styleReference")
           ? "A styleReference image is present and has priority over selected style tags and character-derived style for rendering, palette, lighting, and finish."
           : "",
-        request.assets.some((asset) => asset.role === "gameCharacter")
-          ? "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic chef heroes, random human mascots, or replacement player characters."
-          : "",
+        protagonistInstruction,
         hasPosterMode
           ? "Placeholder annotation rule: any written appearance, species, clothing, weapon, logo-lettering, color, or anatomy description attached to [Game Character], [Boss], [Game Logo], [Prop], or [Key Subject] is non-binding unless it is visibly present in the uploaded reference. Ignore conflicting or embellished placeholder descriptions."
           : "",
-        request.assets.some((asset) => asset.role === "gameLogo" || asset.role === "brandLogo" || /semanticRole=brandLogo/.test(asset.description || ""))
-          ? "Logo text safety: use the exact uploaded logo only when lettering can stay accurate; otherwise reserve a polished blank logo-safe title plate/sign that fits the scene. Do not invent fake logo words, substitute letters, or generate garbled text."
-          : "",
+        brandLogoInstruction,
         ...request.assets.map((asset) => [
           `- ${asset.role}: ${asset.id}`,
+          `semanticRole=${assetSemanticRole(asset)}`,
+          `fusion=${assetFusionStrategy(asset, { mode: request.context.mode })}`,
           asset.description || "",
           asset.url ? `referenceUrl=${asset.url}` : "",
         ].filter(Boolean).join("; ")),
@@ -162,6 +170,60 @@ function imagePrompt(request: ImageGenerationRequest): string {
     "Avoid flat collage, cheap clip-art, generic replacement characters, duplicated asset copies, and conflicting photorealistic backgrounds.",
   ].join(" ");
   return [request.prompt, qualityInstruction, assetInstruction, negativeInstruction].filter(Boolean).join("\n\n");
+}
+
+function hasSemanticRole(request: ImageGenerationRequest, role: ReturnType<typeof assetSemanticRole>): boolean {
+  return request.assets.some((asset) => assetSemanticRole(asset) === role);
+}
+
+function modeReferenceInstruction(request: ImageGenerationRequest): string {
+  switch (request.context.mode) {
+    case "icon":
+      return "Icon reference handling: choose one dominant uploaded subject or motif and simplify/redraw it into a clean 1:1 icon silhouette. Do not create a poster scene, multi-character battle, copied sticker, or any text.";
+    case "logo":
+      return "Logo reference handling: use uploaded assets as brand continuity, motif, material, or shape references for a wordmark/mark system. Do not turn them into a scene or pasted collage.";
+    case "announcement":
+      return "Announcement reference handling: use uploaded assets as supporting art around a readable copy-safe announcement panel. Do not cover the title/copy area or generate garbled operational text.";
+    case "collab":
+      return "Collab reference handling: keep uploaded characters and logos as separate identities unified by one scene, shared lighting, materials, and interaction. Do not merge identities or create hybrid marks.";
+    case "poster":
+    default:
+      return "Use each uploaded character, BOSS/key subject, and logo once as an integrated in-world element. Do not create duplicate large/small copies or sticker-like pasted versions of the same asset.";
+  }
+}
+
+function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): string {
+  if (!hasSemanticRole(request, "protagonist")) return "";
+  switch (request.context.mode) {
+    case "icon":
+      return "Icon character rule: a gameCharacter reference may become the single main icon subject, but no extra characters or crowded group scenes.";
+    case "logo":
+      return "Logo character rule: character references may inspire mascot-like motifs only if the wordmark/mark remains primary.";
+    case "announcement":
+      return "Announcement character rule: character references may act as presenters or supporting cast without covering headline/copy hierarchy.";
+    case "collab":
+      return "Collab character rule: visible characters must come from uploaded gameCharacter/collabCharacter references and remain separate; no generic replacements or merged traits.";
+    case "poster":
+    default:
+      return "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic chef heroes, random human mascots, or replacement player characters.";
+  }
+}
+
+function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): string {
+  if (!hasSemanticRole(request, "brandLogo")) return "";
+  switch (request.context.mode) {
+    case "icon":
+      return "Icon logo rule: uploaded logos may guide color, symbol shape, or brand style, but icon mode must not render logo lettering or readable text.";
+    case "logo":
+      return "Logo text safety: uploaded logos guide brand continuity. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or blank wordmark treatment. Do not invent fake replacement lettering.";
+    case "announcement":
+      return "Announcement logo rule: use uploaded logos as small clean lockups or reserved brand-safe areas, never as fake repeated watermark text.";
+    case "collab":
+      return "Collab logo rule: keep each uploaded logo/brand identity separate and readable; do not fuse two logos into one fake hybrid mark.";
+    case "poster":
+    default:
+      return "Logo text safety: use the exact uploaded logo only when lettering can stay accurate; otherwise reserve a polished blank logo-safe title plate/sign that fits the scene. Do not invent fake logo words, substitute letters, or generate garbled text.";
+  }
 }
 
 function imageSize(request: ImageGenerationRequest): string {

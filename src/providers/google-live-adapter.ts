@@ -199,6 +199,11 @@ function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterReferenceAssets = hasPosterMode && request.assets.some((asset) => isPosterIntegratedReferenceAsset(asset));
   const assetInventory = request.assets.length ? assetSemanticInventory(request.assets, { mode: request.context.mode }) : "";
   const fusionDirective = modeAssetFusionDirective(request.context.mode, request.assets);
+  const referenceIdentityInstruction = modeReferenceIdentityInstruction(request);
+  const antagonistInstruction = modeSpecificAntagonistInstruction(request);
+  const brandLogoInstruction = modeSpecificBrandLogoInstruction(request);
+  const protagonistInstruction = modeSpecificProtagonistInstruction(request);
+  const multiProtagonistInstruction = modeSpecificMultiProtagonistInstruction(request);
   const modeQualityInstruction = (() => {
     if (request.context.mode === "icon") {
       return [
@@ -284,8 +289,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
         hasPosterMode
           ? "Use each uploaded protagonist, antagonist/key subject, brand logo, prop, and environment reference according to its semantic duty. Keep identity consistent while changing pose, expression, action, lighting, scale, and perspective for a vivid KV moment. Do not create large/small duplicate copies."
           : "Use each uploaded asset once according to its role unless the mode explicitly asks for variants. Do not create duplicate large/small copies, alternate redraws, or sticker-like pasted versions of the same asset.",
-        "Treat uploaded character images as locked model sheets for identity: face, hair, proportions, costume, colors, original tool/prop, line weight, and silhouette. The pose and expression should become more dynamic for the poster; do not preserve the exact same front-facing reference pose unless no other identity-safe pose is possible.",
-        "Identity lock means no new facial hair, age shift, body-type shift, hairstyle swap, costume swap, or generic chef redesign. If a character reference is a small chibi/mascot, keep that exact chibi/mascot identity while only changing pose and expression.",
+        referenceIdentityInstruction,
         fusionDirective,
         assetInventory ? `Uploaded asset semantic duties:\n${assetInventory}` : "",
         request.assets.some((asset) => assetSemanticRole(asset) === "styleReference")
@@ -303,18 +307,10 @@ function imagePrompt(request: ImageGenerationRequest): string {
           return `- ${parts.join("; ")}`;
         }),
         "Do not invent details that conflict with locked character, logo, or brand references.",
-        request.assets.some((asset) => assetSemanticRole(asset) === "antagonist")
-          ? "A BOSS/key subject reference is present. Include it as a visible antagonist or key creature while preserving its uploaded silhouette, crown, mouth, eye, teeth, tongue, and color blocks rather than replacing it with a generic monster."
-          : "",
-        request.assets.some((asset) => assetSemanticRole(asset) === "brandLogo")
-          ? "A gameLogo reference is present. Allocate one readable logo-safe treatment. Use the exact uploaded logo/wordmark only if letterforms can stay accurate; otherwise leave a polished blank logo-safe plate/sign. Do not redraw a different logo, invent look-alike words, substitute letters, or add a second logo."
-          : "",
-        request.assets.filter((asset) => assetSemanticRole(asset) === "protagonist").length > 1
-          ? "Multiple gameCharacter references are separate characters. Include them as distinct characters when the composition supports a group poster; do not merge their appearances."
-          : "",
-        request.assets.some((asset) => assetSemanticRole(asset) === "protagonist")
-          ? "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic chef heroes, random human mascots, or replacement player characters."
-          : "",
+        antagonistInstruction,
+        brandLogoInstruction,
+        multiProtagonistInstruction,
+        protagonistInstruction,
       ].join("\n")
     : "";
   const negativeInstruction = request.negativePrompt?.trim()
@@ -343,6 +339,102 @@ function imagePrompt(request: ImageGenerationRequest): string {
     posterNegativeInstruction,
     negativeInstruction,
   ].filter(Boolean).join("\n\n");
+}
+
+function protagonistCount(request: ImageGenerationRequest): number {
+  return request.assets.filter((asset) => assetSemanticRole(asset) === "protagonist").length;
+}
+
+function hasSemanticRole(request: ImageGenerationRequest, role: ReturnType<typeof assetSemanticRole>): boolean {
+  return request.assets.some((asset) => assetSemanticRole(asset) === role);
+}
+
+function modeReferenceIdentityInstruction(request: ImageGenerationRequest): string {
+  if (request.assets.length === 0) return "";
+  switch (request.context.mode) {
+    case "icon":
+      return "Icon reference lock: uploaded subject assets are identity/silhouette anchors for one simplified icon subject. Preserve recognizable colors, proportions, markings, and key props while redrawing into a bold small-size-readable icon form. No copied static pose and no text.";
+    case "logo":
+      return "Logo reference lock: uploaded visual assets are brand-continuity or motif references for a mark/wordmark system. Extract shape rhythm, color, material, and symbolic cues without turning the output into a character scene or poster.";
+    case "announcement":
+      return "Announcement reference lock: uploaded characters, subjects, logos, UI, and environments are supporting references around a readable announcement surface. Preserve identity where used, but keep the title/copy zone clear.";
+    case "collab":
+      return "Collab reference lock: uploaded character and logo references remain separate identities. Preserve each side's recognizable silhouette, colors, styling, and brand cues while unifying them through scene lighting, material, and interaction.";
+    case "poster":
+    default:
+      return [
+        "Treat uploaded character images as locked model sheets for identity: face, hair, proportions, costume, colors, original tool/prop, line weight, and silhouette. The pose and expression should become more dynamic for the poster; do not preserve the exact same front-facing reference pose unless no other identity-safe pose is possible.",
+        "Identity lock means no new facial hair, age shift, body-type shift, hairstyle swap, costume swap, or generic chef redesign. If a character reference is a small chibi/mascot, keep that exact chibi/mascot identity while only changing pose and expression.",
+      ].join("\n");
+  }
+}
+
+function modeSpecificMultiProtagonistInstruction(request: ImageGenerationRequest): string {
+  if (protagonistCount(request) <= 1) return "";
+  switch (request.context.mode) {
+    case "icon":
+      return "Multiple character references in icon mode are alternatives or style/identity cues; choose one dominant subject and do not make a crowded group icon.";
+    case "logo":
+      return "Multiple character references in logo mode are motif inputs only; do not turn the logo into a group character illustration.";
+    case "announcement":
+      return "Multiple character references in announcement mode may form a supporting cast around the copy-safe panel, but they must not cover the title/copy area.";
+    case "collab":
+      return "Multiple character references in collab mode are separate identities; keep them distinct and never merge, average, or swap visual traits.";
+    case "poster":
+    default:
+      return "Multiple gameCharacter references are separate characters. Include them as distinct characters when the composition supports a group poster; do not merge their appearances.";
+  }
+}
+
+function modeSpecificAntagonistInstruction(request: ImageGenerationRequest): string {
+  if (!hasSemanticRole(request, "antagonist")) return "";
+  switch (request.context.mode) {
+    case "icon":
+      return "Antagonist icon rule: if the uploaded BOSS/key subject is the icon subject, simplify it into one bold creature/item silhouette with high contrast and no surrounding battle scene.";
+    case "logo":
+      return "Antagonist logo rule: use uploaded BOSS/key subject traits only as symbolic motifs in the mark; do not render a full scene or character illustration behind the wordmark.";
+    case "announcement":
+      return "Antagonist announcement rule: use uploaded BOSS/key subject only as an event cue or supporting art element around the copy-safe panel, never as a threat that covers the announcement text.";
+    case "collab":
+      return "Antagonist collab rule: if an antagonist/key subject appears, keep it as a separate participant or shared-world cue; do not merge it with either collaboration identity.";
+    case "poster":
+    default:
+      return "A BOSS/key subject reference is present. Include it as a visible antagonist or key creature while preserving its uploaded silhouette, crown, mouth, eye, teeth, tongue, and color blocks rather than replacing it with a generic monster.";
+  }
+}
+
+function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): string {
+  if (!hasSemanticRole(request, "brandLogo")) return "";
+  switch (request.context.mode) {
+    case "icon":
+      return "Brand icon rule: uploaded logos may guide colors, symbol shape, or brand energy, but icon mode must not render logo lettering, captions, or readable text.";
+    case "logo":
+      return "Brand logo rule: uploaded logos guide wordmark rhythm, colors, silhouette, and brand continuity. Preserve exact spelling only when reliable; otherwise use a clean copy-safe mark or blank wordmark treatment without fake replacement text.";
+    case "announcement":
+      return "Brand announcement rule: use uploaded logos as clean small lockups or reserved brand-safe areas. Do not create fake replacement logo text or repeated watermark patterns.";
+    case "collab":
+      return "Brand collab rule: keep each uploaded logo/brand identity separate and readable within one unified scene; do not fuse two logos into one fake hybrid mark.";
+    case "poster":
+    default:
+      return "A gameLogo reference is present. Allocate one readable logo-safe treatment. Use the exact uploaded logo/wordmark only if letterforms can stay accurate; otherwise leave a polished blank logo-safe plate/sign. Do not redraw a different logo, invent look-alike words, substitute letters, or add a second logo.";
+  }
+}
+
+function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): string {
+  if (!hasSemanticRole(request, "protagonist")) return "";
+  switch (request.context.mode) {
+    case "icon":
+      return "Icon subject roster lock: when a gameCharacter reference is used, it should become the single main icon subject or be omitted in favor of a stronger selected subject; do not add extra characters.";
+    case "logo":
+      return "Logo character rule: uploaded characters may influence mascot/brand-world motifs only if they support the mark; do not let character art dominate the wordmark.";
+    case "announcement":
+      return "Announcement character rule: uploaded characters may act as presenters or supporting cast around the copy-safe panel; do not add random extra cast or cover the headline.";
+    case "collab":
+      return "Collab character roster lock: visible characters must come from uploaded gameCharacter/collabCharacter references and remain distinct; do not add generic replacements or merge traits.";
+    case "poster":
+    default:
+      return "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic chef heroes, random human mascots, or replacement player characters.";
+  }
 }
 
 function posterReferenceMappingInstruction(request: ImageGenerationRequest): string {

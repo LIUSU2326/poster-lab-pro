@@ -40,6 +40,12 @@ for (const token of [
   "brand-safe typography",
   "no poster scene complexity",
   "Logo text safety",
+  "modeAssetFusionDirective",
+  "modeReferenceInstruction",
+  "Icon reference handling",
+  "Collab reference handling",
+  "Icon logo rule",
+  "Collab logo rule",
 ]) {
   if (!adapter.includes(token)) issues.push(`openai-live-adapter.ts: missing ${token}`);
 }

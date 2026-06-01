@@ -460,6 +460,90 @@ async function runRuntimeCheck() {
     if (!styleReferenceMapped.request.assets.some((asset) => asset.role === "styleReference" && /highest-priority/i.test(asset.description || ""))) {
       issues.push("provider image request should mark uploaded style references as highest-priority style inputs");
     }
+
+    const createModeAsset = (asset, id, role, label) => ({
+      ...asset,
+      id,
+      role,
+      label,
+      metadata: {},
+      previewUrl: `http://localhost:3000/uploads/workspaces/check/${id}.png`,
+      storageKey: `projects/project-pizza-kitchen/assets/${role}/${id}.png`,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const modeBaseAsset = baseAsset || snapshot.assets[0];
+    const multimodeSnapshot = {
+      ...snapshot,
+      assets: [
+        ...snapshot.assets,
+        createModeAsset(modeBaseAsset, "asset-collab-partner", "collabCharacter", "Collab partner"),
+        createModeAsset(modeBaseAsset, "asset-icon-subject", "subjectReference", "Icon subject"),
+        createModeAsset(modeBaseAsset, "asset-announcement-ui", "uiScreenshot", "Announcement UI"),
+      ],
+    };
+    const multimodeExpectations = {
+      icon: [
+        "Mode Quality Bar",
+        "Icon quality target",
+        "single dominant subject",
+        "readable at 64px",
+        "ABSOLUTELY NO TEXT",
+        "no poster scene complexity",
+        "Default pipeline: AI integrated redraw",
+      ],
+      logo: [
+        "Mode Quality Bar",
+        "Logo quality target",
+        "wordmark/mark system is the primary subject",
+        "pure solid-color background",
+        "Uploaded logos are brand references",
+        "without fake replacement text",
+      ],
+      announcement: [
+        "Mode Quality Bar",
+        "Announcement quality target",
+        "copy-safe area",
+        "uploaded characters or key subjects can act as guide",
+        "do not cover the headline/copy zone",
+      ],
+      collab: [
+        "Mode Quality Bar",
+        "Collab quality target",
+        "[Game Character]",
+        "[Collab Partner]",
+        "must remain separate visible entities",
+        "do not merge characters",
+        "Collab target: separate identities and logos",
+      ],
+    };
+    for (const [mode, expectedTokens] of Object.entries(multimodeExpectations)) {
+      const prompt = prompts.createImagePromptPackage({
+        snapshot: multimodeSnapshot,
+        mode,
+        schemeId: `scheme-${mode}-01`,
+      });
+      if (!prompt.validation.ok) {
+        issues.push(`${mode} image prompt should validate with mode-appropriate reference assets: ${prompt.validation.errors.join(" ")}`);
+      }
+      const mappedMode = mapperModule.mapPromptPackageToProviderRequest({
+        promptPackage: prompt,
+        snapshot: multimodeSnapshot,
+        providerId: "google",
+        kind: "imageGeneration",
+      });
+      for (const token of expectedTokens) {
+        if (!mappedMode.request.prompt.includes(token)) {
+          issues.push(`${mode} mapped image prompt should include multimode quality token: ${token}`);
+        }
+      }
+      if (!mappedMode.request.assets.every((asset) => /fusion=/.test(asset.description || ""))) {
+        issues.push(`${mode} mapped assets should carry semantic fusion descriptions`);
+      }
+      if (mappedMode.request.prompt.includes("Poster Quality Bar") && mode !== "poster") {
+        issues.push(`${mode} prompt should not inherit poster-only quality bar`);
+      }
+    }
   } finally {
     const resolved = path.resolve(outDir);
     if (resolved.startsWith(`${path.resolve(root)}${path.sep}`) && path.basename(resolved).startsWith(".tmp-provider-request-check-")) {
