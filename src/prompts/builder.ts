@@ -308,6 +308,7 @@ function requiredSlotLabel(mode: ProductionMode, slot: ReturnType<typeof getRequ
 }
 
 function createSlogans(snapshot: WorkspaceSnapshot, modeState: WorkspaceModeState, schemeId: string | null) {
+  if (modeState.mode === "icon" || modeState.mode === "logo") return {};
   const scheme = schemeId ? snapshot.schemes.find((item) => item.id === schemeId) : undefined;
   const targetLanguage = modeState.sloganSettings.languages[0] || "en-US";
   if (modeState.sloganSettings.mode === "off") {
@@ -540,6 +541,34 @@ function formatPosterTypographyDirection(slogans: Partial<Record<SloganLanguage,
   ].join("\n");
 }
 
+function formatModeTypographyDirection(
+  mode: ProductionMode,
+  slogans: Partial<Record<SloganLanguage, string>>,
+): string {
+  if (mode === "poster") return formatPosterTypographyDirection(slogans);
+  if (mode === "icon") {
+    return "Icon mode ignores campaign copy and slogan text. The generated image must contain absolutely no text, no letters, no captions, no logo lettering, and no UI copy.";
+  }
+  if (mode === "logo") {
+    return "Logo mode uses only the configured wordmark/mark system. Do not add campaign slogans, subtitles, decorative fake words, or poster copy; preserve exact spelling only when reliable, otherwise use a clean copy-safe mark treatment.";
+  }
+  if (mode === "announcement") {
+    return [
+      "Announcement typography treatment:",
+      Object.entries(slogans).map(([language, slogan]) => `${language}: ${slogan}`).join("\n"),
+      "Prioritize a clean title/copy-safe UI panel or in-world announcement surface.",
+      "Render exact short copy only when spelling can stay clean; otherwise leave polished blank text fields or plates for later copy placement.",
+      "Do not generate garbled letters, fake title words, or let characters cover the announcement copy zone.",
+    ].filter(Boolean).join("\n");
+  }
+  return [
+    "Collaboration typography treatment:",
+    Object.entries(slogans).map(([language, slogan]) => `${language}: ${slogan}`).join("\n"),
+    "Use only short readable campaign copy when clean spelling is likely; otherwise reserve a polished blank copy-safe lockup.",
+    "Keep both brand/logo identities separate and avoid fake hybrid logo text.",
+  ].filter(Boolean).join("\n");
+}
+
 function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
   if (modeState.mode !== "poster" || modeState.modeForm.mode !== "poster") return "";
 
@@ -720,9 +749,7 @@ function buildSections(input: {
         title: "Poster Typography Integration",
         source: "slogan",
         priority: 84,
-        content: input.mode === "poster"
-          ? formatPosterTypographyDirection(input.slogans)
-          : "Keep text readable and integrated with the selected layout.",
+        content: formatModeTypographyDirection(input.mode, input.slogans),
       }),
     );
   }
