@@ -33,8 +33,8 @@ function mimeTypeForFile(filePath: string): string {
 function uploadRoots(): string[] {
   const roots = [
     localAssetUploadBaseDir(),
-    path.join(process.cwd(), "public", "uploads"),
-  ].map((root) => path.resolve(root));
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "public", "uploads"),
+  ].map((root) => path.resolve(/*turbopackIgnore: true*/ root));
   return Array.from(new Set(roots));
 }
 
@@ -48,7 +48,7 @@ export async function GET(
     if (segments.length === 0) return new Response("Not found", { status: 404 });
 
     for (const root of uploadRoots()) {
-      const targetPath = path.join(root, ...segments);
+      const targetPath = path.join(/*turbopackIgnore: true*/ root, ...segments);
       assertInsideDirectory(root, targetPath);
       const stats = await stat(targetPath).catch(() => null);
       if (!stats?.isFile()) continue;

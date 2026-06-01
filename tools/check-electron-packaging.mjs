@@ -17,6 +17,8 @@ const main = read("electron/main.cjs");
 const prepare = read("tools/prepare-electron-dist.mjs");
 const mac = read("tools/pack-electron-mac.mjs");
 const portable = read("tools/pack-electron-portable.mjs");
+const uploadRoute = read("app/uploads/[...path]/route.ts");
+const localBinaryStore = read("src/assets/local-binary-store.ts");
 const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
 const testing = read("TESTING.md");
@@ -33,6 +35,15 @@ for (const token of [
 
 if (!nextConfig.includes('output: "standalone"')) {
   issues.push("next.config.mjs: missing standalone output");
+}
+
+for (const [file, source] of [
+  ["app/uploads/[...path]/route.ts", uploadRoute],
+  ["src/assets/local-binary-store.ts", localBinaryStore],
+]) {
+  if (!source.includes("turbopackIgnore: true")) {
+    issues.push(`${file}: missing Turbopack trace guard around runtime upload directory fallback`);
+  }
 }
 
 for (const token of [

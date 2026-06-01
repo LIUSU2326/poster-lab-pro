@@ -46,7 +46,7 @@ export function localAssetUploadBaseDir(): string {
   const runtimeDir = process.env.POSTER_LAB_RUNTIME_DIR?.trim();
   if (runtimeDir) return path.resolve(runtimeDir, "..", "uploads");
 
-  return path.join(process.cwd(), "public", "uploads");
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), "public", "uploads");
 }
 
 function publicUploadUrl(origin: string, workspaceId: string, storageSegments: string[]): string {
