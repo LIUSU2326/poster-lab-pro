@@ -164,8 +164,7 @@ export function setRuntimeWorkspaceSnapshot(snapshot, source = "runtime") {
     state.activeMode = snapshot.activeMode;
   }
 
-  ensureSelectedScheme();
-  ensureSelectedResult();
+  reconcileWorkspaceUiState();
 }
 
 export function getActiveMode() {
@@ -229,6 +228,42 @@ export function ensureSelectedResult() {
 
   if (!state.selectedResultUserSet && localFileResult && !current.metadata?.resultFile) {
     state.selectedResult = localFileResult.id;
+  }
+}
+
+export function reconcileWorkspaceUiState() {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const previousSelectedResult = state.selectedResult;
+  const previousViewerOpen = state.resultViewerOpen;
+
+  ensureSelectedScheme();
+  ensureSelectedResult();
+
+  const activeResultIds = new Set(getModeResults().map((result) => result.id));
+  if (previousViewerOpen && (!state.selectedResult || (previousSelectedResult && !activeResultIds.has(previousSelectedResult)))) {
+    state.resultViewerOpen = false;
+  }
+
+  const knownSchemeIds = new Set([
+    ...Object.values(modeSpecs).flatMap((mode) => (mode.schemes || []).map((scheme) => scheme.id)),
+    ...((snapshot.schemes || []).map((scheme) => scheme.id)),
+  ]);
+  state.selectedSchemeVariants = Object.fromEntries(
+    Object.entries(state.selectedSchemeVariants || {}).filter(([schemeId]) => knownSchemeIds.has(schemeId)),
+  );
+
+  const archiveRowIds = new Set((snapshot.archiveRows || []).map((row) => row.id));
+  state.archiveSelection = (state.archiveSelection || []).filter((rowId) => archiveRowIds.has(rowId));
+
+  const resultIds = new Set((snapshot.results || []).map((result) => result.id));
+  const nextOperations = (state.resultOperations || []).filter((operation) => (
+    !operation.resultId
+      || resultIds.has(operation.resultId)
+      || (operation.outputResultId && resultIds.has(operation.outputResultId))
+  ));
+  state.resultOperations = nextOperations;
+  if (state.resultOperation?.id && !nextOperations.some((operation) => operation.id === state.resultOperation.id)) {
+    state.resultOperation = null;
   }
 }
 

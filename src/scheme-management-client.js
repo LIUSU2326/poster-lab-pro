@@ -1,5 +1,5 @@
 import { modeSpecs } from './data/modes.js';
-import { getRuntimeWorkspaceSnapshot, setRuntimeWorkspaceSnapshot, state, ensureSelectedScheme, ensureSelectedResult } from './state.js';
+import { getRuntimeWorkspaceSnapshot, setRuntimeWorkspaceSnapshot, state } from './state.js';
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -145,8 +145,6 @@ function generatedSchemeIdsForMode(snapshot, modeId) {
 
 function applySnapshot(nextSnapshot, source) {
   setRuntimeWorkspaceSnapshot(nextSnapshot, source);
-  ensureSelectedScheme();
-  ensureSelectedResult();
 }
 
 async function persistSnapshot(nextSnapshot, options = {}) {
