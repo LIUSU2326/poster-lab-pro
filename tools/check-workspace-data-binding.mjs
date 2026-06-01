@@ -64,8 +64,17 @@ if (!pkg.includes("workspace-data:check")) {
 if (!schemaModels.includes("subjectReference|gameCharacter|prop|gameLogo")) {
   issues.push("models.js: icon mode should accept subject, character, prop, or logo as primary icon reference");
 }
+if (!schemaModels.includes('collab: ["gameCharacter", "collabCharacter", "gameLogo", "brandLogo?", "background?"]')) {
+  issues.push("models.js: collab mode should keep partner brand logo optional while requiring both character identities and game logo");
+}
+if (!schemaModels.includes('announcement: ["gameCharacter?", "background?", "gameLogo?", "brandLogo?", "uiScreenshot?"]')) {
+  issues.push("models.js: announcement mode should treat uploaded visuals as optional copy-safe references");
+}
 if (!adapters.includes('icon: ["subjectReference", "gameCharacter", "prop", "gameLogo"')) {
   issues.push("workspace-adapters.js: icon asset ordering should prioritize all primary icon reference roles");
+}
+if (!adapters.includes('announcement: ["gameCharacter", "background", "gameLogo", "brandLogo", "uiScreenshot"]')) {
+  issues.push("workspace-adapters.js: announcement asset ordering should expose optional copy-safe references");
 }
 
 for (const [fileName, source] of [

@@ -202,8 +202,8 @@ export const formSchemas = {
 
 export const modeAssetRequirements = {
   poster: ["gameCharacter", "background?", "prop?", "gameLogo?", "styleReference?", "compositionReference?"],
-  collab: ["gameCharacter", "collabCharacter", "gameLogo", "brandLogo", "background?"],
-  announcement: ["gameCharacter?", "background?", "gameLogo|brandLogo"],
+  collab: ["gameCharacter", "collabCharacter", "gameLogo", "brandLogo?", "background?"],
+  announcement: ["gameCharacter?", "background?", "gameLogo?", "brandLogo?", "uiScreenshot?"],
   logo: ["subjectReference?", "gameLogo?"],
   icon: ["subjectReference|gameCharacter|prop|gameLogo", "compositionReference?", "styleReference?"],
 };

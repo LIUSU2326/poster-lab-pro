@@ -43,6 +43,16 @@ for (const mode of ["poster", "collab", "announcement", "logo", "icon"]) {
   if (!slots.includes(`${mode}:`)) issues.push(`slot-definitions.ts: missing ${mode} slots`);
 }
 
+for (const token of [
+  'id: "announcement-brand-logo"',
+  'role: "brandLogo"',
+  'id: "announcement-ui-reference"',
+  'role: "uiScreenshot"',
+  'description: "Optional scene, event background',
+]) {
+  if (!slots.includes(token)) issues.push(`slot-definitions.ts: missing announcement optional asset token ${token}`);
+}
+
 for (const token of ["getModeAssetSlots", "getRequiredAssetSlots", "AssetSlotDefinitionSchema"]) {
   if (!slots.includes(token)) issues.push(`slot-definitions.ts: missing ${token}`);
 }
@@ -180,9 +190,18 @@ async function runRuntimeCheck() {
     for (const mode of ["poster", "collab", "announcement", "logo", "icon"]) {
       const modeSlots = assets.getModeAssetSlots(mode);
       if (!Array.isArray(modeSlots) || modeSlots.length === 0) issues.push(`${mode} must expose asset slots`);
-      if (mode !== "logo" && assets.getRequiredAssetSlots(mode).length === 0) {
+      if (!["announcement", "logo"].includes(mode) && assets.getRequiredAssetSlots(mode).length === 0) {
         issues.push(`${mode} must have at least one required asset slot`);
       }
+    }
+
+    const announcementRequired = assets.getRequiredAssetSlots("announcement");
+    if (announcementRequired.length !== 0) {
+      issues.push("announcement mode should not hard-require uploaded assets; title/copy safety is the primary input");
+    }
+    const announcementRoles = assets.getModeAssetSlots("announcement").map((slot) => slot.role);
+    for (const role of ["gameCharacter", "background", "gameLogo", "brandLogo", "uiScreenshot"]) {
+      if (!announcementRoles.includes(role)) issues.push(`announcement mode should expose optional ${role} reference slot`);
     }
 
     const invalidName = assets.AssetUploadPlanRequestSchema.safeParse({
