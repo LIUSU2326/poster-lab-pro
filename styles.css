@@ -10483,6 +10483,10 @@ select:focus-visible,
   white-space: nowrap;
 }
 
+.queue-row-mini .queue-row-failure {
+  color: var(--danger);
+}
+
 .queue-mini-progress {
   grid-column: 1 / -1;
   display: block;
@@ -10519,6 +10523,12 @@ select:focus-visible,
   display: inline-block;
   margin-right: 6px;
   color: var(--danger);
+}
+
+.queue-failure small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-tertiary, var(--muted));
 }
 
 .queue-context-actions {

@@ -53,6 +53,7 @@ function renderQueueContext(queue, tone, imageFailureCount) {
         <p class="queue-failure">
           <span>${escapeHtml(queue.summary.failureCode || "失败")}</span>
           ${escapeHtml(queue.summary.failureMessage)}
+          ${queue.summary.failureNextStep ? `<small>${escapeHtml(queue.summary.failureNextStep)}</small>` : ""}
         </p>
       `
     : "";
@@ -101,6 +102,13 @@ function renderQueueMiniRow(row) {
       <span>${escapeHtml(row.label)}</span>
       <strong>${escapeHtml(row.state)}</strong>
       <small>${escapeHtml(row.stageLabel)} · ${escapeHtml(row.cost)}</small>
+      ${row.failure ? `
+        <small class="queue-row-failure">
+          ${escapeHtml(row.failure.codeLabel)} · ${escapeHtml(row.failure.userMessage)}
+          ${row.failure.nextStep ? ` · ${escapeHtml(row.failure.nextStep)}` : ""}
+          ${row.failure.attemptLabel ? ` · ${escapeHtml(row.failure.attemptLabel)}` : ""}
+        </small>
+      ` : ""}
       <i class="queue-mini-progress" aria-hidden="true"><em style="width: ${escapeHtml(row.progress)}%"></em></i>
     </div>
   `;

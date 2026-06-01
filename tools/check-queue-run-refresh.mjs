@@ -64,7 +64,9 @@ for (const token of [
   "snapshot.queueSummaries",
   "progressLabel",
   "failureMessage",
+  "failureNextStep",
   "retryableFailureCount",
+  "errorCodeNextSteps",
   "waitingProvider",
   "formatCost",
 ]) {
@@ -75,6 +77,7 @@ for (const token of [
   "renderTaskChrome",
   "queue-context",
   "queue-row-mini",
+  "queue-row-failure",
   "queue-failure",
   "retry-failed-images",
 ]) {
@@ -85,6 +88,7 @@ for (const token of [
   ".queue-context",
   ".queue-context-meta",
   ".queue-row-mini",
+  ".queue-row-mini .queue-row-failure",
   ".queue-mini-progress",
   ".queue-failure",
 ]) {
@@ -338,6 +342,12 @@ async function runRuntimeCheck() {
   }
   if (!failedQueue.summary.failureMessage.includes("模型暂时繁忙")) {
     issues.push("queue view model should expose provider user-facing failure messages");
+  }
+  if (!failedQueue.summary.failureNextStep.includes("备用图像模型")) {
+    issues.push("queue view model should expose actionable next steps for failures");
+  }
+  if (!failedQueue.rows[0]?.failure?.attemptLabel.includes("2/2")) {
+    issues.push("queue task rows should expose failed attempt labels");
   }
   if (!failedQueue.rows[0]?.cost.includes("预计 USD 0.24")) {
     issues.push("queue task rows should expose estimated cost labels");

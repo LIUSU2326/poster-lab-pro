@@ -32,6 +32,17 @@ const errorCodeLabels = {
   unknown: "未知错误",
 };
 
+const errorCodeNextSteps = {
+  missing_config: "打开“模型与 Key”补全供应商配置后再运行。",
+  unsupported_capability: "切换到支持该任务能力的图像模型或供应商。",
+  invalid_request: "检查当前方案、素材和宣传词是否缺失、过长或互相冲突。",
+  provider_unavailable: "稍后重试，或切换到备用图像模型。",
+  rate_limited: "等待限流恢复，或临时降低批量数量再试。",
+  auth_failed: "重新保存 API Key，并用连接测试确认可用。",
+  quota_exceeded: "检查供应商余额、额度或项目限额后再运行。",
+  unknown: "保留当前方案，重试一次；如果持续失败，再换模型或检查素材。",
+};
+
 function formatCost({ estimatedCost, actualCost, currency = "USD" }) {
   if (typeof actualCost === "number") return `实际 ${currency} ${actualCost.toFixed(2)}`;
   if (typeof estimatedCost === "number") return `预计 ${currency} ${estimatedCost.toFixed(2)}`;
@@ -169,6 +180,7 @@ function createRuntimeQueueViewModel(activeMode) {
       failureAction: failed > 0 ? "重试失败图片或检查模型配置" : "无当前失败",
       failureMessage: firstFailure?.userMessage || "",
       failureCode: firstFailure?.codeLabel || "",
+      failureNextStep: firstFailure?.nextStep || "",
       failureCount: failures.length,
       retryableFailureCount: failures.filter((failure) => failure.retryable).length,
       failures,
@@ -187,15 +199,19 @@ function formatCurrentStage(activeRow, job) {
 function failureFromTask(task) {
   if (!task?.error) return null;
   const code = task.error.code || "unknown";
+  const attempts = Number(task.attempts || 0);
+  const maxAttempts = Number(task.maxAttempts || 0);
   return {
     taskId: task.id,
     kind: task.kind,
     code,
     codeLabel: errorCodeLabels[code] || code,
     retryable: Boolean(task.error.retryable),
-    attempts: Number(task.attempts || 0),
-    maxAttempts: Number(task.maxAttempts || 0),
+    attempts,
+    maxAttempts,
+    attemptLabel: maxAttempts > 0 ? `${attempts}/${maxAttempts} 次尝试` : attempts > 0 ? `${attempts} 次尝试` : "",
     userMessage: task.error.userMessage || task.error.message || "任务失败，请检查模型配置或稍后重试。",
+    nextStep: task.error.nextStep || errorCodeNextSteps[code] || errorCodeNextSteps.unknown,
   };
 }
 
