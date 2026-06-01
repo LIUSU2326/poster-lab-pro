@@ -1,5 +1,6 @@
 import { state } from '../state.js';
 import { getModelSlots, getProviderRows } from '../data/workspace-adapters.js';
+import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
 
 const providerModelCatalog = {
   openai: {
@@ -278,6 +279,67 @@ function renderProviderStatus(provider, credential) {
   return `<span class="provider-status ${escapeHtml(status)}">${escapeHtml(label)}</span>`;
 }
 
+function renderLiveGatePanel() {
+  const gate = getLiveGateViewModel({ id: state.activeMode });
+  const blockers = gate.blockers.length > 0
+    ? gate.blockers.map((blocker) => `<li><strong>${escapeHtml(blocker.label)}</strong><span>${escapeHtml(blocker.message)}</span></li>`).join("")
+    : `<li class="live-gate-ok">所有实机安全要求已满足。</li>`;
+
+  return `
+    <section class="provider-config-card live-gate-panel ${escapeHtml(gate.tone)}" aria-label="实机安全闸">
+      <div class="live-gate-head">
+        <div>
+          <span>Live Gate</span>
+          <strong>实机安全闸 · ${escapeHtml(gate.stateLabel)}</strong>
+          <small>${escapeHtml(gate.helper)}</small>
+        </div>
+        <label class="live-switch" aria-label="开启实机安全闸">
+          <input type="checkbox" data-live-toggle="enabled" ${state.liveGate.enabled ? "checked" : ""}>
+          <i aria-hidden="true"></i>
+        </label>
+      </div>
+
+      <div class="live-gate-metrics">
+        <div class="live-gate-metric">
+          <span>预计费用</span>
+          <strong>${escapeHtml(gate.estimatedCostLabel)}</strong>
+        </div>
+        <label class="live-gate-cost">
+          <span>费用上限</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value="${escapeHtml(gate.maxAcceptedCost.toFixed(2))}"
+            data-live-cost-cap
+            aria-label="实机费用上限"
+          />
+        </label>
+        <div class="live-gate-metric">
+          <span>供应商</span>
+          <strong>${escapeHtml(gate.providerName)}</strong>
+        </div>
+      </div>
+
+      <div class="live-gate-checks" aria-label="实机确认项">
+        ${gate.confirmations.map((row) => `
+          <label class="live-gate-row">
+            <span>${escapeHtml(row.label)}</span>
+            <input type="checkbox" data-live-toggle="${escapeHtml(row.key)}" ${row.checked ? "checked" : ""}>
+          </label>
+        `).join("")}
+        ${gate.prerequisites.map((row) => `
+          <label class="live-gate-row prerequisite">
+            <span>${escapeHtml(row.label)}</span>
+            <input type="checkbox" ${row.checked ? "checked" : ""} disabled>
+          </label>
+        `).join("")}
+      </div>
+      <ul class="live-gate-blockers">${blockers}</ul>
+    </section>
+  `;
+}
+
 export function renderSettingsSheet() {
   const providers = getProviderRows();
   const modelSlots = getModelSlots();
@@ -458,6 +520,8 @@ export function renderSettingsSheet() {
               ` : ""}
               ${connection?.error ? `<p>${escapeHtml(connection.error)}</p>` : ""}
             </section>
+
+            ${renderLiveGatePanel()}
 
             <section class="provider-config-card model-routing">
               <div class="provider-card-title">
