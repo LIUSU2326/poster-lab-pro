@@ -1,0 +1,578 @@
+import { z } from "zod";
+import { posterAssetFusionStrategy, posterAssetSemanticRole } from "../assets/semantic-roles";
+import { ProviderConfigFormSchema, type ProviderConfigForm } from "../schema/zod";
+import type { ProviderId } from "../schema/zod";
+import {
+  BriefGenerationRequestSchema,
+  ProviderBriefResponseSchema,
+  ProviderHealthResponseSchema,
+  createProviderError,
+  type BriefGenerationRequest,
+  type GenerationProviderAdapter,
+  type ProviderBriefResponse,
+  type ProviderConfigValidation,
+  type ProviderHealthResponse,
+  type ProviderResult,
+} from "./contracts";
+import { getProviderManifest } from "./manifests";
+import {
+  posterCinematicKvQualityDirective,
+  posterHeroPerformanceScaleLock,
+  posterIdentitySafeMotionRule,
+  posterLogoSingleUseLock,
+  posterKvArchitectureBriefSlots,
+  posterKvArchitectureDirective,
+  posterKvArchitectureSlotSeed,
+  posterKvAssetCountsFromAssets,
+  posterKvBriefAugmentation,
+  posterSubjectAccessoryStrictnessLock,
+} from "./poster-kv-architectures";
+import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "../prompts/slogan-policy";
+
+const CHAT_COMPLETIONS_PATH = "/chat/completions";
+
+const defaultBaseUrls: Partial<Record<ProviderId, string>> = {
+  openai: "https://api.openai.com/v1",
+  aigocode: "https://api.aigocode.com/v1",
+  deepseek: "https://api.deepseek.com",
+  qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+};
+
+export const OpenAICompatibleChatTransportRequestSchema = z.object({
+  url: z.string().url(),
+  method: z.literal("POST"),
+  headers: z.record(z.string(), z.string()),
+  body: z.record(z.string(), z.unknown()),
+});
+
+export const OpenAICompatibleChatTransportResponseSchema = z.object({
+  ok: z.boolean(),
+  status: z.number().int(),
+  body: z.unknown(),
+});
+
+const ChatCompletionResponseSchema = z
+  .object({
+    choices: z.array(
+      z
+        .object({
+          message: z
+            .object({
+              content: z.union([z.string(), z.array(z.unknown())]).optional(),
+            })
+            .passthrough()
+            .optional(),
+        })
+        .passthrough(),
+    ).default([]),
+    usage: z
+      .object({
+        prompt_tokens: z.number().int().min(0).optional(),
+        completion_tokens: z.number().int().min(0).optional(),
+        total_tokens: z.number().int().min(0).optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
+const BriefCompletionSchema = z.object({
+  schemes: z.array(
+    z.object({
+      title: z.string().min(1),
+      brief: z.string().min(1),
+      prompt: z.string().min(1),
+      promptZh: z.string().min(1).optional(),
+      promptEn: z.string().min(1).optional(),
+      slogans: z.record(z.string(), z.string()).default({}),
+    }),
+  ).min(1),
+});
+
+const SUPPORTED_SLOGAN_LANGUAGES = ["zh-CN", "en-US", "ja-JP", "ko-KR"] as const;
+
+export type OpenAICompatibleChatTransportRequest = z.infer<typeof OpenAICompatibleChatTransportRequestSchema>;
+export type OpenAICompatibleChatTransportResponse = z.infer<typeof OpenAICompatibleChatTransportResponseSchema>;
+export type OpenAICompatibleChatTransport = (
+  request: OpenAICompatibleChatTransportRequest,
+) => Promise<OpenAICompatibleChatTransportResponse>;
+
+export type OpenAICompatibleBriefAdapterOptions = {
+  providerId: ProviderId;
+  transport?: OpenAICompatibleChatTransport;
+  now?: () => number;
+};
+
+export function createOpenAICompatibleChatFetchTransport(fetchImpl: typeof fetch): OpenAICompatibleChatTransport {
+  return async (request) => {
+    const response = await fetchImpl(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: JSON.stringify(request.body),
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const body = contentType.includes("application/json") ? await response.json() : await response.text();
+    return OpenAICompatibleChatTransportResponseSchema.parse({
+      ok: response.ok,
+      status: response.status,
+      body,
+    });
+  };
+}
+
+function validateConfig(providerId: ProviderId, config: ProviderConfigForm): ProviderConfigValidation {
+  const parsed = ProviderConfigFormSchema.parse(config);
+  const missing: (keyof ProviderConfigForm)[] = [];
+  const warnings: string[] = [];
+
+  if (parsed.providerId !== providerId) {
+    warnings.push(`Config providerId ${parsed.providerId} does not match adapter ${providerId}.`);
+  }
+  if (!parsed.enabled) missing.push("enabled");
+  if (!parsed.apiKey?.trim()) missing.push("apiKey");
+  if (!parsed.defaultModel?.trim() && !parsed.modelSlots.concept?.trim()) missing.push("defaultModel");
+
+  return {
+    ok: missing.length === 0,
+    missing,
+    warnings,
+  };
+}
+
+function normalizeBaseUrl(providerId: ProviderId, config: ProviderConfigForm): string {
+  return (config.baseUrl?.trim() || defaultBaseUrls[providerId] || "").replace(/\/+$/, "");
+}
+
+function conceptModel(config: ProviderConfigForm): string {
+  return config.modelSlots.concept || config.defaultModel || "gpt-5.5";
+}
+
+function configError<T>(providerId: ProviderId, config: ProviderConfigForm): ProviderResult<T> {
+  const validation = validateConfig(providerId, config);
+  const hasMissingApiKey = validation.missing.includes("apiKey");
+  return {
+    ok: false,
+    error: createProviderError(
+      providerId,
+      hasMissingApiKey ? "auth_failed" : "missing_config",
+      `Provider is missing configuration: ${validation.missing.join(", ")}`,
+      {
+        userMessage: hasMissingApiKey ? "请先保存 API Key，再生成海报方案。" : "当前供应商配置不完整。",
+      },
+    ),
+  };
+}
+
+function transportError<T>(providerId: ProviderId): ProviderResult<T> {
+  return {
+    ok: false,
+    error: createProviderError(providerId, "provider_unavailable", "Chat transport is not connected.", {
+      userMessage: "当前供应商的文本生成通道未连接。",
+    }),
+  };
+}
+
+function statusError<T>(providerId: ProviderId, status: number, body: unknown): ProviderResult<T> {
+  const message = typeof body === "string"
+    ? body
+    : body && typeof body === "object" && "error" in body
+      ? JSON.stringify((body as Record<string, unknown>).error)
+      : JSON.stringify(body);
+  return {
+    ok: false,
+    error: createProviderError(providerId, status === 401 || status === 403 ? "auth_failed" : "unknown", message, {
+      userMessage: status === 401 || status === 403 ? "API Key 校验失败，请检查供应商和模型。" : "供应商返回错误，方案生成失败。",
+    }),
+  };
+}
+
+function buildBriefMessages(request: BriefGenerationRequest) {
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const randomizationSeed = request.context.traceId || request.context.jobId || `${Date.now()}`;
+  const assets = request.assets.map((asset) => ({
+    role: asset.role,
+    semanticRole: posterAssetSemanticRole(asset),
+    id: asset.id,
+    description: asset.description || "",
+    mimeType: asset.mimeType,
+    hasUrl: Boolean(asset.url),
+    fusionStrategy: posterAssetFusionStrategy(asset),
+  }));
+
+  return [
+    {
+      role: "system",
+      content: [
+        "You are a senior game marketing art director.",
+        "Return JSON only. No markdown, no commentary.",
+        "Each scheme must include title, brief, prompt, promptZh, promptEn, and slogans.",
+        "promptZh must be a Chinese image-generation prompt. promptEn must be an English image-generation prompt.",
+        "languageTargets contains exactly one target slogan language. Return slogans only for that selected language.",
+        "Infer each uploaded asset's semantic poster duty from semanticRole, role, label, and description: protagonist, antagonist, brandLogo, prop, environment, styleReference, compositionReference, keySubject, or supportingAsset.",
+        "If multiple assets share semanticRole protagonist/gameCharacter, each one is an independent game character reference. Plan them as separate characters in group compositions when possible; never merge their appearances.",
+        "Aim for premium game campaign key visual polish while respecting uploaded or selected art style.",
+        "Do not plan duplicate large/small copies of the same uploaded character, BOSS, or logo.",
+        "When protagonist/gameCharacter assets are present, visible hero/player characters must come from those uploaded references only. Do not invent extra chef heroes or generic human mascots.",
+        "If only one protagonist/gameCharacter asset is present, plan exactly one playable hero. Do not write chef squad, team, allies, or multiple heroes unless multiple protagonist assets are listed.",
+        "Do not write a scheme where uploaded playable characters are only back-facing, hidden, tiny, or looking away. Their faces, expressions, body language, and signature props must be readable in front view, 3/4 front view, or strong profile.",
+        posterHeroPerformanceScaleLock(),
+        posterIdentitySafeMotionRule(),
+        posterSubjectAccessoryStrictnessLock(),
+        "Do not write schemes that preserve the exact uploaded front-facing/static pose. Identity is locked, but posture should become a new performance: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact, landing dust, or foreshortened prop/tool angle.",
+        "For uploaded BOSS/key-subject assets, plan a threat performance rather than a scaled-up sticker: lunge, brace, swing, burst through a doorway, land with dust, or react to impact while preserving the uploaded silhouette and signature details.",
+        "Never make a scheme depend on static standee staging such as the hero simply standing on a divider and the BOSS merely pressing in from one side. Convert those ideas into a trailer moment with sprinting, blocking, sliding, impact, doorway/portal burst, or weapon/prop collision.",
+        "Forbidden static placeholder verbs when uploaded protagonists or BOSS references are present: do not write '[Game Character 1] stands', 'stands heroically', 'is placed', 'is located', '站在', '英勇地站在', '位于', or '从一侧压迫'. Use active verbs such as sprint, block, slide, leap, brace, collide, lunge, strike, burst, or recoil.",
+        "When uploaded character/BOSS/logo assets are present, image prompts must use placeholders such as [Game Character 1], [Game Character 2], [Boss], and [Game Logo] instead of describing hair, face, clothes, gender, skin, colors, or exact logo lettering.",
+        "If a placeholder needs a role noun, use generic role language only. Do not attach descriptive appearance clauses to placeholders; the uploaded image reference defines identity and visual details.",
+        "Never ask the image model to add age, beard, mustache, hairstyle changes, costume changes, body-type changes, or generic chef/person redesigns to uploaded characters.",
+        "Each image prompt should describe actions, camera, composition, environment interaction, VFX, lighting, and story tension around those placeholders, and must forbid plain overlay/PPT typography.",
+        posterLogoSingleUseLock(),
+        "Treat focusGuidance as soft creative emphasis only. It must not override uploaded identity references, assigned KV architecture, story readability, or production-quality composition.",
+        "Every scheme must carry a real art-direction blueprint: camera/lens/perspective, layered depth, key/fill/rim lighting, volumetric atmosphere, particles/VFX, contact/cast shadows, color/value grouping, material texture, and logo/typography integration.",
+        posterCinematicKvQualityDirective(),
+      ].join(" "),
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        task: "Generate poster design schemes for batch image generation.",
+        projectName: request.projectName,
+        gameDescription: request.gameDescription,
+        focusGuidance: request.focusGuidance || "",
+        creativeDirection: request.creativeDirection || "",
+        guardrails: request.guardrails,
+        languageTargets: request.languageTargets,
+        schemeCount: request.schemeCount,
+        randomizationSeed,
+        requiredKvArchitectureSlots: posterKvArchitectureBriefSlots(request.schemeCount, randomizationSeed),
+        assets,
+        rules: [
+          "Generate NEW random poster schemes for this batch.",
+          "Assign the requiredKvArchitectureSlots in order: scheme 1 uses slot 1, scheme 2 uses slot 2, and so on. The slot is mandatory and must be visible in both brief and image prompt.",
+          "Treat focusGuidance as a soft creative lens, not a literal mandatory scene. If it mentions giant pizza, giant food, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the architecture; do not make every scheme a flat pizza-floor battlefield.",
+          "Every scheme brief must include a concrete shot blueprint: foreground framing, uploaded hero performance, BOSS pressure, world context, logo/copy safe area, and camera angle.",
+          "Every scheme brief must include a production design blueprint: camera height/lens feel/perspective, foreground-midground-background layers, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and typography/logo integration.",
+          "For every uploaded asset, explicitly honor its semantic duty. Protagonists carry performance; antagonists carry threat/scale; brandLogo assets stay readable and scene-integrated; prop assets become used story objects; environment assets guide world design; styleReference controls rendering; compositionReference controls layout only.",
+          "For uploaded brandLogo/gameLogo assets, render the exact logo visual design and letterform rhythm only when spelling can stay accurate. Do not ask the image model to invent look-alike words, substitute letters, or create a fake replacement logo; use a polished blank logo-safe sign/title plate if exact spelling cannot be guaranteed.",
+          posterLogoSingleUseLock(),
+          posterCinematicKvQualityDirective(),
+          "Every image prompt must carry that production design forward as explicit image instructions, not as a generic one-sentence scene description.",
+          "Every scheme must stage a memorable physical set piece: restaurant interior, oven portal, cliffs, tunnels, kitchen counter battlefield, doorway breach, market/VIP pressure, or wilderness route. Avoid empty pastel sky, generic food-field backdrop, and centered mascot-ad composition.",
+          "At least one uploaded hero must physically interact with the BOSS or environment: blocking, climbing, striking, sliding, cooking, pulling, defending, or causing visible impact. Do not place heroes as symmetrical floating stickers around a central BOSS.",
+          "Every image prompt must include a KV quality self-check: one-second readability, strong thumbnail silhouette, obvious story conflict, layered depth, directional lighting, and no cheap sticker collage.",
+          "Each scheme should have one coherent story scene, strong focal hierarchy, layered depth, cinematic lighting, polished color grading, and campaign-ready logo/slogan safe areas.",
+          "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-pizza-landscape concept unless the assigned slot itself asks for giant food terrain.",
+          "Use divergent story-composition archetypes across the batch, such as boss encounter, kitchen siege, ingredient heist, wilderness chase, restaurant defense, portal discovery, victory feast, caravan expedition, VIP demand versus ingredient hunt, or staff-training-to-boss-fight contrast.",
+          "Do not default to a simple horizontal scene with heroes standing left and right on a pizza surface. Giant food can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
+          "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",
+          "Avoid flat sticker collage, cheap clip-art composition, floating elements, tabletop food wallpaper, random extra mascots, generic replacement characters, and duplicate copies of uploaded assets.",
+          "If exactly one protagonist/gameCharacter asset is listed, design around [Game Character 1] as the only playable hero. Multiple-hero language is forbidden in that case.",
+          posterHeroPerformanceScaleLock(),
+          posterSubjectAccessoryStrictnessLock(),
+          "Do not write back-facing-only or looking-away hero staging. Uploaded character faces must be readable in front view, 3/4 front view, or strong profile.",
+          "Do not preserve the exact uploaded static pose as the final performance. Keep identity, but ask for a new body line, stride, block, leap, recoil, swing, contact point, or foreshortened prop/tool angle.",
+          "Forbidden static placeholder verbs when uploaded protagonists or BOSS references are present: do not write '[Game Character 1] stands', 'stands heroically', 'is placed', 'is located', '站在', '英勇地站在', '位于', or '从一侧压迫'. Use active verbs such as sprint, block, slide, leap, brace, collide, lunge, strike, burst, or recoil.",
+          "The BOSS prompt must describe a real threat action or physical reaction, not a still mascot pose enlarged beside the scene.",
+          "If a scheme uses a split-world divider, the hero must actively cross, block on, slide along, leap from, or collide with that divider; the BOSS must lunge, strike, burst through, or recoil from impact rather than simply stand on the opposite side.",
+          "Never add age shifts, beard/mustache, hairstyle changes, costume changes, body-type changes, or generic chef/person redesigns to uploaded character placeholders.",
+          "For every protagonist/gameCharacter prompt, use placeholders and state that the placeholder preserves the uploaded reference identity/model sheet, without spelling out physical details.",
+          "For every antagonist/BOSS/key-subject prompt, use the [Boss] or key-subject placeholder and state that it preserves the uploaded identity from its reference, without redesigning it.",
+          "When describing a placeholder's action, do not name a specific uploaded tool, weapon, costume, face, or body feature in text. Say the placeholder uses its uploaded signature prop/tool only if visible in the reference, and let the image reference define what that prop/tool is.",
+          "For slogan or headline text, require a visible copy treatment: custom game-campaign lettering integrated into the scene when clean spelling is possible, or a polished blank title plate/ribbon in the copy area if clean spelling cannot be guaranteed. Never silently omit the copy area, never request fake logo text, and never request plain overlay/PPT typography.",
+          imageRenderableSloganRule(targetLanguage),
+          "The slogan phrase must be derived from the assigned scheme's story beat, action verb, threat, prop, or set-piece material, so it feels written for that exact KV rather than pasted in later. Avoid generic three-part lists; prefer concrete copy such as a knife/oven/portal/impact/BOSS-action phrase when those elements define the scheme.",
+          integratedSloganTreatmentRule(),
+          "If a richer campaign line is needed, put that sentence in brief/prompt only; the slogans field must stay short enough to render cleanly inside one poster image.",
+          "Do not assume a logo exists unless an asset with semanticRole brandLogo is present.",
+          "If no image assets are provided, create concepts from project description and focus guidance only.",
+          "Use multiple protagonist/gameCharacter assets as separate characters when the campaign composition supports it.",
+          "Respect creativeDirection for selected style tags, output sizes, composition/reference analysis, and prompt constraints.",
+          `Return exactly one slogan language: ${targetLanguage}.`,
+        ],
+        outputShape: {
+          schemes: [
+            {
+              title: "Chinese poster scheme title",
+              brief: "Chinese visual direction and layout plan",
+              prompt: "Image prompt suitable for the selected image model",
+              promptZh: "Chinese image prompt",
+              promptEn: "English image prompt",
+              slogans: {
+                [targetLanguage]: "scene-derived 2-6 word image-renderable slogan",
+              },
+            },
+          ],
+        },
+      }),
+    },
+  ];
+}
+
+function contentToString(content: string | unknown[] | undefined): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map((part) => {
+    if (typeof part === "string") return part;
+    if (part && typeof part === "object" && "text" in part) return String((part as Record<string, unknown>).text || "");
+    return "";
+  }).join("");
+}
+
+function firstString(record: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function normalizeBriefScheme(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const record = value as Record<string, unknown>;
+  const title = firstString(record, ["title", "schemeTitle", "scheme_title", "posterTitle", "conceptTitle", "name", "方案标题", "标题"]);
+  const brief = firstString(record, [
+    "brief",
+    "visualDirection",
+    "visual_direction",
+    "direction",
+    "layoutPlan",
+    "layout",
+    "description",
+    "concept",
+    "artDirection",
+    "shotBlueprint",
+    "视觉方向",
+    "方案说明",
+  ]);
+  const prompt = firstString(record, [
+    "prompt",
+    "imagePrompt",
+    "image_prompt",
+    "generationPrompt",
+    "imageGenerationPrompt",
+    "finalPrompt",
+    "promptZh",
+    "promptEn",
+    "生图提示词",
+    "中文提示词",
+  ]);
+  const slogan = firstString(record, ["slogan", "tagline", "headline", "copy", "宣传词"]);
+  const slogans = record.slogans && typeof record.slogans === "object"
+    ? record.slogans
+    : slogan
+      ? { "en-US": slogan }
+      : {};
+
+  if (!title && !brief && !prompt) return value;
+  return {
+    ...record,
+    title: title || brief?.slice(0, 80) || "海报设计方案",
+    brief: brief || title || "AI generated poster visual direction.",
+    prompt: prompt || brief || title || "Premium game campaign key visual.",
+    promptZh: firstString(record, ["promptZh", "中文提示词"]) || prompt || brief,
+    promptEn: firstString(record, ["promptEn", "English Prompt", "englishPrompt"]) || prompt || brief,
+    slogans,
+  };
+}
+
+function isSchemeLikeArray(value: unknown): value is unknown[] {
+  return Array.isArray(value) && value.some((item) => {
+    if (!item || typeof item !== "object") return false;
+    const record = item as Record<string, unknown>;
+    return Boolean(firstString(record, [
+      "title",
+      "schemeTitle",
+      "scheme_title",
+      "posterTitle",
+      "conceptTitle",
+      "brief",
+      "visualDirection",
+      "visual_direction",
+      "prompt",
+      "imagePrompt",
+      "image_prompt",
+      "generationPrompt",
+      "方案标题",
+      "视觉方向",
+      "生图提示词",
+    ]));
+  });
+}
+
+function coerceBriefCompletion(value: unknown): unknown {
+  if (Array.isArray(value)) return { schemes: value.map(normalizeBriefScheme) };
+  if (!value || typeof value !== "object") return value;
+
+  const record = value as Record<string, unknown>;
+  for (const key of ["schemes", "posterSchemes", "poster_schemes", "plans", "concepts", "items", "results"]) {
+    if (Array.isArray(record[key])) return { schemes: record[key].map(normalizeBriefScheme) };
+  }
+
+  for (const nestedKey of ["data", "result", "output"]) {
+    const nested = record[nestedKey];
+    if (nested && typeof nested === "object") {
+      const coerced = coerceBriefCompletion(nested);
+      if (coerced && typeof coerced === "object" && Array.isArray((coerced as Record<string, unknown>).schemes)) {
+        return coerced;
+      }
+    }
+  }
+
+  const singleScheme = normalizeBriefScheme(record);
+  if (singleScheme && typeof singleScheme === "object") {
+    const schemeRecord = singleScheme as Record<string, unknown>;
+    if (
+      typeof schemeRecord.title === "string" &&
+      typeof schemeRecord.brief === "string" &&
+      typeof schemeRecord.prompt === "string"
+    ) {
+      return { schemes: [singleScheme] };
+    }
+  }
+
+  const firstObjectArray = Object.values(record).find(isSchemeLikeArray);
+  return firstObjectArray ? { schemes: firstObjectArray.map(normalizeBriefScheme) } : value;
+}
+
+function parseBriefContent(content: string) {
+  const trimmed = content.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1]?.trim();
+  return BriefCompletionSchema.parse(coerceBriefCompletion(JSON.parse(fenced || trimmed)));
+}
+
+function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const seed = request.context.traceId || request.context.jobId || `${Date.now()}`;
+  const assetCounts = posterKvAssetCountsFromAssets(request.assets);
+  return parsed.schemes.slice(0, request.schemeCount).map((scheme, index) => {
+    const promptZh = scheme.promptZh || scheme.prompt;
+    const promptEn = scheme.promptEn || scheme.prompt;
+    const architectureSeed = posterKvArchitectureSlotSeed(seed, index);
+    const architectureBrief = posterKvBriefAugmentation(architectureSeed);
+    const architecturePrompt = posterKvArchitectureDirective({
+      seed: architectureSeed,
+      assetCounts,
+    });
+    const cinematicBrief = "电影级强化：方案必须具备明确镜头语言、主光/逆光/体积光、粒子/VFX、前中后景纵深、可读角色表演、环境 set-piece 和一个可被理解的故事瞬间。";
+    const slogans = Object.fromEntries(
+      SUPPORTED_SLOGAN_LANGUAGES
+        .filter((language) => language === targetLanguage && scheme.slogans[language])
+        .flatMap((language) => {
+          const slogan = scheme.slogans[language];
+          if (!slogan) return [];
+          const normalized = normalizeImageRenderableSlogan({
+            slogan,
+            language,
+            brandTerms: [request.projectName],
+            contextText: [
+              scheme.title,
+              scheme.brief,
+              scheme.prompt,
+              promptZh,
+              promptEn,
+            ].join("\n"),
+          });
+          return normalized ? [[language, normalized] as const] : [];
+        }),
+    );
+    return {
+      title: scheme.title,
+      brief: `${architectureBrief}\n${cinematicBrief}\n${scheme.brief}`.slice(0, 1800),
+      prompt: `${scheme.prompt}\n\n${architecturePrompt}`.slice(0, 12000),
+      promptZh: `${promptZh}\n\n${architecturePrompt}`.slice(0, 12000),
+      promptEn: `${promptEn}\n\n${architecturePrompt}`.slice(0, 12000),
+      slogans,
+    };
+  });
+}
+
+export function createOpenAICompatibleBriefAdapter(options: OpenAICompatibleBriefAdapterOptions): GenerationProviderAdapter {
+  const providerId = options.providerId;
+  const manifest = getProviderManifest(providerId);
+  const now = options.now || Date.now;
+
+  return {
+    manifest,
+
+    validateConfig(config) {
+      return validateConfig(providerId, config);
+    },
+
+    async healthCheck(config): Promise<ProviderResult<ProviderHealthResponse>> {
+      const validation = validateConfig(providerId, config);
+      return {
+        ok: true,
+        value: ProviderHealthResponseSchema.parse({
+          providerId,
+          ok: validation.ok && Boolean(options.transport),
+          status: validation.ok && options.transport ? "ready" : "not_configured",
+          message: validation.ok ? "文本方案生成通道已配置。" : `缺少配置：${validation.missing.join(", ")}`,
+        }),
+      };
+    },
+
+    async generateBrief(request: BriefGenerationRequest, config: ProviderConfigForm): Promise<ProviderResult<ProviderBriefResponse>> {
+      const parsedRequest = BriefGenerationRequestSchema.parse(request);
+      const parsedConfig = ProviderConfigFormSchema.parse(config);
+      const validation = validateConfig(providerId, parsedConfig);
+      if (!manifest.capabilities.includes("briefGeneration")) {
+        return {
+          ok: false,
+          error: createProviderError(providerId, "unsupported_capability", `${providerId} does not support briefGeneration.`, {
+            userMessage: "当前供应商不支持方案生成。",
+          }),
+        };
+      }
+      if (!validation.ok) return configError(providerId, parsedConfig);
+      if (!options.transport) return transportError(providerId);
+
+      const baseUrl = normalizeBaseUrl(providerId, parsedConfig);
+      if (!baseUrl) return configError(providerId, parsedConfig);
+
+      const model = conceptModel(parsedConfig);
+      const startedAt = now();
+      const transportResponse = await options.transport(
+        OpenAICompatibleChatTransportRequestSchema.parse({
+          url: `${baseUrl}${CHAT_COMPLETIONS_PATH}`,
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${parsedConfig.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: {
+            model,
+            messages: buildBriefMessages(parsedRequest),
+            temperature: 0.85,
+          },
+        }),
+      );
+      const parsedTransportResponse = OpenAICompatibleChatTransportResponseSchema.parse(transportResponse);
+      if (!parsedTransportResponse.ok) return statusError(providerId, parsedTransportResponse.status, parsedTransportResponse.body);
+
+      try {
+        const response = ChatCompletionResponseSchema.parse(parsedTransportResponse.body);
+        const content = contentToString(response.choices[0]?.message?.content);
+        const parsedBrief = parseBriefContent(content);
+        return {
+          ok: true,
+          value: ProviderBriefResponseSchema.parse({
+            providerId,
+            model,
+            schemes: normalizeSchemes(parsedBrief, parsedRequest),
+            usage: {
+              promptTokens: response.usage?.prompt_tokens || response.usage?.total_tokens || 0,
+              elapsedMs: Math.max(0, now() - startedAt),
+            },
+          }),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error: createProviderError(providerId, "unknown", error instanceof Error ? error.message : "Invalid brief response.", {
+            userMessage: "供应商返回的方案结构无法解析。",
+          }),
+        };
+      }
+    },
+  };
+}

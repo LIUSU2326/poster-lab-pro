@@ -1,0 +1,6 @@
+id,scene,source,translation,comment
+1001,ui,开始游戏,Start Game,主按钮
+1002,ui,雇佣佣兵 %s,Hire Mercenary %s,保留占位符
+1003,item,<color=#ffcc00>金币宝箱</color>,<color=#ffcc00>Gold Chest</color>,保留富文本标签
+1004,dialogue,欢迎来到佣兵小镇\n今天也要努力！,"Welcome to Mercenary Town\nLet's do our best today!",保留换行符
+1005,system,背包空间不足,Not enough bag space,系统提示
