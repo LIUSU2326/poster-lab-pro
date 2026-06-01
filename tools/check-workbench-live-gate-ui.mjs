@@ -18,6 +18,7 @@ const configSource = read("src/render/config-panel.js");
 const topbarSource = read("src/render/topbar.js");
 const inspectorSource = read("src/render/inspector.js");
 const taskChromeSource = read("src/render/task-chrome.js");
+const centerBoardSource = read("src/render/center-board.js");
 const settingsSheetSource = read("src/render/settings-sheet.js");
 const stylesSource = read("styles.css");
 const design = read("DESIGN.md");
@@ -61,6 +62,7 @@ for (const [name, source, tokens] of [
   ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "toggle-task"]],
   ["inspector.js", inspectorSource, ["live-gate-inspector", "实机安全闸"]],
   ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关"]],
+  ["center-board.js", centerBoardSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
   ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "data-live-toggle", "data-live-cost-cap", "实机安全闸"]],
   ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim"]],
 ]) {

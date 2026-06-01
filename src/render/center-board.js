@@ -8,6 +8,7 @@
 } from '../state.js';
 import { renderArchiveBoard } from './archive-board.js';
 import { resolveResultOperationRoute } from '../provider-capabilities.js';
+import { getManualLiveTestViewModel } from '../data/live-gate-view-model.js';
 import { getImageGenerationStatus, getSchemeGenerationStatus } from '../data/generation-activity.js';
 import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/workspace-adapters.js';
 
@@ -231,12 +232,19 @@ function getProjectLibraryFallbackAssets() {
 }
 
 function renderResultEmpty(activeMode) {
+  const manual = getManualLiveTestViewModel(activeMode);
   return `
     <div class="result-empty">
       <span>${getModeAbbrev(activeMode.id)}</span>
       <strong>还没有生成素材</strong>
-      <small>运行一次实机测试或批量任务后，这里会显示图片、尺寸、模型输出和下载操作。</small>
-      <button class="primary-button" type="button" data-action="run-manual-live-test">实机测试</button>
+      <small>${escapeHtml(manual.disabled ? manual.firstBlocker || "请先完成实机安全闸。" : "运行一次实机测试或批量任务后，这里会显示图片、尺寸、模型输出和下载操作。")}</small>
+      <button
+        class="primary-button"
+        type="button"
+        data-action="run-manual-live-test"
+        title="${escapeHtml(manual.disabled ? manual.firstBlocker : manual.label)}"
+        ${manual.disabled ? "disabled" : ""}
+      >${escapeHtml(manual.label)}</button>
     </div>
   `;
 }
