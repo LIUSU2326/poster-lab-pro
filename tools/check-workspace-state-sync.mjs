@@ -197,6 +197,7 @@ async function run() {
     { id: "op-state-b", resultId: resultB.id, status: "done" },
   ];
   state.resultOperation = state.resultOperations[0];
+  state.resultDeleteConfirmId = resultA.id;
 
   const resultDeleteEnvelope = await deleteResultForWorkbench({ resultId: resultA.id }, { fetchImpl: fakeFetch });
   const resultDeletedSnapshot = getRuntimeWorkspaceSnapshot();
@@ -258,6 +259,7 @@ async function run() {
   assert(state.archiveSelection.includes(`archive-${resultB.id}`), "remaining archive selection should be preserved");
   assert(state.resultOperations.every((operation) => operation.resultId !== resultA.id), "result operations for removed results should be cleared");
   assert(state.resultOperation === null, "current result operation should clear when its source result is removed");
+  assert(state.resultDeleteConfirmId === "", "result delete confirmation should clear when confirmed result is removed");
 
   state.selectedScheme = schemeB;
   state.selectedResult = resultB.id;

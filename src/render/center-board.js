@@ -261,6 +261,7 @@ function renderResultCard(result) {
   const scheme = getSchemeById(result.schemeId);
   const display = scheme ? getSchemeDisplay({ id: result.mode }, scheme) : null;
   const selected = state.selectedResult === result.id;
+  const confirmingDelete = state.resultDeleteConfirmId === result.id;
   const src = getResultPreviewUrl(result);
   const downloadUrl = getResultDownloadUrlForViewer(result);
   const ratio = result.width && result.height ? simplifyRatio(result.width, result.height) : "";
@@ -292,7 +293,7 @@ function renderResultCard(result) {
           <button type="button" data-action="open-result-viewer" data-result-id="${escapeHtml(result.id)}">查看</button>
           <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
           <button type="button" data-action="submit-generation" data-scheme-id="${escapeHtml(result.schemeId)}">重试方案</button>
-          <button class="danger" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">删除</button>
+          <button class="danger ${confirmingDelete ? "confirming" : ""}" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">${confirmingDelete ? "确认删除" : "删除"}</button>
           ${downloadUrl ? `<a href="${downloadUrl}" download>下载</a>` : ""}
         </div>
       </div>
@@ -345,6 +346,7 @@ function renderResultViewer() {
   const downloadUrl = getResultDownloadUrlForViewer(result);
   const finalSize = `${result.width}x${result.height}`;
   const ratio = result.width && result.height ? simplifyRatio(result.width, result.height) : "自定义";
+  const confirmingDelete = state.resultDeleteConfirmId === result.id;
 
   return `
     <div class="result-viewer" role="dialog" aria-modal="true" aria-label="图片大图查看">
@@ -368,7 +370,7 @@ function renderResultViewer() {
         ${renderResultActionButton(result, "removeBg", "移除背景")}
         <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
         <button type="button" data-action="submit-generation" data-scheme-id="${escapeHtml(result.schemeId)}">重试方案</button>
-        <button class="danger" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">删除结果</button>
+        <button class="danger ${confirmingDelete ? "confirming" : ""}" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">${confirmingDelete ? "确认删除" : "删除结果"}</button>
         ${downloadUrl ? `<a href="${downloadUrl}" download>下载结果</a>` : `<button type="button" disabled>下载结果</button>`}
       </div>
     </div>

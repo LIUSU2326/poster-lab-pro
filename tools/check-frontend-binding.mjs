@@ -54,6 +54,7 @@ for (const token of [
   "goto-result-scheme",
   "deleteResultForWorkbench",
   'action === "delete-result"',
+  "resultDeleteConfirmId",
 ]) {
   if (!events.includes(token)) issues.push(`events.js: missing result recovery token ${token}`);
 }
@@ -104,6 +105,7 @@ for (const token of [
   "resultMatchesFilter",
   "goto-result-scheme",
   "重试方案",
+  "确认删除",
   'data-action="delete-result"',
 ]) {
   if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
@@ -114,6 +116,9 @@ if (!events.includes('nextView === "results"')) {
 }
 if (!stateSource.includes('view === "results"') || !stateSource.includes('state.view = "results"')) {
   issues.push("state.js: URL view handling must preserve results view");
+}
+if (!stateSource.includes("resultDeleteConfirmId")) {
+  issues.push("state.js: missing result delete confirmation state");
 }
 
 for (const token of [
@@ -126,7 +131,9 @@ for (const token of [
   ".top-actions .run-mode-chip.live",
   ".top-actions .run-mode-chip.test",
   ".result-quick-actions button.danger",
+  ".result-quick-actions button.danger.confirming",
   ".result-viewer-dock button.danger",
+  ".result-viewer-dock button.danger.confirming",
 ]) {
   if (!styles.includes(token)) issues.push(`styles.css: missing result/current render UI token ${token}`);
 }

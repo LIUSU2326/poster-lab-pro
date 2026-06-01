@@ -2543,6 +2543,12 @@ input[type="range"] {
   box-shadow: 0 0 14px color-mix(in oklch, var(--danger), transparent 88%);
 }
 
+.result-quick-actions button.danger.confirming {
+  border-color: color-mix(in oklch, var(--danger), transparent 26%);
+  background: color-mix(in oklch, var(--danger-soft), transparent 0%);
+  color: var(--danger);
+}
+
 .result-toolbar-actions button.uses-fallback-route,
 .result-quick-actions button.uses-fallback-route,
 .operation-grid .ghost-action.uses-fallback-route {
@@ -6488,6 +6494,11 @@ select:focus {
 .result-viewer-dock button.danger:hover {
   border-color: rgba(255, 140, 140, 0.38);
   background: rgba(255, 92, 92, 0.18);
+}
+
+.result-viewer-dock button.danger.confirming {
+  border-color: rgba(255, 150, 150, 0.55);
+  background: rgba(255, 92, 92, 0.24);
 }
 
 .result-viewer-dock a {

@@ -530,11 +530,18 @@ async function handleActionControl(control, event, render) {
   if (action === "delete-result") {
     const resultId = control.dataset.resultId || state.selectedResult || "";
     if (!resultId) return;
+    if (state.resultDeleteConfirmId !== resultId) {
+      state.resultDeleteConfirmId = resultId;
+      state.view = "results";
+      render();
+      return;
+    }
     const deleteEnvelope = await deleteResultForWorkbench({ resultId });
     if (!deleteEnvelope.ok) {
       state.submission = createLocalServiceError("delete_result_failed", deleteEnvelope.error?.message || "删除结果失败。");
       state.taskOpen = false;
     }
+    state.resultDeleteConfirmId = "";
     state.view = "results";
     render();
     return;
