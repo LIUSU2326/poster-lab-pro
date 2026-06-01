@@ -174,6 +174,7 @@ export function renderConfigPanel(activeMode) {
               <small>${activeMode.id === "icon" ? "上传方形构图参考。" : "上传构图或裁切参考。"}</small>
             </button>
           </div>
+          ${renderAssetOperation()}
         </section>
 
         <section class="config-section">

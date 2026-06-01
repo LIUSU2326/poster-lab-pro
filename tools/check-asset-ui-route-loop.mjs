@@ -38,6 +38,7 @@ for (const token of [
   "simulate-asset-upload",
   "data-asset-role",
   "asset-route-status",
+  "renderAssetOperation()",
 ]) {
   if (!configPanel.includes(token)) issues.push(`config-panel.js: missing asset UI token ${token}`);
 }

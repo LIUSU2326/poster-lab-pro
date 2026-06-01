@@ -64,7 +64,7 @@ if (!pkg.includes("desktop-test-path:check")) {
 for (const token of ["APP_VERSION", "APP_BUNDLE_HINT", "release/mac/Poster Lab Pro.app", "APP_MAIN_BRANCH"]) {
   if (!appMetadata.includes(token)) issues.push(`app-metadata.js: missing desktop identity token ${token}`);
 }
-for (const token of ["APP_VERSION", "APP_BUNDLE_HINT", "topbar-meta", "bundle-path"]) {
+for (const token of ["APP_VERSION", "APP_BUNDLE_HINT", "topbar-meta", "bundle-path", "getDesktopBundlePath", "posterLabDesktop?.appPath"]) {
   if (!topbar.includes(token)) issues.push(`topbar.js: missing visible app version/path token ${token}`);
 }
 

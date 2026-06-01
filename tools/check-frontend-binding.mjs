@@ -133,6 +133,8 @@ for (const token of [
   "重生成片",
   "确认删除",
   'data-action="delete-result"',
+  "is-live-blocked",
+  "请先开启并通过实机安全闸",
 ]) {
   if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
 }
@@ -154,6 +156,10 @@ if (!stateSource.includes('view === "results"') || !stateSource.includes('state.
 if (!stateSource.includes("resultDeleteConfirmId")) {
   issues.push("state.js: missing result delete confirmation state");
 }
+const queueResultOperationSource = stateSource.match(/export function queueResultOperation[\s\S]*?export function updateResultOperation/)?.[0] || "";
+if (queueResultOperationSource.includes('state.view = "schemes"')) {
+  issues.push("state.js: result operations should keep the current result/viewer context while queueing");
+}
 
 for (const token of [
   "repeat(3, minmax(68px, 1fr))",
@@ -173,8 +179,14 @@ for (const token of [
   ".result-quick-actions button.danger.confirming",
   ".result-viewer-dock button.danger",
   ".result-viewer-dock button.danger.confirming",
+  ".result-operation-context.running",
+  ".result-operation-context.warning",
 ]) {
   if (!styles.includes(token)) issues.push(`styles.css: missing result/current render UI token ${token}`);
+}
+
+for (const token of ["renderResultOperationContext", "formatOperationStatus", "结果操作"]) {
+  if (!taskChrome.includes(token)) issues.push(`task-chrome.js: missing result operation status token ${token}`);
 }
 
 if (!configPanel.includes('data-action="generate-schemes"')) {

@@ -36,7 +36,7 @@ for (const token of [
   if (!main.includes(token)) issues.push(`electron/main.cjs: missing ${token}`);
 }
 
-for (const token of ["contextBridge", "posterLabDesktop", "onNextExit"]) {
+for (const token of ["contextBridge", "posterLabDesktop", "appPath", "resolveDesktopAppPath", "onNextExit"]) {
   if (!preload.includes(token)) issues.push(`electron/preload.cjs: missing ${token}`);
 }
 

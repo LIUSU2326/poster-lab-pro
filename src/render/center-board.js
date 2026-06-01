@@ -11,6 +11,7 @@ import { resolveResultOperationRoute } from '../provider-capabilities.js';
 import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
 import { getImageGenerationStatus, getSchemeGenerationStatus } from '../data/generation-activity.js';
 import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/workspace-adapters.js';
+import { modeSpecs } from '../data/modes.js';
 
 export function renderCenterBoard(activeMode, selected) {
   if (state.view === "archive") return renderArchiveBoard();
@@ -446,16 +447,22 @@ function getResultDownloadUrlForViewer(result) {
 function renderResultActionButton(result, action, label) {
   const active = isResultOperationActive(action, result.id);
   const route = resolveResultOperationRoute(action, state.provider);
+  const activeMode = modeSpecs[result.mode] || modeSpecs[state.activeMode] || { id: result.mode || state.activeMode };
+  const liveGate = getLiveGateViewModel(activeMode);
+  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
+  const disabledTitle = liveBlocked
+    ? liveGate.blockers?.[0]?.message || "请先开启并通过实机安全闸，再调用真实模型服务。"
+    : route.title;
   return `
     <button
-      class="${active ? "is-active" : ""} ${route.native ? "is-native-route" : "uses-fallback-route"}"
+      class="${active ? "is-active" : ""} ${liveBlocked ? "is-live-blocked" : ""} ${route.native ? "is-native-route" : "uses-fallback-route"}"
       type="button"
       data-result-action="${action}"
       data-result-id="${result.id}"
       data-route-provider="${escapeHtml(route.providerId)}"
-      title="${escapeHtml(route.title)}"
-      aria-label="${escapeHtml(route.title)}"
-      ${route.supported ? "" : "disabled"}
+      title="${escapeHtml(disabledTitle)}"
+      aria-label="${escapeHtml(disabledTitle)}"
+      ${route.supported && !liveBlocked ? "" : "disabled"}
     >${active ? "已入队" : label}</button>
   `;
 }

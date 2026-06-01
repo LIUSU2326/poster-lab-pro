@@ -1,5 +1,6 @@
 import { getLiveGateViewModel, getManualLiveTestViewModel } from '../data/live-gate-view-model.js';
 import { createQueueViewModel } from '../data/queue-view-model.js';
+import { state } from '../state.js';
 
 export function renderTaskChrome(activeMode) {
   const queue = createQueueViewModel(activeMode);
@@ -22,6 +23,7 @@ export function renderTaskChrome(activeMode) {
         <b>${escapeHtml(queueLabel)}</b>
       </button>
       ${renderQueueContext(queue, queueTone, imageFailureCount)}
+      ${renderResultOperationContext()}
       <button class="task-slim live-gate-slim ${liveGate.tone}" type="button" data-action="open-settings">
         <span>安全开关</span>
         <b>${escapeHtml(liveGate.stateLabel)}</b>
@@ -40,6 +42,47 @@ export function renderTaskChrome(activeMode) {
       </div>
     </aside>
   `;
+}
+
+function renderResultOperationContext() {
+  const operation = state.resultOperation || state.resultOperations?.[0];
+  if (!operation) return "";
+  const tone = operation.status === "failed"
+    ? "warning"
+    : operation.status === "done"
+      ? "success"
+      : operation.status === "running"
+        ? "running"
+        : "";
+
+  return `
+    <div class="result-operation-context ${tone}" aria-label="当前结果操作">
+      <div>
+        <span>结果操作</span>
+        <strong>${escapeHtml(operation.label || "图片处理")}</strong>
+        <small>${escapeHtml(operation.message || "等待本地队列处理。")}</small>
+      </div>
+      <div>
+        <span>状态</span>
+        <strong>${escapeHtml(formatOperationStatus(operation.status))}</strong>
+        <small>${escapeHtml(`${operation.progress ?? 0}% · ${operation.elapsed || "00:00"}`)}</small>
+      </div>
+      <div>
+        <span>成本</span>
+        <strong>${escapeHtml(operation.cost || "待估算")}</strong>
+        <small>${escapeHtml(operation.providerId || operation.routedFromProviderId || "本地路由")}</small>
+      </div>
+    </div>
+  `;
+}
+
+function formatOperationStatus(status) {
+  return {
+    queued: "已入队",
+    running: "处理中",
+    done: "已完成",
+    failed: "失败",
+  }[status] || "等待中";
 }
 
 function renderQueueContext(queue, tone, imageFailureCount) {

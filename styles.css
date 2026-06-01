@@ -3702,6 +3702,22 @@ input[type="range"] {
   box-shadow: inset 0 1px 0 color-mix(in oklch, var(--panel-raised), transparent 12%);
 }
 
+.result-operation-context.running {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 54%);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--accent-soft), var(--panel-raised) 36%), color-mix(in oklch, var(--panel-soft), transparent 0%));
+}
+
+.result-operation-context.warning {
+  border-color: color-mix(in oklch, var(--danger), var(--line) 54%);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--danger-soft), var(--panel-raised) 24%), color-mix(in oklch, var(--panel-soft), transparent 0%));
+}
+
+.result-operation-context.success {
+  border-color: color-mix(in oklch, var(--success), var(--line) 54%);
+}
+
 .manual-live-context.warning {
   border-color: color-mix(in oklch, var(--warning), var(--line) 54%);
 }

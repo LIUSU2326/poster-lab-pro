@@ -325,7 +325,6 @@ export function queueResultOperation(action, resultId) {
   state.resultOperations = [operation, ...state.resultOperations].slice(0, 8);
   state.selectedResult = resultId;
   state.selectedResultUserSet = true;
-  state.view = "schemes";
   state.taskOpen = true;
   return operation;
 }

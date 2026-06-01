@@ -19,6 +19,7 @@ export function renderTopbar(activeMode) {
   const liveBlockedTitle = liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "";
   const selectedSchemeRenderDisabled = !selectedScheme || generatingImages || liveBlocked;
   const runMode = getRunModeViewModel(liveGate);
+  const bundlePath = getDesktopBundlePath();
 
   return `
     <header class="topbar" data-workspace-revision="${escapeHtml(summary.revision)}" data-workspace-assets="${escapeHtml(summary.assetCount)}">
@@ -32,7 +33,7 @@ export function renderTopbar(activeMode) {
       <div class="topbar-meta" aria-label="当前应用版本">
         <span>v${escapeHtml(APP_VERSION)}</span>
         <span>${escapeHtml(APP_MAIN_BRANCH)}</span>
-        <span class="bundle-path" title="${escapeHtml(APP_BUNDLE_HINT)}">${escapeHtml(APP_BUNDLE_HINT)}</span>
+        <span class="bundle-path" title="${escapeHtml(bundlePath)}">${escapeHtml(bundlePath)}</span>
         <span>rev ${escapeHtml(summary.revision)}</span>
       </div>
       <div class="view-switch top-view-switch" aria-label="主视图">
@@ -88,6 +89,11 @@ export function renderTopbar(activeMode) {
       </nav>
     </header>
   `;
+}
+
+function getDesktopBundlePath() {
+  const appPath = globalThis.posterLabDesktop?.appPath;
+  return appPath || APP_BUNDLE_HINT;
 }
 
 function getRunModeViewModel(liveGate) {
