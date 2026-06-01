@@ -54,6 +54,9 @@ for (const token of [
   "cost_limit_exceeded",
   "missing_runtime_credential",
   "costSummaryLabel",
+  "plannedOutputLabel",
+  "costBasisLabel",
+  "estimatePreparedGeneration",
 ]) {
   if (!viewModelSource.includes(token)) issues.push(`live-gate-view-model.js: missing ${token}`);
 }
@@ -64,8 +67,8 @@ for (const [name, source, tokens] of [
   ["inspector.js", inspectorSource, ["live-gate-inspector", "实机安全闸"]],
   ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关"]],
   ["center-board.js", centerBoardSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
-  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "data-live-toggle", "data-live-cost-cap", "实机安全闸"]],
-  ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim"]],
+  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "data-live-toggle", "data-live-cost-cap", "实机安全闸", "预计数量"]],
+  ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim", "live-gate-metric small"]],
 ]) {
   for (const token of tokens) {
     if (!source.includes(token)) issues.push(`${name}: missing ${token}`);
@@ -106,6 +109,9 @@ try {
   const defaultGate = getLiveGateViewModel(modeSpecs.poster);
   if (defaultGate.status !== "skipped" || defaultGate.allowed) {
     issues.push("default live gate should be skipped and not allowed");
+  }
+  if (!defaultGate.plannedOutputLabel || defaultGate.estimatedCost <= 0.05 || defaultGate.costBasisLabel !== "来自当前配置") {
+    issues.push("default live gate should estimate prepared generation cost from current output settings");
   }
 
   state.liveGate.enabled = true;

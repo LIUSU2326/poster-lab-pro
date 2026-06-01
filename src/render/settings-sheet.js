@@ -303,6 +303,11 @@ function renderLiveGatePanel() {
         <div class="live-gate-metric">
           <span>预计费用</span>
           <strong>${escapeHtml(gate.estimatedCostLabel)}</strong>
+          <small>${escapeHtml(gate.costBasisLabel)}</small>
+        </div>
+        <div class="live-gate-metric">
+          <span>预计数量</span>
+          <strong>${escapeHtml(gate.plannedOutputLabel)}</strong>
         </div>
         <label class="live-gate-cost">
           <span>费用上限</span>

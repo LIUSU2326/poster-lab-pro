@@ -55,6 +55,8 @@ const prerequisiteRows = [
 ];
 
 const missingQueueJobMessage = "Create a queue job with the normal batch action first.";
+const conceptEstimateCost = 0.02;
+const imageEstimateCost = 0.05;
 
 function parseCurrency(value) {
   const parsed = Number(String(value || "").replace(/[^0-9.-]/g, ""));
@@ -63,6 +65,37 @@ function parseCurrency(value) {
 
 function formatCurrency(value) {
   return typeof value === "number" && value > 0 ? `$${value.toFixed(2)}` : "真实成本未返回";
+}
+
+function clampInteger(value, min, max, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(parsed)));
+}
+
+function getModeOutputSettings(activeMode) {
+  const modeId = activeMode?.id || state.activeMode;
+  const modeState = (state.workspaceSnapshot?.modeStates || []).find((item) => item.mode === modeId);
+  return modeState?.outputSettings || {};
+}
+
+function estimatePreparedGeneration(activeMode) {
+  const outputSettings = getModeOutputSettings(activeMode);
+  const schemeFallback = Array.isArray(activeMode?.schemes) && activeMode.schemes.length > 0
+    ? activeMode.schemes.length
+    : 1;
+  const schemeCount = clampInteger(outputSettings.schemeCount, 1, 20, schemeFallback);
+  const imagesPerScheme = clampInteger(outputSettings.imagesPerScheme, 1, 8, 1);
+  const imageCount = schemeCount * imagesPerScheme;
+  const estimatedCost = conceptEstimateCost + imageCount * imageEstimateCost;
+
+  return {
+    schemeCount,
+    imagesPerScheme,
+    imageCount,
+    estimatedCost,
+    plannedOutputLabel: `${schemeCount} 方案 · ${imageCount} 张图`,
+  };
 }
 
 function getNestedValue(key) {
@@ -129,7 +162,8 @@ export function getLiveGateViewModel(activeMode) {
   const queue = createQueueViewModel(activeMode);
   const costLabel = queue.summary.costLabel || queue.summary.estimatedCost || "";
   const costKnown = /[0-9]/.test(String(costLabel));
-  const estimatedCost = costKnown ? parseCurrency(costLabel) : 0.05;
+  const preparedEstimate = estimatePreparedGeneration(activeMode);
+  const estimatedCost = costKnown ? parseCurrency(costLabel) : preparedEstimate.estimatedCost;
   const liveGate = state.liveGate || {};
   const maxAcceptedCost = Number.isFinite(Number(liveGate.maxAcceptedCost))
     ? Number(liveGate.maxAcceptedCost)
@@ -161,10 +195,15 @@ export function getLiveGateViewModel(activeMode) {
     stateLabel,
     providerName: getProviderName(),
     estimatedCost,
-    estimatedCostLabel: costKnown ? formatCurrency(estimatedCost) : "预估 $0.05",
+    estimatedCostLabel: costKnown ? formatCurrency(estimatedCost) : `预估 ${formatCurrency(estimatedCost)}`,
+    costBasisLabel: costKnown ? "来自当前队列" : "来自当前配置",
+    plannedOutputLabel: preparedEstimate.plannedOutputLabel,
+    plannedImageCount: preparedEstimate.imageCount,
+    plannedSchemeCount: preparedEstimate.schemeCount,
+    plannedImagesPerScheme: preparedEstimate.imagesPerScheme,
     maxAcceptedCost,
     maxAcceptedCostLabel: formatCurrency(maxAcceptedCost),
-    costSummaryLabel: `${costKnown ? formatCurrency(estimatedCost) : "预估 $0.05"} / 上限 ${formatCurrency(maxAcceptedCost)}`,
+    costSummaryLabel: `${costKnown ? formatCurrency(estimatedCost) : `预估 ${formatCurrency(estimatedCost)}`} / 上限 ${formatCurrency(maxAcceptedCost)}`,
     blockerCount: blockers.length,
     blockers,
     confirmations: confirmationRows.map((row) => ({
