@@ -37,8 +37,8 @@ for (const token of [
 for (const scriptName of ["check", "poster-chain:check", "build:next", "dev:next"]) {
   if (!pkg.includes(`"${scriptName}"`)) issues.push(`package.json: missing ${scriptName} script`);
 }
-if (!pkg.includes("\"version\": \"0.5.3\"")) {
-  issues.push("package.json: desktop-visible version should match the current V0.5.3 plan milestone");
+if (!pkg.includes("\"version\": \"0.6.0\"")) {
+  issues.push("package.json: desktop-visible version should match the current V0.6.0 plan milestone");
 }
 
 for (const [file, source] of [
