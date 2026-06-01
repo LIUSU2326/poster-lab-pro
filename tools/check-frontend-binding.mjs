@@ -22,6 +22,7 @@ const taskChrome = read("src/render/task-chrome.js");
 const workspaceSnapshot = read("src/data/workspace-snapshot.js");
 const stateSource = read("src/state.js");
 const resultManagementClient = read("src/result-management-client.js");
+const resultOperationClient = read("src/result-operation-client.js");
 const styles = read("styles.css");
 
 for (const token of [
@@ -75,6 +76,10 @@ for (const token of [
   "setRuntimeWorkspaceSnapshot",
 ]) {
   if (!resultManagementClient.includes(token)) issues.push(`result-management-client.js: missing ${token}`);
+}
+
+for (const token of ["getLiveGateViewModel", "liveExecution", "请先开启并通过实机安全闸"]) {
+  if (!resultOperationClient.includes(token)) issues.push(`result-operation-client.js: missing live gate token ${token}`);
 }
 
 for (const token of [
