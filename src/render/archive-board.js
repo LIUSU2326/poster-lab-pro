@@ -60,7 +60,12 @@ export function renderArchiveBoard() {
               <span>${escapeHtml(formatArchiveTime(row.createdAt))}</span>
               <span class="status-chip ${row.status}">${escapeHtml(row.state)}</span>
               <div class="row-actions">
-                <button type="button">查看</button>
+                <button
+                  type="button"
+                  data-action="open-result-viewer"
+                  data-result-id="${escapeHtml(row.resultId)}"
+                  data-result-view="results"
+                >查看</button>
                 ${row.downloadUrl ? `<a href="${escapeHtml(row.downloadUrl)}" download data-archive-download="${escapeHtml(row.id)}">下载</a>` : `<button type="button" disabled>下载</button>`}
               </div>
             </div>

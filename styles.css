@@ -12822,6 +12822,14 @@ select:focus-visible,
   font-size: 12px;
 }
 
+.config-action-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .batch-progress div {
   display: flex;
   align-items: center;

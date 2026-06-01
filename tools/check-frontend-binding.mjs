@@ -16,6 +16,7 @@ const staticService = read("src/static-local-api-service.js");
 const events = read("src/events.js");
 const topbar = read("src/render/topbar.js");
 const centerBoard = read("src/render/center-board.js");
+const archiveBoard = read("src/render/archive-board.js");
 const configPanel = read("src/render/config-panel.js");
 const taskChrome = read("src/render/task-chrome.js");
 const workspaceSnapshot = read("src/data/workspace-snapshot.js");
@@ -103,6 +104,7 @@ for (const token of [
   "getRunModeViewModel",
   "本地服务",
   "liveBlockedTitle",
+  "归档导出",
   "liveGate.estimatedCostLabel",
   "liveGate.costSummaryLabel",
 ]) {
@@ -130,6 +132,14 @@ for (const token of [
   if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
 }
 
+for (const token of ['data-result-view="results"', 'data-action="open-result-viewer"']) {
+  if (!archiveBoard.includes(token)) issues.push(`archive-board.js: missing archive result action token ${token}`);
+}
+
+for (const token of ["config-action-note", "先在顶部开启并通过实机安全闸"]) {
+  if (!configPanel.includes(token)) issues.push(`config-panel.js: missing gated generation helper token ${token}`);
+}
+
 if (!events.includes('nextView === "results"')) {
   issues.push("events.js: data-view handler must support the results view");
 }
@@ -153,6 +163,7 @@ for (const token of [
   ".scheme-plan-empty",
   ".scheme-plan-empty-actions",
   ".result-empty-actions",
+  ".config-action-note",
   ".result-quick-actions button.danger",
   ".result-quick-actions button.danger.confirming",
   ".result-viewer-dock button.danger",

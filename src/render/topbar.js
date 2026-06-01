@@ -56,7 +56,7 @@ export function renderTopbar(activeMode) {
           <span class="${state.theme === "light" ? "active" : ""}">亮色</span>
           <span class="${state.theme === "dark" ? "active" : ""}">暗色</span>
         </button>
-        <button type="button" data-view="archive">导出</button>
+        <button type="button" data-view="archive">归档导出</button>
         ${failedImageCount > 0 ? `<button class="retry-failed-button" type="button" data-action="retry-failed-images">重试失败 ${failedImageCount}</button>` : ""}
         ${selectedScheme ? `
           <button

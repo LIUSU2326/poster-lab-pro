@@ -562,6 +562,7 @@ async function handleActionControl(control, event, render) {
       state.selectedResult = control.dataset.resultId;
       state.selectedResultUserSet = true;
     }
+    if (control.dataset.resultView === "results") state.view = "results";
     state.resultViewerOpen = true;
   }
   if (action === "goto-result-scheme") {

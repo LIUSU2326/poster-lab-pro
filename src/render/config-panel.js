@@ -227,6 +227,7 @@ export function renderConfigPanel(activeMode) {
         >
           ${batchStatus.active ? `<span class="button-spinner" aria-hidden="true"></span><span>方案生成中</span><strong>${batchStatus.completed}/${batchStatus.total}</strong>` : copy.cta}
         </button>
+        ${liveBlocked ? `<p class="config-action-note">先在顶部开启并通过实机安全闸，再调用真实模型服务。</p>` : ""}
         ${batchStatus.active ? `
           <div class="batch-progress" role="status" aria-live="polite">
             <div>
