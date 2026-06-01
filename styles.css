@@ -5704,6 +5704,8 @@ select:focus {
   display: flex;
   gap: 7px;
   align-items: center;
+  min-width: 0;
+  flex-wrap: wrap;
   color: var(--text-tertiary);
   font-size: 11px;
 }
@@ -5711,6 +5713,13 @@ select:focus {
 .topbar-meta span {
   color: var(--text-secondary);
   font-weight: 650;
+}
+
+.topbar-meta .bundle-path {
+  max-width: min(32vw, 290px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .production-layout {
@@ -6743,7 +6752,13 @@ select {
 }
 
 .topbar-meta {
-  display: none;
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  color: var(--text-tertiary);
+  font-size: 11px;
 }
 
 .top-actions {

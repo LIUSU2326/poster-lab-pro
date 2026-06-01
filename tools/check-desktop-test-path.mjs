@@ -16,6 +16,8 @@ const decisions = read("DECISIONS.md");
 const roadmap = read("ROADMAP.md");
 const testing = read("TESTING.md");
 const pkg = read("package.json");
+const appMetadata = read("src/app-metadata.js");
+const topbar = read("src/render/topbar.js");
 
 for (const token of [
   "npm run check",
@@ -34,6 +36,9 @@ for (const token of [
 
 for (const scriptName of ["check", "poster-chain:check", "build:next", "dev:next"]) {
   if (!pkg.includes(`"${scriptName}"`)) issues.push(`package.json: missing ${scriptName} script`);
+}
+if (!pkg.includes("\"version\": \"0.5.3\"")) {
+  issues.push("package.json: desktop-visible version should match the current V0.5.3 plan milestone");
 }
 
 for (const [file, source] of [
@@ -54,6 +59,13 @@ for (const forbidden of ["api.openai.com", "OPENAI_API_KEY=", "REPLICATE_API_TOK
 
 if (!pkg.includes("desktop-test-path:check")) {
   issues.push("package.json: missing desktop-test-path:check script");
+}
+
+for (const token of ["APP_VERSION", "APP_BUNDLE_HINT", "release/mac/Poster Lab Pro.app", "APP_MAIN_BRANCH"]) {
+  if (!appMetadata.includes(token)) issues.push(`app-metadata.js: missing desktop identity token ${token}`);
+}
+for (const token of ["APP_VERSION", "APP_BUNDLE_HINT", "topbar-meta", "bundle-path"]) {
+  if (!topbar.includes(token)) issues.push(`topbar.js: missing visible app version/path token ${token}`);
 }
 
 if (issues.length > 0) {

@@ -2,6 +2,7 @@ import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/worksp
 import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
 import { getImageGenerationStatus } from '../data/generation-activity.js';
 import { state } from '../state.js';
+import { APP_BUNDLE_HINT, APP_MAIN_BRANCH, APP_VERSION } from '../app-metadata.js';
 
 export function renderTopbar(activeMode) {
   const project = getWorkspaceProject();
@@ -21,6 +22,12 @@ export function renderTopbar(activeMode) {
           <small>${modeLabel}工作台</small>
           <strong>${escapeHtml(project.name || "未命名项目")}</strong>
         </div>
+      </div>
+      <div class="topbar-meta" aria-label="当前应用版本">
+        <span>v${escapeHtml(APP_VERSION)}</span>
+        <span>${escapeHtml(APP_MAIN_BRANCH)}</span>
+        <span class="bundle-path" title="${escapeHtml(APP_BUNDLE_HINT)}">${escapeHtml(APP_BUNDLE_HINT)}</span>
+        <span>rev ${escapeHtml(summary.revision)}</span>
       </div>
       <div class="view-switch top-view-switch" aria-label="主视图">
         <button class="${state.view === "schemes" ? "active" : ""}" type="button" data-view="schemes">方案</button>
