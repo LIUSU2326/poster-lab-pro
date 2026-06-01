@@ -47,6 +47,13 @@ for (const token of [
 if (!events.includes("submitGenerationDraft")) {
   issues.push("events.js: submit-generation action must call submitGenerationDraft");
 }
+for (const token of [
+  ".scheme-card[data-scheme-id]",
+  "data-result-filter",
+  "goto-result-scheme",
+]) {
+  if (!events.includes(token)) issues.push(`events.js: missing result recovery token ${token}`);
+}
 
 for (const token of [
   "createStaticLocalApiService",
@@ -71,6 +78,8 @@ for (const token of [
   "selected-render-button",
   "getSelectedRenderableScheme",
   "data-scheme-id",
+  "run-mode-chip",
+  "liveGate.estimatedCostLabel",
 ]) {
   if (!topbar.includes(token)) issues.push(`topbar.js: missing current-result workflow token ${token}`);
 }
@@ -79,6 +88,10 @@ for (const token of [
   'state.view === "results"',
   "renderResultBoard",
   "result-board",
+  "renderResultFilters",
+  "resultMatchesFilter",
+  "goto-result-scheme",
+  "重试方案",
 ]) {
   if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
 }
@@ -93,6 +106,12 @@ if (!stateSource.includes('view === "results"') || !stateSource.includes('state.
 for (const token of [
   "repeat(3, minmax(68px, 1fr))",
   ".top-actions .selected-render-button",
+  ".result-filter-tabs",
+  ".result-quick-actions a",
+  ".result-status.failed",
+  ".top-actions .run-mode-chip",
+  ".top-actions .run-mode-chip.live",
+  ".top-actions .run-mode-chip.test",
 ]) {
   if (!styles.includes(token)) issues.push(`styles.css: missing result/current render UI token ${token}`);
 }

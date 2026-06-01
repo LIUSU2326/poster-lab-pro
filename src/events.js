@@ -26,6 +26,7 @@ export function bindEvents(render) {
       state.view = "schemes";
       state.selectedScheme = "";
       state.resultViewerOpen = false;
+      state.resultFilter = "all";
       ensureSelectedScheme();
       render();
     });
@@ -43,12 +44,22 @@ export function bindEvents(render) {
     });
   });
 
-  document.querySelectorAll("[data-scheme-id]").forEach((card) => {
+  document.querySelectorAll("[data-result-filter]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      state.resultFilter = button.dataset.resultFilter || "all";
+      event.preventDefault();
+      event.stopPropagation();
+      render();
+    });
+  });
+
+  document.querySelectorAll(".scheme-card[data-scheme-id]").forEach((card) => {
     card.addEventListener("click", () => {
       state.selectedScheme = card.dataset.schemeId;
       render();
     });
     card.addEventListener("keydown", (event) => {
+      if (event.target?.closest?.("a, button, [data-action]")) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         state.selectedScheme = card.dataset.schemeId;
@@ -59,10 +70,10 @@ export function bindEvents(render) {
 
   document.querySelectorAll(".result-card[data-result-id]").forEach((card) => {
     card.addEventListener("click", (event) => {
-      if (event.target?.closest?.("a")) return;
+      if (event.target?.closest?.("a, button, [data-action]")) return;
       state.selectedResult = card.dataset.resultId;
       state.selectedResultUserSet = true;
-      state.view = "schemes";
+      state.view = "results";
       state.resultViewerOpen = true;
       render();
     });
@@ -71,7 +82,7 @@ export function bindEvents(render) {
         event.preventDefault();
         state.selectedResult = card.dataset.resultId;
         state.selectedResultUserSet = true;
-        state.view = "schemes";
+        state.view = "results";
         state.resultViewerOpen = true;
         render();
       }
@@ -504,6 +515,15 @@ async function handleActionControl(control, event, render) {
       state.selectedResultUserSet = true;
     }
     state.resultViewerOpen = true;
+  }
+  if (action === "goto-result-scheme") {
+    const schemeId = control.dataset.schemeId || "";
+    if (!schemeId) return;
+    state.selectedScheme = schemeId;
+    state.view = "schemes";
+    state.resultViewerOpen = false;
+    render();
+    return;
   }
   if (action === "close-result-viewer") state.resultViewerOpen = false;
   if (action === "toggle-left-panel") {

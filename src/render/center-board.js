@@ -144,6 +144,8 @@ function formatProjectEntryDate(value) {
 
 function renderResultBoard(activeMode) {
   const results = getModeResults();
+  const activeFilter = normalizeResultFilter(state.resultFilter);
+  const filteredResults = results.filter((result) => resultMatchesFilter(result, activeFilter));
   const readyCount = results.filter((result) => result.status === "ready").length;
   const storedCount = results.filter((result) => getResultPreviewUrl(result)).length;
   const failedCount = results.filter((result) => result.status === "failed").length;
@@ -157,20 +159,58 @@ function renderResultBoard(activeMode) {
           <strong>${results.length} 项结果</strong>
           <small>${readyCount} 项可用 / ${storedCount} 个本地文件 / ${failedCount} 项失败。点击图片查看大图与编辑操作。</small>
         </div>
-        ${failedImageCount > 0 ? `
-          <div class="result-toolbar-actions">
+        <div class="result-toolbar-actions">
+          ${renderResultFilters(activeFilter, {
+            all: results.length,
+            ready: readyCount,
+            stored: storedCount,
+            failed: failedCount,
+          })}
+          ${failedImageCount > 0 ? `
             <button class="retry-failed-button" type="button" data-action="retry-failed-images">重试全部失败图片 ${failedImageCount}</button>
-          </div>
-        ` : ""}
+          ` : ""}
+        </div>
       </div>
-      ${results.length === 0 ? renderResultEmpty(activeMode) : `
+      ${results.length === 0 ? renderResultEmpty(activeMode) : filteredResults.length === 0 ? renderResultFilteredEmpty(activeFilter) : `
         <div class="result-grid">
-          ${results.map((result) => renderResultCard(result)).join("")}
+          ${filteredResults.map((result) => renderResultCard(result)).join("")}
         </div>
       `}
     </section>
     ${state.resultViewerOpen ? renderResultViewer() : ""}
   `;
+}
+
+function renderResultFilters(activeFilter, counts) {
+  const filters = [
+    { id: "all", label: "全部", count: counts.all },
+    { id: "ready", label: "可用", count: counts.ready },
+    { id: "stored", label: "本地文件", count: counts.stored },
+    { id: "failed", label: "失败", count: counts.failed },
+  ];
+  return `
+    <div class="result-filter-tabs" role="tablist" aria-label="结果筛选">
+      ${filters.map((filter) => `
+        <button
+          class="${filter.id === activeFilter ? "active" : ""}"
+          type="button"
+          data-result-filter="${escapeAttribute(filter.id)}"
+          aria-selected="${filter.id === activeFilter ? "true" : "false"}"
+        >${escapeHtml(filter.label)} ${escapeHtml(filter.count)}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function normalizeResultFilter(value) {
+  return ["all", "ready", "stored", "failed"].includes(value) ? value : "all";
+}
+
+function resultMatchesFilter(result, filter) {
+  if (filter === "ready") return result.status === "ready";
+  if (filter === "stored") return Boolean(getResultPreviewUrl(result));
+  if (filter === "failed") return result.status === "failed";
+  return true;
 }
 
 function getFailedImageTaskCount(modeId) {
@@ -201,11 +241,29 @@ function renderResultEmpty(activeMode) {
   `;
 }
 
+function renderResultFilteredEmpty(activeFilter) {
+  const label = {
+    ready: "可用结果",
+    stored: "本地文件",
+    failed: "失败结果",
+  }[activeFilter] || "结果";
+  return `
+    <div class="result-empty">
+      <span>FILTER</span>
+      <strong>当前没有${escapeHtml(label)}</strong>
+      <small>切回全部结果，或继续生成/重试后这里会自动更新。</small>
+      <button class="primary-button" type="button" data-result-filter="all">查看全部结果</button>
+    </div>
+  `;
+}
+
 function renderResultCard(result) {
   const scheme = getSchemeById(result.schemeId);
   const display = scheme ? getSchemeDisplay({ id: result.mode }, scheme) : null;
   const selected = state.selectedResult === result.id;
   const src = getResultPreviewUrl(result);
+  const downloadUrl = getResultDownloadUrlForViewer(result);
+  const ratio = result.width && result.height ? simplifyRatio(result.width, result.height) : "";
 
   return `
     <article class="result-card compact-result ${selected ? "selected" : ""}" data-result-id="${result.id}" tabindex="0">
@@ -222,7 +280,20 @@ function renderResultCard(result) {
             <span>${escapeHtml(display?.code || scheme?.code || result.schemeId)}</span>
             <h2>${escapeHtml(display?.title || scheme?.title || "生成素材")}</h2>
           </div>
+          <strong class="result-status ${escapeAttribute(result.status || "")}">${escapeHtml(formatResultStatus(result.status))}</strong>
         </header>
+        <div class="result-meta">
+          <span>${escapeHtml(formatResultSize(result))}</span>
+          ${ratio ? `<span>${escapeHtml(ratio)}</span>` : ""}
+          ${result.model ? `<span>${escapeHtml(result.model)}</span>` : ""}
+          <span>${escapeHtml(formatResultDate(result.updatedAt || result.createdAt))}</span>
+        </div>
+        <div class="result-quick-actions">
+          <button type="button" data-action="open-result-viewer" data-result-id="${escapeHtml(result.id)}">查看</button>
+          <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
+          <button type="button" data-action="submit-generation" data-scheme-id="${escapeHtml(result.schemeId)}">重试方案</button>
+          ${downloadUrl ? `<a href="${downloadUrl}" download>下载</a>` : ""}
+        </div>
       </div>
     </article>
   `;
@@ -294,6 +365,8 @@ function renderResultViewer() {
         ${renderResultActionButton(result, "variant", "生成变体")}
         ${renderResultActionButton(result, "upscale", "高清放大")}
         ${renderResultActionButton(result, "removeBg", "移除背景")}
+        <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
+        <button type="button" data-action="submit-generation" data-scheme-id="${escapeHtml(result.schemeId)}">重试方案</button>
         ${downloadUrl ? `<a href="${downloadUrl}" download>下载结果</a>` : `<button type="button" disabled>下载结果</button>`}
       </div>
     </div>
@@ -814,6 +887,18 @@ function formatResultStatus(status) {
     failed: "失败",
     archived: "已归档",
   }[status] || status || "未知";
+}
+
+function formatResultDate(value) {
+  if (!value) return "未知时间";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "未知时间";
+  return date.toLocaleString(undefined, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function formatResultSize(result) {

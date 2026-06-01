@@ -20,6 +20,7 @@ export const state = {
   selectedSchemeVariants: /** @type {Record<string, number>} */ ({}),
   selectedResult: "",
   selectedResultUserSet: false,
+  resultFilter: "all",
   archiveSelection: [],
   archiveExportMessage: "",
   projectLibraryMessage: "",

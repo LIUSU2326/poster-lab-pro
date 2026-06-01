@@ -2319,6 +2319,32 @@ input[type="range"] {
   gap: 8px;
 }
 
+.result-filter-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 3px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.result-filter-tabs button {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.result-filter-tabs button.active {
+  background: var(--primary-surface);
+  color: var(--accent-ink);
+}
+
 .result-toolbar-actions button,
 .result-actions button,
 .result-actions a {
@@ -2345,6 +2371,22 @@ input[type="range"] {
   background: var(--control-hover);
   color: var(--text);
   box-shadow: 0 8px 18px color-mix(in oklch, var(--accent), transparent 88%);
+}
+
+.result-toolbar-actions .result-filter-tabs button {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-tertiary);
+  box-shadow: none;
+}
+
+.result-toolbar-actions .result-filter-tabs button.active,
+.result-toolbar-actions .result-filter-tabs button.active:hover {
+  background: var(--primary-surface);
+  color: var(--accent-ink);
 }
 
 .result-grid {
@@ -2441,6 +2483,12 @@ input[type="range"] {
   color: var(--success);
 }
 
+.result-status.failed {
+  border-color: color-mix(in oklch, var(--danger), transparent 62%);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .result-meta,
 .result-processing,
 .result-actions,
@@ -2454,7 +2502,11 @@ input[type="range"] {
   padding-top: 2px;
 }
 
-.result-quick-actions button {
+.result-quick-actions button,
+.result-quick-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 28px;
   padding: 0 9px;
   border: 1px solid var(--border-default);
@@ -2463,11 +2515,13 @@ input[type="range"] {
   color: var(--text-2);
   font-size: 11px;
   font-weight: 780;
+  text-decoration: none;
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
 
 .result-toolbar-actions button.is-active,
 .result-quick-actions button:hover,
+.result-quick-actions a:hover,
 .result-quick-actions button.is-active,
 .operation-grid .ghost-action.is-active {
   border-color: color-mix(in oklch, var(--accent), transparent 48%);
@@ -12484,6 +12538,41 @@ select:focus-visible,
 
 .top-actions .live-gate-chip {
   min-width: 0 !important;
+}
+
+.top-actions .run-mode-chip {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  min-height: 34px !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: 999px !important;
+  background: var(--panel-lift) !important;
+  color: var(--text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 780 !important;
+}
+
+.top-actions .run-mode-chip b,
+.top-actions .run-mode-chip small {
+  font: inherit !important;
+  white-space: nowrap !important;
+}
+
+.top-actions .run-mode-chip b {
+  color: var(--text-primary) !important;
+}
+
+.top-actions .run-mode-chip.live {
+  border-color: color-mix(in oklch, var(--warning), transparent 54%) !important;
+  background: color-mix(in oklch, var(--warning-soft), var(--panel) 78%) !important;
+}
+
+.top-actions .run-mode-chip.test {
+  border-color: color-mix(in oklch, var(--success), transparent 60%) !important;
+  background: color-mix(in oklch, var(--success-soft), var(--panel) 82%) !important;
 }
 
 .top-actions .theme-switch {
