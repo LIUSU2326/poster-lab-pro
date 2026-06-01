@@ -98,6 +98,30 @@ function estimatePreparedGeneration(activeMode) {
   };
 }
 
+function latestModeQueuePlan(activeMode) {
+  const modeId = activeMode?.id || state.activeMode;
+  const plans = Array.isArray(state.workspaceSnapshot?.queuePlans)
+    ? state.workspaceSnapshot.queuePlans.filter((plan) => plan.job?.mode === modeId)
+    : [];
+  return plans[plans.length - 1] || null;
+}
+
+function plannedOutputFromQueue(activeMode) {
+  const plan = latestModeQueuePlan(activeMode);
+  if (!plan) return null;
+  const imageTasks = (plan.tasks || []).filter((task) => task.kind === "imageGeneration");
+  if (imageTasks.length === 0) return null;
+  const schemeIds = new Set(imageTasks.map((task) => task.input?.schemeId).filter(Boolean));
+  const imageCount = imageTasks.reduce((sum, task) => sum + clampInteger(task.input?.count, 1, 8, 1), 0);
+  const schemeCount = schemeIds.size || imageTasks.length;
+  return {
+    schemeCount,
+    imagesPerScheme: imageCount > 0 && schemeCount > 0 ? Math.max(1, Math.round(imageCount / schemeCount)) : 1,
+    imageCount,
+    plannedOutputLabel: `${schemeCount} 方案 · ${imageCount} 张图`,
+  };
+}
+
 function getNestedValue(key) {
   return key.split(".").reduce((current, part) => current?.[part], state.liveGate);
 }
@@ -163,6 +187,7 @@ export function getLiveGateViewModel(activeMode) {
   const costLabel = queue.summary.costLabel || queue.summary.estimatedCost || "";
   const costKnown = /[0-9]/.test(String(costLabel));
   const preparedEstimate = estimatePreparedGeneration(activeMode);
+  const plannedOutput = plannedOutputFromQueue(activeMode) || preparedEstimate;
   const estimatedCost = costKnown ? parseCurrency(costLabel) : preparedEstimate.estimatedCost;
   const liveGate = state.liveGate || {};
   const maxAcceptedCost = Number.isFinite(Number(liveGate.maxAcceptedCost))
@@ -197,10 +222,10 @@ export function getLiveGateViewModel(activeMode) {
     estimatedCost,
     estimatedCostLabel: costKnown ? formatCurrency(estimatedCost) : `预估 ${formatCurrency(estimatedCost)}`,
     costBasisLabel: costKnown ? "来自当前队列" : "来自当前配置",
-    plannedOutputLabel: preparedEstimate.plannedOutputLabel,
-    plannedImageCount: preparedEstimate.imageCount,
-    plannedSchemeCount: preparedEstimate.schemeCount,
-    plannedImagesPerScheme: preparedEstimate.imagesPerScheme,
+    plannedOutputLabel: plannedOutput.plannedOutputLabel,
+    plannedImageCount: plannedOutput.imageCount,
+    plannedSchemeCount: plannedOutput.schemeCount,
+    plannedImagesPerScheme: plannedOutput.imagesPerScheme,
     maxAcceptedCost,
     maxAcceptedCostLabel: formatCurrency(maxAcceptedCost),
     costSummaryLabel: `${costKnown ? formatCurrency(estimatedCost) : `预估 ${formatCurrency(estimatedCost)}`} / 上限 ${formatCurrency(maxAcceptedCost)}`,

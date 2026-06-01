@@ -57,6 +57,7 @@ for (const token of [
   "plannedOutputLabel",
   "costBasisLabel",
   "estimatePreparedGeneration",
+  "plannedOutputFromQueue",
 ]) {
   if (!viewModelSource.includes(token)) issues.push(`live-gate-view-model.js: missing ${token}`);
 }
@@ -130,6 +131,49 @@ try {
   }
   if (!allowedGate.costSummaryLabel.includes("上限")) {
     issues.push("live gate should expose a cost summary label with accepted cap");
+  }
+
+  state.workspaceSnapshot.queuePlans = [{
+    job: {
+      id: "job-live-gate-output-check",
+      projectId: state.workspaceSnapshot.project.id,
+      mode: "poster",
+      providerId: "google",
+      status: "queued",
+      title: "poster output check",
+      createdAt: "2026-05-23T00:00:00.000Z",
+      updatedAt: "2026-05-23T00:00:00.000Z",
+    },
+    tasks: [{
+      id: "task-live-gate-image-check",
+      jobId: "job-live-gate-output-check",
+      kind: "imageGeneration",
+      status: "queued",
+      stage: "planning",
+      mode: "poster",
+      input: { schemeId: "scheme-live-gate-output-check", count: 2 },
+      output: { providerResultIds: [], metadata: {} },
+      cost: { estimatedCost: 0.1, actualCost: null, currency: "USD" },
+      elapsedMs: 0,
+    }],
+    events: [],
+  }];
+  state.workspaceSnapshot.queueSummaries = [{
+    jobId: "job-live-gate-output-check",
+    total: 1,
+    queued: 1,
+    running: 0,
+    completed: 0,
+    failed: 0,
+    cancelled: 0,
+    progress: 0,
+    estimatedCost: 0.1,
+    actualCost: null,
+    elapsedMs: 0,
+  }];
+  const queueGate = getLiveGateViewModel(modeSpecs.poster);
+  if (queueGate.costBasisLabel !== "来自当前队列" || queueGate.plannedImageCount !== 2) {
+    issues.push("live gate should prefer queue-derived cost and planned output when a queue exists");
   }
 
   state.liveGate.maxAcceptedCost = 0.01;
