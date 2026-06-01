@@ -2,6 +2,7 @@ import { state, ensureSelectedResult, ensureSelectedScheme, queueResultOperation
 import { submitGenerationDraft } from './form-binding.js';
 import { runManualLiveTestForWorkbench } from './manual-live-test-client.js';
 import { runResultOperationForWorkbench } from './result-operation-client.js';
+import { deleteResultForWorkbench } from './result-management-client.js';
 import { simulateWorkbenchAssetUpload } from './asset-library-client.js';
 import { clearGeneratedSchemesForWorkbench, deleteGeneratedSchemeForWorkbench, resetGeneratedSchemeForWorkbench } from './scheme-management-client.js';
 import { getArchiveRows } from './data/workspace-adapters.js';
@@ -526,6 +527,18 @@ async function handleActionControl(control, event, render) {
     return;
   }
   if (action === "close-result-viewer") state.resultViewerOpen = false;
+  if (action === "delete-result") {
+    const resultId = control.dataset.resultId || state.selectedResult || "";
+    if (!resultId) return;
+    const deleteEnvelope = await deleteResultForWorkbench({ resultId });
+    if (!deleteEnvelope.ok) {
+      state.submission = createLocalServiceError("delete_result_failed", deleteEnvelope.error?.message || "删除结果失败。");
+      state.taskOpen = false;
+    }
+    state.view = "results";
+    render();
+    return;
+  }
   if (action === "toggle-left-panel") {
     state.leftCollapsed = !state.leftCollapsed;
     if (!state.leftCollapsed) state.leftWidth = clamp(state.leftWidth || 320, LEFT_PANEL_MIN, LEFT_PANEL_MAX);

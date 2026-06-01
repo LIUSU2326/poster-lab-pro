@@ -79,6 +79,9 @@ async function run() {
     deleteGeneratedSchemeForWorkbench,
     resetGeneratedSchemeForWorkbench,
   } = await import(pathToFileURL(path.join(root, "src/scheme-management-client.js")).href);
+  const {
+    deleteResultForWorkbench,
+  } = await import(pathToFileURL(path.join(root, "src/result-management-client.js")).href);
 
   const updatedAt = "2026-06-01T00:00:00.000Z";
   const schemeA = "generated-poster-state-a";
@@ -178,6 +181,48 @@ async function run() {
   };
 
   state.apiMode = "http";
+  setRuntimeWorkspaceSnapshot(serverSnapshot, "http");
+  state.selectedScheme = schemeA;
+  state.selectedResult = resultA.id;
+  state.selectedResultUserSet = true;
+  state.resultViewerOpen = true;
+  state.selectedSchemeVariants = {
+    [schemeA]: 2,
+    [schemeB]: 1,
+    "missing-scheme": 3,
+  };
+  state.archiveSelection = [`archive-${resultA.id}`, `archive-${resultB.id}`, "archive-missing"];
+  state.resultOperations = [
+    { id: "op-state-a", resultId: resultA.id, status: "done" },
+    { id: "op-state-b", resultId: resultB.id, status: "done" },
+  ];
+  state.resultOperation = state.resultOperations[0];
+
+  const resultDeleteEnvelope = await deleteResultForWorkbench({ resultId: resultA.id }, { fetchImpl: fakeFetch });
+  const resultDeletedSnapshot = getRuntimeWorkspaceSnapshot();
+  assert(resultDeleteEnvelope.ok, "deleteResultForWorkbench should persist through fake http");
+  assert(resultDeletedSnapshot.schemes.some((scheme) => scheme.id === schemeA), "deleting a result should keep its scheme");
+  assert(!resultDeletedSnapshot.results.some((result) => result.id === resultA.id), "deleted result should be removed from snapshot");
+  assert(!resultDeletedSnapshot.archiveRows.some((row) => row.resultAssetId === resultA.id), "deleted result archive row should be removed");
+  assert(state.selectedResult !== resultA.id, "selectedResult should move away from a directly deleted result");
+  assert(state.resultViewerOpen === false, "result viewer should close when its selected result is directly deleted");
+  assert(!state.archiveSelection.includes(`archive-${resultA.id}`), "directly deleted result archive selection should be cleared");
+  assert(state.resultOperations.every((operation) => operation.resultId !== resultA.id), "directly deleted result operations should be cleared");
+  assert(state.resultOperation === null, "current result operation should clear after directly deleting its source result");
+
+  serverSnapshot = {
+    ...serverSnapshot,
+    results: [resultA, resultB],
+    archiveRows: [
+      makeArchiveRow(resultA, "State Sync A", updatedAt),
+      makeArchiveRow(resultB, "State Sync B", updatedAt),
+    ],
+    metadata: {
+      ...serverSnapshot.metadata,
+      revision: serverSnapshot.metadata.revision + 1,
+      updatedAt,
+    },
+  };
   setRuntimeWorkspaceSnapshot(serverSnapshot, "http");
   state.selectedScheme = schemeA;
   state.selectedResult = resultA.id;

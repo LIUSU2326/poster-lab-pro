@@ -292,6 +292,7 @@ function renderResultCard(result) {
           <button type="button" data-action="open-result-viewer" data-result-id="${escapeHtml(result.id)}">查看</button>
           <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
           <button type="button" data-action="submit-generation" data-scheme-id="${escapeHtml(result.schemeId)}">重试方案</button>
+          <button class="danger" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">删除</button>
           ${downloadUrl ? `<a href="${downloadUrl}" download>下载</a>` : ""}
         </div>
       </div>
@@ -367,6 +368,7 @@ function renderResultViewer() {
         ${renderResultActionButton(result, "removeBg", "移除背景")}
         <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
         <button type="button" data-action="submit-generation" data-scheme-id="${escapeHtml(result.schemeId)}">重试方案</button>
+        <button class="danger" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">删除结果</button>
         ${downloadUrl ? `<a href="${downloadUrl}" download>下载结果</a>` : `<button type="button" disabled>下载结果</button>`}
       </div>
     </div>

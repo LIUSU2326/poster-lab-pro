@@ -2530,6 +2530,19 @@ input[type="range"] {
   box-shadow: 0 0 16px color-mix(in oklch, var(--accent), transparent 86%);
 }
 
+.result-quick-actions button.danger {
+  border-color: color-mix(in oklch, var(--danger), transparent 58%);
+  background: color-mix(in oklch, var(--danger-soft), transparent 28%);
+  color: var(--danger);
+}
+
+.result-quick-actions button.danger:hover {
+  border-color: color-mix(in oklch, var(--danger), transparent 38%);
+  background: color-mix(in oklch, var(--danger-soft), transparent 8%);
+  color: var(--danger);
+  box-shadow: 0 0 14px color-mix(in oklch, var(--danger), transparent 88%);
+}
+
 .result-toolbar-actions button.uses-fallback-route,
 .result-quick-actions button.uses-fallback-route,
 .operation-grid .ghost-action.uses-fallback-route {
@@ -6464,6 +6477,17 @@ select:focus {
 .result-viewer-dock button:hover,
 .result-viewer-dock a:hover {
   background: rgba(255,255,255,0.14);
+}
+
+.result-viewer-dock button.danger {
+  border-color: rgba(255, 120, 120, 0.28);
+  background: rgba(255, 92, 92, 0.12);
+  color: rgba(255, 210, 210, 0.96);
+}
+
+.result-viewer-dock button.danger:hover {
+  border-color: rgba(255, 140, 140, 0.38);
+  background: rgba(255, 92, 92, 0.18);
 }
 
 .result-viewer-dock a {
