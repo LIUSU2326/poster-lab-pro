@@ -56,6 +56,6 @@ Real provider image generation is manual and opt-in. It requires saved provider 
 ## Manual QA
 
 - Poster QA: `POSTER_QA.md`
-- Desktop test path: `DESKTOP_TESTING.md`
+- Desktop Test Path: `DESKTOP_TESTING.md`
 - Regression notes: `TESTING.md`
 - Roadmap and remaining risks: `ROADMAP.md`

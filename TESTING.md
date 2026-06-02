@@ -21,6 +21,7 @@ Accepted fixes from the pass:
 
 Regression checks:
 
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Run `npm run prompts:check`.
 - Run `npm run provider-requests:check`.
 - Run `npm run google-live-adapter:check`.

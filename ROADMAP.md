@@ -1,5 +1,20 @@
 # ROADMAP.md
 
+## 2026-06-02 1.0 RC Release Candidate Preparation Update
+
+### Completed In This Pass
+
+- Added `RELEASE_CHECKLIST.md` as the release-candidate gate for local beta/RC promotion.
+- Added `npm run release-candidate:check` to verify version identity, desktop bundle path, visible app metadata, live safety gate, cost cap UI, and release documentation.
+- Added `release-candidate:check` to the full `npm run check` chain so RC readiness cannot drift outside normal validation.
+- Confirmed the release gate keeps live provider calls manual and opt-in; automated checks still use fake transports and spend no provider credits.
+
+### Remaining RC Watch Items
+
+- Result history, rerun, and recovery flows are usable but still deserve a guided product pass before a broader user beta.
+- Signed installer, auto-update, crash reporting, and production release channels remain outside the local RC gate.
+- 1.1 quality work should focus on Icon post-processing, Logo/text refinement, Announcement copy-safe output, Collab missing-brand handling, and automatic image-quality failure detection.
+
 ## 2026-06-02 1.0.0-beta.3 Real Generation Acceptance Update
 
 ### Completed In This Pass
@@ -21,7 +36,7 @@
 
 ### Next Step
 
-- Package and smoke the `1.0.0-beta.3` desktop app, push to `main`, then move into 1.0 RC release-candidate preparation.
+- Package and smoke the `1.0.0-beta.3` desktop app at `release/mac/Poster Lab Pro.app`, push to `main`, then move into 1.0 RC release-candidate preparation.
 
 ## 2026-06-02 1.0.0-beta.2 UX Regression Update
 
