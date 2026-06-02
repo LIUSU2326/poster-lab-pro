@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-alpha.3`
+- Version: `1.1.0-alpha.4`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -44,6 +44,6 @@ Live provider calls remain opt-in:
 
 - Icon mode now applies local zero-cost corner repair when the result audit detects a rounded-mask risk; still review 64px readability manually.
 - Logo spelling is model-dependent; Logo Text Strategy now prefers exact short wordmarks only when reliable and otherwise reserves a blank wordmark plate for later vector/text refinement.
-- Announcement should prefer editable copy-safe panels when exact operational text matters.
-- Collab should use blank partner brand plates unless a partner `brandLogo` is uploaded.
+- Announcement Copy Safety Strategy now reserves editable title/body copy-safe fields and uses blank fields when exact text is risky.
+- Collab Brand Safety Strategy now reserves blank partner brand plates unless a partner `brandLogo` is uploaded.
 - Signed installer, auto-update, crash reporting, and a production release channel are not part of this local RC gate.

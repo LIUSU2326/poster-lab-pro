@@ -1,5 +1,22 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-alpha.4 Announcement Collab Safety Release Update
+
+### Completed In This Pass
+
+- Promoted Announcement/Collab safety to `1.1.0-alpha.4`.
+- Added shared Announcement Copy Safety Strategy for exact short titles vs blank editable copy panels.
+- Added shared Collab Brand Safety Strategy for uploaded partner logo lockups vs blank partner brand plates.
+- Added locked prompt sections for Announcement and Collab.
+- Repeated both safety locks in Google and OpenAI live image prompt wrappers.
+- Extended Result Quality Audit with `announcementCopyStrategy`, `announcement-copy-safe-panel-fallback`, `collabPartnerBrandStrategy`, and `collab-blank-partner-brand-plate`.
+
+### Release Intent
+
+- This alpha reduces garbled announcement copy and fake partner brand text without adding OCR or provider calls.
+- Announcement remains a copy-safe UI/event visual, not a battle poster.
+- Collab remains two separate identities in one scene, not a hybrid character or fake co-brand wordmark.
+
 ## 2026-06-02 1.1.0-alpha.3 Logo Text Strategy Release Update
 
 ### Completed In This Pass

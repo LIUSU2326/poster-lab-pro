@@ -213,6 +213,12 @@ function resultQualityTextTargets(snapshot: WorkspaceSnapshot | undefined, task:
   if (task.mode === "logo" && modeState?.modeForm.mode === "logo") {
     return [modeState.modeForm.wordmark].filter((item) => item.trim().length > 0);
   }
+  if (task.mode === "announcement" && modeState?.modeForm.mode === "announcement") {
+    return [modeState.modeForm.announcementTitle].filter((item) => item.trim().length > 0);
+  }
+  if (task.mode === "collab" && modeState?.modeForm.mode === "collab") {
+    return [modeState.modeForm.collabBrandName].filter((item) => item.trim().length > 0);
+  }
   return [];
 }
 

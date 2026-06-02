@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D096: Announcement And Collab Prefer Safety Plates Over Garbled Or Fake Text
+
+Status: accepted
+
+Context: Announcement and Collab modes have different text risks. Announcement outputs can generate garbled operational copy or cover the copy area with characters/effects. Collab outputs can invent readable partner brand names or fake sponsor logos when no partner `brandLogo` was uploaded.
+
+Decision: Add shared safety policies. Announcement Copy Safety Strategy always reserves editable title/body copy-safe fields and falls back to blank fields for long or risky titles. Collab Brand Safety Strategy uses an uploaded partner `brandLogo` when available; otherwise it reserves a polished blank partner brand plate, neutral emblem, or copy-safe lockup instead of readable fake partner branding.
+
+Impact:
+
+- Announcement remains a copy-safe UI/event visual, not a poster battle with unreadable text.
+- Collab keeps game and partner identities separate while avoiding fake partner wordmarks.
+- Result Quality Audit records both strategies and flags fallback conditions locally without OCR or provider calls.
+- Future rerun presets can use these findings to request safer copy panels, blank partner plates, stronger separation, or quieter backgrounds.
+
 ## D095: Logo Text Strategy Prefers Blank Refinement Plates For Complex Wordmarks
 
 Status: accepted

@@ -114,11 +114,13 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
       return [
         "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, and polished UI/event art direction.",
         "Composition bar: uploaded subjects support the announcement surface without covering headline or key copy.",
+        "Announcement Copy Safety Strategy lock: follow the prompt's safety strategy exactly. Reserve calm editable title/body copy-safe fields; if exact text is uncertain, leave polished blank fields instead of garbled operational text or pseudo-copy.",
       ].join(" ");
     case "collab":
       return [
         "Quality bar: premium collaboration campaign visual with two identities kept separate but unified by shared lighting, materials, scene, and interaction story.",
         "Composition bar: dual-character and dual-logo balance without merging identities, inventing partner brand names, or creating fake hybrid marks.",
+        "Collab Brand Safety Strategy lock: if no partner brandLogo reference is uploaded, reserve a polished blank partner brand plate or neutral emblem and do not generate fake readable partner wording.",
       ].join(" ");
     case "poster":
     default:
@@ -186,9 +188,9 @@ function modeReferenceInstruction(request: ImageGenerationRequest): string {
     case "logo":
       return "Logo reference handling: use uploaded assets as brand continuity, motif, material, or shape references for a wordmark/mark system. Do not turn them into a scene or pasted collage, and use Logo Text Strategy rather than pseudo-letters.";
     case "announcement":
-      return "Announcement reference handling: use uploaded assets as supporting art around a readable copy-safe announcement panel. Do not cover the title/copy area or generate garbled operational text.";
+      return "Announcement reference handling: use uploaded assets as supporting art around a readable copy-safe announcement panel. Do not cover the title/copy area, and follow Announcement Copy Safety Strategy instead of generating garbled operational text.";
     case "collab":
-      return "Collab reference handling: keep uploaded characters and logos as separate identities unified by one scene, shared lighting, materials, and interaction. Do not merge identities, invent partner brand names, or create hybrid marks.";
+      return "Collab reference handling: keep uploaded characters and logos as separate identities unified by one scene, shared lighting, materials, and interaction. Follow Collab Brand Safety Strategy; do not merge identities, invent partner brand names, or create hybrid marks.";
     case "poster":
     default:
       return "Use each uploaded character, BOSS/key subject, and logo once as an integrated in-world element. Do not create duplicate large/small copies or sticker-like pasted versions of the same asset.";

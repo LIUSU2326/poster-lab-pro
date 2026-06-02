@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import type { ProductionMode } from "../schema/zod";
 import { logoWordmarkTextRisk } from "../prompts/logo-text-policy";
+import { announcementCopySafetyPolicy, collabBrandSafetyPolicy } from "../prompts/mode-safety-policy";
 
 export type ResultQualityFindingSeverity = "info" | "review" | "warning";
 
@@ -179,21 +180,48 @@ export async function auditResultQuality(input: {
   }
 
   if (input.mode === "announcement") {
+    const announcementTitle = input.textTargets?.find((target) => target.trim().length > 0) || "";
+    const announcementPolicy = announcementCopySafetyPolicy(announcementTitle);
+    metrics.announcementCopyTarget = announcementPolicy.title || "not-configured";
+    metrics.announcementCopyStrategy = announcementPolicy.strategy;
+    metrics.announcementCopyComplexityScore = announcementPolicy.complexityScore;
     findings.push(finding({
       code: "announcement-copy-safe-review",
       severity: "info",
       message: "Announcement output should preserve a calm editable copy-safe area.",
       recommendation: "Review that generated operational text is absent or clean, and that a later editable title/body layer can be placed safely.",
     }));
+    if (announcementPolicy.strategy === "blankCopySafePanel") {
+      findings.push(finding({
+        code: "announcement-copy-safe-panel-fallback",
+        severity: "review",
+        message: "The announcement title is high-risk for direct image-model text rendering.",
+        recommendation: "Prefer polished blank title/body fields and add exact operational copy as editable text later.",
+      }));
+    }
   }
 
-  if (input.mode === "collab" && !(input.assetRoles || []).includes("brandLogo")) {
-    findings.push(finding({
-      code: "collab-missing-partner-brand-logo",
-      severity: "review",
-      message: "No partner brandLogo was uploaded for this Collab result.",
-      recommendation: "Review that the image uses a blank partner brand plate or neutral emblem instead of readable fake partner wordmarks.",
-    }));
+  if (input.mode === "collab") {
+    const collabPolicy = collabBrandSafetyPolicy({
+      collabBrandName: input.textTargets?.find((target) => target.trim().length > 0) || "",
+      hasPartnerBrandLogo: (input.assetRoles || []).includes("brandLogo"),
+    });
+    metrics.collabPartnerBrandTarget = collabPolicy.partnerName || "not-configured";
+    metrics.collabPartnerBrandStrategy = collabPolicy.strategy;
+    if (collabPolicy.strategy === "blankPartnerBrandPlate") {
+      findings.push(finding({
+        code: "collab-missing-partner-brand-logo",
+        severity: "review",
+        message: "No partner brandLogo was uploaded for this Collab result.",
+        recommendation: "Review that the image uses a blank partner brand plate or neutral emblem instead of readable fake partner wordmarks.",
+      }));
+      findings.push(finding({
+        code: "collab-blank-partner-brand-plate",
+        severity: "review",
+        message: "Collab should reserve blank partner branding instead of inventing partner text.",
+        recommendation: "Use an uploaded partner brandLogo for readable partner branding, or keep the partner lockup as a polished blank plate/emblem.",
+      }));
+    }
   }
 
   return {

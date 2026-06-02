@@ -35,7 +35,11 @@ for (const token of [
   "logoWordmarkTextRisk",
   "logoTextStrategy",
   "announcement-copy-safe-review",
+  "announcement-copy-safe-panel-fallback",
+  "announcementCopySafetyPolicy",
   "collab-missing-partner-brand-logo",
+  "collab-blank-partner-brand-plate",
+  "collabBrandSafetyPolicy",
   "local-overlay-fallback-applied",
   "tokenCost: 0",
 ]) {
@@ -215,6 +219,23 @@ async function runRuntimeCheck() {
       issues.push("logo quality audit should store copySafeBlankWordmark strategy for complex lettering");
     }
 
+    const announcementAudit = await results.auditResultQuality({
+      mode: "announcement",
+      dataUrl: null,
+      width: 1200,
+      height: 627,
+      targetWidth: 1200,
+      targetHeight: 627,
+      assetRoles: ["gameLogo"],
+      textTargets: ["Scheduled Maintenance And Compensation Details For All Regions"],
+    });
+    if (!announcementAudit.findings.some((item) => item.code === "announcement-copy-safe-panel-fallback")) {
+      issues.push("announcement quality audit should recommend blank copy-safe panel for complex operational title");
+    }
+    if (announcementAudit.metrics.announcementCopyStrategy !== "blankCopySafePanel") {
+      issues.push("announcement quality audit should store blankCopySafePanel strategy for complex copy");
+    }
+
     const collabAudit = await results.auditResultQuality({
       mode: "collab",
       dataUrl: null,
@@ -223,9 +244,16 @@ async function runRuntimeCheck() {
       targetWidth: 1920,
       targetHeight: 1080,
       assetRoles: ["gameCharacter", "collabCharacter", "gameLogo"],
+      textTargets: ["Partner Brand"],
     });
     if (!collabAudit.findings.some((item) => item.code === "collab-missing-partner-brand-logo")) {
       issues.push("collab quality audit should flag missing partner brandLogo");
+    }
+    if (!collabAudit.findings.some((item) => item.code === "collab-blank-partner-brand-plate")) {
+      issues.push("collab quality audit should recommend blank partner brand plate when partner brandLogo is missing");
+    }
+    if (collabAudit.metrics.collabPartnerBrandStrategy !== "blankPartnerBrandPlate") {
+      issues.push("collab quality audit should store blankPartnerBrandPlate strategy when partner brandLogo is missing");
     }
   } finally {
     if (path.basename(outDir).startsWith(".tmp-result-quality-audit-")) {

@@ -55,16 +55,20 @@ Deferred:
 
 ## 1.1.0-alpha.4 Announcement And Collab Safety
 
-Target:
+Status: done.
+
+Implemented:
 
 - Announcement should preserve editable copy-safe regions.
 - Collab should keep both sides separate and avoid fake partner branding.
-
-Likely work:
-
-- Surface quality audit findings as rerun guidance.
-- Add mode-specific rerun presets: safer copy panel, blank partner plate, stronger separation, quieter background.
+- Add Announcement Copy Safety Strategy for exact short titles vs blank editable panels.
+- Add Collab Brand Safety Strategy for uploaded partner logo lockups vs blank partner brand plates.
+- Surface quality audit findings for risky announcement copy and missing partner brand logos.
 - Ask for partner `brandLogo` only when the user needs readable partner branding.
+
+Deferred:
+
+- Add one-click mode-specific rerun presets after the safety strategy is validated in real generation.
 
 ## 1.1.0-alpha.5 Poster KV Failure Detection
 

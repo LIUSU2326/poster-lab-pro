@@ -1,5 +1,27 @@
 # TESTING.md
 
+## 2026-06-02 1.1.0-alpha.4 Announcement Collab Safety Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-alpha.4`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Announcement prompt packages include a locked `Announcement Copy Safety Strategy` section.
+- Verify complex Announcement titles use `blankCopySafePanel` and reserve polished blank editable title/body fields.
+- Verify Collab prompt packages include a locked `Collab Brand Safety Strategy` section.
+- Verify Collab without partner `brandLogo` uses `blankPartnerBrandPlate` and forbids fake readable partner wording.
+- Verify Result Quality Audit stores `announcementCopyStrategy` and `collabPartnerBrandStrategy`.
+- Verify Google and OpenAI live image prompts repeat both safety locks without adding provider calls to automated checks.
+
+Automated checks:
+
+- Run `npm run prompts:check`.
+- Run `npm run provider-requests:check`.
+- Run `npm run google-live-adapter:check`.
+- Run `npm run openai-live-adapter:check`.
+- Run `npm run result-quality-audit:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1.0-alpha.3 Logo Text Strategy Release Update
 
 Desktop Test Path checks:

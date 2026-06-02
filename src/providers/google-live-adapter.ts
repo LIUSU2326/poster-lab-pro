@@ -223,12 +223,14 @@ function imagePrompt(request: ImageGenerationRequest): string {
       return [
         "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, and polished UI/event art direction.",
         "Composition bar: uploaded subjects support the announcement surface without covering headline or key copy.",
+        "Announcement Copy Safety Strategy lock: follow the prompt's safety strategy exactly. Reserve calm editable title/body copy-safe fields; if exact text is uncertain, leave polished blank fields instead of garbled operational text or pseudo-copy.",
       ].join(" ");
     }
     if (request.context.mode === "collab") {
       return [
         "Quality bar: premium collaboration campaign visual with two identities kept separate but unified by shared lighting, materials, scene, and interaction story.",
         "Composition bar: dual-character and dual-logo balance without merging identities, inventing partner brand names, or creating fake hybrid marks.",
+        "Collab Brand Safety Strategy lock: if no partner brandLogo reference is uploaded, reserve a polished blank partner brand plate or neutral emblem and do not generate fake readable partner wording.",
       ].join(" ");
     }
     return [
@@ -360,9 +362,9 @@ function modeReferenceIdentityInstruction(request: ImageGenerationRequest): stri
     case "logo":
       return "Logo reference lock: uploaded visual assets are brand-continuity or motif references for a mark/wordmark system. Extract shape rhythm, color, material, and symbolic cues without turning the output into a character scene or poster. Use Logo Text Strategy rather than pseudo-letters.";
     case "announcement":
-      return "Announcement reference lock: uploaded characters, subjects, logos, UI, and environments are supporting references around a readable announcement surface. Preserve identity where used, but keep the title/copy zone clear.";
+      return "Announcement reference lock: uploaded characters, subjects, logos, UI, and environments are supporting references around a readable announcement surface. Preserve identity where used, but keep the title/copy zone clear and follow Announcement Copy Safety Strategy.";
     case "collab":
-      return "Collab reference lock: uploaded character and logo references remain separate identities. Preserve each side's recognizable silhouette, colors, styling, and brand cues while unifying them through scene lighting, material, and interaction. Do not invent partner brand names or fake sponsor wordmarks for any side that lacks an uploaded brandLogo.";
+      return "Collab reference lock: uploaded character and logo references remain separate identities. Preserve each side's recognizable silhouette, colors, styling, and brand cues while unifying them through scene lighting, material, and interaction. Follow Collab Brand Safety Strategy; do not invent partner brand names or fake sponsor wordmarks for any side that lacks an uploaded brandLogo.";
     case "poster":
     default:
       return [

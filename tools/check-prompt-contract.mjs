@@ -15,6 +15,7 @@ const contracts = read("src/prompts/contracts.ts");
 const guardrails = read("src/prompts/guardrails.ts");
 const builder = read("src/prompts/builder.ts");
 const logoTextPolicy = read("src/prompts/logo-text-policy.ts");
+const modeSafetyPolicy = read("src/prompts/mode-safety-policy.ts");
 const sloganPolicy = read("src/prompts/slogan-policy.ts");
 const barrel = read("src/prompts/index.ts");
 
@@ -93,7 +94,13 @@ for (const token of [
   "copySafeBlankWordmark",
   "polished blank wordmark plate",
   "Announcement quality target",
+  "Announcement Copy Safety Strategy",
+  "announcementCopySafetyBlock",
+  "blankCopySafePanel",
   "Collab quality target",
+  "Collab Brand Safety Strategy",
+  "collabBrandSafetyBlock",
+  "blankPartnerBrandPlate",
   "Icon mode ignores campaign copy",
   "Logo mode uses only the configured wordmark",
   "Announcement typography treatment",
@@ -107,17 +114,17 @@ for (const token of [
   "mode !== \"logo\"",
   "asset.role === \"prop\" && assetSemanticRole(asset) === \"antagonist\"",
 ]) {
-  if (!builder.includes(token) && !sloganPolicy.includes(token) && !logoTextPolicy.includes(token)) {
+  if (!builder.includes(token) && !sloganPolicy.includes(token) && !logoTextPolicy.includes(token) && !modeSafetyPolicy.includes(token)) {
     issues.push(`builder.ts: missing ${token}`);
   }
 }
 
-for (const token of ["contracts", "guardrails", "builder", "logo-text-policy"]) {
+for (const token of ["contracts", "guardrails", "builder", "logo-text-policy", "mode-safety-policy"]) {
   if (!barrel.includes(token)) issues.push(`index.ts: missing export for ${token}`);
 }
 
 for (const forbidden of ["fetch(", "XMLHttpRequest", "axios", "localStorage", "sessionStorage", "generateImage(", "healthCheck("]) {
-  if ([contracts, guardrails, builder, logoTextPolicy].join("\n").includes(forbidden)) {
+  if ([contracts, guardrails, builder, logoTextPolicy, modeSafetyPolicy].join("\n").includes(forbidden)) {
     issues.push(`prompt layer must not perform provider, network, DOM, or persistence side effects (${forbidden})`);
   }
 }

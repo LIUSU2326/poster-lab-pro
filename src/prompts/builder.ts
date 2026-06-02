@@ -32,6 +32,7 @@ import {
 } from "./contracts";
 import { getPromptGuardrails, lockedFieldsForPromptMode } from "./guardrails";
 import { logoTextPolicyBlock, logoWordmarkTextRisk } from "./logo-text-policy";
+import { announcementCopySafetyBlock, announcementCopySafetyPolicy, collabBrandSafetyBlock } from "./mode-safety-policy";
 import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "./slogan-policy";
 import {
   posterHeroPerformanceScaleLock,
@@ -457,7 +458,8 @@ function formatModeForm(modeState: WorkspaceModeState): string {
     return `Collab style injection: ${form.collabStyleInjection}. Character placeholders only: ${form.characterPlaceholdersOnly}. Prevent merge: ${form.preventCharacterMerge}.`;
   }
   if (form.mode === "announcement") {
-    return `Announcement title: ${form.announcementTitle}. Layout mode: ${form.layoutMode}. Group shot when multi-character: ${form.groupShotWhenMultiCharacter}.`;
+    const policy = announcementCopySafetyPolicy(form.announcementTitle);
+    return `Announcement title: ${form.announcementTitle}. Layout mode: ${form.layoutMode}. Group shot when multi-character: ${form.groupShotWhenMultiCharacter}. Copy safety strategy: ${policy.strategy}.`;
   }
   if (form.mode === "logo") {
     const policy = logoWordmarkTextRisk(form.wordmark);
@@ -636,6 +638,28 @@ function formatLogoTextDirection(modeState: WorkspaceModeState, assets: PromptAs
   });
 }
 
+function formatModeSafetyDirection(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): {
+  title: string;
+  content: string;
+} | null {
+  if (modeState.mode === "announcement" && modeState.modeForm.mode === "announcement") {
+    return {
+      title: "Announcement Copy Safety Strategy",
+      content: announcementCopySafetyBlock(modeState.modeForm.announcementTitle),
+    };
+  }
+  if (modeState.mode === "collab" && modeState.modeForm.mode === "collab") {
+    return {
+      title: "Collab Brand Safety Strategy",
+      content: collabBrandSafetyBlock({
+        collabBrandName: modeState.modeForm.collabBrandName,
+        hasPartnerBrandLogo: assets.some((asset) => asset.role === "brandLogo"),
+      }),
+    };
+  }
+  return null;
+}
+
 function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
   if (modeState.mode !== "poster" || modeState.modeForm.mode !== "poster") return "";
 
@@ -798,6 +822,20 @@ function buildSections(input: {
         locked: true,
         priority: 93,
         content: logoTextDirection,
+      }),
+    );
+  }
+
+  const modeSafetyDirection = formatModeSafetyDirection(input.modeState, input.assets);
+  if (modeSafetyDirection) {
+    sections.push(
+      section({
+        id: input.mode === "announcement" ? "announcement-copy-safety" : "collab-brand-safety",
+        title: modeSafetyDirection.title,
+        source: "mode",
+        locked: true,
+        priority: 93,
+        content: modeSafetyDirection.content,
       }),
     );
   }

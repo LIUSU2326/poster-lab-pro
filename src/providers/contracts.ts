@@ -235,8 +235,16 @@ export function createProviderError(
 export function modeGuardrails(mode: ProductionMode): z.infer<typeof ProviderModeGuardrailSchema> {
   const rulesByMode: Record<ProductionMode, string[]> = {
     poster: ["Keep game logo readable.", "Respect platform safe areas.", "Do not copy protected IP."],
-    collab: ["Use [Game Character] and [Collab Partner] placeholders only.", "Do NOT merge both entities."],
-    announcement: ["Keep announcement copy readable.", "Use group-shot planning when multiple characters are present."],
+    collab: [
+      "Use [Game Character] and [Collab Partner] placeholders only.",
+      "Do NOT merge both entities.",
+      "Use Collab Brand Safety Strategy: missing partner brandLogo means blank partner brand plate, not fake readable partner text.",
+    ],
+    announcement: [
+      "Keep announcement copy readable.",
+      "Use group-shot planning when multiple characters are present.",
+      "Use Announcement Copy Safety Strategy: reserve editable title/body copy-safe fields and avoid garbled operational text.",
+    ],
     logo: [
       "Wordmark is the primary subject.",
       "Use a pure solid-color background.",

@@ -506,6 +506,8 @@ async function runRuntimeCheck() {
       announcement: [
         "Mode Quality Bar",
         "Announcement quality target",
+        "Announcement Copy Safety Strategy",
+        "editable copy-safe panel",
         "copy-safe area",
         "uploaded characters or key subjects can act as guide",
         "do not cover the headline/copy zone",
@@ -513,6 +515,8 @@ async function runRuntimeCheck() {
       collab: [
         "Mode Quality Bar",
         "Collab quality target",
+        "Collab Brand Safety Strategy",
+        "blankPartnerBrandPlate",
         "[Game Character]",
         "[Collab Partner]",
         "must remain separate visible entities",
