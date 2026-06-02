@@ -1,5 +1,24 @@
 # ROADMAP.md
 
+## 2026-06-03 1.1.0-beta.6 Multimode Regression Gate Release Update
+
+### Completed In This Pass
+
+- Promoted the zero-cost multimode stability pass to `1.1.0-beta.6`.
+- Added `npm run multimode-regression:check` as a dedicated release gate for Poster, Icon, Logo, Announcement, and Collab prompt/provider requests.
+- Verified Poster stays on AI integrated redraw with BOSS performance, contact/occlusion, slogan, and no default scene-plate fallback.
+- Verified Icon stays square, no-text, single-subject, and 64px-readable without Poster KV prompt inheritance.
+- Verified Logo copy-safe blank wordmark mode keeps high-risk title fragments and readable-lettering cues redacted.
+- Verified Announcement keeps its editable copy-safe panel and does not inherit Poster KV task language.
+- Verified Collab keeps uploaded game and partner characters separate, uses blank partner brand plates without a partner `brandLogo`, and switches to uploaded partner lockup when a partner `brandLogo` is present.
+- Fixed long Prompt Package compaction so `Mode Guardrails` remain preserved even when the section body is trimmed.
+
+### Release Intent
+
+- This beta makes the 1.1 multimode generation chain harder to regress while avoiding extra provider cost.
+- It turns the previously scattered multimode assertions into a named gate that is easy to run before packaging.
+- It prepares the next pass for `1.1.0-rc.1`, focused on full UX/reliability walk-through rather than more prompt churn.
+
 ## 2026-06-03 1.1.0-beta.5 Collab Synthetic Partner Validation Release Update
 
 ### Completed In This Pass

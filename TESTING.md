@@ -1,5 +1,29 @@
 # TESTING.md
 
+## 2026-06-03 1.1.0-beta.6 Multimode Regression Gate Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-beta.6`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify `npm run multimode-regression:check` is present and included in `npm run check`.
+- Verify Poster provider requests still use `AI integrated redraw`, preserve BOSS performance locks, preserve slogan visibility, and do not fall back to `Identity-Safe Game Campaign KV Plate` by default.
+- Verify Icon provider requests stay `1:1`, text-free, single-subject, and readable at 64px without inheriting Poster KV prompt blocks.
+- Verify Logo provider requests in copy-safe blank wordmark mode redact high-risk project/title fragments and ask for a polished blank wordmark plate instead of readable or pseudo-readable letters.
+- Verify Announcement provider requests keep an editable copy-safe panel and do not inherit Poster KV task language.
+- Verify Collab provider requests keep `[Game Character]` and `[Collab Partner]` separate, use `blankPartnerBrandPlate` when no partner `brandLogo` exists, and switch to `uploadedPartnerBrandLockup` when a partner `brandLogo` is uploaded.
+- Verify long prompt packages preserve `Mode Guardrails` after prompt compaction.
+
+Automated checks:
+
+- Run `npm run multimode-regression:check`.
+- Run `npm run prompts:check`.
+- Run `npm run provider-requests:check`.
+- Run `npm run asset-fusion:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-03 1.1.0-beta.5 Collab Synthetic Partner Validation Release Update
 
 Desktop Test Path checks:

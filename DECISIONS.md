@@ -1,5 +1,19 @@
 # DECISIONS.md
 
+## D103: Multimode Regression Is A Release Gate
+
+Status: accepted
+
+Context: Poster, Icon, Logo, Announcement, and Collab now share the same asset semantic/fusion foundation, but each mode still has different output goals. Prior checks covered many individual prompt and provider rules, yet the cross-mode behavior was buried inside broader scripts and could be missed when one mode was tuned aggressively.
+
+Decision: Add a dedicated zero-cost `multimode-regression:check` release gate. It constructs provider-ready workspace snapshots, builds image prompt packages for every mode, maps them to provider requests, and asserts the core non-negotiables: Poster integrated redraw, Icon no-text square single subject, Logo copy-safe blank wordmark redaction, Announcement copy-safe panels, and Collab separate identities/brand safety. The gate also verifies long prompt packages preserve `Mode Guardrails` after compaction.
+
+Impact:
+
+- Mode-specific quality rules are protected together before packaging.
+- Future prompt changes can still improve a single mode, but they must not accidentally turn other modes into Poster KV, fake Logo text, unsafe Announcement copy, or merged Collab identities.
+- The check is local-only and does not spend provider credits.
+
 ## D102: Collab Validation May Use A Synthetic Partner Asset
 
 Status: accepted

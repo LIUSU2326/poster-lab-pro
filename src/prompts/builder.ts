@@ -899,13 +899,30 @@ function buildFinalPrompt(sections: PromptSection[], guardrails: PromptGuardrail
   const hardRules = guardrails
     .map((item) => `${item.severity.toUpperCase()}: ${item.rule}`)
     .join("\n");
-  return clampPromptLength(`${sectionText}\n\n## Mode Guardrails\n${hardRules}`);
+  return clampPromptLengthWithRequiredClosingBlock({
+    body: sectionText,
+    closingBlock: `## Mode Guardrails\n${hardRules}`,
+  });
 }
 
 function clampPromptLength(prompt: string): string {
   if (prompt.length <= FINAL_PROMPT_MAX_CHARS) return prompt;
   const suffix = "\n\n## Prompt Trim Notice\nPrompt was compacted to fit the provider request limit. Keep the highest-priority sections and asset constraints above authoritative.";
   return `${prompt.slice(0, FINAL_PROMPT_MAX_CHARS - suffix.length)}${suffix}`;
+}
+
+function clampPromptLengthWithRequiredClosingBlock(input: {
+  body: string;
+  closingBlock: string;
+}): string {
+  const prompt = `${input.body}\n\n${input.closingBlock}`;
+  if (prompt.length <= FINAL_PROMPT_MAX_CHARS) return prompt;
+
+  const notice = "\n\n## Prompt Trim Notice\nPrompt was compacted to fit the prompt package limit. Keep the highest-priority sections, asset constraints, and Mode Guardrails authoritative.";
+  const closing = `\n\n${input.closingBlock}`;
+  const bodyBudget = FINAL_PROMPT_MAX_CHARS - notice.length - closing.length;
+  if (bodyBudget <= 0) return clampPromptLength(prompt);
+  return `${input.body.slice(0, bodyBudget).trimEnd()}${notice}${closing}`;
 }
 
 function validatePromptPackage(params: {
