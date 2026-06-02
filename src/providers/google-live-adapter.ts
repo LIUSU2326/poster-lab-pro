@@ -216,6 +216,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
       return [
         "Quality bar: premium game logo/mark system, readable wordmark or emblem construction, crisp bevel/material finish, clean silhouette, and brand-safe typography.",
         "Composition bar: logo/wordmark is primary on a clean solid-color background when requested; props or characters may influence motifs but must not become a poster scene.",
+        "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Render exact short wordmarks only when reliable; otherwise reserve a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement.",
       ].join(" ");
     }
     if (request.context.mode === "announcement") {
@@ -357,7 +358,7 @@ function modeReferenceIdentityInstruction(request: ImageGenerationRequest): stri
     case "icon":
       return "Icon reference lock: uploaded subject assets are identity/silhouette anchors for one simplified icon subject. Preserve recognizable colors, proportions, markings, and visible key props while redrawing into a bold small-size-readable icon form. No invented shield/weapon/tool/accessory, no copied static pose, and no text.";
     case "logo":
-      return "Logo reference lock: uploaded visual assets are brand-continuity or motif references for a mark/wordmark system. Extract shape rhythm, color, material, and symbolic cues without turning the output into a character scene or poster.";
+      return "Logo reference lock: uploaded visual assets are brand-continuity or motif references for a mark/wordmark system. Extract shape rhythm, color, material, and symbolic cues without turning the output into a character scene or poster. Use Logo Text Strategy rather than pseudo-letters.";
     case "announcement":
       return "Announcement reference lock: uploaded characters, subjects, logos, UI, and environments are supporting references around a readable announcement surface. Preserve identity where used, but keep the title/copy zone clear.";
     case "collab":
@@ -420,7 +421,7 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
     case "icon":
       return "Brand icon rule: uploaded logos may guide colors, symbol shape, or brand energy, but icon mode must not render logo lettering, captions, or readable text.";
     case "logo":
-      return "Brand logo rule: uploaded logos guide wordmark rhythm, colors, silhouette, and brand continuity. Preserve exact spelling only when reliable; otherwise use a clean copy-safe mark or blank wordmark treatment without fake replacement text.";
+      return "Brand logo rule: uploaded logos guide wordmark rhythm, colors, silhouette, and brand continuity. Preserve exact spelling only when reliable; otherwise use a clean copy-safe mark or polished blank wordmark plate without fake replacement text.";
     case "announcement":
       return "Brand announcement rule: use uploaded logos as clean small lockups or reserved brand-safe areas. Do not create fake replacement logo text or repeated watermark patterns.";
     case "collab":
@@ -734,7 +735,7 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
         ? "Icon mode requires clean full-canvas 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no OS app-icon mask or rounded black container, no invented shield/weapon/tool/accessory, minimal background detail, high contrast, and 64px readability."
         : "",
       request.context.mode === "logo"
-        ? "Logo mode requires wordmark readability and brand system clarity. Do not turn the result into a cinematic scene, and do not invent fake replacement lettering for uploaded logo references."
+        ? "Logo mode requires wordmark readability and brand system clarity. Follow Logo Text Strategy, do not turn the result into a cinematic scene, and do not invent fake replacement lettering or pseudo-letters for uploaded logo references."
         : "",
       modeSubjectAccessoryInstruction(request),
       modeSpecificBrandLogoInstruction(request),

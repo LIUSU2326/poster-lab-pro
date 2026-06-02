@@ -31,6 +31,7 @@ import {
   type PromptValidation,
 } from "./contracts";
 import { getPromptGuardrails, lockedFieldsForPromptMode } from "./guardrails";
+import { logoTextPolicyBlock, logoWordmarkTextRisk } from "./logo-text-policy";
 import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "./slogan-policy";
 import {
   posterHeroPerformanceScaleLock,
@@ -459,7 +460,8 @@ function formatModeForm(modeState: WorkspaceModeState): string {
     return `Announcement title: ${form.announcementTitle}. Layout mode: ${form.layoutMode}. Group shot when multi-character: ${form.groupShotWhenMultiCharacter}.`;
   }
   if (form.mode === "logo") {
-    return `Wordmark: ${form.wordmark}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}.`;
+    const policy = logoWordmarkTextRisk(form.wordmark);
+    return `Wordmark: ${form.wordmark}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}. Logo text strategy: ${policy.strategy}.`;
   }
   if (form.mode === "icon") {
     return `Aspect ratio: ${form.aspectRatio}. No text: ${form.noText}. Full-bleed square: ${form.fullBleedSquare}. Composition reference rotation: ${form.compositionReferenceRotation}.`;
@@ -626,6 +628,14 @@ function formatModeTypographyDirection(
   ].filter(Boolean).join("\n");
 }
 
+function formatLogoTextDirection(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
+  if (modeState.mode !== "logo" || modeState.modeForm.mode !== "logo") return "";
+  return logoTextPolicyBlock({
+    wordmark: modeState.modeForm.wordmark,
+    hasUploadedLogoReference: assets.some((asset) => assetSemanticRole(asset) === "brandLogo"),
+  });
+}
+
 function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
   if (modeState.mode !== "poster" || modeState.modeForm.mode !== "poster") return "";
 
@@ -774,6 +784,20 @@ function buildSections(input: {
         source: "mode",
         priority: 94,
         content: qualityDirection,
+      }),
+    );
+  }
+
+  const logoTextDirection = formatLogoTextDirection(input.modeState, input.assets);
+  if (logoTextDirection) {
+    sections.push(
+      section({
+        id: "logo-text-strategy",
+        title: "Logo Text Strategy",
+        source: "mode",
+        locked: true,
+        priority: 93,
+        content: logoTextDirection,
       }),
     );
   }

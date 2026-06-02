@@ -237,7 +237,11 @@ export function modeGuardrails(mode: ProductionMode): z.infer<typeof ProviderMod
     poster: ["Keep game logo readable.", "Respect platform safe areas.", "Do not copy protected IP."],
     collab: ["Use [Game Character] and [Collab Partner] placeholders only.", "Do NOT merge both entities."],
     announcement: ["Keep announcement copy readable.", "Use group-shot planning when multiple characters are present."],
-    logo: ["Wordmark is the primary subject.", "Use a pure solid-color background."],
+    logo: [
+      "Wordmark is the primary subject.",
+      "Use a pure solid-color background.",
+      "Use Logo Text Strategy: exact short wordmark only when reliable; otherwise reserve a polished blank wordmark plate for later vector/text refinement.",
+    ],
     icon: ["Aspect ratio is locked to 1:1.", "No text.", "Full-bleed square composition with sharp corners."],
   };
 

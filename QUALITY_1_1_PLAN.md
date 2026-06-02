@@ -37,18 +37,21 @@ Still manual:
 
 ## 1.1.0-alpha.3 Logo And Text Refinement
 
-Target:
+Status: done.
+
+Implemented:
 
 - Separate Logo generation from poster-like scenes.
 - Avoid fake replacement lettering.
 - Give users a clean path when exact spelling is unreliable.
-
-Likely work:
-
-- Add a dedicated logo/text refinement queue operation.
+- Add shared Logo Text Strategy: `exactShortWordmark` for short simple targets, `copySafeBlankWordmark` for complex/high-risk lettering.
 - Support blank wordmark plate output for later vector/text placement.
-- Add a generated text risk detector for likely gibberish or repeated pseudo-letters.
+- Add a local text-risk detector for configured wordmark complexity.
 - Keep uploaded Logo as brand reference, not as repeated pasted sticker.
+
+Deferred:
+
+- Add a dedicated logo/text refinement queue operation after the current prompt/audit strategy is validated in real generation.
 
 ## 1.1.0-alpha.4 Announcement And Collab Safety
 

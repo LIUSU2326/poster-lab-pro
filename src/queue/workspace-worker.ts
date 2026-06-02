@@ -207,6 +207,15 @@ function projectAssetRoles(snapshot: WorkspaceSnapshot | undefined, projectId: s
     .map((asset) => asset.role);
 }
 
+function resultQualityTextTargets(snapshot: WorkspaceSnapshot | undefined, task: QueueTask): string[] {
+  if (!snapshot) return [];
+  const modeState = snapshot.modeStates.find((item) => item.mode === task.mode);
+  if (task.mode === "logo" && modeState?.modeForm.mode === "logo") {
+    return [modeState.modeForm.wordmark].filter((item) => item.trim().length > 0);
+  }
+  return [];
+}
+
 function metadataBoolean(value: unknown): boolean {
   return value === true || value === "true" || value === "1" || value === 1;
 }
@@ -372,6 +381,7 @@ async function resultFromTaskWithProject(input: {
     targetHeight: input.task.input.height || null,
     assetRoles: projectAssetRoles(input.snapshot, input.projectId),
     overlayApplied: Boolean(overlayed?.processing?.applied.length),
+    textTargets: resultQualityTextTargets(input.snapshot, input.task),
   });
   const iconRepair = input.task.mode === "icon" && initialQualityAudit.findings.some((finding) =>
     finding.code === "icon-rounded-mask-risk")
@@ -392,6 +402,7 @@ async function resultFromTaskWithProject(input: {
         targetHeight: input.task.input.height || null,
         assetRoles: projectAssetRoles(input.snapshot, input.projectId),
         overlayApplied: Boolean(overlayed?.processing?.applied.length),
+        textTargets: resultQualityTextTargets(input.snapshot, input.task),
       })
     : initialQualityAudit;
   const resultFile = await storeResultFile({

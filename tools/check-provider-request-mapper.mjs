@@ -495,6 +495,9 @@ async function runRuntimeCheck() {
       logo: [
         "Mode Quality Bar",
         "Logo quality target",
+        "Logo Text Strategy",
+        "copySafeBlankWordmark",
+        "polished blank wordmark plate",
         "wordmark/mark system is the primary subject",
         "pure solid-color background",
         "Uploaded logos are brand references",

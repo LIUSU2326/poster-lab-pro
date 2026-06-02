@@ -31,6 +31,9 @@ for (const token of [
   "result-quality-audit.v1",
   "icon-rounded-mask-risk",
   "logo-text-accuracy-review",
+  "logo-copy-safe-wordmark-fallback",
+  "logoWordmarkTextRisk",
+  "logoTextStrategy",
   "announcement-copy-safe-review",
   "collab-missing-partner-brand-logo",
   "local-overlay-fallback-applied",
@@ -47,7 +50,7 @@ if (!resultsIndex.includes("quality-audit")) {
   issues.push("src/results/index.ts: missing quality-audit export");
 }
 
-for (const token of ["auditResultQuality", "qualityAudit", "projectAssetRoles", "repairIconCanvasEdges", "iconPostProcessing"]) {
+for (const token of ["auditResultQuality", "qualityAudit", "projectAssetRoles", "repairIconCanvasEdges", "iconPostProcessing", "resultQualityTextTargets"]) {
   if (!worker.includes(token)) issues.push(`workspace-worker.ts: missing quality audit worker token ${token}`);
 }
 
@@ -200,9 +203,16 @@ async function runRuntimeCheck() {
       targetWidth: 1024,
       targetHeight: 1024,
       assetRoles: ["gameLogo"],
+      textTargets: ["Pizza Kitchen Adventures Ultimate Saga"],
     });
     if (!logoAudit.findings.some((item) => item.code === "logo-text-accuracy-review")) {
       issues.push("logo quality audit should require text accuracy review");
+    }
+    if (!logoAudit.findings.some((item) => item.code === "logo-copy-safe-wordmark-fallback")) {
+      issues.push("logo quality audit should recommend copy-safe wordmark fallback for complex lettering");
+    }
+    if (logoAudit.metrics.logoTextStrategy !== "copySafeBlankWordmark") {
+      issues.push("logo quality audit should store copySafeBlankWordmark strategy for complex lettering");
     }
 
     const collabAudit = await results.auditResultQuality({

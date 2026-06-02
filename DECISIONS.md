@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D095: Logo Text Strategy Prefers Blank Refinement Plates For Complex Wordmarks
+
+Status: accepted
+
+Context: Logo mode needs brand-safe wordmark output, but image models can still produce pseudo-letters, substituted characters, or fake replacement logos when asked to spell complex titles. Treating every wordmark as directly renderable creates polished-looking but unusable Logo results.
+
+Decision: Add a shared Logo Text Strategy. Short simple Latin wordmarks may request exact spelling with review. Complex, long, non-Latin, or punctuation-heavy wordmarks should produce a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement instead of generated fake lettering. Result Quality Audit records the selected strategy and flags `logo-copy-safe-wordmark-fallback` for complex targets.
+
+Impact:
+
+- Logo mode remains a Logo/mark system, not a poster scene.
+- Uploaded logos stay brand references for rhythm, color, shape, and material style, not pasted stickers.
+- Automated checks remain local and token-free; no OCR or provider call is added.
+- A future dedicated vector/text refinement queue can use this strategy as its handoff point.
+
 ## D094: Icon Rounded-Mask Repair Is Audit-Triggered And Local
 
 Status: accepted

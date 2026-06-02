@@ -1,5 +1,22 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-alpha.3 Logo Text Strategy Release Update
+
+### Completed In This Pass
+
+- Promoted the Logo/text refinement pass to `1.1.0-alpha.3`.
+- Added a shared Logo Text Strategy policy that classifies configured wordmarks as `exactShortWordmark` or `copySafeBlankWordmark`.
+- Added a locked Logo Text Strategy prompt section for Logo mode.
+- Repeated the strategy in Google and OpenAI live image prompt wrappers.
+- Extended Result Quality Audit so complex Logo wordmarks produce `logo-copy-safe-wordmark-fallback` and store `logoTextStrategy` metrics.
+- Passed prompt, provider request, live adapter, worker, type, and result-audit checks.
+
+### Release Intent
+
+- This alpha makes Logo mode safer without pretending image models can reliably spell every complex wordmark.
+- It keeps uploaded logos as brand references and avoids fake replacement lettering.
+- It prepares the later dedicated vector/text refinement path without adding extra provider cost.
+
 ## 2026-06-02 1.1.0-alpha.2 Icon Quality Release Update
 
 ### Completed In This Pass

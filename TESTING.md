@@ -1,5 +1,26 @@
 # TESTING.md
 
+## 2026-06-02 1.1.0-alpha.3 Logo Text Strategy Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-alpha.3`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Logo prompt packages include a locked `Logo Text Strategy` section.
+- Verify short simple wordmarks can request exact spelling with visual review.
+- Verify complex wordmarks use `copySafeBlankWordmark` and ask for a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement.
+- Verify Logo Result Quality Audit stores `logoTextStrategy` and flags `logo-copy-safe-wordmark-fallback` for complex lettering.
+- Verify Google and OpenAI live image prompts repeat the Logo Text Strategy lock without adding provider calls to automated checks.
+
+Automated checks:
+
+- Run `npm run prompts:check`.
+- Run `npm run provider-requests:check`.
+- Run `npm run google-live-adapter:check`.
+- Run `npm run openai-live-adapter:check`.
+- Run `npm run result-quality-audit:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1.0-alpha.2 Icon Quality Release Update
 
 Desktop Test Path checks:

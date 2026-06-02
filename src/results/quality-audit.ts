@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import type { ProductionMode } from "../schema/zod";
+import { logoWordmarkTextRisk } from "../prompts/logo-text-policy";
 
 export type ResultQualityFindingSeverity = "info" | "review" | "warning";
 
@@ -111,6 +112,7 @@ export async function auditResultQuality(input: {
   targetHeight?: number | null;
   assetRoles?: string[];
   overlayApplied?: boolean;
+  textTargets?: string[];
 }): Promise<ResultQualityAudit> {
   const findings: ResultQualityFinding[] = [];
   const metrics: ResultQualityAudit["metrics"] = {
@@ -155,12 +157,25 @@ export async function auditResultQuality(input: {
   }
 
   if (input.mode === "logo") {
+    const primaryWordmark = input.textTargets?.find((target) => target.trim().length > 0) || "";
+    const logoTextPolicy = logoWordmarkTextRisk(primaryWordmark);
+    metrics.logoTextTarget = logoTextPolicy.wordmark || "not-configured";
+    metrics.logoTextStrategy = logoTextPolicy.strategy;
+    metrics.logoTextComplexityScore = logoTextPolicy.complexityScore;
     findings.push(finding({
       code: "logo-text-accuracy-review",
       severity: "review",
       message: "Logo/wordmark spelling is model-dependent and needs visual review.",
       recommendation: "Verify lettering against the uploaded logo or reserve a blank wordmark plate for later vector/text refinement.",
     }));
+    if (logoTextPolicy.strategy === "copySafeBlankWordmark") {
+      findings.push(finding({
+        code: "logo-copy-safe-wordmark-fallback",
+        severity: "review",
+        message: "The configured wordmark is high-risk for direct image-model spelling.",
+        recommendation: "Prefer a polished blank wordmark plate, emblem, or mark system now, then add exact lettering in a later vector/text refinement step.",
+      }));
+    }
   }
 
   if (input.mode === "announcement") {

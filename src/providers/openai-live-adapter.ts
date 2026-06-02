@@ -108,6 +108,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
         "Quality bar: premium game logo/mark system, readable wordmark or emblem construction, crisp bevel/material finish, clean silhouette, and brand-safe typography.",
         "Composition bar: logo/wordmark is primary on a clean solid-color background when requested; props, characters, or uploaded logo references may influence motifs but must not become a poster scene.",
         "Logo text safety: do not invent fake replacement lettering for uploaded logo references; preserve exact spelling only when reliable, otherwise design a clean copy-safe mark or blank wordmark treatment.",
+        "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Render exact short wordmarks only when reliable; otherwise reserve a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement.",
       ].join(" ");
     case "announcement":
       return [
@@ -183,7 +184,7 @@ function modeReferenceInstruction(request: ImageGenerationRequest): string {
     case "icon":
       return "Icon reference handling: choose one dominant uploaded subject or motif and simplify/redraw it into a clean 1:1 icon silhouette. Do not create a poster scene, multi-character battle, copied sticker, invented shield/weapon/tool/accessory, or any text.";
     case "logo":
-      return "Logo reference handling: use uploaded assets as brand continuity, motif, material, or shape references for a wordmark/mark system. Do not turn them into a scene or pasted collage.";
+      return "Logo reference handling: use uploaded assets as brand continuity, motif, material, or shape references for a wordmark/mark system. Do not turn them into a scene or pasted collage, and use Logo Text Strategy rather than pseudo-letters.";
     case "announcement":
       return "Announcement reference handling: use uploaded assets as supporting art around a readable copy-safe announcement panel. Do not cover the title/copy area or generate garbled operational text.";
     case "collab":
@@ -226,7 +227,7 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
     case "icon":
       return "Icon logo rule: uploaded logos may guide color, symbol shape, or brand style, but icon mode must not render logo lettering or readable text.";
     case "logo":
-      return "Logo text safety: uploaded logos guide brand continuity. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or blank wordmark treatment. Do not invent fake replacement lettering.";
+      return "Logo text safety: uploaded logos guide brand continuity. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or polished blank wordmark plate. Do not invent fake replacement lettering or pseudo-letters.";
     case "announcement":
       return "Announcement logo rule: use uploaded logos as small clean lockups or reserved brand-safe areas, never as fake repeated watermark text.";
     case "collab":
