@@ -1,5 +1,17 @@
 # TESTING.md
 
+## 2026-06-02 1.1 Result Quality Audit Update
+
+Result Quality Audit checks:
+
+- Verify `npm run result-quality-audit:check` passes.
+- Verify generated results can store `metadata.qualityAudit` without changing image pixels.
+- Verify Icon audit can flag transparent or dark rounded-corner mask risk.
+- Verify Logo audit adds a text accuracy review finding.
+- Verify Announcement audit adds a copy-safe review finding.
+- Verify Collab audit flags missing partner `brandLogo` so the UI can later ask for a blank partner plate or partner logo upload.
+- Verify the audit is local-only and token-free.
+
 ## 2026-06-02 1.0.0-beta.3 Real Generation Acceptance Update
 
 Real generation checks:

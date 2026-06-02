@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D093: Result Quality Audit Stores Non-AI Review Metadata
+
+Status: accepted
+
+Context: The 1.0 beta real generation pass identified several issues that cannot be reliably fixed only by prompt text: Icon outputs can inherit rounded app-icon masks, Logo spelling needs visual review, Announcement copy areas need safety review, and Collab can need a missing partner-logo check. These checks should not trigger extra model calls or mutate the generated image.
+
+Decision: Store a `qualityAudit` metadata object on generated results. The Result Quality Audit is local-only, token-free, and review-oriented. It can flag icon rounded-mask risk from image corners, logo text accuracy review, announcement copy-safe review, collab missing partner `brandLogo`, aspect-ratio review, and local overlay fallback review.
+
+Impact:
+
+- Queue worker attaches `metadata.qualityAudit` when storing generated results.
+- The audit can power future UI warnings without rerunning providers.
+- The audit does not change final image pixels and does not spend provider credits.
+- Checks guard the audit module, worker integration, and key finding codes.
+
 ## D092: Real Generation QA Locks Reference Accessories And Missing Partner Brands
 
 Status: accepted

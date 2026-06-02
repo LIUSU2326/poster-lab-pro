@@ -1,5 +1,21 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1 Quality Enhancement Foundation Update
+
+### Completed In This Pass
+
+- Added Result Quality Audit metadata for generated results.
+- Added local icon corner analysis to flag potential rounded app-icon mask or dark container risk.
+- Added review findings for Logo text accuracy, Announcement copy-safe areas, Collab missing partner `brandLogo`, aspect-ratio drift, and local overlay fallback.
+- Wired the audit into the workspace queue worker so generated results carry `metadata.qualityAudit`.
+- Added `npm run result-quality-audit:check` and included it in `npm run check`.
+
+### Why This Is First
+
+- It does not mutate images, does not call providers, and does not spend credits.
+- It creates a foundation for future UI warnings, one-click rerun guidance, and 1.1 failure detection.
+- It keeps prompt tuning separate from post-result review, which makes real generation tests easier to interpret.
+
 ## 2026-06-02 1.0 RC Release Candidate Preparation Update
 
 ### Completed In This Pass

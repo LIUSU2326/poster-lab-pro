@@ -31,6 +31,7 @@ import {
   type ImageOutputProcessing,
   type PosterAssetOverlayInputAsset,
 } from "../results/image-post-processing";
+import { auditResultQuality } from "../results/quality-audit";
 import { summarizeWorkspaceSnapshot } from "../storage/contracts";
 import {
   QueuePlanSchema,
@@ -198,6 +199,13 @@ function selectPosterOverlayAssets(snapshot: WorkspaceSnapshot): PosterAssetOver
   }));
 }
 
+function projectAssetRoles(snapshot: WorkspaceSnapshot | undefined, projectId: string): string[] {
+  if (!snapshot) return [];
+  return snapshot.assets
+    .filter((asset) => asset.projectId === projectId)
+    .map((asset) => asset.role);
+}
+
 function metadataBoolean(value: unknown): boolean {
   return value === true || value === "true" || value === "1" || value === 1;
 }
@@ -353,6 +361,17 @@ async function resultFromTaskWithProject(input: {
         slogan: posterSloganForScheme(input.snapshot, input.task.input.schemeId),
       })
     : null;
+  const finalDataUrl = overlayed?.dataUrl || prepared.dataUrl;
+  const qualityAudit = await auditResultQuality({
+    mode: input.task.mode,
+    dataUrl: finalDataUrl,
+    width: prepared.width,
+    height: prepared.height,
+    targetWidth: input.task.input.width || null,
+    targetHeight: input.task.input.height || null,
+    assetRoles: projectAssetRoles(input.snapshot, input.projectId),
+    overlayApplied: Boolean(overlayed?.processing?.applied.length),
+  });
   const resultFile = await storeResultFile({
     ...(input.fileStore ? { fileStore: input.fileStore } : {}),
     workspaceId: input.workspaceId,
@@ -362,7 +381,7 @@ async function resultFromTaskWithProject(input: {
     index: input.index,
     width: prepared.width,
     height: prepared.height,
-    dataUrl: overlayed?.dataUrl || prepared.dataUrl,
+    dataUrl: finalDataUrl,
   });
   const result = resultFromTask(
     input.task,
@@ -372,7 +391,10 @@ async function resultFromTaskWithProject(input: {
     resultFile,
     prepared.processing,
     { width: prepared.width, height: prepared.height },
-    overlayed?.processing ? { assetOverlayProcessing: overlayed.processing } : {},
+    {
+      ...(overlayed?.processing ? { assetOverlayProcessing: overlayed.processing } : {}),
+      qualityAudit,
+    },
   );
   return StoredResultAssetSchema.parse({
     ...result,
