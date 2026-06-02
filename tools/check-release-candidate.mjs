@@ -23,12 +23,13 @@ const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 
-const currentVersion = "1.1.0-beta.6";
+const currentVersion = "1.1.0-rc.1";
 
 for (const token of [
   `"version": "${currentVersion}"`,
   "\"check\"",
   "\"multimode-regression:check\"",
+  "\"ux-regression:check\"",
   "\"desktop:pack:mac\"",
   "\"release-candidate:check\"",
 ]) {
@@ -83,8 +84,8 @@ if (!decisions.includes("D092")) {
   issues.push("DECISIONS.md: missing D092 real generation QA decision");
 }
 
-if (!testing.includes("1.1.0-beta.6 Multimode Regression Gate Release Update")) {
-  issues.push("TESTING.md: missing 1.1.0-beta.6 multimode regression release section");
+if (!testing.includes("1.1.0-rc.1 UX Reliability Gate Release Update")) {
+  issues.push("TESTING.md: missing 1.1.0-rc.1 UX reliability release section");
 }
 
 if (issues.length > 0) {

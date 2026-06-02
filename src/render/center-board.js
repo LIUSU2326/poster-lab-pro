@@ -542,6 +542,7 @@ function renderResultActionButton(result, action, label) {
 
 function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
   const display = getSchemeDisplay(activeMode, scheme);
+  const confirmingDelete = state.schemeDeleteConfirmId === scheme.id;
   const schemeGeneration = getSchemeGenerationStatus(activeMode, scheme.id);
   const imageGeneration = getImageGenerationStatus(activeMode, scheme.id);
   const rendering = scheme.status === "loading" || imageGeneration.active;
@@ -587,13 +588,13 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
         ${renderSchemeVersionPager(scheme, schemeResults)}
         <div class="scheme-card-actions">
           <button
-            class="scheme-delete-button"
+            class="scheme-delete-button ${confirmingDelete ? "confirming" : ""}"
             type="button"
             data-action="delete-scheme"
             data-scheme-delete-id="${escapeHtml(scheme.id)}"
             aria-label="删除方案"
             title="删除方案"
-          >删除</button>
+          >${confirmingDelete ? "确认删除" : "删除"}</button>
           <button
             class="render-button ${rendering ? "loading" : ""}"
             type="button"

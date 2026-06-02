@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-beta.6`
+- Version: `1.1.0-rc.1`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -53,4 +53,5 @@ Live provider calls remain opt-in:
 - Packaged beta.4 live validation passed for Logo (`job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8`) and Announcement (`job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf`).
 - Beta.5 Collab live validation passed with synthetic partner asset `asset-collab-star-cream-partner-beta5` and job `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`; the expected missing partner `brandLogo` audit stayed at review with a blank partner brand plate.
 - Beta.6 adds `npm run multimode-regression:check` as a zero-cost cross-mode gate for Poster, Icon, Logo, Announcement, and Collab prompt/provider requests; it also keeps `Mode Guardrails` preserved when long prompt packages are compacted.
+- RC1 adds `npm run ux-regression:check` as a zero-cost UX/reliability gate for mode navigation, blocked live generation, result management, settings safety, project library, queue failure recovery, and destructive-action confirmation.
 - Signed installer, auto-update, crash reporting, and a production release channel are not part of this local RC gate.

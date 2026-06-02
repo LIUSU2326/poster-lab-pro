@@ -1,5 +1,31 @@
 # TESTING.md
 
+## 2026-06-03 1.1.0-rc.1 UX Reliability Gate Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-rc.1`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify `npm run ux-regression:check` is present and included in `npm run check`.
+- Verify all five mode shells render core navigation: schemes, results, archive, settings, live safety, run mode, theme switch, scheme generation, and asset upload entry points.
+- Verify blocked live generation clearly disables scheme/image generation and offers an `打开实机安全闸` path instead of silently failing.
+- Verify result management includes filters, viewer, return-to-scheme, regenerate, delete confirmation, download, and Result Quality Audit guidance.
+- Verify scheme deletion uses a second-click confirmation state instead of immediate deletion.
+- Verify settings exposes provider setup steps, API Key save/test, route-plan test, resizable sheet, live cost cap, and live safety confirmations.
+- Verify project library save/import/delete entry points are reachable without affecting uploaded assets or results.
+- Verify failed image queues surface retry actions and failure context.
+
+Automated checks:
+
+- Run `npm run ux-regression:check`.
+- Run `npm run frontend-binding:check`.
+- Run `npm run workspace-state:check`.
+- Run `npm run asset-ui:check`.
+- Run `npm run queue-refresh:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-03 1.1.0-beta.6 Multimode Regression Gate Release Update
 
 Desktop Test Path checks:

@@ -1,5 +1,24 @@
 # ROADMAP.md
 
+## 2026-06-03 1.1.0-rc.1 UX Reliability Gate Release Update
+
+### Completed In This Pass
+
+- Promoted the current build to `1.1.0-rc.1`.
+- Added `npm run ux-regression:check` as a zero-cost UI/UX reliability gate that renders key shell states without provider calls.
+- Covered all five mode shells for navigation, settings access, live safety status, run mode status, theme switching, scheme generation, and asset upload entry points.
+- Covered blocked live-generation UX so scheme/image generation is disabled with a clear path to the live safety gate.
+- Covered result management UX: filters, viewer, return-to-scheme, regenerate, download, delete confirmation, and Result Quality Audit guidance.
+- Covered settings UX: provider setup steps, credential save/test, route plan test, resizable sheet, cost cap, and live gate confirmations.
+- Covered project library entry points and failed-image queue recovery controls.
+- Changed scheme deletion to require a second click, matching result deletion's confirmation behavior.
+
+### Release Intent
+
+- This RC starts the product-level reliability phase after the multimode generation chain stabilized.
+- It protects the main desktop workflow from quiet UX regressions without spending provider credits.
+- Remaining RC work should focus on hands-on desktop walkthrough polish, user-facing copy, and any critical issues found during manual use.
+
 ## 2026-06-03 1.1.0-beta.6 Multimode Regression Gate Release Update
 
 ### Completed In This Pass

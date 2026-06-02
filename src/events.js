@@ -549,11 +549,18 @@ async function handleActionControl(control, event, render) {
   if (action === "delete-scheme") {
     const schemeId = control.dataset.schemeDeleteId || "";
     if (!schemeId) return;
+    if (state.schemeDeleteConfirmId !== schemeId) {
+      state.schemeDeleteConfirmId = schemeId;
+      state.resultDeleteConfirmId = "";
+      render();
+      return;
+    }
     const deleteEnvelope = await deleteGeneratedSchemeForWorkbench({ schemeId });
     if (!deleteEnvelope.ok) {
       state.submission = createLocalServiceError("delete_scheme_failed", deleteEnvelope.error?.message || "删除方案失败。");
       state.taskOpen = false;
     }
+    state.schemeDeleteConfirmId = "";
     render();
     return;
   }
@@ -580,6 +587,7 @@ async function handleActionControl(control, event, render) {
     if (!resultId) return;
     if (state.resultDeleteConfirmId !== resultId) {
       state.resultDeleteConfirmId = resultId;
+      state.schemeDeleteConfirmId = "";
       state.view = "results";
       render();
       return;

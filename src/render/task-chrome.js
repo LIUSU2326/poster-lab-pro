@@ -94,7 +94,7 @@ function renderQueueContext(queue, tone, imageFailureCount) {
   const failure = queue.summary.failureMessage
     ? `
         <p class="queue-failure">
-          <span>${escapeHtml(queue.summary.failureCode || "失败")}</span>
+          <span>失败原因 · ${escapeHtml(queue.summary.failureCode || "失败")}</span>
           ${escapeHtml(queue.summary.failureMessage)}
           ${queue.summary.failureNextStep ? `<small>${escapeHtml(queue.summary.failureNextStep)}</small>` : ""}
         </p>

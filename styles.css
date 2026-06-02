@@ -12256,6 +12256,13 @@ select:focus-visible,
   color: color-mix(in oklch, var(--danger, #d33), black 8%);
 }
 
+.scheme-delete-button.confirming {
+  border-color: color-mix(in oklch, var(--danger, #d33), transparent 24%);
+  background: color-mix(in oklch, var(--danger-soft, #fee), white 18%);
+  color: color-mix(in oklch, var(--danger, #d33), black 4%);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--danger, #d33), transparent 88%);
+}
+
 .scheme-card.plan-card.without-plan-media,
 .scheme-card.plan-card.without-plan-media:first-child {
   grid-template-rows: 46px 64px 84px 84px 44px !important;

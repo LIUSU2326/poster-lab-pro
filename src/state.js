@@ -20,6 +20,7 @@ export const state = {
   selectedSchemeVariants: /** @type {Record<string, number>} */ ({}),
   selectedResult: "",
   selectedResultUserSet: false,
+  schemeDeleteConfirmId: "",
   resultDeleteConfirmId: "",
   resultFilter: "all",
   archiveSelection: [],
@@ -257,6 +258,9 @@ export function reconcileWorkspaceUiState() {
   state.archiveSelection = (state.archiveSelection || []).filter((rowId) => archiveRowIds.has(rowId));
 
   const resultIds = new Set((snapshot.results || []).map((result) => result.id));
+  if (state.schemeDeleteConfirmId && !knownSchemeIds.has(state.schemeDeleteConfirmId)) {
+    state.schemeDeleteConfirmId = "";
+  }
   if (state.resultDeleteConfirmId && !resultIds.has(state.resultDeleteConfirmId)) {
     state.resultDeleteConfirmId = "";
   }

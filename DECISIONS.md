@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D104: RC Builds Require A UX Reliability Gate
+
+Status: accepted
+
+Context: The 1.1 beta work stabilized the generation chain, but a usable desktop app also needs predictable navigation, visible state, clear safety blockers, result recovery, and confirmation before destructive actions. These UX expectations were partly covered by broad frontend checks, but not by a release-candidate gate that renders the key screens.
+
+Decision: Add a dedicated zero-cost `ux-regression:check` gate for RC builds. It renders the shell, blocked live-generation state, results board, result viewer, settings sheet, generation-choice dialog, project library, and failed queue state. It verifies that core entry points and safety messages remain visible. Scheme deletion now mirrors result deletion with a second-click confirmation.
+
+Impact:
+
+- RC releases are judged on usability, not only prompt/provider correctness.
+- Destructive scheme deletion is less likely to happen by misclick.
+- The check stays local-only and avoids provider cost.
+- Future UI polish can change layout details, but must preserve the main workflow affordances.
+
 ## D103: Multimode Regression Is A Release Gate
 
 Status: accepted
