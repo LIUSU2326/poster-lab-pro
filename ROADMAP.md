@@ -1,5 +1,21 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-beta.1 Quality Audit Refresh Release Update
+
+### Completed In This Pass
+
+- Promoted the current 1.1 validation build to `1.1.0-beta.1`.
+- Added local Result Quality Audit refresh for stale result metadata when a workspace snapshot is loaded.
+- Added queue-run response refresh so returned workspaces carry the current audit metrics.
+- Recomputed stale audits from local stored result image files without calling image providers.
+- Fixed the Beta validation mismatch where a real Poster result could show only old base audit metrics.
+
+### Release Intent
+
+- This beta keeps live-generation acceptance honest: existing results now pick up current Poster/Icon/Logo/Announcement/Collab review metadata.
+- It does not spend provider credits and does not mutate generated pixels.
+- It prepares the next multimode real-image review pass with reliable metadata.
+
 ## 2026-06-02 1.1.0-alpha.5 Poster KV Failure Detection Release Update
 
 ### Completed In This Pass

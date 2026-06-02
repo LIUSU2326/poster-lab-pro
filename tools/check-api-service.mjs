@@ -38,6 +38,11 @@ for (const token of [
   "createAssetLibraryService",
   "createResultDownloadDescriptor",
   "createMemoryDraftRepository",
+  "auditResultQuality",
+  "qualityAuditNeedsRefresh",
+  "refreshResultQualityAudits",
+  "readStoredFile",
+  "posterHasIntegratedReference",
 ]) {
   if (!service.includes(token)) issues.push(`service.ts: missing ${token}`);
 }

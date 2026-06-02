@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D098: Quality Audit Refreshes Stale Result Metadata Locally
+
+Status: accepted
+
+Context: The 1.1 Beta live Poster validation showed a real generated result stored only the older base Result Quality Audit metrics even though the packaged app contained the newer Poster KV audit rules. Existing result metadata can lag behind current local audit rules, which makes desktop review misleading.
+
+Decision: Refresh stale `metadata.qualityAudit` locally when workspace snapshots are loaded or queue-run responses are returned. The refresh reads the stored result image file when available, recomputes Result Quality Audit with current mode, asset-role, and text-target context, and saves the updated metadata without calling providers or changing generated pixels.
+
+Impact:
+
+- Old results can pick up current Poster/Icon/Logo/Announcement/Collab review findings.
+- Real-generation acceptance uses reliable local metadata after app upgrades.
+- The refresh is token-free and deterministic.
+- Future audit schema changes should add required mode metrics so stale audits can be detected.
+
 ## D097: Poster KV Failure Detection Is Local Review Guidance
 
 Status: accepted

@@ -12,11 +12,19 @@ import { summarizeQueue } from "../queue/contracts";
 import { createAssetLibraryService } from "../assets/library-service";
 import { createWorkspaceQueueWorker } from "../queue/workspace-worker";
 import { createResultDownloadDescriptor } from "../results/download-descriptor";
-import { ResultStoredFileMetadataSchema, type LocalResultFileStore } from "../results/file-store";
+import { auditResultQuality } from "../results/quality-audit";
+import {
+  ResultStoredFileMetadataSchema,
+  type LocalResultFileStore,
+  type ResultStoredFileMetadata,
+} from "../results/file-store";
+import type { ProductionMode } from "../schema/zod";
 import {
   createMemoryDraftRepository,
   type StorageRepository,
   type StorageLoadResult,
+  type StoredResultAsset,
+  type WorkspaceSnapshot,
 } from "../storage";
 import { providerCredentialKeyRef } from "./provider-credential-refs";
 import {
@@ -87,7 +95,7 @@ export type LocalApiServiceOptions = {
   repository?: StorageRepository;
   credentialVault?: EncryptedProviderCredentialVault;
   providerRegistry?: ProviderAdapterRegistry;
-  resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl" | "deleteStoredFile">;
+  resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl" | "deleteStoredFile"> & Partial<Pick<LocalResultFileStore, "readStoredFile">>;
   requireLiveExecutionGate?: boolean;
 };
 
@@ -188,10 +196,130 @@ function workspaceIdFromUnknown(request: unknown): string | undefined {
   return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
 }
 
-function resultFileMetadataFromUnknown(value: unknown): { storageKey: string } | null {
+function resultFileMetadataFromUnknown(value: unknown): ResultStoredFileMetadata | null {
   if (!value || typeof value !== "object") return null;
   const parsed = ResultStoredFileMetadataSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
+}
+
+const QUALITY_AUDIT_REQUIRED_METRICS: Record<ProductionMode, string[]> = {
+  poster: ["posterHasIntegratedReference", "posterHasLogoReference", "posterHasCopyTarget"],
+  icon: ["iconCornerAlpha", "iconCenterAlpha"],
+  logo: ["logoTextStrategy"],
+  announcement: ["announcementCopyStrategy"],
+  collab: ["collabPartnerBrandStrategy"],
+};
+
+function qualityAuditNeedsRefresh(result: StoredResultAsset): boolean {
+  const audit = result.metadata.qualityAudit;
+  if (!audit || typeof audit !== "object") return true;
+  const auditRecord = audit as Record<string, unknown>;
+  if (auditRecord.version !== "result-quality-audit.v1" || auditRecord.mode !== result.mode) return true;
+  const metrics = auditRecord.metrics;
+  if (!metrics || typeof metrics !== "object") return true;
+  const metricRecord = metrics as Record<string, unknown>;
+  return QUALITY_AUDIT_REQUIRED_METRICS[result.mode].some((key) => !(key in metricRecord));
+}
+
+function projectAssetRoles(snapshot: WorkspaceSnapshot, projectId: string): string[] {
+  return snapshot.assets
+    .filter((asset) => asset.projectId === projectId)
+    .map((asset) => asset.role);
+}
+
+function posterSloganForResult(snapshot: WorkspaceSnapshot, result: StoredResultAsset): string | null {
+  const scheme = snapshot.schemes.find((item) => item.id === result.schemeId);
+  const slogans = scheme?.slogans || {};
+  return slogans["en-US"] || slogans["zh-CN"] || slogans["ja-JP"] || slogans["ko-KR"] || null;
+}
+
+function qualityAuditTextTargets(snapshot: WorkspaceSnapshot, result: StoredResultAsset): string[] {
+  const modeState = snapshot.modeStates.find((item) => item.mode === result.mode);
+  if (result.mode === "poster") {
+    const slogan = posterSloganForResult(snapshot, result);
+    return slogan ? [slogan] : [];
+  }
+  if (result.mode === "logo" && modeState?.modeForm.mode === "logo") {
+    return [modeState.modeForm.wordmark].filter((item) => item.trim().length > 0);
+  }
+  if (result.mode === "announcement" && modeState?.modeForm.mode === "announcement") {
+    return [modeState.modeForm.announcementTitle].filter((item) => item.trim().length > 0);
+  }
+  if (result.mode === "collab" && modeState?.modeForm.mode === "collab") {
+    return [modeState.modeForm.collabBrandName].filter((item) => item.trim().length > 0);
+  }
+  return [];
+}
+
+function resultDataUrlFromProviderAsset(result: StoredResultAsset): string | null {
+  const providerAsset = result.metadata.providerAsset;
+  if (!providerAsset || typeof providerAsset !== "object") return null;
+  const dataUrl = (providerAsset as Record<string, unknown>).dataUrl;
+  return typeof dataUrl === "string" && dataUrl.startsWith("data:") ? dataUrl : null;
+}
+
+async function resultDataUrlForQualityRefresh(
+  result: StoredResultAsset,
+  fileStore?: Pick<LocalResultFileStore, "readStoredFile">,
+): Promise<string | null> {
+  const fromProviderAsset = resultDataUrlFromProviderAsset(result);
+  if (fromProviderAsset) return fromProviderAsset;
+
+  const resultFile = resultFileMetadataFromUnknown(result.metadata.resultFile);
+  if (!resultFile || !fileStore) return null;
+  const stored = await fileStore.readStoredFile(resultFile.storageKey);
+  return `data:${resultFile.mimeType};base64,${Buffer.from(stored.bytes).toString("base64")}`;
+}
+
+async function refreshResultQualityAudits(input: {
+  snapshot: WorkspaceSnapshot;
+  resultFileStore?: Partial<Pick<LocalResultFileStore, "readStoredFile">>;
+  updatedAt?: string;
+}): Promise<{ snapshot: WorkspaceSnapshot; updated: boolean }> {
+  const staleResults = input.snapshot.results.filter(qualityAuditNeedsRefresh);
+  if (staleResults.length === 0) return { snapshot: input.snapshot, updated: false };
+
+  const fileStore = input.resultFileStore?.readStoredFile
+    ? { readStoredFile: input.resultFileStore.readStoredFile.bind(input.resultFileStore) }
+    : undefined;
+  const refreshed = new Map<string, StoredResultAsset>();
+
+  for (const result of staleResults) {
+    const dataUrl = await resultDataUrlForQualityRefresh(result, fileStore);
+    const qualityAudit = await auditResultQuality({
+      mode: result.mode,
+      dataUrl,
+      width: result.width,
+      height: result.height,
+      targetWidth: result.width,
+      targetHeight: result.height,
+      assetRoles: projectAssetRoles(input.snapshot, result.projectId),
+      overlayApplied: Boolean((result.metadata.assetOverlayProcessing as { applied?: unknown[] } | undefined)?.applied?.length),
+      textTargets: qualityAuditTextTargets(input.snapshot, result),
+    });
+    refreshed.set(result.id, {
+      ...result,
+      metadata: {
+        ...result.metadata,
+        qualityAudit,
+      },
+      updatedAt: input.updatedAt || result.updatedAt,
+    });
+  }
+
+  const updatedAt = input.updatedAt || new Date().toISOString();
+  return {
+    updated: true,
+    snapshot: {
+      ...input.snapshot,
+      results: input.snapshot.results.map((result) => refreshed.get(result.id) || result),
+      metadata: {
+        ...input.snapshot.metadata,
+        revision: input.snapshot.metadata.revision + 1,
+        updatedAt,
+      },
+    },
+  };
 }
 
 async function updateProviderCredentialMirror(input: {
@@ -323,12 +451,18 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
           return WorkspaceSnapshotLoadResponseSchema.parse(storageLoadFailure(loaded, parsed.workspaceId));
         }
 
+        const refreshed = await refreshResultQualityAudits({
+          snapshot: loaded.snapshot,
+          ...(options.resultFileStore ? { resultFileStore: options.resultFileStore } : {}),
+        });
+        if (refreshed.updated) await repository.saveSnapshot(refreshed.snapshot);
+
         return WorkspaceSnapshotLoadResponseSchema.parse({
           ok: true,
-          data: { snapshot: loaded.snapshot },
+          data: { snapshot: refreshed.snapshot },
           meta: createApiMeta({
-            workspaceId: loaded.snapshot.metadata.workspaceId,
-            revision: loaded.snapshot.metadata.revision,
+            workspaceId: refreshed.snapshot.metadata.workspaceId,
+            revision: refreshed.snapshot.metadata.revision,
           }),
         });
       } catch (error) {
@@ -594,13 +728,21 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
       try {
         const parsed = QueuePlanRunApiRequestSchema.parse(request);
         const result = await queueWorker.run(parsed);
+        const refreshed = await refreshResultQualityAudits({
+          snapshot: result.workspace,
+          ...(options.resultFileStore ? { resultFileStore: options.resultFileStore } : {}),
+        });
+        if (refreshed.updated) await repository.saveSnapshot(refreshed.snapshot);
 
         return QueuePlanRunApiResponseSchema.parse({
           ok: true,
-          data: result,
+          data: {
+            ...result,
+            workspace: refreshed.snapshot,
+          },
           meta: createApiMeta({
             workspaceId: parsed.workspaceId,
-            revision: result.workspace.metadata.revision,
+            revision: refreshed.snapshot.metadata.revision,
           }),
         });
       } catch (error) {

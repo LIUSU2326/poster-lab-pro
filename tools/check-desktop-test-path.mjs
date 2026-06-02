@@ -37,8 +37,8 @@ for (const token of [
 for (const scriptName of ["check", "poster-chain:check", "build:next", "dev:next"]) {
   if (!pkg.includes(`"${scriptName}"`)) issues.push(`package.json: missing ${scriptName} script`);
 }
-if (!pkg.includes("\"version\": \"1.1.0-alpha.5\"")) {
-  issues.push("package.json: desktop-visible version should match the current 1.1 alpha milestone");
+if (!pkg.includes("\"version\": \"1.1.0-beta.1\"")) {
+  issues.push("package.json: desktop-visible version should match the current 1.1 beta milestone");
 }
 
 for (const [file, source] of [
@@ -61,7 +61,7 @@ if (!pkg.includes("desktop-test-path:check")) {
   issues.push("package.json: missing desktop-test-path:check script");
 }
 
-for (const token of ["APP_VERSION", "1.1.0-alpha.5", "APP_BUNDLE_HINT", "release/mac/Poster Lab Pro.app", "APP_MAIN_BRANCH"]) {
+for (const token of ["APP_VERSION", "1.1.0-beta.1", "APP_BUNDLE_HINT", "release/mac/Poster Lab Pro.app", "APP_MAIN_BRANCH"]) {
   if (!appMetadata.includes(token)) issues.push(`app-metadata.js: missing desktop identity token ${token}`);
 }
 for (const token of ["APP_VERSION", "APP_BUNDLE_HINT", "topbar-meta", "bundle-path", "getDesktopBundlePath", "posterLabDesktop?.appPath"]) {

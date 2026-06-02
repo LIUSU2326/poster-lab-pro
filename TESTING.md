@@ -1,5 +1,23 @@
 # TESTING.md
 
+## 2026-06-02 1.1.0-beta.1 Quality Audit Refresh Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-beta.1`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify loading a workspace can refresh stale `metadata.qualityAudit` from a locally stored result file.
+- Verify refreshed Poster results include current `posterHasIntegratedReference`, `posterHasLogoReference`, and `posterHasCopyTarget` metrics when applicable.
+- Verify the refresh remains local-only, token-free, and does not call providers or mutate generated pixels.
+
+Automated checks:
+
+- Run `npm run result-quality-audit:check`.
+- Run `npm run api-service:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1.0-alpha.5 Poster KV Failure Detection Release Update
 
 Desktop Test Path checks:
