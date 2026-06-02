@@ -1,5 +1,23 @@
 # ROADMAP.md
 
+## 2026-06-03 1.1.0-rc.2 User Test Readiness Release Update
+
+### Completed In This Pass
+
+- Promoted the build to `1.1.0-rc.2`.
+- Added `USER_TESTING.md` as the desktop user trial guide for the 1.1 release candidate.
+- Added `npm run user-test-readiness:check` and included it in the full `npm run check` chain.
+- Documented the safe manual testing flow: open the desktop app, confirm visible version/path, configure provider credentials, test connection, enable live safety gate, set accepted cost cap, and limit real-generation acceptance to 1-2 runs per mode when needed.
+- Added per-mode acceptance criteria for Poster, Icon, Logo, Announcement, and Collab.
+- Added result review and failure recovery instructions, including Result Quality Audit, second-click deletion confirmation, `失败原因`, and `重试失败图片`.
+- Added a check for stale asset reappearance after deleting and reuploading assets.
+
+### Release Intent
+
+- This RC makes the app ready for a focused local user trial, not just developer regression checks.
+- It keeps real provider usage opt-in and bounded by the safety gate and cost cap.
+- Remaining work should be limited to issues found during hands-on user testing before the 1.1 stable promotion.
+
 ## 2026-06-03 1.1.0-rc.1 UX Reliability Gate Release Update
 
 ### Completed In This Pass

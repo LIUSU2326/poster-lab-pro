@@ -1,5 +1,19 @@
 # DECISIONS.md
 
+## D105: 1.1.0-rc.2 Requires A User Test Readiness Guide
+
+Status: accepted
+
+Context: The RC1 UX gate verifies key UI states, but real users still need a clear testing path: which desktop app to open, how to confirm version/path, how to enable live generation safely, which assets to upload, what each mode should visually satisfy, and what to report when something fails.
+
+Decision: Add `USER_TESTING.md` and a zero-cost `user-test-readiness:check` release gate. The guide keeps live generation opt-in, limits acceptance runs to 1-2 generations per mode when needed, lists per-mode visual acceptance criteria, and explains result review/failure recovery. Release candidates must keep this guide version-aligned with the desktop app.
+
+Impact:
+
+- User testing has a repeatable checklist instead of ad hoc instructions.
+- Real provider spend remains bounded and intentional.
+- Reports should include the app version, workspace revision, mode, asset roles, result id, live-gate state, audit findings, and visual failure.
+
 ## D104: RC Builds Require A UX Reliability Gate
 
 Status: accepted

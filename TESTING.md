@@ -1,5 +1,27 @@
 # TESTING.md
 
+## 2026-06-03 1.1.0-rc.2 User Test Readiness Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-rc.2`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify `/Users/liusu/Desktop/Poster Lab Pro.app` launches and serves `http://127.0.0.1:3000`.
+- Verify `USER_TESTING.md` tells a tester where to open the App, how to confirm version/path, how to configure `模型与 Key`, and how the live safety gate/cost cap works.
+- Verify user testing limits real generation to 1-2 runs per mode when needed and warns against unlimited retries.
+- Verify the guide covers Poster, Icon, Logo, Announcement, and Collab acceptance criteria.
+- Verify the guide explains old asset reappearance checks after deleting/reuploading assets.
+- Verify the guide explains Result Quality Audit review, result viewer actions, second-click deletion confirmation, failed queue `失败原因`, and `重试失败图片`.
+
+Automated checks:
+
+- Run `npm run user-test-readiness:check`.
+- Run `npm run ux-regression:check`.
+- Run `npm run multimode-regression:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-03 1.1.0-rc.1 UX Reliability Gate Release Update
 
 Desktop Test Path checks:

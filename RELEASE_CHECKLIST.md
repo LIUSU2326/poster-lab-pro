@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-rc.1`
+- Version: `1.1.0-rc.2`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -14,12 +14,14 @@ Run these before promoting a build:
 
 1. `npm run check`
 2. `npm run release-candidate:check`
-3. `npm run desktop:pack:mac`
-4. Replace `/Users/liusu/Desktop/Poster Lab Pro.app` with `release/mac/Poster Lab Pro.app`.
-5. Verify `CFBundleShortVersionString` matches the current version.
-6. Launch the desktop app and verify `http://127.0.0.1:3000` returns the workbench HTML.
-7. Verify the top bar shows the version and desktop bundle path.
-8. Verify settings shows provider setup order, connection test, live safety gate, estimated cost, and accepted cost cap.
+3. `npm run user-test-readiness:check`
+4. `npm run desktop:pack:mac`
+5. Replace `/Users/liusu/Desktop/Poster Lab Pro.app` with `release/mac/Poster Lab Pro.app`.
+6. Verify `CFBundleShortVersionString` matches the current version.
+7. Launch the desktop app and verify `http://127.0.0.1:3000` returns the workbench HTML.
+8. Verify the top bar shows the version and desktop bundle path.
+9. Verify settings shows provider setup order, connection test, live safety gate, estimated cost, and accepted cost cap.
+10. Use `USER_TESTING.md` for the manual user trial.
 
 ## Manual Live Generation Gate
 
@@ -54,4 +56,5 @@ Live provider calls remain opt-in:
 - Beta.5 Collab live validation passed with synthetic partner asset `asset-collab-star-cream-partner-beta5` and job `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`; the expected missing partner `brandLogo` audit stayed at review with a blank partner brand plate.
 - Beta.6 adds `npm run multimode-regression:check` as a zero-cost cross-mode gate for Poster, Icon, Logo, Announcement, and Collab prompt/provider requests; it also keeps `Mode Guardrails` preserved when long prompt packages are compacted.
 - RC1 adds `npm run ux-regression:check` as a zero-cost UX/reliability gate for mode navigation, blocked live generation, result management, settings safety, project library, queue failure recovery, and destructive-action confirmation.
+- RC2 adds a User Test Readiness Gate with `USER_TESTING.md` and `npm run user-test-readiness:check`; manual acceptance should run only 1-2 real generations per mode when needed.
 - Signed installer, auto-update, crash reporting, and a production release channel are not part of this local RC gate.
