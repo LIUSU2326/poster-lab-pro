@@ -1,5 +1,28 @@
 # TESTING.md
 
+## 2026-06-03 1.1.0-beta.5 Collab Synthetic Partner Validation Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-beta.5`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Collab image prompt validation fails when `collabCharacter` is missing instead of reusing BOSS/prop assets as a partner.
+- Verify synthetic partner asset `asset-collab-star-cream-partner-beta5` is committed as `role=collabCharacter`, label `Collab partner character`, and provider-ready.
+- Verify Collab prompt package validation passes with `[Game Character]`, `[Collab Partner]`, and `[Game Logo]` bindings.
+- Completed low-cost Collab real-generation rerun `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`: accepted because the game character and synthetic partner stayed separate, interacted in one restaurant scene, and did not become a hybrid character.
+- Verify the missing partner `brandLogo` audit remains `review` with `collab-missing-partner-brand-logo` and `collab-blank-partner-brand-plate`.
+- Verify the image uses a blank partner brand plate or neutral partner area instead of fake readable partner branding.
+
+Automated checks:
+
+- Run `npm run prompts:check`.
+- Run `npm run provider-requests:check`.
+- Run `npm run google-live-adapter:check`.
+- Run `npm run result-quality-audit:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1.0-beta.4 Logo Copy-Safe Blank Wordmark Release Update
 
 Desktop Test Path checks:

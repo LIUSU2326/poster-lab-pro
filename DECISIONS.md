@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D102: Collab Validation May Use A Synthetic Partner Asset
+
+Status: accepted
+
+Context: The 1.1 beta multimode acceptance pass still needed a Collab real-generation validation, but the current user workspace did not include a real partner/collab character asset. Running Collab without a `collabCharacter` would either fail validation or risk treating an unrelated BOSS/prop as the partner identity.
+
+Decision: For the beta.5 validation pass, create a clearly synthetic partner character asset and commit it through the normal asset upload path as `role=collabCharacter`. Treat it like any uploaded reference during prompt/package/provider mapping. Do not use the uploaded BOSS/prop as the partner. If no partner `brandLogo` exists, keep the partner brand area blank or neutral instead of generating fake readable partner branding.
+
+Impact:
+
+- Collab can be tested end to end without waiting for a real partner IP asset.
+- The test still exercises the true uploaded-reference path rather than a mock-only prompt.
+- Missing partner logo safety remains visible through `collab-missing-partner-brand-logo` and `collab-blank-partner-brand-plate` review findings.
+- Future real partner assets can replace the synthetic asset without changing the Collab safety rules.
+
 ## D101: Logo Copy-Safe Mode Redacts High-Risk Wordmarks From Image Prompts
 
 Status: accepted

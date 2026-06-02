@@ -1,5 +1,22 @@
 # ROADMAP.md
 
+## 2026-06-03 1.1.0-beta.5 Collab Synthetic Partner Validation Release Update
+
+### Completed In This Pass
+
+- Promoted the Collab validation gap to `1.1.0-beta.5`.
+- Created a synthetic `collabCharacter` test asset, `asset-collab-star-cream-partner-beta5`, so Collab could be validated without misusing the uploaded BOSS/prop asset as a partner.
+- Verified Collab prompt package validation changed from missing required `collabCharacter` to `validation.ok=true` after the partner asset was committed through the real asset upload path.
+- Ran one low-cost Google Collab live generation: `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`.
+- Accepted the visual result because `[Game Character]` and `[Collab Partner]` stayed separate, shared one restaurant service scene, interacted around the pizza, and did not merge into a hybrid character.
+- Confirmed the missing partner `brandLogo` path stayed at review with `collab-missing-partner-brand-logo` and `collab-blank-partner-brand-plate`; the image used a blank partner brand plate instead of fake readable partner branding.
+
+### Release Intent
+
+- This beta closes the last 1.1 multimode real-validation gap without requiring the user to provide an actual partner IP asset.
+- It keeps Collab validation honest: synthetic partner identity is treated as a real uploaded reference, while missing partner brand/logo text remains copy-safe.
+- It prepares the next pass for 1.1 RC UX and reliability review across project info, assets, modes, queue state, settings, and result management.
+
 ## 2026-06-02 1.1.0-beta.4 Logo Copy-Safe Blank Wordmark Release Update
 
 ### Completed In This Pass

@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-beta.4`
+- Version: `1.1.0-beta.5`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -51,4 +51,5 @@ Live provider calls remain opt-in:
 - Icon Result Quality Audit now catches white-corner plus dark rounded-edge app containers and triggers the local edge repair.
 - Logo copy-safe blank wordmark mode now redacts high-risk project title text, wordmark fragments, translated category terms, and readable-lettering cues from provider prompts/assets; Google withholds readable Logo inline references in this mode.
 - Packaged beta.4 live validation passed for Logo (`job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8`) and Announcement (`job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf`).
+- Beta.5 Collab live validation passed with synthetic partner asset `asset-collab-star-cream-partner-beta5` and job `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`; the expected missing partner `brandLogo` audit stayed at review with a blank partner brand plate.
 - Signed installer, auto-update, crash reporting, and a production release channel are not part of this local RC gate.
