@@ -1,5 +1,19 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-alpha.1 Result Quality Audit Release Update
+
+### Completed In This Pass
+
+- Promoted the Result Quality Audit foundation to `1.1.0-alpha.1`.
+- Synchronized package version, visible app metadata, desktop test path, release checklist, and release-candidate checks.
+- Prepared this alpha to make quality audit findings visible in the packaged desktop App without additional provider cost.
+
+### Release Intent
+
+- This alpha turns the 1.1 quality audit work from hidden metadata into a desktop-testable build.
+- It does not add new real-generation runs by itself.
+- It keeps Icon/Logo/Announcement/Collab/Poster quality improvements staged for later 1.1 alpha passes.
+
 ## 2026-06-02 1.1 Quality Enhancement Foundation Update
 
 ### Completed In This Pass

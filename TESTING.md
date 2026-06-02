@@ -1,5 +1,22 @@
 # TESTING.md
 
+## 2026-06-02 1.1.0-alpha.1 Result Quality Audit Release Update
+
+Desktop release checks:
+
+- Verify the visible app version is `1.1.0-alpha.1`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify `/Users/liusu/Desktop/Poster Lab Pro.app` is replaced only after `npm run check` and `npm run desktop:pack:mac` pass.
+- Verify result cards and the result viewer surface `metadata.qualityAudit` as lightweight review guidance.
+- Verify Result Quality Audit remains local-only, token-free, and does not mutate final generated pixels.
+
+Automated checks:
+
+- Run `npm run result-quality-audit:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1 Result Quality Audit Update
 
 Result Quality Audit checks:
