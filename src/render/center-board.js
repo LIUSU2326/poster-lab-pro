@@ -341,6 +341,7 @@ function renderResultCard(result) {
           ${result.model ? `<span>${escapeHtml(result.model)}</span>` : ""}
           <span>${escapeHtml(formatResultDate(result.updatedAt || result.createdAt))}</span>
         </div>
+        ${renderResultQualityPill(result)}
         <div class="result-quick-actions">
           <button type="button" data-action="open-result-viewer" data-result-id="${escapeHtml(result.id)}">查看</button>
           <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
@@ -408,6 +409,7 @@ function renderResultViewer() {
           ? `<img src="${previewUrl}" alt="${escapeHtml(display?.title || scheme?.title || result.id)}" width="1280" height="720">`
           : `<div class="result-viewer-placeholder">本地预览暂不可用</div>`}
       </div>
+      ${renderResultQualityPanel(result)}
       <div class="result-viewer-dock">
         <div class="result-viewer-count">
           <span>${escapeHtml(display?.code || scheme?.code || "RESULT")}</span>
@@ -427,6 +429,72 @@ function renderResultViewer() {
       </div>
     </div>
   `;
+}
+
+function getResultQualityAudit(result) {
+  const audit = result?.metadata?.qualityAudit;
+  if (!audit || typeof audit !== "object" || audit.version !== "result-quality-audit.v1") return null;
+  const findings = Array.isArray(audit.findings) ? audit.findings : [];
+  const summary = ["pass", "review", "warning"].includes(audit.summary) ? audit.summary : "review";
+  return { ...audit, summary, findings };
+}
+
+function resultQualityTone(summary) {
+  if (summary === "warning") return "warning";
+  if (summary === "review") return "review";
+  return "pass";
+}
+
+function resultQualityLabel(audit) {
+  if (!audit) return "";
+  const count = audit.findings.length;
+  if (audit.summary === "pass") return "质检通过";
+  if (audit.summary === "warning") return `需处理 ${count}`;
+  return `需复核 ${count}`;
+}
+
+function renderResultQualityPill(result) {
+  const audit = getResultQualityAudit(result);
+  if (!audit) return "";
+  return `
+    <div class="result-quality-pill ${resultQualityTone(audit.summary)}" title="${escapeAttribute(resultQualityLabel(audit))}">
+      <span>质检</span>
+      <strong>${escapeHtml(resultQualityLabel(audit))}</strong>
+    </div>
+  `;
+}
+
+function renderResultQualityPanel(result) {
+  const audit = getResultQualityAudit(result);
+  if (!audit || audit.findings.length === 0) return "";
+  const findings = audit.findings.slice(0, 3);
+  return `
+    <div class="result-quality-panel ${resultQualityTone(audit.summary)}" aria-label="结果质检提示">
+      <div>
+        <span>Result Quality Audit</span>
+        <strong>${escapeHtml(resultQualityLabel(audit))}</strong>
+      </div>
+      <ul>
+        ${findings.map((item) => `
+          <li>
+            <strong>${escapeHtml(qualityFindingLabel(item.code))}</strong>
+            <span>${escapeHtml(item.recommendation || item.message || item.code)}</span>
+          </li>
+        `).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function qualityFindingLabel(code) {
+  return {
+    "icon-rounded-mask-risk": "图标边角",
+    "logo-text-accuracy-review": "Logo 字形",
+    "announcement-copy-safe-review": "文案安全区",
+    "collab-missing-partner-brand-logo": "联名标识",
+    "target-aspect-ratio-review": "尺寸比例",
+    "local-overlay-fallback-applied": "本地兜底",
+  }[code] || "质检提示";
 }
 
 function getResultPreviewUrl(result) {

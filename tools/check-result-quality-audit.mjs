@@ -18,6 +18,8 @@ function read(filePath) {
 const audit = read("src/results/quality-audit.ts");
 const resultsIndex = read("src/results/index.ts");
 const worker = read("src/queue/workspace-worker.ts");
+const centerBoard = read("src/render/center-board.js");
+const styles = read("styles.css");
 const decisions = read("DECISIONS.md");
 const roadmap = read("ROADMAP.md");
 const testing = read("TESTING.md");
@@ -42,6 +44,20 @@ if (!resultsIndex.includes("quality-audit")) {
 
 for (const token of ["auditResultQuality", "qualityAudit", "projectAssetRoles"]) {
   if (!worker.includes(token)) issues.push(`workspace-worker.ts: missing quality audit worker token ${token}`);
+}
+
+for (const token of [
+  "renderResultQualityPill",
+  "renderResultQualityPanel",
+  "qualityFindingLabel",
+  "result-quality-audit.v1",
+  "Result Quality Audit",
+]) {
+  if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result quality UI token ${token}`);
+}
+
+for (const token of [".result-quality-pill", ".result-quality-panel"]) {
+  if (!styles.includes(token)) issues.push(`styles.css: missing result quality UI style ${token}`);
 }
 
 for (const [file, source] of [

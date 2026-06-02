@@ -2594,6 +2594,52 @@ input[type="range"] {
   color: var(--accent);
 }
 
+.result-quality-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--panel-soft), transparent 8%);
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.result-quality-pill span {
+  color: var(--text-tertiary);
+  font-weight: 700;
+}
+
+.result-quality-pill strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 820;
+}
+
+.result-quality-pill.pass {
+  border-color: color-mix(in oklch, var(--success), transparent 66%);
+  background: color-mix(in oklch, var(--success-soft), transparent 18%);
+  color: var(--success);
+}
+
+.result-quality-pill.review {
+  border-color: color-mix(in oklch, var(--warning), transparent 58%);
+  background: color-mix(in oklch, var(--warning-soft), transparent 18%);
+  color: var(--warning);
+}
+
+.result-quality-pill.warning {
+  border-color: color-mix(in oklch, var(--danger), transparent 58%);
+  background: color-mix(in oklch, var(--danger-soft), transparent 18%);
+  color: var(--danger);
+}
+
 .result-empty {
   display: grid;
   width: min(460px, calc(100% - 44px));
@@ -6458,6 +6504,75 @@ select:focus {
   font-size: 28px;
   line-height: 1;
   box-shadow: 0 14px 36px rgba(22, 26, 34, 0.12);
+}
+
+.result-quality-panel {
+  position: fixed;
+  left: 72px;
+  bottom: 34px;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 144px));
+  max-height: 34vh;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  background: color-mix(in srgb, #242836 90%, transparent);
+  color: rgba(255,255,255,0.9);
+  box-shadow: 0 22px 64px rgba(22, 26, 34, 0.22);
+}
+
+.result-quality-panel > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.result-quality-panel > div span {
+  color: rgba(255,255,255,0.55);
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.result-quality-panel > div strong {
+  color: rgba(255,255,255,0.94);
+  font-size: 12px;
+}
+
+.result-quality-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-quality-panel li {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.result-quality-panel li strong {
+  color: rgba(255,255,255,0.94);
+  font-size: 12px;
+}
+
+.result-quality-panel li span {
+  color: rgba(255,255,255,0.64);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.result-quality-panel.review {
+  border-color: color-mix(in oklch, var(--warning), transparent 48%);
+}
+
+.result-quality-panel.warning {
+  border-color: color-mix(in oklch, var(--danger), transparent 48%);
 }
 
 .result-viewer-dock {
@@ -13047,6 +13162,14 @@ select:focus-visible,
 
   .result-viewer-dock {
     max-width: 100% !important;
+  }
+
+  .result-quality-panel {
+    left: 12px;
+    right: 12px;
+    bottom: 118px;
+    width: auto;
+    max-height: 24vh;
   }
 
   .provider-setup-steps {
