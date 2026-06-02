@@ -10,6 +10,7 @@ Result Quality Audit checks:
 - Verify Logo audit adds a text accuracy review finding.
 - Verify Announcement audit adds a copy-safe review finding.
 - Verify Collab audit flags missing partner `brandLogo` so the UI can later ask for a blank partner plate or partner logo upload.
+- Verify result cards and the result viewer surface `metadata.qualityAudit` as lightweight review guidance.
 - Verify the audit is local-only and token-free.
 
 ## 2026-06-02 1.0.0-beta.3 Real Generation Acceptance Update

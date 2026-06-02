@@ -1,0 +1,80 @@
+# QUALITY_1_1_PLAN.md
+
+## Goal
+
+Raise generation quality after the 1.0 beta/RC gate without making every issue a prompt tweak.
+
+## 1.1.0-alpha.1 Result Quality Audit
+
+Status: done.
+
+- Store `metadata.qualityAudit` on generated results.
+- Flag icon rounded-mask risk from local corner analysis.
+- Flag Logo text accuracy review.
+- Flag Announcement copy-safe review.
+- Flag Collab missing partner `brandLogo`.
+- Flag local overlay fallback and target aspect-ratio drift.
+- Show quality audit status in result cards and the result viewer.
+
+## 1.1.0-alpha.2 Icon Quality Pass
+
+Target:
+
+- Reduce dark rounded app-icon masks.
+- Keep full-canvas square artwork.
+- Preserve one strong subject silhouette.
+- Keep 64px readability.
+
+Likely work:
+
+- Add icon-specific post-processing only when audit flags mask risk.
+- Add optional background expansion/corner repair using local image processing when safe.
+- Keep no-text and no-sticker prompt checks.
+- Add an icon thumbnail readability check.
+
+## 1.1.0-alpha.3 Logo And Text Refinement
+
+Target:
+
+- Separate Logo generation from poster-like scenes.
+- Avoid fake replacement lettering.
+- Give users a clean path when exact spelling is unreliable.
+
+Likely work:
+
+- Add a dedicated logo/text refinement queue operation.
+- Support blank wordmark plate output for later vector/text placement.
+- Add a generated text risk detector for likely gibberish or repeated pseudo-letters.
+- Keep uploaded Logo as brand reference, not as repeated pasted sticker.
+
+## 1.1.0-alpha.4 Announcement And Collab Safety
+
+Target:
+
+- Announcement should preserve editable copy-safe regions.
+- Collab should keep both sides separate and avoid fake partner branding.
+
+Likely work:
+
+- Surface quality audit findings as rerun guidance.
+- Add mode-specific rerun presets: safer copy panel, blank partner plate, stronger separation, quieter background.
+- Ask for partner `brandLogo` only when the user needs readable partner branding.
+
+## 1.1.0-alpha.5 Poster KV Failure Detection
+
+Target:
+
+- Detect the most common failed KV outputs before the user has to explain them.
+
+Likely work:
+
+- Audit for local overlay fallback, repeated uploaded assets, missing copy area, missing logo-safe treatment, and aspect-ratio/crop risk.
+- Add result-level rerun suggestions tied to specific findings.
+- Expand KV architecture library only after audit data confirms repeated composition failure patterns.
+
+## Non-Goals
+
+- Do not run unlimited real-generation tests.
+- Do not make local overlay the default path again.
+- Do not force image models to spell long operational copy when an editable copy-safe region is safer.
+- Do not turn Icon, Logo, Announcement, or Collab into Poster mode with different labels.

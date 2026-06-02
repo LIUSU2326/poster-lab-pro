@@ -8,7 +8,9 @@
 - Added local icon corner analysis to flag potential rounded app-icon mask or dark container risk.
 - Added review findings for Logo text accuracy, Announcement copy-safe areas, Collab missing partner `brandLogo`, aspect-ratio drift, and local overlay fallback.
 - Wired the audit into the workspace queue worker so generated results carry `metadata.qualityAudit`.
+- Surfaced quality audit status in result cards and the result viewer.
 - Added `npm run result-quality-audit:check` and included it in `npm run check`.
+- Added `QUALITY_1_1_PLAN.md` to split the next quality work into Icon, Logo/text, Announcement/Collab, and Poster KV detection batches.
 
 ### Why This Is First
 
