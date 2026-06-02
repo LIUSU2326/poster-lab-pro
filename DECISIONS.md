@@ -1,5 +1,21 @@
 # DECISIONS.md
 
+## D101: Logo Copy-Safe Mode Redacts High-Risk Wordmarks From Image Prompts
+
+Status: accepted
+
+Context: The `1.1.0-beta.3` Logo live validation no longer produced a poster scene, but the image model still rendered partial readable text from the uploaded logo/project name. The result looked polished while omitting part of the title, which is more dangerous than a clearly blank refinement plate.
+
+Decision: In `copySafeBlankWordmark` mode, redact high-risk wordmark text, project title terms, wordmark fragments, translated project/category terms, and readable-lettering cues from final provider image prompts and Logo asset descriptions. Add an explicit `COPY-SAFE BLANK WORDMARK ENFORCEMENT` block. Treat uploaded logos in Logo mode as non-text brand motif references for color, silhouette, spacing, material, and plate styling rather than exact wordmark references. When the uploaded Logo reference itself contains readable lettering, withhold that inline visual reference from Google Logo copy-safe image requests and rely on non-text brand cues instead.
+
+Impact:
+
+- Complex Logo mode outputs should produce blank plates/emblems instead of partial title fragments.
+- Uploaded Logo assets still guide brand feel without inviting copied/malformed letters.
+- Exact final lettering remains a later vector/text refinement step.
+- Provider-request and Google adapter checks now guard this behavior.
+- The packaged beta.4 Desktop Test Path passed with `job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8`, which produced a blank title plate without readable or pseudo-readable text.
+
 ## D100: Icon Audit Must Detect White-Corner Dark-Edge App Containers
 
 Status: accepted

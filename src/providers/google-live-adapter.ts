@@ -194,8 +194,13 @@ function normalizeGoogleImageModel(model: string): string {
   return value;
 }
 
+function isLogoCopySafeBlankWordmarkPrompt(prompt: string): boolean {
+  return /COPY-SAFE BLANK WORDMARK ENFORCEMENT|copy-safe blank wordmark/i.test(prompt);
+}
+
 function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterMode = request.context.mode === "poster";
+  const logoCopySafeBlankWordmark = request.context.mode === "logo" && isLogoCopySafeBlankWordmarkPrompt(request.prompt);
   const hasPosterReferenceAssets = hasPosterMode && request.assets.some((asset) => isPosterIntegratedReferenceAsset(asset));
   const assetInventory = request.assets.length ? assetSemanticInventory(request.assets, { mode: request.context.mode }) : "";
   const fusionDirective = modeAssetFusionDirective(request.context.mode, request.assets);
@@ -307,7 +312,11 @@ function imagePrompt(request: ImageGenerationRequest): string {
             `semanticRole=${semanticRole}`,
             `fusion=${assetFusionStrategy(asset, { mode: request.context.mode })}`,
             asset.description,
-            asset.url ? `referenceUrl=${asset.url}` : "",
+            asset.url
+              ? logoCopySafeBlankWordmark && semanticRole === "brandLogo"
+                ? "referenceUrl=withheld for copy-safe blank wordmark mode; use non-text brand cues only"
+                : `referenceUrl=${asset.url}`
+              : "",
           ].filter(Boolean);
           return `- ${parts.join("; ")}`;
         }),
@@ -423,7 +432,7 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
     case "icon":
       return "Brand icon rule: uploaded logos may guide colors, symbol shape, or brand energy, but icon mode must not render logo lettering, captions, or readable text.";
     case "logo":
-      return "Brand logo rule: uploaded logos guide wordmark rhythm, colors, silhouette, and brand continuity. Preserve exact spelling only when reliable; otherwise use a clean copy-safe mark or polished blank wordmark plate without fake replacement text.";
+      return "Brand logo rule: uploaded logos guide wordmark rhythm, colors, silhouette, spacing, material finish, and brand continuity. Follow Logo Text Strategy exactly. In copy-safe blank wordmark mode, do not render readable letters, uploaded-logo text, project-title fragments, partial words, pseudo-letters, slogans, or decorative fake typography; use a polished blank wordmark plate, emblem, badge, or mark system.";
     case "announcement":
       return "Brand announcement rule: use uploaded logos as clean small lockups or reserved brand-safe areas. Do not create fake replacement logo text or repeated watermark patterns.";
     case "collab":
@@ -583,25 +592,44 @@ function assetInlineReferenceRequired(
 
 async function referencePartsForAssets(
   assets: ImageGenerationRequest["assets"] | BriefGenerationRequest["assets"],
-  options: { scenePlateOnly?: boolean; requireInlineIntegratedReferences?: boolean } = {},
+  options: {
+    mode?: ImageGenerationRequest["context"]["mode"] | BriefGenerationRequest["context"]["mode"];
+    scenePlateOnly?: boolean;
+    requireInlineIntegratedReferences?: boolean;
+    withholdLogoTextReferences?: boolean;
+  } = {},
 ): Promise<GoogleRequestPart[]> {
   const parts: GoogleRequestPart[] = [];
   const roleCounters = new Map<string, number>();
   for (const asset of assets) {
     const skipInlineForScenePlate = Boolean(options.scenePlateOnly && isPosterIntegratedReferenceAsset(asset));
-    const referenceLabel = skipInlineForScenePlate
-      ? scenePlateReferenceLabelForAsset(asset, roleCounters)
-      : referenceLabelForAsset(asset, roleCounters);
+    const withholdLogoTextReference = Boolean(
+      options.withholdLogoTextReferences &&
+        options.mode === "logo" &&
+        posterAssetSemanticRole(asset) === "brandLogo",
+    );
+    const referenceLabel = withholdLogoTextReference
+      ? "[BRAND MOTIF REFERENCE WITHHELD FOR COPY-SAFE LOGO TEXT: the uploaded logo image contains readable lettering, so it is not sent as an inline visual reference. Use only non-text brand cues described in the prompt: colors, silhouette rhythm, material style, plate shape, spacing, and emblem motifs. Do not render readable letters.]"
+      : skipInlineForScenePlate
+        ? scenePlateReferenceLabelForAsset(asset, roleCounters)
+        : referenceLabelForAsset(asset, roleCounters, options.mode);
     parts.push({
       text: [
         referenceLabel,
         `Reference asset ${asset.role}: ${asset.id}.`,
         asset.description || "",
-        skipInlineForScenePlate
-          ? "Use this asset only as a role placeholder for empty staging and later local compositing. Do not render it, do not invent a substitute, and do not render labels or placeholder words for it."
-          : asset.url ? "The following inline image is a binding visual/model-sheet/brand reference for this exact semantic role, not loose inspiration. Redraw it naturally into the scene when its role requires visible use." : "",
+        withholdLogoTextReference
+          ? "Inline image intentionally withheld to prevent copied, partial, or pseudo-readable wordmark text in copy-safe blank Logo mode."
+          : skipInlineForScenePlate
+            ? "Use this asset only as a role placeholder for empty staging and later local compositing. Do not render it, do not invent a substitute, and do not render labels or placeholder words for it."
+            : asset.url
+              ? options.mode === "logo" && posterAssetSemanticRole(asset) === "brandLogo"
+                ? "The following inline image is a non-text brand reference for colors, silhouette, layout rhythm, bevel/material style, and emblem motifs. Follow Logo Text Strategy; do not copy readable letters unless an exact short wordmark is explicitly requested."
+                : "The following inline image is a binding visual/model-sheet/brand reference for this exact semantic role, not loose inspiration. Redraw it naturally into the scene when its role requires visible use."
+              : "",
       ].filter(Boolean).join(" "),
     });
+    if (withholdLogoTextReference) continue;
     if (skipInlineForScenePlate) continue;
     const inlineData = await inlineDataFromAsset(asset);
     if (inlineData?.data) {
@@ -646,6 +674,7 @@ function scenePlateReferenceLabelForAsset(
 function referenceLabelForAsset(
   asset: ImageGenerationRequest["assets"][number] | BriefGenerationRequest["assets"][number],
   roleCounters: Map<string, number>,
+  mode?: ImageGenerationRequest["context"]["mode"] | BriefGenerationRequest["context"]["mode"],
 ): string {
   const semanticRole = posterAssetSemanticRole(asset);
   const nextIndex = (roleCounters.get(semanticRole) || 0) + 1;
@@ -658,6 +687,9 @@ function referenceLabelForAsset(
     return `[CRITICAL VISUAL REFERENCE: this image defines ${referenceName}. Copy the exact antagonist/BOSS identity: silhouette, face/marking details, mouth, eyes, teeth, crown/horns/tools, color blocks, and graphic line quality. You may change pose, scale, attack motion, lighting, and scene integration.]`;
   }
   if (semanticRole === "brandLogo") {
+    if (mode === "logo") {
+      return `[BRAND MOTIF REFERENCE: ${referenceName} supplies color palette, silhouette rhythm, material finish, spacing, and emblem/plate styling. Follow Logo Text Strategy. In copy-safe blank wordmark mode, do NOT render readable letters, copied logo text, pseudo-letters, project-title fragments, or any subset of the uploaded wordmark.]`;
+    }
     return `[CRITICAL LOGO REFERENCE: exact appearance of ${referenceName}. Include this uploaded logo/wordmark once, integrated into the campaign art without inventing a replacement.]`;
   }
   if (semanticRole === "prop") {
@@ -683,9 +715,12 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
     isPosterIntegratedReferenceAsset(asset),
   );
   const scenePlateOnly = request.context.mode === "poster" && /Identity-Safe Game Campaign KV Plate|SCENE PLATE only/i.test(request.prompt);
+  const withholdLogoTextReferences = request.context.mode === "logo" && isLogoCopySafeBlankWordmarkPrompt(request.prompt);
   const referenceParts = await referencePartsForAssets(request.assets, {
+    mode: request.context.mode,
     scenePlateOnly,
     requireInlineIntegratedReferences: isPosterWithReferences && !scenePlateOnly,
+    withholdLogoTextReferences,
   });
   const finalPlateRule = isPosterWithReferences && scenePlateOnly
     ? [
@@ -737,7 +772,7 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
         ? "Icon mode requires clean full-canvas 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no OS app-icon mask or rounded black container, no invented shield/weapon/tool/accessory, minimal background detail, high contrast, and 64px readability."
         : "",
       request.context.mode === "logo"
-        ? "Logo mode requires wordmark readability and brand system clarity. Follow Logo Text Strategy, do not turn the result into a cinematic scene, and do not invent fake replacement lettering or pseudo-letters for uploaded logo references."
+        ? "Logo mode requires wordmark/mark system clarity. Follow Logo Text Strategy exactly. If the strategy is copy-safe blank, render no readable letters or project-title fragments; use a polished blank wordmark plate, emblem, badge, or mark system. Do not turn the result into a cinematic scene and do not invent fake replacement lettering or pseudo-letters for uploaded logo references."
         : "",
       modeSubjectAccessoryInstruction(request),
       modeSpecificBrandLogoInstruction(request),
@@ -820,6 +855,7 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
       ...shared,
       "Logo mode hard lock: design a logo, symbol, badge, wordmark, or title lockup. Do not create a cinematic scene, character battle, poster background, environmental set piece, or campaign slogan art.",
       "Logo Text Strategy: use exact provided brand text only when it can stay readable; otherwise create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction without pseudo-letters.",
+      "When planning a copy-safe blank wordmark plate, do not place the project name, uploaded-logo letters, partial title words, readable alphabet letters, or pseudo-letters in image prompts. Refer to the brand only as an uploaded brand reference or reserved blank wordmark area.",
       "Uploaded logo references guide brand color, silhouette, rhythm, and finish. Do not generate a fake replacement logo or look-alike gibberish.",
       "slogans must be an empty object for logo mode.",
     ];
@@ -982,7 +1018,10 @@ function briefPrompt(request: BriefGenerationRequest): string {
 async function briefPromptParts(request: BriefGenerationRequest): Promise<GoogleRequestPart[]> {
   return [
     { text: briefPrompt(request) },
-    ...await referencePartsForAssets(request.assets),
+    ...await referencePartsForAssets(request.assets, {
+      mode: request.context.mode,
+      withholdLogoTextReferences: request.context.mode === "logo",
+    }),
   ];
 }
 
@@ -1408,7 +1447,7 @@ function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { bri
     case "logo":
       return {
         brief: "Logo 模式锁定：标识/徽章/字标优先，不做电影场景或海报，不生成乱码假字。",
-        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. Keep typography readable only when exact; otherwise use a polished blank wordmark plate or emblem without pseudo-letters.",
+        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. If the wordmark is copy-safe blank, render no readable letters, uploaded-logo text, project-title fragments, partial words, slogans, or pseudo-letters; use a polished blank wordmark plate, emblem, badge, or mark system.",
       };
     case "announcement":
       return {

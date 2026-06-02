@@ -228,8 +228,8 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
   switch (request.context.mode) {
     case "icon":
       return "Icon logo rule: uploaded logos may guide color, symbol shape, or brand style, but icon mode must not render logo lettering or readable text.";
-    case "logo":
-      return "Logo text safety: uploaded logos guide brand continuity. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or polished blank wordmark plate. Do not invent fake replacement lettering or pseudo-letters.";
+	    case "logo":
+	      return "Logo text safety: uploaded logos guide brand continuity through color, silhouette, rhythm, spacing, and material style. Follow Logo Text Strategy exactly. In copy-safe blank wordmark mode, do not render readable letters, uploaded-logo text, project-title fragments, partial words, pseudo-letters, slogans, or decorative fake typography; use a polished blank wordmark plate, emblem, badge, or mark system.";
     case "announcement":
       return "Announcement logo rule: use uploaded logos as small clean lockups or reserved brand-safe areas, never as fake repeated watermark text.";
     case "collab":

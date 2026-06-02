@@ -1,5 +1,26 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-beta.4 Logo Copy-Safe Blank Wordmark Release Update
+
+### Completed In This Pass
+
+- Promoted the Logo real-validation fix to `1.1.0-beta.4`.
+- Real beta.3 Logo validation confirmed the mode no longer became a poster, but the model still generated partial readable logo text from the uploaded logo/project name.
+- Redacted high-risk copy-safe wordmarks from final provider image prompts.
+- Extended the redaction to wordmark fragments, translated project/category terms, and readable-lettering cues in both provider prompts and Logo asset descriptions.
+- Withheld uploaded Logo inline visual references in Google Logo copy-safe mode when the reference itself contains readable lettering.
+- Strengthened Logo Text Strategy so uploaded logos are non-text brand references for rhythm, color, silhouette, material, and plate styling.
+- Changed Gemini inline logo reference labels in Logo mode from exact wordmark copying to `BRAND MOTIF REFERENCE`.
+- Added provider-request regression coverage to ensure copy-safe Logo prompts contain `COPY-SAFE BLANK WORDMARK ENFORCEMENT` and do not include the high-risk project title.
+- Real beta.4 Logo rerun `job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8` produced a blank yellow title plate with no readable or pseudo-readable lettering.
+- Real beta.4 Announcement rerun `job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf` produced a proper announcement UI with exact title, calm editable body panel, supporting character, and pass audit.
+
+### Release Intent
+
+- This beta prevents polished but unusable partial logo lettering such as missing suffixes or pseudo-accurate title fragments.
+- It keeps exact lettering as a later vector/text refinement handoff when the wordmark is complex.
+- It confirms Logo and Announcement through the packaged Desktop Test Path; Collab remains pending until a real partner/collab asset is uploaded.
+
 ## 2026-06-02 1.1.0-beta.3 Icon Edge Container Detection Release Update
 
 ### Completed In This Pass

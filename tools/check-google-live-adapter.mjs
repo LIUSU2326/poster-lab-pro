@@ -80,6 +80,11 @@ for (const token of [
 	  "Icon mode hard lock",
 	  "slogans must be an empty object for icon mode",
 	  "normalizeModeBriefSchemes",
+	  "BRAND MOTIF REFERENCE",
+	  "copy-safe blank wordmark mode",
+	  "BRAND MOTIF REFERENCE WITHHELD FOR COPY-SAFE LOGO TEXT",
+	  "withholdLogoTextReferences",
+	  "referenceUrl=withheld for copy-safe blank wordmark mode",
 	]) {
 	  if (!adapter.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
 	}
@@ -332,6 +337,77 @@ async function runRuntimeCheck() {
     }
     if (capturedPrompt.includes("Identity-Safe Game Campaign KV Plate") || capturedPrompt.includes("SCENE PLATE only")) {
       issues.push("Google image prompt should not use scene-plate fallback by default");
+    }
+
+    let capturedLogoRequest = null;
+    const logoAdapter = providers.createGoogleLiveImageAdapter({
+      now: () => 1100,
+      transport: async (request) => {
+        capturedLogoRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      inlineData: {
+                        mimeType: "image/png",
+                        data: await fakePngBase64(1024, 1024),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        };
+      },
+    });
+    const logoCopySafeRequest = providers.ImageGenerationRequestSchema.parse({
+      context: {
+        projectId: "project-google-logo-copy-safe-check",
+        mode: "logo",
+        providerId: "google",
+        traceId: "trace-google-logo-copy-safe-check",
+      },
+      schemeId: "scheme-google-logo-copy-safe-01",
+      prompt: [
+        "COPY-SAFE BLANK WORDMARK ENFORCEMENT: do not render readable letters.",
+        "Premium blank brand badge with a reserved empty wordmark plate.",
+      ].join("\n"),
+      assets: [
+        {
+          id: "asset-uploaded-logo-with-text",
+          role: "gameLogo",
+          mimeType: "image/png",
+          description: "Uploaded readable Pizza Kitchen Adventures logo reference.",
+          url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/axw6OQAAAAASUVORK5CYII=",
+        },
+      ],
+      platformPreset: "custom",
+      aspectRatio: "1:1",
+      width: 1024,
+      height: 1024,
+      model: "gemini-2.5-flash-image",
+      count: 1,
+    });
+    const logoCopySafeResult = await logoAdapter.generateImage(logoCopySafeRequest, config);
+    if (!logoCopySafeResult.ok) {
+      issues.push(`Google logo copy-safe image generation should succeed: ${logoCopySafeResult.error.code}`);
+    }
+    const logoParts = capturedLogoRequest?.body?.contents?.[0]?.parts || [];
+    const logoPrompt = logoParts.map((part) => part?.text || "").filter(Boolean).join("\n");
+    if (logoParts.some((part) => part?.inlineData)) {
+      issues.push("Google logo copy-safe mode must withhold uploaded logo inlineData to prevent copied wordmark text");
+    }
+    if (!logoPrompt.includes("BRAND MOTIF REFERENCE WITHHELD FOR COPY-SAFE LOGO TEXT")) {
+      issues.push("Google logo copy-safe prompt should explain that the uploaded logo text reference was withheld");
+    }
+    if (logoPrompt.includes("referenceUrl=data:image")) {
+      issues.push("Google logo copy-safe prompt must not expose the uploaded readable logo data URL");
     }
 
     let calls = 0;

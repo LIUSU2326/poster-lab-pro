@@ -375,13 +375,14 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
   }
 
   if (mode === "logo") {
-    return [
-      ...shared,
-      "Logo mode hard lock: design a logo, symbol, badge, wordmark, or title lockup. Do not create a cinematic scene, character battle, poster background, environmental set piece, or campaign slogan art.",
-      "Logo Text Strategy: use exact provided brand text only when it can stay readable; otherwise create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction without pseudo-letters.",
-      "Uploaded logo references guide brand color, silhouette, rhythm, and finish. Do not generate a fake replacement logo or look-alike gibberish.",
-      "slogans must be an empty object for logo mode.",
-    ];
+	    return [
+	      ...shared,
+	      "Logo mode hard lock: design a logo, symbol, badge, wordmark, or title lockup. Do not create a cinematic scene, character battle, poster background, environmental set piece, or campaign slogan art.",
+	      "Logo Text Strategy: use exact provided brand text only when it can stay readable; otherwise create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction without pseudo-letters.",
+	      "When planning a copy-safe blank wordmark plate, do not place the project name, uploaded-logo letters, partial title words, readable alphabet letters, or pseudo-letters in image prompts. Refer to the brand only as an uploaded brand reference or reserved blank wordmark area.",
+	      "Uploaded logo references guide brand color, silhouette, rhythm, and finish. Do not generate a fake replacement logo or look-alike gibberish.",
+	      "slogans must be an empty object for logo mode.",
+	    ];
   }
 
   if (mode === "announcement") {
@@ -649,11 +650,11 @@ function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { bri
         brief: "Icon 模式锁定：1:1 方形、单一主主体、无文字、无海报/KV 场景、低背景复杂度、全画布方角、64px 仍可读。",
         prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject, absolutely no text or logo lettering, no poster scene, no multi-character battle, no rounded app-mask/container, full-bleed sharp square corners, minimal background, high contrast, readable at 64px.",
       };
-    case "logo":
-      return {
-        brief: "Logo 模式锁定：标识/徽章/字标优先，不做电影场景或海报，不生成乱码假字。",
-        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. Keep typography readable only when exact; otherwise use a polished blank wordmark plate or emblem without pseudo-letters.",
-      };
+	    case "logo":
+	      return {
+	        brief: "Logo 模式锁定：标识/徽章/字标优先，不做电影场景或海报，不生成乱码假字。",
+	        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. If the wordmark is copy-safe blank, render no readable letters, uploaded-logo text, project-title fragments, partial words, slogans, or pseudo-letters; use a polished blank wordmark plate, emblem, badge, or mark system.",
+	      };
     case "announcement":
       return {
         brief: "Announcement 模式锁定：信息安全区和公告面板优先，角色/道具只做引导或氛围，不抢文案区域。",

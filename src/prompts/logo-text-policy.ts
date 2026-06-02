@@ -45,21 +45,26 @@ export function logoTextPolicyBlock(input: {
   hasUploadedLogoReference?: boolean;
 }): string {
   const policy = logoWordmarkTextRisk(input.wordmark);
-  const configuredWordmark = policy.wordmark || "not configured";
+  const configuredWordmark = policy.strategy === "exactShortWordmark"
+    ? `"${policy.wordmark || "not configured"}"`
+    : "redacted for copy-safe blank wordmark plate; exact text is reserved for later vector/text refinement";
   const exactRule = policy.strategy === "exactShortWordmark"
     ? "Primary attempt: render the exact configured wordmark only if each letter can remain clean and readable."
     : "Primary attempt: do not force generated readable lettering; create a clean blank wordmark plate, emblem, badge, or mark system ready for later vector/text refinement.";
   const uploadedLogoRule = input.hasUploadedLogoReference
-    ? "Uploaded logo reference: use it for brand rhythm, color, silhouette, material style, and letter spacing cues; do not paste it back as a sticker and do not invent replacement letters."
+    ? "Uploaded logo reference: use it for brand rhythm, color, silhouette, material style, and spacing cues only; do not copy uploaded readable letters back as generated text, do not paste it as a sticker, and do not invent replacement letters."
     : "No uploaded logo reference: design the mark/plate from the project and brand context without pretending a precise existing wordmark was supplied.";
 
   return [
     "Logo Text Strategy:",
-    `Configured wordmark target: "${configuredWordmark}".`,
+    `Configured wordmark target: ${configuredWordmark}.`,
     `Strategy: ${policy.strategy}.`,
     `Reason: ${policy.reason}.`,
     exactRule,
     uploadedLogoRule,
+    policy.strategy === "copySafeBlankWordmark"
+      ? "Copy-safe blank lock: do not render readable letters, partial project-title words, uploaded-logo letters, pseudo-letters, subtitles, slogans, or decorative fake typography. The wordmark area must remain visually blank for later exact text work."
+      : "Exact short wordmark lock: if any letter cannot stay clean, fall back to a blank wordmark plate instead of malformed text.",
     "Fallback rule: if exact spelling is uncertain, reserve a polished blank wordmark plate or clean emblem with brand colors/materials; never generate pseudo-letters, look-alike words, malformed text, extra slogans, or poster copy.",
     "Refinement path: treat final exact lettering as a later vector/text refinement step when the image model cannot guarantee spelling.",
   ].join("\n");

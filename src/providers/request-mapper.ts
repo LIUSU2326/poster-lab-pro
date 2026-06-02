@@ -11,6 +11,7 @@ import {
   type PosterAssetSemanticRole,
 } from "../assets/semantic-roles";
 import { PromptPackageSchema, type PromptAssetBinding, type PromptPackage } from "../prompts/contracts";
+import { logoWordmarkTextRisk } from "../prompts/logo-text-policy";
 import { integratedSloganTreatmentRule } from "../prompts/slogan-policy";
 import { WorkspaceSnapshotSchema, type WorkspaceModeState, type WorkspaceSnapshot } from "../storage/contracts";
 import {
@@ -215,6 +216,7 @@ function toProviderAssetReference(
   snapshot: WorkspaceSnapshot,
   roleIndex: number,
   mode: ProductionMode,
+  options: { copySafeLogoText?: boolean } = {},
 ): ProviderAssetReference {
   const asset = snapshot.assets.find((item) => item.id === binding.assetId);
   const candidateUrl = binding.url || assetUrl(asset);
@@ -233,25 +235,29 @@ function toProviderAssetReference(
   ]
     .filter(Boolean)
     .join("; ");
+  const providerDescription = options.copySafeLogoText && mode === "logo" && semanticRole === "brandLogo"
+    ? redactLogoCopySafePhrases(description)
+    : description;
 
   return ProviderAssetReferenceSchema.parse({
     id: binding.assetId,
     role: binding.role,
     ...(binding.mimeType || asset?.mimeType ? { mimeType: binding.mimeType || asset?.mimeType || undefined } : {}),
     ...(isProviderSafeAssetUrl(candidateUrl) ? { url: candidateUrl } : {}),
-    description: description.slice(0, 500),
+    description: providerDescription.slice(0, 500),
   });
 }
 
 export function assetsFromPromptPackage(
   promptPackage: PromptPackage,
   snapshot: WorkspaceSnapshot,
+  options: { copySafeLogoText?: boolean } = {},
 ): ProviderAssetReference[] {
   const roleCounters = new Map<string, number>();
   return promptPackage.assets.map((asset) => {
     const nextIndex = (roleCounters.get(asset.role) || 0) + 1;
     roleCounters.set(asset.role, nextIndex);
-    return toProviderAssetReference(asset, snapshot, nextIndex, promptPackage.mode);
+    return toProviderAssetReference(asset, snapshot, nextIndex, promptPackage.mode, options);
   });
 }
 
@@ -584,6 +590,92 @@ function assertPromptPackageReadyForProvider(promptPackage: PromptPackage): void
   }
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const LOGO_COPY_SAFE_VISUAL_TOKEN_REPLACEMENTS: Record<string, string> = {
+  pizza: "round melted-cheese baked-food emblem",
+  kitchen: "culinary workspace motif",
+  adventure: "quest motif",
+  adventures: "quest motif",
+};
+
+const LOGO_COPY_SAFE_TRANSLATED_TOKEN_REPLACEMENTS: Record<string, [string, string][]> = {
+  pizza: [["披萨", "圆形烘焙食物图形"]],
+  kitchen: [["厨房", "烹饪空间"]],
+  adventure: [["冒险", "探索旅程"]],
+  adventures: [["冒险", "探索旅程"]],
+};
+
+const LOGO_COPY_SAFE_PHRASE_REPLACEMENTS: [RegExp, string][] = [
+  [/\bbrand\/wordmark reference\b/gi, "brand motif reference"],
+  [/\bpreserve readable brand rhythm\b/gi, "preserve non-text brand rhythm"],
+  [/\breadable brand rhythm\b/gi, "non-text brand rhythm"],
+  [/\blettering rhythm\b/gi, "non-text silhouette rhythm"],
+  [/\bletter rhythm\b/gi, "non-text silhouette rhythm"],
+  [/\breadable wordmark construction\b/gi, "blank mark construction"],
+  [/\bwordmark construction\b/gi, "blank mark construction"],
+  [/\breadable wordmark\/mark system\b/gi, "blank wordmark plate/mark system"],
+  [/\breadable wordmark\b/gi, "blank wordmark plate"],
+  [/\breadable brand construction\b/gi, "brand construction without readable letters"],
+  [/\bpreserve exact spelling\b/gi, "avoid generated spelling"],
+  [/\btypography style\b/gi, "graphic shape style"],
+  [/\btypography\b/gi, "graphic shapes"],
+];
+
+function logoCopySafeComponentTerms(terms: string[]): string[] {
+  const components = terms.flatMap((term) => term.match(/[A-Za-z0-9]{3,}/g) || []);
+  return components.filter((term, index, all) => all.findIndex((candidate) =>
+    candidate.toLowerCase() === term.toLowerCase()) === index);
+}
+
+function logoCopySafeTokenReplacement(token: string): string {
+  return LOGO_COPY_SAFE_VISUAL_TOKEN_REPLACEMENTS[token.toLowerCase()] || "reserved non-text brand motif";
+}
+
+function redactLogoCopySafePhrases(text: string): string {
+  return LOGO_COPY_SAFE_PHRASE_REPLACEMENTS.reduce((current, [pattern, replacement]) =>
+    current.replace(pattern, replacement), text);
+}
+
+function isLogoCopySafeBlankWordmarkModeState(modeState: WorkspaceModeState): boolean {
+  const form = modeState.modeForm;
+  if (form.mode !== "logo") return false;
+  return logoWordmarkTextRisk(form.wordmark).strategy === "copySafeBlankWordmark";
+}
+
+function redactLogoCopySafeWordmarkPrompt(input: {
+  prompt: string;
+  snapshot: WorkspaceSnapshot;
+  modeState: WorkspaceModeState;
+}): string {
+  const form = input.modeState.modeForm;
+  if (form.mode !== "logo") return input.prompt;
+  const policy = logoWordmarkTextRisk(form.wordmark);
+  if (policy.strategy !== "copySafeBlankWordmark") return input.prompt;
+  const terms = [
+    policy.wordmark,
+    input.snapshot.project.name,
+    ...(input.snapshot.brandKit?.fixedBrandTerms || []),
+  ]
+    .map((term) => term.trim())
+    .filter((term, index, all) => term.length >= 3 && all.indexOf(term) === index);
+  const fullyRedacted = terms.reduce((text, term) =>
+    text.replace(new RegExp(escapeRegExp(term), "gi"), "the reserved blank brand wordmark"), input.prompt);
+  const componentRedacted = logoCopySafeComponentTerms(terms).reduce((text, term) => {
+    const replacement = logoCopySafeTokenReplacement(term);
+    const tokenRedacted = text.replace(new RegExp(`\\b${escapeRegExp(term)}\\b`, "gi"), replacement);
+    return (LOGO_COPY_SAFE_TRANSLATED_TOKEN_REPLACEMENTS[term.toLowerCase()] || []).reduce((translatedText, [source, target]) =>
+      translatedText.replace(new RegExp(escapeRegExp(source), "g"), target), tokenRedacted);
+  }, fullyRedacted);
+  const redacted = redactLogoCopySafePhrases(componentRedacted);
+  return [
+    "COPY-SAFE BLANK WORDMARK ENFORCEMENT: the configured brand text and its word fragments are intentionally redacted from this image prompt. Treat redacted project/category wording only as non-text visual motifs. Do not render readable letters, words, uploaded-logo text, project-title fragments, category labels, partial words, pseudo-letters, subtitles, slogans, or decorative fake typography. Produce a polished blank wordmark plate, emblem, badge, or mark system only.",
+    redacted,
+  ].join("\n\n").slice(0, PROVIDER_PROMPT_MAX_CHARS);
+}
+
 function createRequestContext(input: {
   promptPackage: PromptPackage;
   providerId: ProviderId;
@@ -647,7 +739,9 @@ export function mapPromptPackageToBriefRequest(input: {
     gameDescription: modeState.projectBrief.gameDescription || input.snapshot.project.description,
     ...(focusGuidance ? { focusGuidance } : {}),
     creativeDirection: creativeDirectionFromPromptPackage(input.promptPackage),
-    assets: assetsFromPromptPackage(input.promptPackage, input.snapshot),
+    assets: assetsFromPromptPackage(input.promptPackage, input.snapshot, {
+      copySafeLogoText: isLogoCopySafeBlankWordmarkModeState(modeState),
+    }),
     guardrails: modeGuardrails(input.promptPackage.mode),
     languageTargets: languageTargetsFrom(input.promptPackage, modeState),
     schemeCount,
@@ -691,18 +785,25 @@ export function mapPromptPackageToImageRequest(input: {
   const count = input.count ?? modeState.outputSettings.imagesPerScheme;
   const useIdentitySafePlate = shouldUsePosterScenePlateFallback(input.promptPackage);
 
+  const prompt = input.promptPackage.mode === "poster"
+    ? useIdentitySafePlate
+      ? posterIdentitySafePlatePromptFromPromptPackage(input.promptPackage)
+      : posterIntegratedKvPromptFromPromptPackage(input.promptPackage)
+    : redactLogoCopySafeWordmarkPrompt({
+        prompt: input.promptPackage.finalPrompt,
+        snapshot: input.snapshot,
+        modeState,
+      });
   const request = ImageGenerationRequestSchema.parse({
     context: createRequestContext(input),
     schemeId: input.promptPackage.schemeId,
-    prompt: input.promptPackage.mode === "poster"
-      ? useIdentitySafePlate
-        ? posterIdentitySafePlatePromptFromPromptPackage(input.promptPackage)
-        : posterIntegratedKvPromptFromPromptPackage(input.promptPackage)
-      : input.promptPackage.finalPrompt,
+    prompt,
     ...(input.promptPackage.negativePrompt.trim()
       ? { negativePrompt: input.promptPackage.negativePrompt.trim() }
       : {}),
-    assets: assetsFromPromptPackage(input.promptPackage, input.snapshot),
+    assets: assetsFromPromptPackage(input.promptPackage, input.snapshot, {
+      copySafeLogoText: isLogoCopySafeBlankWordmarkModeState(modeState),
+    }),
     platformPreset: input.promptPackage.platform.platformPreset,
     aspectRatio: input.promptPackage.platform.aspectRatio,
     width: input.promptPackage.platform.width || inferredSize.width,

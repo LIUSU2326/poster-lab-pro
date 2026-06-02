@@ -461,10 +461,13 @@ function formatModeForm(modeState: WorkspaceModeState): string {
     const policy = announcementCopySafetyPolicy(form.announcementTitle);
     return `Announcement title: ${form.announcementTitle}. Layout mode: ${form.layoutMode}. Group shot when multi-character: ${form.groupShotWhenMultiCharacter}. Copy safety strategy: ${policy.strategy}.`;
   }
-  if (form.mode === "logo") {
-    const policy = logoWordmarkTextRisk(form.wordmark);
-    return `Wordmark: ${form.wordmark}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}. Logo text strategy: ${policy.strategy}.`;
-  }
+	  if (form.mode === "logo") {
+	    const policy = logoWordmarkTextRisk(form.wordmark);
+	    const wordmarkText = policy.strategy === "exactShortWordmark"
+	      ? form.wordmark
+	      : "redacted for copy-safe blank wordmark plate";
+	    return `Wordmark: ${wordmarkText}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}. Logo text strategy: ${policy.strategy}.`;
+	  }
   if (form.mode === "icon") {
     return `Aspect ratio: ${form.aspectRatio}. No text: ${form.noText}. Full-bleed square: ${form.fullBleedSquare}. Composition reference rotation: ${form.compositionReferenceRotation}.`;
   }
@@ -553,12 +556,13 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
 
   if (modeState.mode === "logo") {
     return [
-      sharedRules,
-      "Logo quality target: readable wordmark/mark system is the primary subject, with clean silhouette, premium material finish, strong brand rhythm, and a pure solid-color background suitable for later compositing.",
-      "Logo asset handling: uploaded logos are brand continuity references for shape, color, letter rhythm, and style. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or blank wordmark treatment without fake replacement text.",
-      "Logo exclusions: do not turn logo mode into a poster scene, character scene, product render, landscape, or sticker collage. Do not invent look-alike words, substitute letters, repeat the uploaded logo as a pasted sticker, or let props/characters dominate the wordmark.",
-    ].join("\n");
-  }
+	      sharedRules,
+	      "Logo quality target: readable wordmark/mark system is the primary subject, with clean silhouette, premium material finish, strong brand rhythm, and a pure solid-color background suitable for later compositing.",
+	      "Logo asset handling: uploaded logos are brand continuity references for shape, color, letter rhythm, and style. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or blank wordmark treatment without fake replacement text.",
+	      "Logo copy-safe blank lock: when Logo Text Strategy is copySafeBlankWordmark, do not render any readable letters, partial project-title words, uploaded-logo text, pseudo-letters, subtitles, slogans, or decorative fake typography.",
+	      "Logo exclusions: do not turn logo mode into a poster scene, character scene, product render, landscape, or sticker collage. Do not invent look-alike words, substitute letters, repeat the uploaded logo as a pasted sticker, or let props/characters dominate the wordmark.",
+	    ].join("\n");
+	  }
 
   if (modeState.mode === "announcement") {
     return [

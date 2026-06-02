@@ -1,5 +1,29 @@
 # TESTING.md
 
+## 2026-06-02 1.1.0-beta.4 Logo Copy-Safe Blank Wordmark Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-beta.4`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Logo provider image requests for `copySafeBlankWordmark` include `COPY-SAFE BLANK WORDMARK ENFORCEMENT`.
+- Verify those provider prompts redact the high-risk project title, wordmark fragments, translated project/category terms, and readable-lettering cues instead of asking the model to render them.
+- Verify Gemini Logo copy-safe mode withholds uploaded Logo inline visual references when the reference itself contains readable lettering.
+- Verify Logo mapped asset descriptions avoid `readable wordmark`, `lettering rhythm`, `letter rhythm`, and `readable brand rhythm`.
+- Completed low-cost Logo real-generation rerun `job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8`: accepted because the result is a blank yellow title plate/emblem with no readable or pseudo-readable letters.
+- Completed low-cost Announcement real-generation rerun `job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf`: accepted because the result is an announcement UI with exact title text, calm editable body panel, supporting character, and `pass` audit.
+- Collab real-generation remains deferred until a real partner/collab character or partner brand asset is available.
+
+Automated checks:
+
+- Run `npm run prompts:check`.
+- Run `npm run provider-requests:check`.
+- Run `npm run google-live-adapter:check`.
+- Run `npm run openai-live-adapter:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1.0-beta.3 Icon Edge Container Detection Release Update
 
 Desktop Test Path checks:

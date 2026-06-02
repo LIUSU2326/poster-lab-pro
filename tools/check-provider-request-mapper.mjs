@@ -82,8 +82,12 @@ for (const token of ["isProviderSafeAssetUrl", "assertPromptPackageReadyForProvi
 for (const token of [
   "assetSemanticRole",
   "assetFusionStrategy",
-  "modeAssetFusionDirective",
-  "shouldUsePosterScenePlateFallback",
+	  "modeAssetFusionDirective",
+	  "redactLogoCopySafeWordmarkPrompt",
+	  "COPY-SAFE BLANK WORDMARK ENFORCEMENT",
+	  "LOGO_COPY_SAFE_VISUAL_TOKEN_REPLACEMENTS",
+	  "word fragments are intentionally redacted",
+	  "shouldUsePosterScenePlateFallback",
   "AI integrated redraw",
   "isExampleAssetUrl",
   "demo placeholder URLs",
@@ -492,15 +496,17 @@ async function runRuntimeCheck() {
         "no poster scene complexity",
         "Default pipeline: AI integrated redraw",
       ],
-      logo: [
-        "Mode Quality Bar",
-        "Logo quality target",
-        "Logo Text Strategy",
-        "copySafeBlankWordmark",
-        "polished blank wordmark plate",
-        "wordmark/mark system is the primary subject",
-        "pure solid-color background",
-        "Uploaded logos are brand references",
+	      logo: [
+	        "Mode Quality Bar",
+	        "Logo quality target",
+	        "Logo Text Strategy",
+	        "copySafeBlankWordmark",
+	        "COPY-SAFE BLANK WORDMARK ENFORCEMENT",
+	        "polished blank wordmark plate",
+	        "do not render readable letters",
+	        "blank wordmark plate/mark system is the primary subject",
+	        "pure solid-color background",
+	        "Uploaded logos are brand references",
         "without fake replacement text",
       ],
       announcement: [
@@ -547,10 +553,23 @@ async function runRuntimeCheck() {
       if (!mappedMode.request.assets.every((asset) => /fusion=/.test(asset.description || ""))) {
         issues.push(`${mode} mapped assets should carry semantic fusion descriptions`);
       }
-      if (mappedMode.request.prompt.includes("Poster Quality Bar") && mode !== "poster") {
-        issues.push(`${mode} prompt should not inherit poster-only quality bar`);
-      }
-    }
+	      if (mappedMode.request.prompt.includes("Poster Quality Bar") && mode !== "poster") {
+	        issues.push(`${mode} prompt should not inherit poster-only quality bar`);
+	      }
+	      if (mode === "logo" && mappedMode.request.prompt.includes(multimodeSnapshot.project.name)) {
+	        issues.push("logo mapped image prompt should redact high-risk project title text in copy-safe blank wordmark mode");
+	      }
+	      if (mode === "logo" && /\b(Pizza|Kitchen|Adventures)\b/i.test(mappedMode.request.prompt)) {
+	        issues.push("logo mapped image prompt should redact high-risk wordmark fragments in copy-safe blank wordmark mode");
+	      }
+	      if (mode === "logo" && /readable wordmark|lettering rhythm|letter rhythm/i.test(mappedMode.request.prompt)) {
+	        issues.push("logo mapped image prompt should avoid readable-lettering cues in copy-safe blank wordmark mode");
+	      }
+	      if (mode === "logo" && mappedMode.request.assets.some((asset) =>
+	        /readable wordmark|lettering rhythm|letter rhythm|readable brand rhythm/i.test(asset.description || ""))) {
+	        issues.push("logo mapped asset descriptions should avoid readable-lettering cues in copy-safe blank wordmark mode");
+	      }
+	    }
   } finally {
     const resolved = path.resolve(outDir);
     if (resolved.startsWith(`${path.resolve(root)}${path.sep}`) && path.basename(resolved).startsWith(".tmp-provider-request-check-")) {
