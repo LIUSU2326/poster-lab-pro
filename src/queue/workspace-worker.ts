@@ -28,6 +28,7 @@ import { isPosterIntegratedReferenceAsset, posterAssetSemanticRole } from "../as
 import {
   applyPosterAssetOverlays,
   prepareImageForTargetSize,
+  repairIconCanvasEdges,
   type ImageOutputProcessing,
   type PosterAssetOverlayInputAsset,
 } from "../results/image-post-processing";
@@ -361,10 +362,10 @@ async function resultFromTaskWithProject(input: {
         slogan: posterSloganForScheme(input.snapshot, input.task.input.schemeId),
       })
     : null;
-  const finalDataUrl = overlayed?.dataUrl || prepared.dataUrl;
-  const qualityAudit = await auditResultQuality({
+  const initialDataUrl = overlayed?.dataUrl || prepared.dataUrl;
+  const initialQualityAudit = await auditResultQuality({
     mode: input.task.mode,
-    dataUrl: finalDataUrl,
+    dataUrl: initialDataUrl,
     width: prepared.width,
     height: prepared.height,
     targetWidth: input.task.input.width || null,
@@ -372,6 +373,27 @@ async function resultFromTaskWithProject(input: {
     assetRoles: projectAssetRoles(input.snapshot, input.projectId),
     overlayApplied: Boolean(overlayed?.processing?.applied.length),
   });
+  const iconRepair = input.task.mode === "icon" && initialQualityAudit.findings.some((finding) =>
+    finding.code === "icon-rounded-mask-risk")
+    ? await repairIconCanvasEdges({
+        dataUrl: initialDataUrl,
+        width: prepared.width,
+        height: prepared.height,
+      })
+    : null;
+  const finalDataUrl = iconRepair?.dataUrl || initialDataUrl;
+  const qualityAudit = iconRepair?.processing
+    ? await auditResultQuality({
+        mode: input.task.mode,
+        dataUrl: finalDataUrl,
+        width: iconRepair.width,
+        height: iconRepair.height,
+        targetWidth: input.task.input.width || null,
+        targetHeight: input.task.input.height || null,
+        assetRoles: projectAssetRoles(input.snapshot, input.projectId),
+        overlayApplied: Boolean(overlayed?.processing?.applied.length),
+      })
+    : initialQualityAudit;
   const resultFile = await storeResultFile({
     ...(input.fileStore ? { fileStore: input.fileStore } : {}),
     workspaceId: input.workspaceId,
@@ -393,6 +415,7 @@ async function resultFromTaskWithProject(input: {
     { width: prepared.width, height: prepared.height },
     {
       ...(overlayed?.processing ? { assetOverlayProcessing: overlayed.processing } : {}),
+      ...(iconRepair?.processing ? { iconPostProcessing: iconRepair.processing } : {}),
       qualityAudit,
     },
   );

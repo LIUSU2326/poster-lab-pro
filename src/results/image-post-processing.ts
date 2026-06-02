@@ -68,6 +68,23 @@ export type PosterAssetOverlayResult = {
   processing: PosterAssetOverlayProcessing | null;
 };
 
+export type IconCanvasEdgeRepairProcessing = {
+  strategy: "iconCanvasEdgeRepair";
+  reason: "roundedMaskRisk";
+  sourceWidth: number;
+  sourceHeight: number;
+  targetWidth: number;
+  targetHeight: number;
+  tokenCost: 0;
+};
+
+export type IconCanvasEdgeRepairResult = {
+  dataUrl: string | null;
+  width: number;
+  height: number;
+  processing: IconCanvasEdgeRepairProcessing | null;
+};
+
 function decodeDataUrl(dataUrl: string): { mimeType: string; bytes: Buffer } | null {
   const match = /^data:([^;,]+);base64,(.*)$/s.exec(dataUrl);
   if (!match?.[1] || typeof match[2] !== "string") return null;
@@ -233,6 +250,116 @@ export async function prepareImageForTargetSize(input: {
         tokenCost: 0,
       },
     };
+  }
+}
+
+function smoothStep(value: number): number {
+  const clamped = Math.max(0, Math.min(1, value));
+  return clamped * clamped * (3 - 2 * clamped);
+}
+
+function softRoundedCenterMask(width: number, height: number): Buffer {
+  const mask = Buffer.alloc(width * height);
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const keepX = width * 0.2;
+  const keepY = height * 0.2;
+  const fadeX = Math.max(1, width * 0.24);
+  const fadeY = Math.max(1, height * 0.24);
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const cornerX = Math.max(0, (Math.abs(x + 0.5 - centerX) - keepX) / fadeX);
+      const cornerY = Math.max(0, (Math.abs(y + 0.5 - centerY) - keepY) / fadeY);
+      const cornerPressure = Math.min(1, Math.sqrt(cornerX * cornerY));
+      const alpha = 1 - smoothStep(cornerPressure);
+      mask[y * width + x] = clampInteger(alpha * 255, 0, 255);
+    }
+  }
+
+  return mask;
+}
+
+export async function repairIconCanvasEdges(input: {
+  dataUrl: string | null;
+  width: number;
+  height: number;
+}): Promise<IconCanvasEdgeRepairResult> {
+  if (!input.dataUrl) {
+    return { dataUrl: null, width: input.width, height: input.height, processing: null };
+  }
+  const decoded = decodeDataUrl(input.dataUrl);
+  if (!decoded) {
+    return { dataUrl: input.dataUrl, width: input.width, height: input.height, processing: null };
+  }
+
+  const targetWidth = input.width || 1024;
+  const targetHeight = input.height || 1024;
+  const cropSize = Math.max(1, Math.floor(Math.min(targetWidth, targetHeight) * 0.62));
+  const left = Math.max(0, Math.floor((targetWidth - cropSize) / 2));
+  const top = Math.max(0, Math.floor((targetHeight - cropSize) / 2));
+
+  try {
+    const normalizedBytes = await sharp(decoded.bytes, { failOn: "none" })
+      .resize({ width: targetWidth, height: targetHeight, fit: "fill", kernel: "lanczos3" })
+      .ensureAlpha()
+      .png()
+      .toBuffer();
+    const background = await sharp(normalizedBytes, { failOn: "none" })
+      .extract({ left, top, width: cropSize, height: cropSize })
+      .resize({ width: targetWidth, height: targetHeight, fit: "cover", kernel: "lanczos3" })
+      .blur(Math.max(6, Math.min(targetWidth, targetHeight) * 0.045))
+      .modulate({ brightness: 0.98, saturation: 1.08 })
+      .png()
+      .toBuffer();
+    const foregroundMask = softRoundedCenterMask(targetWidth, targetHeight);
+    const { data: foregroundSource, info: foregroundInfo } = await sharp(normalizedBytes, { failOn: "none" })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const foregroundRgba = Buffer.alloc(targetWidth * targetHeight * 4);
+    for (let y = 0; y < targetHeight; y += 1) {
+      for (let x = 0; x < targetWidth; x += 1) {
+        const sourceOffset = (y * foregroundInfo.width + x) * foregroundInfo.channels;
+        const targetOffset = (y * targetWidth + x) * 4;
+        const maskAlpha = foregroundMask[y * targetWidth + x] ?? 255;
+        const sourceAlpha = foregroundSource[sourceOffset + 3] ?? 255;
+        foregroundRgba[targetOffset] = foregroundSource[sourceOffset] ?? 0;
+        foregroundRgba[targetOffset + 1] = foregroundSource[sourceOffset + 1] ?? 0;
+        foregroundRgba[targetOffset + 2] = foregroundSource[sourceOffset + 2] ?? 0;
+        foregroundRgba[targetOffset + 3] = Math.round((sourceAlpha * maskAlpha) / 255);
+      }
+    }
+    const foreground = await sharp(foregroundRgba, {
+      raw: {
+        width: targetWidth,
+        height: targetHeight,
+        channels: 4,
+      },
+    })
+      .png()
+      .toBuffer();
+    const repaired = await sharp(background, { failOn: "none" })
+      .composite([{ input: foreground, blend: "over" }])
+      .png()
+      .toBuffer();
+
+    return {
+      dataUrl: `data:image/png;base64,${repaired.toString("base64")}`,
+      width: targetWidth,
+      height: targetHeight,
+      processing: {
+        strategy: "iconCanvasEdgeRepair",
+        reason: "roundedMaskRisk",
+        sourceWidth: targetWidth,
+        sourceHeight: targetHeight,
+        targetWidth,
+        targetHeight,
+        tokenCost: 0,
+      },
+    };
+  } catch {
+    return { dataUrl: input.dataUrl, width: targetWidth, height: targetHeight, processing: null };
   }
 }
 

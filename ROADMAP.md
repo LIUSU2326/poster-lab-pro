@@ -1,5 +1,21 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-alpha.2 Icon Quality Release Update
+
+### Completed In This Pass
+
+- Promoted the Icon quality pass to `1.1.0-alpha.2`.
+- Added local zero-cost Icon canvas edge repair when Result Quality Audit detects rounded app-icon mask or dark-corner container risk.
+- Wired the repair into the workspace queue worker before final result storage.
+- Re-ran Result Quality Audit after repair so the stored result metadata reflects the final image.
+- Added regression coverage that creates a risky rounded-mask icon fixture, repairs it, and verifies the audit risk is reduced.
+
+### Release Intent
+
+- This alpha reduces one common Icon failure without spending extra provider credits or changing the default AI integrated redraw path.
+- It is a targeted repair for generated icon canvases, not a generic local overlay path.
+- 64px readability and subject identity still need visual review during real-generation acceptance.
+
 ## 2026-06-02 1.1.0-alpha.1 Result Quality Audit Release Update
 
 ### Completed In This Pass

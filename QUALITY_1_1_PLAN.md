@@ -18,19 +18,22 @@ Status: done.
 
 ## 1.1.0-alpha.2 Icon Quality Pass
 
-Target:
+Status: done.
+
+Implemented:
 
 - Reduce dark rounded app-icon masks.
 - Keep full-canvas square artwork.
 - Preserve one strong subject silhouette.
 - Keep 64px readability.
-
-Likely work:
-
 - Add icon-specific post-processing only when audit flags mask risk.
-- Add optional background expansion/corner repair using local image processing when safe.
+- Add background expansion/corner repair using local image processing.
+- Re-run the result audit after repair so stored metadata matches the final image.
 - Keep no-text and no-sticker prompt checks.
-- Add an icon thumbnail readability check.
+
+Still manual:
+
+- Review 64px readability during the next real-generation pass.
 
 ## 1.1.0-alpha.3 Logo And Text Refinement
 

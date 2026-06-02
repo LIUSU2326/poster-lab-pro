@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D094: Icon Rounded-Mask Repair Is Audit-Triggered And Local
+
+Status: accepted
+
+Context: The `1.0.0-beta.3` real generation pass showed that Icon mode can follow an app-icon prior: a subject appears inside a rounded dark container instead of filling the square canvas naturally. Prompt constraints reduce this, but models can still return attractive-looking masked icons that fail platform-readiness expectations.
+
+Decision: Apply local `iconCanvasEdgeRepair` only when Result Quality Audit flags `icon-rounded-mask-risk` on an Icon result. The repair builds a blurred center-derived full-canvas underlay, soft-masks the risky corner container area, composites locally, and re-runs the audit before storing result metadata.
+
+Impact:
+
+- The default chain remains AI integrated redraw; this is not a local uploaded-asset overlay.
+- The repair is zero-cost and does not call image providers.
+- Non-Icon modes are untouched.
+- 64px readability and identity fidelity still require visual review in the next real-generation pass.
+
 ## D093: Result Quality Audit Stores Non-AI Review Metadata
 
 Status: accepted

@@ -23,7 +23,7 @@ const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 
-const currentVersion = "1.1.0-alpha.1";
+const currentVersion = "1.1.0-alpha.2";
 
 for (const token of [
   `"version": "${currentVersion}"`,
@@ -82,8 +82,8 @@ if (!decisions.includes("D092")) {
   issues.push("DECISIONS.md: missing D092 real generation QA decision");
 }
 
-if (!testing.includes("1.1.0-alpha.1 Result Quality Audit Release Update")) {
-  issues.push("TESTING.md: missing 1.1.0-alpha.1 result quality audit release section");
+if (!testing.includes("1.1.0-alpha.2 Icon Quality Release Update")) {
+  issues.push("TESTING.md: missing 1.1.0-alpha.2 icon quality release section");
 }
 
 if (issues.length > 0) {

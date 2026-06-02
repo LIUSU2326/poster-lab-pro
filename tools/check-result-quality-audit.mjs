@@ -16,6 +16,7 @@ function read(filePath) {
 }
 
 const audit = read("src/results/quality-audit.ts");
+const imagePostProcessing = read("src/results/image-post-processing.ts");
 const resultsIndex = read("src/results/index.ts");
 const worker = read("src/queue/workspace-worker.ts");
 const centerBoard = read("src/render/center-board.js");
@@ -38,11 +39,15 @@ for (const token of [
   if (!audit.includes(token)) issues.push(`quality-audit.ts: missing ${token}`);
 }
 
+for (const token of ["repairIconCanvasEdges", "iconCanvasEdgeRepair", "IconCanvasEdgeRepairProcessing"]) {
+  if (!imagePostProcessing.includes(token)) issues.push(`image-post-processing.ts: missing ${token}`);
+}
+
 if (!resultsIndex.includes("quality-audit")) {
   issues.push("src/results/index.ts: missing quality-audit export");
 }
 
-for (const token of ["auditResultQuality", "qualityAudit", "projectAssetRoles"]) {
+for (const token of ["auditResultQuality", "qualityAudit", "projectAssetRoles", "repairIconCanvasEdges", "iconPostProcessing"]) {
   if (!worker.includes(token)) issues.push(`workspace-worker.ts: missing quality audit worker token ${token}`);
 }
 
@@ -165,6 +170,26 @@ async function runRuntimeCheck() {
     });
     if (!iconAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
       issues.push("icon quality audit should flag transparent/dark rounded mask risk");
+    }
+    const repairedIcon = await results.repairIconCanvasEdges({
+      dataUrl: `data:image/png;base64,${iconBytes.toString("base64")}`,
+      width: 64,
+      height: 64,
+    });
+    if (repairedIcon.processing?.strategy !== "iconCanvasEdgeRepair") {
+      issues.push("icon edge repair should record iconCanvasEdgeRepair processing");
+    }
+    const repairedAudit = await results.auditResultQuality({
+      mode: "icon",
+      dataUrl: repairedIcon.dataUrl,
+      width: repairedIcon.width,
+      height: repairedIcon.height,
+      targetWidth: 64,
+      targetHeight: 64,
+      assetRoles: ["subjectReference"],
+    });
+    if (repairedAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
+      issues.push("icon edge repair should reduce rounded mask audit risk");
     }
 
     const logoAudit = await results.auditResultQuality({
