@@ -72,15 +72,17 @@ Deferred:
 
 ## 1.1.0-alpha.5 Poster KV Failure Detection
 
-Target:
+Status: done.
+
+Implemented:
 
 - Detect the most common failed KV outputs before the user has to explain them.
-
-Likely work:
-
-- Audit for local overlay fallback, repeated uploaded assets, missing copy area, missing logo-safe treatment, and aspect-ratio/crop risk.
+- Audit for local overlay fallback, target aspect-ratio/crop risk, low thumbnail contrast, letterbox/frame-like edges, uploaded reference integration review, missing/unsafe logo treatment review, and slogan/copy area review.
 - Add result-level rerun suggestions tied to specific findings.
-- Expand KV architecture library only after audit data confirms repeated composition failure patterns.
+
+Deferred:
+
+- Expand KV architecture library only after real-generation audit data confirms repeated composition failure patterns.
 
 ## Non-Goals
 

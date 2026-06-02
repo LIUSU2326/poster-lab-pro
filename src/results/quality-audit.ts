@@ -104,6 +104,53 @@ async function iconCanvasMetrics(dataUrl: string | null | undefined): Promise<Re
   }
 }
 
+async function posterCanvasMetrics(dataUrl: string | null | undefined): Promise<Record<string, number | string | boolean>> {
+  const decoded = decodeDataUrl(dataUrl);
+  if (!decoded) return { posterCanvasAudit: "missing-data-url" };
+
+  try {
+    const { data, info } = await sharp(decoded.bytes, { failOn: "none" })
+      .resize({ width: 48, height: 48, fit: "fill" })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const luminanceAt = (x: number, y: number) => {
+      const offset = (y * info.width + x) * info.channels;
+      const r = data[offset] ?? 0;
+      const g = data[offset + 1] ?? 0;
+      const b = data[offset + 2] ?? 0;
+      return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    };
+    const values: number[] = [];
+    const borderValues: number[] = [];
+    const centerValues: number[] = [];
+    for (let y = 0; y < info.height; y += 1) {
+      for (let x = 0; x < info.width; x += 1) {
+        const value = luminanceAt(x, y);
+        values.push(value);
+        if (x < 3 || y < 3 || x >= info.width - 3 || y >= info.height - 3) borderValues.push(value);
+        if (x >= 16 && x < 32 && y >= 16 && y < 32) centerValues.push(value);
+      }
+    }
+    const average = (items: number[]) => items.reduce((sum, value) => sum + value, 0) / Math.max(1, items.length);
+    const mean = average(values);
+    const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(1, values.length);
+    const stdDev = Math.sqrt(variance);
+    const borderMean = average(borderValues);
+    const centerMean = average(centerValues);
+    return {
+      posterLuminanceMean: Number(mean.toFixed(4)),
+      posterLuminanceStdDev: Number(stdDev.toFixed(4)),
+      posterBorderLuminance: Number(borderMean.toFixed(4)),
+      posterCenterLuminance: Number(centerMean.toFixed(4)),
+      posterLowThumbnailContrastRisk: stdDev < 0.055,
+      posterLetterboxFrameRisk: borderMean < 0.08 && centerMean - borderMean > 0.18,
+    };
+  } catch {
+    return { posterCanvasAudit: "failed" };
+  }
+}
+
 export async function auditResultQuality(input: {
   mode: ProductionMode;
   dataUrl?: string | null;
@@ -153,6 +200,59 @@ export async function auditResultQuality(input: {
         severity: "review",
         message: "Icon corners look like a rounded app-icon mask or dark container.",
         recommendation: "Prefer full-canvas square artwork with subject/background extending naturally to all four corners.",
+      }));
+    }
+  }
+
+  if (input.mode === "poster") {
+    const assetRoles = input.assetRoles || [];
+    const hasLogoReference = assetRoles.some((role) => role === "gameLogo" || role === "brandLogo");
+    const hasIntegratedReference = assetRoles.some((role) =>
+      ["gameCharacter", "collabCharacter", "prop", "subjectReference", "gameLogo", "brandLogo"].includes(role),
+    );
+    const hasCopyTarget = (input.textTargets || []).some((target) => target.trim().length > 0);
+    Object.assign(metrics, await posterCanvasMetrics(input.dataUrl));
+    metrics.posterHasLogoReference = hasLogoReference;
+    metrics.posterHasCopyTarget = hasCopyTarget;
+    metrics.posterHasIntegratedReference = hasIntegratedReference;
+    if (metrics.posterLowThumbnailContrastRisk) {
+      findings.push(finding({
+        code: "poster-low-thumbnail-contrast-risk",
+        severity: "review",
+        message: "Poster thumbnail contrast looks low.",
+        recommendation: "Review one-second readability; rerun with stronger focal contrast, rim light, foreground/midground separation, and clearer value grouping.",
+      }));
+    }
+    if (metrics.posterLetterboxFrameRisk) {
+      findings.push(finding({
+        code: "poster-letterbox-frame-risk",
+        severity: "review",
+        message: "Poster may contain dark border, letterbox, or frame-like edges.",
+        recommendation: "Rerun with full-bleed artwork and no black bars, borders, frames, or presentation margins.",
+      }));
+    }
+    if (hasIntegratedReference) {
+      findings.push(finding({
+        code: "poster-reference-integration-review",
+        severity: "info",
+        message: "Poster uses uploaded visual references and should be reviewed for natural integrated redraw.",
+        recommendation: "Check identity, action pose, contact shadows, occlusion, rim light, environmental color, and VFX overlap; rerun if any uploaded asset looks like a sticker.",
+      }));
+    }
+    if (hasLogoReference) {
+      findings.push(finding({
+        code: "poster-logo-safe-treatment-review",
+        severity: "info",
+        message: "Poster includes a logo/brand reference and needs one safe logo treatment.",
+        recommendation: "Verify there is exactly one readable logo treatment or a polished blank logo-safe plate, with no duplicate/fake logo text.",
+      }));
+    }
+    if (hasCopyTarget) {
+      findings.push(finding({
+        code: "poster-slogan-copy-area-review",
+        severity: "info",
+        message: "Poster has a campaign copy target and needs visible integrated copy treatment or a blank copy-safe plate.",
+        recommendation: "Review that slogan placement is large enough, scene-related, and not PPT-like; rerun if copy is omitted, garbled, or floating as flat overlay text.",
       }));
     }
   }

@@ -42,6 +42,11 @@ for (const token of [
   "collabBrandSafetyPolicy",
   "local-overlay-fallback-applied",
   "tokenCost: 0",
+  "poster-low-thumbnail-contrast-risk",
+  "poster-logo-safe-treatment-review",
+  "poster-slogan-copy-area-review",
+  "poster-reference-integration-review",
+  "posterCanvasMetrics",
 ]) {
   if (!audit.includes(token)) issues.push(`quality-audit.ts: missing ${token}`);
 }
@@ -197,6 +202,37 @@ async function runRuntimeCheck() {
     });
     if (repairedAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
       issues.push("icon edge repair should reduce rounded mask audit risk");
+    }
+
+    const flatPosterSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
+        <rect width="1920" height="1080" fill="#888888"/>
+        <rect x="780" y="420" width="360" height="240" fill="#8a8a8a"/>
+      </svg>
+    `);
+    const posterBytes = await sharp(flatPosterSvg).png().toBuffer();
+    const posterAudit = await results.auditResultQuality({
+      mode: "poster",
+      dataUrl: `data:image/png;base64,${posterBytes.toString("base64")}`,
+      width: 1920,
+      height: 1080,
+      targetWidth: 1920,
+      targetHeight: 1080,
+      assetRoles: ["gameCharacter", "prop", "gameLogo"],
+      textTargets: ["Serve Up Victory"],
+    });
+    for (const code of [
+      "poster-low-thumbnail-contrast-risk",
+      "poster-reference-integration-review",
+      "poster-logo-safe-treatment-review",
+      "poster-slogan-copy-area-review",
+    ]) {
+      if (!posterAudit.findings.some((item) => item.code === code)) {
+        issues.push(`poster quality audit should flag ${code}`);
+      }
+    }
+    if (posterAudit.metrics.posterHasLogoReference !== true || posterAudit.metrics.posterHasCopyTarget !== true) {
+      issues.push("poster quality audit should store logo/copy target metrics");
     }
 
     const logoAudit = await results.auditResultQuality({

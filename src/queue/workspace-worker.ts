@@ -210,6 +210,10 @@ function projectAssetRoles(snapshot: WorkspaceSnapshot | undefined, projectId: s
 function resultQualityTextTargets(snapshot: WorkspaceSnapshot | undefined, task: QueueTask): string[] {
   if (!snapshot) return [];
   const modeState = snapshot.modeStates.find((item) => item.mode === task.mode);
+  if (task.mode === "poster") {
+    const slogan = posterSloganForScheme(snapshot, task.input.schemeId);
+    return slogan ? [slogan] : [];
+  }
   if (task.mode === "logo" && modeState?.modeForm.mode === "logo") {
     return [modeState.modeForm.wordmark].filter((item) => item.trim().length > 0);
   }

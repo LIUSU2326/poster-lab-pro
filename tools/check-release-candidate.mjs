@@ -23,7 +23,7 @@ const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 
-const currentVersion = "1.1.0-alpha.4";
+const currentVersion = "1.1.0-alpha.5";
 
 for (const token of [
   `"version": "${currentVersion}"`,
@@ -82,8 +82,8 @@ if (!decisions.includes("D092")) {
   issues.push("DECISIONS.md: missing D092 real generation QA decision");
 }
 
-if (!testing.includes("1.1.0-alpha.4 Announcement Collab Safety Release Update")) {
-  issues.push("TESTING.md: missing 1.1.0-alpha.4 announcement collab safety release section");
+if (!testing.includes("1.1.0-alpha.5 Poster KV Failure Detection Release Update")) {
+  issues.push("TESTING.md: missing 1.1.0-alpha.5 poster KV failure detection release section");
 }
 
 if (issues.length > 0) {

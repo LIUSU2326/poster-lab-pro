@@ -1,5 +1,21 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-alpha.5 Poster KV Failure Detection Release Update
+
+### Completed In This Pass
+
+- Promoted Poster KV failure detection to `1.1.0-alpha.5`.
+- Added local poster canvas metrics for thumbnail contrast and letterbox/frame-like edge risk.
+- Added Poster result findings for reference integration review, logo-safe treatment review, and slogan/copy-area review.
+- Passed Poster slogan targets from scheme slogans into Result Quality Audit.
+- Added regression coverage for low-contrast Poster fixture plus logo/copy/reference review findings.
+
+### Release Intent
+
+- This alpha gives Poster results actionable review and rerun guidance without calling a model.
+- It does not replace human visual judgment or real-generation acceptance.
+- It prepares the next 1.1 Beta pass where Poster/Icon/Logo/Announcement/Collab are checked against real generated images.
+
 ## 2026-06-02 1.1.0-alpha.4 Announcement Collab Safety Release Update
 
 ### Completed In This Pass

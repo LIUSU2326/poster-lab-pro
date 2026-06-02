@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D097: Poster KV Failure Detection Is Local Review Guidance
+
+Status: accepted
+
+Context: Poster mode quality failures are often visible before a user can articulate them: low thumbnail contrast, letterbox/frame edges, sticker-like reference integration, missing logo treatment, or slogan/copy that is omitted, garbled, too small, or flat like PPT text. Fully judging cinematic quality still requires real image review, but basic failure signals can be captured locally.
+
+Decision: Extend Result Quality Audit for Poster mode with local canvas metrics and review findings. The audit flags low thumbnail contrast, letterbox/frame-like edge risk, reference integration review, logo-safe treatment review, and slogan/copy-area review. Findings provide rerun guidance but do not call providers or mutate the image.
+
+Impact:
+
+- Poster results carry clearer review criteria immediately after generation.
+- The audit remains token-free and deterministic.
+- Human visual review still decides whether the KV is actually good enough.
+- Future real-generation passes can use these finding codes to drive one-click rerun presets and KV architecture expansion.
+
 ## D096: Announcement And Collab Prefer Safety Plates Over Garbled Or Fake Text
 
 Status: accepted

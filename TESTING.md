@@ -1,5 +1,25 @@
 # TESTING.md
 
+## 2026-06-02 1.1.0-alpha.5 Poster KV Failure Detection Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-alpha.5`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Poster Result Quality Audit can flag low thumbnail contrast.
+- Verify Poster Result Quality Audit can flag letterbox/frame-like edge risk.
+- Verify Poster results with uploaded visual references include `poster-reference-integration-review`.
+- Verify Poster results with logo references include `poster-logo-safe-treatment-review`.
+- Verify Poster results with slogan/copy targets include `poster-slogan-copy-area-review`.
+- Verify these findings remain local-only, token-free, and review/rerun guidance rather than provider calls.
+
+Automated checks:
+
+- Run `npm run result-quality-audit:check`.
+- Run `npm run queue-worker:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1.0-alpha.4 Announcement Collab Safety Release Update
 
 Desktop Test Path checks:

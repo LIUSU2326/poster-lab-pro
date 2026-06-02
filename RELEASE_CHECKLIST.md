@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-alpha.4`
+- Version: `1.1.0-alpha.5`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
