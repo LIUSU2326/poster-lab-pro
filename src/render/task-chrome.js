@@ -34,7 +34,7 @@ export function renderTaskChrome(activeMode) {
       </button>
       <div class="live-gate-context ${liveGate.tone}">
         <span>${escapeHtml(liveGate.providerName)}</span>
-        <strong>${escapeHtml(liveGate.blockerCount ? `${liveGate.blockerCount} 项受阻` : liveGate.stateLabel)}</strong>
+        <strong>${escapeHtml(liveGate.blockerCount ? `待完成 ${liveGate.blockerCount} 项安全检查` : liveGate.stateLabel)}</strong>
       </div>
       <div class="manual-live-context ${manual.tone}">
         <span>RESULT FILES</span>

@@ -47,7 +47,7 @@ export function renderTopbar(activeMode) {
         <button
           class="live-gate-chip ${liveGate.tone}"
           type="button"
-          data-action="toggle-task"
+          data-action="open-settings"
           aria-label="打开实机安全闸"
           title="打开模型与 API Key，配置实机安全闸"
         >

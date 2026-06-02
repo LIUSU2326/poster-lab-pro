@@ -279,6 +279,44 @@ function renderProviderStatus(provider, credential) {
   return `<span class="provider-status ${escapeHtml(status)}">${escapeHtml(label)}</span>`;
 }
 
+function renderProviderSetupSteps({ configured, connection, gate }) {
+  const connectionReady = Boolean(connection?.ok || connection?.status === "ready");
+  const steps = [
+    {
+      label: "保存 Key",
+      detail: configured ? "已保存" : "待保存",
+      done: configured,
+    },
+    {
+      label: "测试连接",
+      detail: connectionReady ? "可用" : "待测试",
+      done: connectionReady,
+    },
+    {
+      label: "实机安全闸",
+      detail: gate.allowed ? "已通过" : `${gate.blockerCount || 0} 项待完成`,
+      done: gate.allowed,
+    },
+    {
+      label: "生成入口",
+      detail: gate.allowed ? "可运行" : "仍会禁用",
+      done: gate.allowed,
+    },
+  ];
+
+  return `
+    <section class="provider-setup-steps" aria-label="实机生成准备步骤">
+      ${steps.map((step, index) => `
+        <div class="${step.done ? "done" : "pending"}">
+          <span>${escapeHtml(index + 1)}</span>
+          <strong>${escapeHtml(step.label)}</strong>
+          <small>${escapeHtml(step.detail)}</small>
+        </div>
+      `).join("")}
+    </section>
+  `;
+}
+
 function renderLiveGatePanel() {
   const gate = getLiveGateViewModel({ id: state.activeMode });
   const blockers = gate.blockers.length > 0
@@ -368,6 +406,7 @@ export function renderSettingsSheet() {
   const providerEndpoint = providerEndpointKind(selectedProvider);
   const providerBaseUrl = selectedProvider.url || "Base URL 未设置";
   const connectionModelsCopy = modelAvailability(connection, selectedProvider);
+  const gate = getLiveGateViewModel({ id: state.activeMode });
 
   return `
     <div class="settings-layer" role="dialog" aria-modal="true" aria-label="模型与 API Key">
@@ -395,6 +434,7 @@ export function renderSettingsSheet() {
           </aside>
 
           <section class="provider-detail provider-config-detail">
+            ${renderProviderSetupSteps({ configured, connection, gate })}
             <div class="provider-config-head">
               <div>
                 <span>当前供应商</span>

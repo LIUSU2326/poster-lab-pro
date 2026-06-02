@@ -1,5 +1,23 @@
 # TESTING.md
 
+## 2026-06-02 1.0.0-beta.2 UX Regression Update
+
+UX regression checks:
+
+- Verify the top `实机安全` chip opens settings and exposes the live gate panel path.
+- Verify settings shows the setup order: save API Key, test connection, pass live gate, then generate.
+- Verify blocked scheme/result empty states include an enabled `打开实机安全闸` action next to disabled generation buttons.
+- Verify Icon and Logo modes do not expose editable slogan controls.
+- Verify Poster, Announcement, and Collab modes keep the slogan controls available.
+- Verify queue and safety status copy reads like pending setup, not like a failed generation.
+
+Automated checks:
+
+- Run `npm run workbench-live-gate-ui:check`.
+- Run `npm run provider-credential-ui:check`.
+- Run `npm run frontend-binding:check`.
+- Run `npm run check` before packaging.
+
 ## 2026-06-02 1.0 Beta Multi-Mode Validation Update
 
 Desktop Test Path checks:
@@ -7,7 +25,7 @@ Desktop Test Path checks:
 - Verify `npm run check` passes after prompt, provider, storage, and UX changes.
 - Verify `npm run prompts:check`, `npm run provider-requests:check`, `npm run google-live-adapter:check`, and `npm run openai-live-adapter:check` preserve shared asset fusion rules.
 - Verify `npm run storage:check`, `npm run workspace-data:check`, and `npm run workspace-state:check` preserve workspace summary freshness after assets, queue jobs, results, and archive rows change.
-- Verify the visible app version is `1.0.0-beta.1`.
+- Verify the visible app version is `1.0.0-beta.2`.
 
 Manual multi-mode live checks:
 

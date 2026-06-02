@@ -12962,6 +12962,75 @@ select:focus-visible,
   transform: none !important;
 }
 
+/* 1.0.0-beta.2 UX pass: make live setup state scannable. */
+.provider-setup-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.provider-setup-steps > div {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.provider-setup-steps > div span {
+  grid-row: span 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.provider-setup-steps > div strong,
+.provider-setup-steps > div small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-setup-steps > div strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.provider-setup-steps > div small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.provider-setup-steps > div.done {
+  border-color: color-mix(in srgb, var(--success) 36%, var(--border));
+}
+
+.provider-setup-steps > div.done span {
+  background: color-mix(in srgb, var(--success) 16%, var(--surface));
+  color: var(--success);
+}
+
+.locked-text-strategy .slogan-settings-head > span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 @media (max-width: 860px) {
   .result-viewer {
     padding: 56px 14px 18px !important;
@@ -12978,5 +13047,9 @@ select:focus-visible,
 
   .result-viewer-dock {
     max-width: 100% !important;
+  }
+
+  .provider-setup-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

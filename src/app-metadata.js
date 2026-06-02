@@ -1,3 +1,3 @@
-export const APP_VERSION = "1.0.0-beta.1";
+export const APP_VERSION = "1.0.0-beta.2";
 export const APP_BUNDLE_HINT = "release/mac/Poster Lab Pro.app";
 export const APP_MAIN_BRANCH = "main";

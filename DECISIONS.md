@@ -1,5 +1,19 @@
 # DECISIONS.md
 
+## D091: Beta UX Gives Blocked Generation A Direct Setup Path
+
+Status: accepted
+
+Context: Several generation controls correctly disabled when live execution was not safe, but some empty states only showed a disabled button and explanatory text. Users could understand that something was blocked without having an obvious next click.
+
+Decision: Top-level live safety status opens the settings sheet directly. Blocked empty states now show an active `打开实机安全闸` action. Settings includes a four-step readiness strip that makes the required order visible before generation.
+
+Impact:
+
+- Disabled generation controls are paired with an enabled setup action.
+- Icon and Logo modes avoid misleading slogan controls because their text strategy is fixed by mode.
+- Queue safety copy describes pending checks instead of sounding like a failed generation.
+
 ## D090: 1.0 Beta Shares Asset Fusion Across Production Modes
 
 Status: accepted

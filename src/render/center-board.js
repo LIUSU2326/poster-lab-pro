@@ -83,7 +83,11 @@ function renderSchemeBoardEmpty(activeMode) {
           title="${escapeAttribute(liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "")}"
           ${liveBlocked ? "disabled" : ""}
         >生成方案批次</button>
-        ${modelReady ? "" : `<button type="button" data-action="open-settings">检查模型与 Key</button>`}
+        ${liveBlocked
+          ? `<button type="button" data-action="open-settings">打开实机安全闸</button>`
+          : modelReady
+            ? ""
+            : `<button type="button" data-action="open-settings">检查模型与 Key</button>`}
       </div>
     </div>
   `;
@@ -282,6 +286,7 @@ function renderResultEmpty(activeMode) {
           title="${escapeAttribute(liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "")}"
           ${liveBlocked ? "disabled" : ""}
         >生成${escapeHtml(modeLabel)}</button>
+        ${liveBlocked ? `<button type="button" data-action="open-settings">打开实机安全闸</button>` : ""}
         <button type="button" data-view="schemes">${hasSchemes ? "查看已有方案" : "回到方案"}</button>
       </div>
     </div>

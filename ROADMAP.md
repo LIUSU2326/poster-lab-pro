@@ -1,5 +1,21 @@
 # ROADMAP.md
 
+## 2026-06-02 1.0.0-beta.2 UX Regression Update
+
+### Completed In This Pass
+
+- Made the top `实机安全` chip open the Model/API Key settings sheet directly.
+- Added a four-step setup strip inside settings: save Key, test connection, pass live gate, then generate.
+- Added active `打开实机安全闸` buttons to blocked empty states so users are not left with only disabled generation buttons.
+- Hid editable slogan controls in Icon and Logo modes; Icon now shows a locked no-text strategy, and Logo now points users to the wordmark/Logo reference path.
+- Reduced bottom safety status wording from failure-like `受阻` copy to clearer pending safety-check copy.
+
+### Remaining UX Watch Items
+
+- The settings sheet still combines provider credentials, route plans, and live gate controls in one place.
+- Result history and rerun flows are usable but still need a more guided product experience before RC.
+- Manual live test controls are clearer, but the long-term UI should replace English operational labels with a Chinese-first beta test surface.
+
 ## 2026-06-02 1.0 Beta Readiness Update
 
 ### Completed In This Pass
@@ -10,7 +26,7 @@
 - Fixed the result viewer layout so action controls no longer cover the generated image.
 - Improved the live safety chip wording so users can discover provider/API Key and live-gate settings more directly.
 - Made workspace summaries use the latest meaningful timestamp from metadata, provider configs, mode states, assets, queue events, results, and archive rows.
-- Bumped the visible beta version to `1.0.0-beta.1`.
+- Bumped the visible beta version to `1.0.0-beta.1`; this has since advanced to `1.0.0-beta.2`.
 
 ### Remaining Beta Risks
 
@@ -22,7 +38,7 @@
 
 ### Next Step
 
-- Package the macOS desktop app, run the beta smoke path, and push the `1.0.0-beta.1` code to `main` after checks pass.
+- Package the macOS desktop app, run the beta smoke path, and push the current beta code to `main` after checks pass.
 
 ## 2026-05-28 MVP Flow Correction
 

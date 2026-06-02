@@ -117,8 +117,9 @@ export function renderConfigPanel(activeMode) {
           return `<button class="${mode.id === activeMode.id ? "active" : ""}" type="button" data-mode="${mode.id}" role="tab" aria-selected="${mode.id === activeMode.id}">${itemCopy.label}</button>`;
         }).join("")}
       </div>
-      <button class="manual-live-test" type="button" data-action="run-manual-live-test">
-        <span>MANUAL LIVE TEST</span>
+      <button class="manual-live-test" type="button" data-action="run-manual-live-test" title="MANUAL LIVE TEST">
+        <span>实机测试</span>
+        <small>MANUAL LIVE TEST</small>
       </button>
 
       <div class="config-scroll">
@@ -141,7 +142,7 @@ export function renderConfigPanel(activeMode) {
             <textarea aria-label="项目描述" data-form-field="projectBrief.gameDescription">${escapeHtml(briefDescription)}</textarea>
             ${renderModeBrief(activeMode, form)}
           </div>
-          ${renderSloganSettings(form)}
+          ${renderSloganSettings(form, activeMode.id)}
         </section>
 
         <section class="config-section">
@@ -472,11 +473,27 @@ function renderModeBrief(activeMode, form) {
   `;
 }
 
-function renderSloganSettings(form) {
+function renderSloganSettings(form, modeId) {
   const settings = form.sloganSettings || {};
   const mode = settings.mode || "auto";
   const globalSlogan = settings.globalSlogan || "";
   const languages = Array.isArray(settings.languages) && settings.languages.length > 0 ? settings.languages : ["en-US"];
+  if (modeId === "icon") {
+    return renderLockedTextStrategy({
+      title: "文字策略",
+      label: "图标模式",
+      detail: "图标模式固定无文字。上传的角色、道具或 LOGO 只作为视觉身份参考，不会把宣传词写入图标。",
+      chips: ["无宣传词", "无字标", "64px 可读"],
+    });
+  }
+  if (modeId === "logo") {
+    return renderLockedTextStrategy({
+      title: "文字策略",
+      label: "标识模式",
+      detail: "标识模式只使用下方字标字段和上传 LOGO 参考，不使用海报宣传词，避免生成额外口号或乱码。",
+      chips: ["字标优先", "不生成口号", "纯色背景"],
+    });
+  }
   const options = [
     ["auto", "自动"],
     ["global", "全局"],
@@ -526,6 +543,21 @@ function renderSloganSettings(form) {
             data-choice-value="${value}"
           >${label}</button>
         `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderLockedTextStrategy({ title, label, detail, chips }) {
+  return `
+    <div class="slogan-settings-card locked-text-strategy" data-slogan-locked="${escapeAttribute(label)}">
+      <div class="slogan-settings-head">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(label)}</span>
+      </div>
+      <small>${escapeHtml(detail)}</small>
+      <div class="guardrail-chips">
+        ${chips.map((chip) => `<span>${escapeHtml(chip)}</span>`).join("")}
       </div>
     </div>
   `;

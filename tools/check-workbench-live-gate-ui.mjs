@@ -66,12 +66,12 @@ for (const token of [
 
 for (const [name, source, tokens] of [
   ["config-panel.js", configSource, ["模型、Key 与实机状态在顶部统一查看"]],
-  ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "toggle-task", "costSummaryLabel"]],
+  ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "open-settings", "costSummaryLabel"]],
   ["inspector.js", inspectorSource, ["live-gate-inspector", "实机安全闸"]],
   ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关"]],
   ["center-board.js", centerBoardSource, ["getLiveGateViewModel", "liveBlocked", "先通过实机安全闸"]],
   ["task-chrome.js", taskChromeSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
-  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "data-live-toggle", "data-live-cost-cap", "实机安全闸", "预计数量"]],
+  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "provider-setup-steps", "data-live-toggle", "data-live-cost-cap", "实机安全闸", "预计数量"]],
   ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim", "live-gate-metric small"]],
 ]) {
   for (const token of tokens) {
