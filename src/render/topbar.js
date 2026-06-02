@@ -44,7 +44,13 @@ export function renderTopbar(activeMode) {
       <nav class="top-actions" aria-label="全局操作">
         ${state.view === "archive" || state.view === "results" ? "" : `<button type="button" data-action="toggle-copy">${state.copyVisible ? "收起文案" : "展开文案"}</button>`}
         <button type="button" data-action="open-settings">模型与 Key</button>
-        <button class="live-gate-chip ${liveGate.tone}" type="button" data-action="toggle-task" aria-label="实机安全">
+        <button
+          class="live-gate-chip ${liveGate.tone}"
+          type="button"
+          data-action="toggle-task"
+          aria-label="打开实机安全闸"
+          title="打开模型与 API Key，配置实机安全闸"
+        >
           <i aria-hidden="true"></i>
           <span>实机安全</span>
           <strong>${escapeHtml(liveGate.stateLabel)}</strong>

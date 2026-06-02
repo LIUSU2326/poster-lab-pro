@@ -208,7 +208,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
     if (request.context.mode === "icon") {
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
-        "Composition bar: perfect 1:1 square, full-bleed icon framing, no text, no logo lettering, no captions, no UI copy, no poster scene complexity.",
+        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, no poster scene complexity.",
       ].join(" ");
     }
     if (request.context.mode === "logo") {
@@ -720,7 +720,7 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
       modeAssetFusionDirective(request.context.mode, request.assets),
       "The inline visual references above override loose text guesses. Preserve each reference according to its semantic duty while adapting it to the current mode's visual goal.",
       request.context.mode === "icon"
-        ? "Icon mode requires a clean 1:1 square, one dominant subject, ABSOLUTELY NO TEXT, minimal background detail, high contrast, and 64px readability."
+        ? "Icon mode requires clean full-canvas 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no OS app-icon mask or rounded black container, minimal background detail, high contrast, and 64px readability."
         : "",
       request.context.mode === "logo"
         ? "Logo mode requires wordmark readability and brand system clarity. Do not turn the result into a cinematic scene, and do not invent fake replacement lettering for uploaded logo references."

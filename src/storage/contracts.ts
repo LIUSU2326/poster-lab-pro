@@ -159,6 +159,38 @@ export type StorageRepository = {
   listSnapshots(projectId?: string): Promise<WorkspaceSnapshotSummary[]>;
 };
 
+function latestIsoTimestamp(values: Array<string | null | undefined>): string | null {
+  let latestValue: string | null = null;
+  let latestTime = Number.NEGATIVE_INFINITY;
+
+  for (const value of values) {
+    if (!value) continue;
+    const time = Date.parse(value);
+    if (!Number.isFinite(time) || time <= latestTime) continue;
+    latestValue = value;
+    latestTime = time;
+  }
+
+  return latestValue;
+}
+
+function workspaceEffectiveUpdatedAt(snapshot: WorkspaceSnapshot): string {
+  return latestIsoTimestamp([
+    snapshot.metadata.updatedAt,
+    ...Object.values(snapshot.providerConfigs).map((config) => config?.updatedAt),
+    ...snapshot.modeStates.map((state) => state.updatedAt),
+    ...snapshot.assets.flatMap((asset) => [asset.createdAt, asset.updatedAt]),
+    ...snapshot.referenceAnalyses.flatMap((analysis) => [analysis.createdAt, analysis.updatedAt]),
+    ...snapshot.results.flatMap((result) => [result.createdAt, result.updatedAt, result.archivedAt]),
+    ...snapshot.archiveRows.flatMap((row) => [row.createdAt, row.updatedAt]),
+    ...snapshot.queuePlans.flatMap((plan) => [
+      plan.job.createdAt,
+      plan.job.updatedAt,
+      ...plan.events.map((event) => event.createdAt),
+    ]),
+  ]) || snapshot.metadata.updatedAt;
+}
+
 export function summarizeWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshotSummary {
   return WorkspaceSnapshotSummarySchema.parse({
     workspaceId: snapshot.metadata.workspaceId,
@@ -170,7 +202,7 @@ export function summarizeWorkspaceSnapshot(snapshot: WorkspaceSnapshot): Workspa
     schemeCount: snapshot.schemes.length,
     resultCount: snapshot.results.length,
     runningQueueCount: snapshot.queuePlans.filter((plan) => plan.job.status === "running" || plan.job.status === "queued").length,
-    updatedAt: snapshot.metadata.updatedAt,
+    updatedAt: workspaceEffectiveUpdatedAt(snapshot),
   });
 }
 

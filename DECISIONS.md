@@ -1,5 +1,34 @@
 # DECISIONS.md
 
+## D090: 1.0 Beta Shares Asset Fusion Across Production Modes
+
+Status: accepted
+
+Context: Poster mode now uses uploaded assets as visual references for AI integrated redraw instead of default local overlay. Icon, Logo, Announcement, and Collab also need to benefit from that fusion logic, but each mode has a different visual goal and should not become a poster prompt with another label.
+
+Decision: Keep shared asset semantic role and fusion strategy as the common prompt/request layer, then let each production mode constrain its own output. Icon mode is square, text-free, and single-subject. Logo mode is mark/wordmark-first and filters unrelated antagonist-like props. Announcement mode prioritizes calm copy-safe regions. Collab mode preserves two separate parties in one shared scene. Poster mode remains cinematic KV-first with protagonist, BOSS, logo, and slogan integration.
+
+Impact:
+
+- Uploaded assets are references for redraw by default across modes.
+- Local overlay remains a fallback path only when explicitly forced or when a failure condition is recorded.
+- Prompt checks now guard Icon full-canvas rules and Logo antagonist-prop filtering.
+- The Desktop Test Path requires manual one-run validation for each non-poster mode before promoting a beta build.
+
+## D089: Workspace Summaries Use Effective Update Time
+
+Status: accepted
+
+Context: Workspace metadata can lag behind later result, queue, asset, or archive changes. When summaries rely only on `metadata.updatedAt`, a workspace with fresh generated results can look stale in project lists and archive flows.
+
+Decision: `summarizeWorkspaceSnapshot` now derives `updatedAt` from the latest meaningful timestamp across metadata, provider configs, mode states, assets, reference analyses, results, archive rows, queue jobs, and queue events. The persisted snapshot shape is unchanged.
+
+Impact:
+
+- Existing snapshots do not need migration.
+- Workspace lists and summaries better reflect real user activity.
+- Storage checks guard the effective timestamp helper so this reliability rule stays in place.
+
 ## D088: Poster Production Is Scheme-First And Uses Image References
 
 Status: accepted

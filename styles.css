@@ -12929,3 +12929,54 @@ select:focus-visible,
     justify-content: flex-start !important;
   }
 }
+
+/* 0.9 UX pass: keep result actions out of the artwork itself. */
+.result-viewer {
+  grid-template-rows: minmax(0, 1fr) auto !important;
+  place-items: stretch center !important;
+  gap: 18px !important;
+  padding: 52px 72px 40px !important;
+}
+
+.result-viewer-stage {
+  width: min(86vw, 1380px) !important;
+  height: min(62vh, 640px) !important;
+  min-height: 0 !important;
+}
+
+.result-viewer-stage img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: min(62vh, 640px) !important;
+}
+
+.result-viewer-dock {
+  position: static !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: auto !important;
+  max-width: min(96vw, 1320px) !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  transform: none !important;
+}
+
+@media (max-width: 860px) {
+  .result-viewer {
+    padding: 56px 14px 18px !important;
+  }
+
+  .result-viewer-stage {
+    width: 100% !important;
+    height: min(58vh, 520px) !important;
+  }
+
+  .result-viewer-stage img {
+    max-height: min(58vh, 520px) !important;
+  }
+
+  .result-viewer-dock {
+    max-width: 100% !important;
+  }
+}

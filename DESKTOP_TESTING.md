@@ -4,6 +4,13 @@
 
 This is the local desktop test runbook for the current MVP workbench. It verifies the route-backed Next.js app and the safe Poster production chain before any live image provider is enabled.
 
+## 1.0 Beta Identity
+
+- Visible version: `1.0.0-beta.1`
+- Desktop bundle hint: `release/mac/Poster Lab Pro.app`
+- Main branch: `main`
+- Desktop Test Path still starts with static checks before any live provider call.
+
 ## Safe Local Order
 
 1. Install dependencies if needed:
@@ -23,10 +30,10 @@ This is the local desktop test runbook for the current MVP workbench. It verifie
 
 Use this after the browser and `desktop:dev` shell are acceptable:
 
-1. Build the standalone Next payload and unpacked Windows app:
-   - `npm run desktop:pack`
+1. Build the standalone Next payload and macOS app:
+   - `npm run desktop:pack:mac`
 2. Open the generated app:
-   - `release/win-unpacked/Poster Lab Pro.exe`
+   - `release/mac/Poster Lab Pro.app`
 3. Confirm the app opens without manually running `npm run dev:next`.
 4. Keep live provider generation manual and opt-in.
 
@@ -54,10 +61,10 @@ Use this after the browser and `desktop:dev` shell are acceptable:
 ## Not Covered Yet
 
 - Real OpenAI, Replicate, ComfyUI, or Custom HTTP image generation.
-- Encrypted API Key vault.
-- Production result binary storage or signed URLs.
-- Packaged desktop installer. The current Electron Packaging path creates an unpacked Windows app for faster testing.
-- Full Collab, Announcement, Logo, and Icon acceptance chains.
+- Signed installer, auto-update, crash reporting, or production release channel.
+- Cloud result storage or signed URLs.
+- Fully productized result history, rerun, and recovery flows.
+- Automated live-provider image tests.
 
 ## Live Provider Rule
 

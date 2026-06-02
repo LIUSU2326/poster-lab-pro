@@ -1,5 +1,29 @@
 # ROADMAP.md
 
+## 2026-06-02 1.0 Beta Readiness Update
+
+### Completed In This Pass
+
+- Validated Icon, Logo, Announcement, and Collab with one controlled real-generation run each through the current Desktop Test Path.
+- Tightened Logo mode so antagonist-like prop assets are not bound into logo generation prompts.
+- Tightened Icon mode prompts to request full-canvas square artwork instead of an OS app-icon mask or rounded container.
+- Fixed the result viewer layout so action controls no longer cover the generated image.
+- Improved the live safety chip wording so users can discover provider/API Key and live-gate settings more directly.
+- Made workspace summaries use the latest meaningful timestamp from metadata, provider configs, mode states, assets, queue events, results, and archive rows.
+- Bumped the visible beta version to `1.0.0-beta.1`.
+
+### Remaining Beta Risks
+
+- Icon mode can still produce rounded icon-mask framing because the image model has a strong app-icon prior.
+- Logo text accuracy is improved but still model-dependent; complex wordmarks may need manual refinement or a dedicated logo/text path.
+- Announcement text should favor calm copy-safe regions rather than generated final copy when spelling matters.
+- The settings sheet still contains several responsibilities in one modal; it is acceptable for beta but should become a clearer setup flow later.
+- Archive/result management is usable but still needs a more productized history and rerun experience after beta.
+
+### Next Step
+
+- Package the macOS desktop app, run the beta smoke path, and push the `1.0.0-beta.1` code to `main` after checks pass.
+
 ## 2026-05-28 MVP Flow Correction
 
 - Slogan language selection is single-target per batch, not multi-select.

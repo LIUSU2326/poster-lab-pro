@@ -270,7 +270,11 @@ function assetsForPromptMode(snapshot: WorkspaceSnapshot, mode: ProductionMode):
   const allowedRoles = new Set(getModeAssetSlots(mode).map((slot) => slot.role));
   const requiredRoles = new Set(getRequiredAssetSlots(mode).map((slot) => slot.role));
   const modeAssets = snapshot.assets
-    .filter((asset) => asset.projectId === snapshot.project.id && allowedRoles.has(asset.role));
+    .filter((asset) => asset.projectId === snapshot.project.id && allowedRoles.has(asset.role))
+    .filter((asset) => {
+      if (mode !== "logo") return true;
+      return !(asset.role === "prop" && assetSemanticRole(asset) === "antagonist");
+    });
   const realRoles = new Set(modeAssets.filter((asset) => !isDemoAsset(asset)).map((asset) => asset.role));
   const hasRealIconPrimary = mode === "icon" && modeAssets.some((asset) =>
     !isDemoAsset(asset) && isIconPrimaryAssetRole(asset.role),
@@ -537,6 +541,7 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
       sharedRules,
       "Icon quality target: premium game/app icon, perfect 1:1 square, one single dominant subject, bold readable silhouette, high contrast, minimal background, crisp focal detail, and readable at 64px.",
       "Icon asset handling: uploaded character, prop, BOSS-like subject, or logo reference can become the main icon subject, but it must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
+      "Icon canvas lock: generate square artwork that fills the full canvas to all four corners. Do not render an OS app-icon mask, rounded black square, rounded container, white border, badge frame, or empty corner padding.",
       "Icon exclusions: ABSOLUTELY NO TEXT, no logo lettering, no captions, no UI copy, no poster scene complexity, no multi-character battle scene, no white border, no rounded container, and no copied static asset pose.",
     ].join("\n");
   }

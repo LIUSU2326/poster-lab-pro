@@ -80,6 +80,7 @@ for (const token of [
   "formatModeQualityDirection",
   "Mode Quality Bar",
   "Icon quality target",
+  "Icon canvas lock",
   "Logo quality target",
   "Announcement quality target",
   "Collab quality target",
@@ -93,6 +94,8 @@ for (const token of [
   "Default generation path: AI integrated redraw",
   "demo placeholder URL",
   "Re-upload the real image asset",
+  "mode !== \"logo\"",
+  "asset.role === \"prop\" && assetSemanticRole(asset) === \"antagonist\"",
 ]) {
   if (!builder.includes(token) && !sloganPolicy.includes(token)) issues.push(`builder.ts: missing ${token}`);
 }

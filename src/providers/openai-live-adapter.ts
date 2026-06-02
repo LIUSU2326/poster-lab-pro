@@ -101,7 +101,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
     case "icon":
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
-        "Composition bar: perfect 1:1 square, full-bleed icon framing, no text, no logo lettering, no captions, no UI copy, and no poster scene complexity.",
+        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, and no poster scene complexity.",
       ].join(" ");
     case "logo":
       return [

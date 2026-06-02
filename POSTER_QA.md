@@ -2,6 +2,17 @@
 
 This checklist defines the acceptance bar for Poster Lab Pro poster mode before changes are promoted to the packaged desktop app or pushed to `main`.
 
+## V1.0 Beta Multi-Mode Gate
+
+- Poster, Icon, Logo, Announcement, and Collab modes must all use the shared asset fusion path: uploaded assets are visual references for AI integrated redraw, not default local overlay layers.
+- Icon mode must produce a `1:1` square, no text, one dominant readable subject, strong silhouette, and clear 64px thumbnail readability.
+- Logo mode must prioritize the uploaded logo or configured wordmark; it must not include BOSS / antagonist props as logo subjects, and it must avoid turning the result into a cinematic poster.
+- Announcement mode must keep a calm copy-safe area for final text and must avoid fake or unreadable generated copy.
+- Collab mode must keep both parties separate, preserve each side's identity cues, and stage them in one shared scene without merging them into one hybrid character.
+- Poster mode remains the strictest KV gate: protagonist scale, BOSS threat, single logo treatment, visible integrated slogan, cinematic lighting, foreground-midground-background depth, and no sticker feel.
+- Real paid validation for this beta is capped at one run per non-poster mode unless a blocker appears.
+- Any local overlay must be recorded as fallback metadata, not treated as the default finished-art path.
+
 ## V0.4.1 Stability Gate
 
 - AI integrated redraw is the default path for poster mode.
@@ -30,12 +41,17 @@ This checklist defines the acceptance bar for Poster Lab Pro poster mode before 
 For each controlled real-generation test, record:
 
 - job id and result path
+- production mode and selected scheme id
 - whether asset overlay was applied
 - whether uploaded protagonist identity is preserved
 - whether protagonist scale/action is readable
 - whether BOSS is a believable threat
 - whether logo appears once and avoids fake text
 - whether slogan is scene-derived, visible, and integrated
+- for Icon: whether it remains text-free, square, single-subject, and readable at 64px
+- for Logo: whether it avoids unrelated character/BOSS pollution and avoids poster-like scenery
+- for Announcement: whether the copy-safe region is clear and quiet
+- for Collab: whether both parties stay separate but share the same environment
 - whether any new props, shields, weapons, or duplicate characters were invented
 - whether the image still reads as a premium game campaign KV at thumbnail size
 

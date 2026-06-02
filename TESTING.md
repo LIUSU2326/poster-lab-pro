@@ -1,5 +1,28 @@
 # TESTING.md
 
+## 2026-06-02 1.0 Beta Multi-Mode Validation Update
+
+Desktop Test Path checks:
+
+- Verify `npm run check` passes after prompt, provider, storage, and UX changes.
+- Verify `npm run prompts:check`, `npm run provider-requests:check`, `npm run google-live-adapter:check`, and `npm run openai-live-adapter:check` preserve shared asset fusion rules.
+- Verify `npm run storage:check`, `npm run workspace-data:check`, and `npm run workspace-state:check` preserve workspace summary freshness after assets, queue jobs, results, and archive rows change.
+- Verify the visible app version is `1.0.0-beta.1`.
+
+Manual multi-mode live checks:
+
+- Icon: one low-cost run; accept only `1:1`, no text, single strong subject, and 64px readability.
+- Logo: one low-cost run; accept only wordmark/mark-first output with no BOSS or unrelated prop pollution.
+- Announcement: one low-cost run; accept only a clear copy-safe area and no generated gibberish.
+- Collab: one low-cost run; accept only two separated parties in a shared scene, not a merged hybrid.
+- Do not add these live provider calls to automated checks because they can spend provider credits.
+
+Known beta watch items:
+
+- Image models may still prefer rounded app-icon masks in Icon mode; keep this as a manual review item until an icon-specific crop/background post-process is added.
+- Complex generated text can still drift; prefer copy-safe regions or post-production text refinement over forcing unreadable AI text.
+- If local network routing requires a proxy, run the dev server with the same proxy environment as the desktop shell.
+
 ## 2026-05-28 Generation Flow Rule Update
 
 Poster generation checks:

@@ -34,6 +34,8 @@ for (const token of [
   "WorkspaceModeStateSchema",
   "StorageRepository",
   "summarizeWorkspaceSnapshot",
+  "workspaceEffectiveUpdatedAt",
+  "latestIsoTimestamp",
 ]) {
   if (!contracts.includes(token)) issues.push(`contracts.ts: missing ${token}`);
 }
