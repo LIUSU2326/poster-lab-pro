@@ -266,13 +266,16 @@ function softRoundedCenterMask(width: number, height: number): Buffer {
   const keepY = height * 0.2;
   const fadeX = Math.max(1, width * 0.24);
   const fadeY = Math.max(1, height * 0.24);
+  const edgeFade = Math.max(1, Math.min(width, height) * 0.18);
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const cornerX = Math.max(0, (Math.abs(x + 0.5 - centerX) - keepX) / fadeX);
       const cornerY = Math.max(0, (Math.abs(y + 0.5 - centerY) - keepY) / fadeY);
       const cornerPressure = Math.min(1, Math.sqrt(cornerX * cornerY));
-      const alpha = 1 - smoothStep(cornerPressure);
+      const edgeDistance = Math.min(x + 0.5, y + 0.5, width - x - 0.5, height - y - 0.5);
+      const edgeAlpha = smoothStep(edgeDistance / edgeFade);
+      const alpha = (1 - smoothStep(cornerPressure)) * edgeAlpha;
       mask[y * width + x] = clampInteger(alpha * 255, 0, 255);
     }
   }

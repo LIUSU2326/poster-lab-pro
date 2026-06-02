@@ -1,5 +1,34 @@
 # DECISIONS.md
 
+## D100: Icon Audit Must Detect White-Corner Dark-Edge App Containers
+
+Status: accepted
+
+Context: The `1.1.0-beta.2` Icon live validation no longer produced a Poster KV composition, but the image model still returned a rounded black app-icon container on a white square canvas. The existing audit only caught transparent corners or fully dark corner containers, so this common white-corner/dark-edge failure incorrectly passed.
+
+Decision: Extend Icon Result Quality Audit with outer-corner and edge-band luminance sampling. A light outer corner paired with a much darker edge band and opaque center is treated as `icon-rounded-mask-risk` through `iconLightCornerDarkEdgeContainerRisk`. The local Icon edge repair now fades the full outer edge band over a blurred center-derived background, not only the corner area.
+
+Impact:
+
+- Rounded app-icon frames with white outside corners are no longer accepted as pass.
+- The repair remains zero-cost, local, and Icon-only.
+- The next Desktop Test Path rerun should confirm whether the packaged app stores a repaired full-canvas Icon instead of a black rounded container.
+
+## D099: Non-Poster Brief Generation Must Not Inherit Poster KV Architecture
+
+Status: accepted
+
+Context: The 1.1 Beta multimode live validation showed that Icon, Logo, and Announcement schemes could be generated from Poster KV architecture instructions. The image model then followed the scheme faithfully, producing battle-poster compositions where Icon needed one simple subject and Announcement needed a readable copy-safe panel.
+
+Decision: Make brief generation mode-aware. Poster keeps the cinematic KV architecture prompt, Poster sanitizer, and architecture augmentation. Icon, Logo, Announcement, and Collab bypass Poster KV slots and receive their own planning rules and normalization locks. Icon and Logo clear generated slogans; Icon normalization prepends an `ICON MODE ONLY` prompt lock and strips Poster/KV contamination from provider text.
+
+Impact:
+
+- Poster quality work remains intact.
+- Icon, Logo, Announcement, and Collab no longer inherit Poster scheme templates.
+- Automated Google adapter checks simulate contaminated Icon brief output and verify mode-specific cleanup.
+- The next Desktop Test Path should use one low-cost Icon rerun to visually confirm the fix.
+
 ## D098: Quality Audit Refreshes Stale Result Metadata Locally
 
 Status: accepted

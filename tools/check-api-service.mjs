@@ -43,6 +43,7 @@ for (const token of [
   "refreshResultQualityAudits",
   "readStoredFile",
   "posterHasIntegratedReference",
+  "iconLightCornerDarkEdgeContainerRisk",
 ]) {
   if (!service.includes(token)) issues.push(`service.ts: missing ${token}`);
 }

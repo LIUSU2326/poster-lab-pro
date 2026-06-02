@@ -73,12 +73,16 @@ for (const token of [
   "Uploaded subject accessory lock",
   "no invented shield/weapon/tool/accessory",
   "invent partner brand names",
-  "polished blank partner brand plate",
-  "Brand icon rule",
-  "Brand collab rule",
-]) {
-  if (!adapter.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
-}
+	  "polished blank partner brand plate",
+	  "Brand icon rule",
+	  "Brand collab rule",
+	  "modeBriefPrompt",
+	  "Icon mode hard lock",
+	  "slogans must be an empty object for icon mode",
+	  "normalizeModeBriefSchemes",
+	]) {
+	  if (!adapter.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
+	}
 
 for (const token of ["id: \"google\"", "gemini-2.5-flash-image", "Google AI Studio"]) {
   if (!manifests.includes(token)) issues.push(`manifests.ts: missing Google manifest token ${token}`);
@@ -425,11 +429,94 @@ async function runRuntimeCheck() {
     if (!fallbackBrief.ok || fallbackBrief.value.model !== "gemini-2.5-pro") {
       issues.push("Google brief generation should retry with gemini-2.5-pro when flash is temporarily unavailable");
     }
-    if (briefFallbackCalls.length !== 2 || !briefFallbackCalls[0].includes("gemini-2.5-flash") || !briefFallbackCalls[1].includes("gemini-2.5-pro")) {
-      issues.push("Google brief fallback should call flash first and pro second");
-    }
+	    if (briefFallbackCalls.length !== 2 || !briefFallbackCalls[0].includes("gemini-2.5-flash") || !briefFallbackCalls[1].includes("gemini-2.5-pro")) {
+	      issues.push("Google brief fallback should call flash first and pro second");
+	    }
 
-    let queueTransportCalls = 0;
+	    let iconBriefPrompt = "";
+	    const iconBriefAdapter = providers.createGoogleLiveImageAdapter({
+	      now: () => 2100,
+	      transport: async (request) => {
+	        iconBriefPrompt = request.body?.contents?.[0]?.parts?.[0]?.text || "";
+	        return {
+	          ok: true,
+	          status: 200,
+	          body: {
+	            candidates: [
+	              {
+	                content: {
+	                  parts: [
+	                    {
+	                      text: JSON.stringify({
+	                        schemes: [
+	                          {
+	                            title: "KV构图母版：错误的图标海报",
+	                            brief: "KV构图母版：角色站在海报中央，电影级游戏主视觉海报。",
+	                            prompt: "Premium game key art poster, KV composition, cinematic battle scene.",
+	                            promptZh: "高完成度游戏主视觉海报，KV 构图，电影战斗场景。",
+	                            promptEn: "Premium game key art poster, KV composition, cinematic battle scene.",
+	                            slogans: { "en-US": "Wrong poster slogan" },
+	                          },
+	                        ],
+	                      }),
+	                    },
+	                  ],
+	                },
+	              },
+	            ],
+	          },
+	        };
+	      },
+	    });
+	    const iconBriefRequest = providers.BriefGenerationRequestSchema.parse({
+	      context: {
+	        projectId: "project-google-icon-brief-check",
+	        mode: "icon",
+	        providerId: "google",
+	        traceId: "trace-google-icon-brief-check",
+	      },
+	      projectName: "Pizza Kitchen Adventures",
+	      gameDescription: "Cooking adventure game.",
+	      creativeDirection: "Generate a clean 1:1 icon.",
+	      assets: [
+	        {
+	          id: "asset-icon-character",
+	          role: "gameCharacter",
+	          mimeType: "image/png",
+	          description: "Uploaded hero reference",
+	        },
+	      ],
+	      guardrails: providers.modeGuardrails("icon"),
+	      languageTargets: ["en-US"],
+	      schemeCount: 1,
+	    });
+	    const iconBrief = await iconBriefAdapter.generateBrief(iconBriefRequest, config);
+	    if (!iconBrief.ok) {
+	      issues.push(`Google icon brief mode-aware generation should succeed: ${iconBrief.error.code}`);
+	    } else {
+	      const scheme = iconBrief.value.schemes[0];
+	      if (!scheme.prompt.includes("ICON MODE ONLY")) {
+	        issues.push("Google icon brief normalization should prepend ICON MODE ONLY lock");
+	      }
+	      if (scheme.prompt.includes("Premium game key art poster") || scheme.prompt.includes("KV composition")) {
+	        issues.push("Google icon brief normalization should strip poster/KV contamination from provider text");
+	      }
+	      if (Object.keys(scheme.slogans || {}).length !== 0) {
+	        issues.push("Google icon brief normalization should drop slogans for icon mode");
+	      }
+	    }
+	    for (const forbidden of ["Generate NEW poster design schemes", "requiredKvArchitectureSlots", "posterKvArchitectureBriefSlots"]) {
+	      if (iconBriefPrompt.includes(forbidden)) {
+	        issues.push(`Google icon brief prompt must not include poster-only planning token: ${forbidden}`);
+	      }
+	    }
+	    for (const required of ["Generate icon design schemes", "Icon mode hard lock", "one single dominant subject"]) {
+	      if (!iconBriefPrompt.includes(required)) {
+	        issues.push(`Google icon brief prompt should include icon mode token: ${required}`);
+	      }
+	    }
+
+	    let queueTransportCalls = 0;
     const snapshotBase = withInlineMockAssets(storage.createMockWorkspaceSnapshot());
     const plan = queue.createBatchQueuePlan({
       projectId: snapshotBase.project.id,

@@ -1,5 +1,43 @@
 # TESTING.md
 
+## 2026-06-02 1.1.0-beta.3 Icon Edge Container Detection Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-beta.3`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Icon Result Quality Audit flags white outside corners plus dark rounded-edge app containers.
+- Verify `iconLightCornerDarkEdgeContainerRisk` is stored in metrics for that failure shape.
+- Verify Icon local edge repair can reduce the rounded-container risk without provider calls.
+- Do one low-cost Icon real-generation rerun after packaging if needed; stop after one image and judge only the key failure.
+
+Automated checks:
+
+- Run `npm run result-quality-audit:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
+## 2026-06-02 1.1.0-beta.2 Mode-Aware Brief Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-beta.2`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Poster scheme generation still contains Poster KV architecture and cinematic quality rules.
+- Verify Icon scheme generation does not contain Poster KV architecture slots or poster-scheme task language.
+- Verify Icon normalized prompts include `ICON MODE ONLY`, request one dominant subject, and keep slogans empty.
+- Verify Logo, Announcement, and Collab brief planning use their own mode targets instead of Poster KV planning.
+- Do one low-cost Icon real-generation rerun after packaging to confirm the live result is no longer a battle-poster composition.
+
+Automated checks:
+
+- Run `npm run google-live-adapter:check`.
+- Run `npm run poster-kv-quality:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-02 1.1.0-beta.1 Quality Audit Refresh Release Update
 
 Desktop Test Path checks:

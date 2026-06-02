@@ -68,10 +68,10 @@ for (const token of [
   }
 }
 
-for (const [file, source] of [
-  ["src/providers/google-live-adapter.ts", googleAdapter],
-  ["src/providers/openai-compatible-brief-adapter.ts", openAiBriefAdapter],
-]) {
+	for (const [file, source] of [
+	  ["src/providers/google-live-adapter.ts", googleAdapter],
+	  ["src/providers/openai-compatible-brief-adapter.ts", openAiBriefAdapter],
+	]) {
   for (const token of [
     "posterStaticSchemeLanguageBan",
     "posterSchemeBlueprintRequirement",
@@ -82,10 +82,21 @@ for (const [file, source] of [
   ]) {
     if (!source.includes(token)) issues.push(`${file}: missing brief-stage poster quality rule ${token}`);
   }
-  if (!source.includes("sanitizePosterSchemeText")) {
-    issues.push(`${file}: missing brief-stage poster scheme sanitizer`);
-  }
-}
+	  if (!source.includes("sanitizePosterSchemeText")) {
+	    issues.push(`${file}: missing brief-stage poster scheme sanitizer`);
+	  }
+	  for (const token of [
+	    "modeBriefRules",
+	    "Icon mode hard lock",
+	    "slogans must be an empty object for icon mode",
+	    "requiredKvArchitectureSlots",
+	  ]) {
+	    if (!source.includes(token)) issues.push(`${file}: missing mode-aware brief guard token ${token}`);
+	  }
+	  if (!source.includes("request.context.mode !== \"poster\"")) {
+	    issues.push(`${file}: non-poster brief generation must bypass poster KV prompt construction`);
+	  }
+	}
 
 for (const token of [
   "export function sanitizePosterSchemeText",

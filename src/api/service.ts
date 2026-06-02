@@ -204,7 +204,7 @@ function resultFileMetadataFromUnknown(value: unknown): ResultStoredFileMetadata
 
 const QUALITY_AUDIT_REQUIRED_METRICS: Record<ProductionMode, string[]> = {
   poster: ["posterHasIntegratedReference", "posterHasLogoReference", "posterHasCopyTarget"],
-  icon: ["iconCornerAlpha", "iconCenterAlpha"],
+  icon: ["iconCornerAlpha", "iconCenterAlpha", "iconLightCornerDarkEdgeContainerRisk"],
   logo: ["logoTextStrategy"],
   announcement: ["announcementCopyStrategy"],
   collab: ["collabPartnerBrandStrategy"],

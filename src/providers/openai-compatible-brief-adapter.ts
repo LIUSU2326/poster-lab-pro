@@ -190,10 +190,8 @@ function statusError<T>(providerId: ProviderId, status: number, body: unknown): 
   };
 }
 
-function buildBriefMessages(request: BriefGenerationRequest) {
-  const targetLanguage = request.languageTargets[0] || "en-US";
-  const randomizationSeed = request.context.traceId || request.context.jobId || `${Date.now()}`;
-  const assets = request.assets.map((asset) => ({
+function briefAssetInventory(request: BriefGenerationRequest) {
+  return request.assets.map((asset) => ({
     role: asset.role,
     semanticRole: posterAssetSemanticRole(asset),
     id: asset.id,
@@ -202,6 +200,17 @@ function buildBriefMessages(request: BriefGenerationRequest) {
     hasUrl: Boolean(asset.url),
     fusionStrategy: posterAssetFusionStrategy(asset),
   }));
+}
+
+function buildBriefMessages(request: BriefGenerationRequest) {
+  if (request.context.mode !== "poster") return buildModeBriefMessages(request);
+  return buildPosterBriefMessages(request);
+}
+
+function buildPosterBriefMessages(request: BriefGenerationRequest) {
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const randomizationSeed = request.context.traceId || request.context.jobId || `${Date.now()}`;
+  const assets = briefAssetInventory(request);
 
   return [
     {
@@ -309,6 +318,144 @@ function buildBriefMessages(request: BriefGenerationRequest) {
             },
           ],
         },
+      }),
+    },
+  ];
+}
+
+function modeBriefTask(mode: BriefGenerationRequest["context"]["mode"]): string {
+  switch (mode) {
+    case "icon":
+      return "Generate icon design schemes for batch image generation. This is not poster or KV planning.";
+    case "logo":
+      return "Generate logo and brand mark design schemes for batch image generation. This is not poster or scene planning.";
+    case "announcement":
+      return "Generate announcement visual design schemes for batch image generation. This is not poster or cinematic KV planning.";
+    case "collab":
+      return "Generate collaboration campaign visual schemes for batch image generation. Keep partner identities separate. This is not generic poster KV planning.";
+    default:
+      return "Generate mode-specific design schemes for batch image generation. This is not poster KV planning.";
+  }
+}
+
+function modeBriefIdentityRule(mode: BriefGenerationRequest["context"]["mode"]): string {
+  switch (mode) {
+    case "icon":
+      return "Icon reference planning: choose one dominant uploaded subject or brand motif as the icon subject, preserve its identity/silhouette/colors as a reference, and redraw/simplify it into one clean icon form.";
+    case "logo":
+      return "Logo reference planning: uploaded logos are brand references, not prompts for fake replacement words. Preserve brand shape language and letterform rhythm only when spelling can stay accurate.";
+    case "announcement":
+      return "Announcement reference planning: uploaded characters, props, and logos support a readable event/update panel. They must not steal priority from the announcement copy-safe area.";
+    case "collab":
+      return "Collab reference planning: each uploaded character, logo, and partner asset remains a separate identity. Do not merge two brands, characters, or logos into one hybrid.";
+    default:
+      return "Mode reference planning: preserve each uploaded asset according to semanticRole and redraw it naturally for this mode.";
+  }
+}
+
+function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetLanguage: string): string[] {
+  const shared = [
+    "Generate NEW random schemes for this mode only.",
+    "Do not mention KV composition templates, poster architecture slots, poster key visual, cinematic poster scene, or poster slogan placement unless mode is poster.",
+    "For every uploaded asset, infer semantic duty from semanticRole, original role, label, and description. Do not write logic as if only gameCharacter, prop, and gameLogo can matter.",
+    "Use placeholders such as [Game Character 1], [Boss], [Game Logo], [Prop 1], [Collab Character 1], or [Key Subject 1] instead of describing exact hair, face, clothing, anatomy, or logo lettering.",
+    modeBriefIdentityRule(mode),
+    "Respect creativeDirection, selected style tags, output size, reference analysis, and prompt constraints.",
+    "Every scheme must have a unique title, unique visual direction, and unique image prompt without reusing a sentence template.",
+  ];
+
+  if (mode === "icon") {
+    return [
+      ...shared,
+      "Icon mode hard lock: 1:1 square, one single dominant subject, no text, no logo lettering, no captions, no poster scene, no multi-character battle, no OS app icon rounded mask, no black rounded container, no empty corner padding.",
+      "Icon prompt must prioritize bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square corners, crisp focal detail, and 64px readability.",
+      "If several uploaded assets exist, choose one best subject or brand motif for each scheme instead of crowding them together.",
+      "slogans must be an empty object for icon mode.",
+    ];
+  }
+
+  if (mode === "logo") {
+    return [
+      ...shared,
+      "Logo mode hard lock: design a logo, symbol, badge, wordmark, or title lockup. Do not create a cinematic scene, character battle, poster background, environmental set piece, or campaign slogan art.",
+      "Logo Text Strategy: use exact provided brand text only when it can stay readable; otherwise create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction without pseudo-letters.",
+      "Uploaded logo references guide brand color, silhouette, rhythm, and finish. Do not generate a fake replacement logo or look-alike gibberish.",
+      "slogans must be an empty object for logo mode.",
+    ];
+  }
+
+  if (mode === "announcement") {
+    return [
+      ...shared,
+      "Announcement mode hard lock: readable update/event graphic first, with a calm copy-safe panel or UI surface. Do not turn it into a battle poster or movie KV.",
+      "Characters and props may frame, point to, or lightly interact with the panel, but they must not cover the headline/copy area.",
+      "If exact announcement text cannot be rendered cleanly, plan polished blank fields or title plates instead of fake text or pseudo-letters.",
+      imageRenderableSloganRule(targetLanguage),
+      "If slogans are returned, keep one short exact announcement-style title only; avoid generic hype copy and avoid long paragraphs.",
+    ];
+  }
+
+  return [
+    ...shared,
+    "Collab mode hard lock: show a collaboration relationship with two distinct sides, separate character identities, and separate logo/brand zones unified by one scene or graphic system.",
+    "Do not merge both sides into one hybrid character, one hybrid logo, or one fake partner brand. Use a blank partner brand plate when partner text cannot stay accurate.",
+    "The relationship should be readable through interaction, exchange, handoff, rivalry, invitation, split-stage, or shared prop/event design.",
+    imageRenderableSloganRule(targetLanguage),
+    "If slogans are returned, keep them short and tied to the collaboration interaction rather than poster hype.",
+  ];
+}
+
+function modeBriefOutputShape(mode: BriefGenerationRequest["context"]["mode"], targetLanguage: string) {
+  const slogans = mode === "icon" || mode === "logo" ? {} : { [targetLanguage]: "short mode-specific line or title" };
+  return {
+    schemes: [
+      {
+        title: mode === "icon" ? "Chinese icon scheme title" : "Chinese mode-specific scheme title",
+        brief: "Chinese visual direction and layout plan for this mode",
+        prompt: "Image prompt suitable for the selected image model and this mode",
+        promptZh: "Chinese image-generation prompt",
+        promptEn: "English image-generation prompt",
+        slogans,
+      },
+    ],
+  };
+}
+
+function buildModeBriefMessages(request: BriefGenerationRequest) {
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const randomizationSeed = request.context.traceId || request.context.jobId || `${Date.now()}`;
+  const assets = briefAssetInventory(request);
+  const mode = request.context.mode;
+
+  return [
+    {
+      role: "system",
+      content: [
+        "You are a senior game creative production director.",
+        "Return JSON only. No markdown, no commentary.",
+        "Each scheme must include title, brief, prompt, promptZh, promptEn, and slogans.",
+        "promptZh must be a Chinese image-generation prompt. promptEn must be an English image-generation prompt.",
+        "This request is mode-specific. Do not inherit poster/KV architecture rules unless mode is poster.",
+        "Do not plan pasted overlays. Uploaded assets are identity, brand, style, composition, or subject references that should be redrawn naturally according to the current mode.",
+        modeBriefIdentityRule(mode),
+      ].join(" "),
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        task: modeBriefTask(mode),
+        mode,
+        projectName: request.projectName,
+        gameDescription: request.gameDescription,
+        focusGuidance: request.focusGuidance || "",
+        creativeDirection: request.creativeDirection || "",
+        guardrails: request.guardrails,
+        languageTargets: request.languageTargets,
+        schemeCount: request.schemeCount,
+        randomizationSeed,
+        assets,
+        rules: modeBriefRules(mode, targetLanguage),
+        outputShape: modeBriefOutputShape(mode, targetLanguage),
       }),
     },
   ];
@@ -446,7 +593,7 @@ function parseBriefContent(content: string) {
   return BriefCompletionSchema.parse(coerceBriefCompletion(JSON.parse(fenced || trimmed)));
 }
 
-function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
+function normalizePosterSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
   const targetLanguage = request.languageTargets[0] || "en-US";
   const seed = request.context.traceId || request.context.jobId || `${Date.now()}`;
   const assetCounts = posterKvAssetCountsFromAssets(request.assets);
@@ -493,6 +640,105 @@ function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request
       slogans,
     };
   });
+}
+
+function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { brief: string; prompt: string } {
+  switch (mode) {
+    case "icon":
+      return {
+        brief: "Icon 模式锁定：1:1 方形、单一主主体、无文字、无海报/KV 场景、低背景复杂度、全画布方角、64px 仍可读。",
+        prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject, absolutely no text or logo lettering, no poster scene, no multi-character battle, no rounded app-mask/container, full-bleed sharp square corners, minimal background, high contrast, readable at 64px.",
+      };
+    case "logo":
+      return {
+        brief: "Logo 模式锁定：标识/徽章/字标优先，不做电影场景或海报，不生成乱码假字。",
+        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. Keep typography readable only when exact; otherwise use a polished blank wordmark plate or emblem without pseudo-letters.",
+      };
+    case "announcement":
+      return {
+        brief: "Announcement 模式锁定：信息安全区和公告面板优先，角色/道具只做引导或氛围，不抢文案区域。",
+        prompt: "ANNOUNCEMENT MODE ONLY: create a readable announcement/update graphic with a calm copy-safe panel or UI surface, no fake text, no battle-poster staging, characters and props only support or frame the message area.",
+      };
+    case "collab":
+      return {
+        brief: "Collab 模式锁定：双方角色/Logo 独立但统一场景，不融合成一个角色或假 Logo。",
+        prompt: "COLLAB MODE ONLY: create a collaboration visual with separate identities and brand zones unified by one interaction or graphic system, no hybrid character, no hybrid/fake logo, use blank partner brand plates when text cannot be exact.",
+      };
+    default:
+      return {
+        brief: "模式锁定：按当前模式目标生成，不继承海报 KV 架构。",
+        prompt: "MODE-SPECIFIC OUTPUT ONLY: follow the current mode target and do not turn this into a poster/KV composition.",
+      };
+  }
+}
+
+function sanitizeNonPosterModeText(text: string, mode: BriefGenerationRequest["context"]["mode"]): string {
+  const replacement = mode === "icon"
+    ? "game icon"
+    : mode === "logo"
+      ? "brand logo"
+      : mode === "announcement"
+        ? "announcement visual"
+        : "collaboration visual";
+  return text
+    .replace(/KV构图母版[:：]?/gi, "")
+    .replace(/requiredKvArchitectureSlots/gi, "modeSpecificPlanning")
+    .replace(/高完成度游戏主视觉海报/g, replacement)
+    .replace(/游戏主视觉海报/g, replacement)
+    .replace(/game marketing poster/gi, replacement)
+    .replace(/premium game key art poster/gi, replacement)
+    .replace(/poster key visual/gi, replacement)
+    .replace(/cinematic key visual/gi, replacement)
+    .replace(/\bKV\b/g, replacement);
+}
+
+function normalizeModeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const mode = request.context.mode;
+  const qualityLock = modeQualityLock(mode);
+  return parsed.schemes.slice(0, request.schemeCount).map((scheme) => {
+    const title = sanitizeNonPosterModeText(scheme.title, mode) || scheme.title;
+    const brief = sanitizeNonPosterModeText(scheme.brief, mode) || scheme.brief;
+    const prompt = sanitizeNonPosterModeText(scheme.prompt, mode) || scheme.prompt;
+    const promptZh = sanitizeNonPosterModeText(scheme.promptZh || scheme.prompt, mode) || prompt;
+    const promptEn = sanitizeNonPosterModeText(scheme.promptEn || scheme.prompt, mode) || prompt;
+    const slogans = mode === "icon" || mode === "logo"
+      ? {}
+      : Object.fromEntries(
+        SUPPORTED_SLOGAN_LANGUAGES
+          .filter((language) => language === targetLanguage && scheme.slogans[language])
+          .flatMap((language) => {
+            const slogan = scheme.slogans[language];
+            if (!slogan) return [];
+            const normalized = normalizeImageRenderableSlogan({
+              slogan,
+              language,
+              brandTerms: [request.projectName],
+              contextText: [
+                title,
+                brief,
+                prompt,
+                promptZh,
+                promptEn,
+              ].join("\n"),
+            });
+            return normalized ? [[language, normalized] as const] : [];
+          }),
+      );
+    return {
+      title,
+      brief: `${qualityLock.brief}\n${brief}`.slice(0, 1800),
+      prompt: `${qualityLock.prompt}\n\n${prompt}`.slice(0, 12000),
+      promptZh: `${qualityLock.prompt}\n\n${promptZh}`.slice(0, 12000),
+      promptEn: `${qualityLock.prompt}\n\n${promptEn}`.slice(0, 12000),
+      slogans,
+    };
+  });
+}
+
+function normalizeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
+  if (request.context.mode === "poster") return normalizePosterSchemes(parsed, request);
+  return normalizeModeSchemes(parsed, request);
 }
 
 export function createOpenAICompatibleBriefAdapter(options: OpenAICompatibleBriefAdapterOptions): GenerationProviderAdapter {

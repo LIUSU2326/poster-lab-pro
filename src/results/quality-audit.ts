@@ -68,37 +68,69 @@ async function iconCanvasMetrics(dataUrl: string | null | undefined): Promise<Re
       };
     };
 
-    const samples: { luminance: number; alpha: number }[] = [];
-    const sampleBox = (left: number, top: number, size: number) => {
-      for (let y = top; y < top + size; y += 1) {
-        for (let x = left; x < left + size; x += 1) samples.push(pixel(x, y));
-      }
-    };
-    sampleBox(0, 0, 6);
-    sampleBox(26, 0, 6);
-    sampleBox(0, 26, 6);
-    sampleBox(26, 26, 6);
+	    const samples: { luminance: number; alpha: number }[] = [];
+	    const sampleBox = (left: number, top: number, size: number) => {
+	      for (let y = top; y < top + size; y += 1) {
+	        for (let x = left; x < left + size; x += 1) samples.push(pixel(x, y));
+	      }
+	    };
+	    sampleBox(0, 0, 6);
+	    sampleBox(26, 0, 6);
+	    sampleBox(0, 26, 6);
+	    sampleBox(26, 26, 6);
+	    const outerCornerSamples: { luminance: number; alpha: number }[] = [];
+	    const sampleOuterCornerBox = (left: number, top: number, size: number) => {
+	      for (let y = top; y < top + size; y += 1) {
+	        for (let x = left; x < left + size; x += 1) outerCornerSamples.push(pixel(x, y));
+	      }
+	    };
+	    sampleOuterCornerBox(0, 0, 3);
+	    sampleOuterCornerBox(29, 0, 3);
+	    sampleOuterCornerBox(0, 29, 3);
+	    sampleOuterCornerBox(29, 29, 3);
 
-    const centerSamples: { luminance: number; alpha: number }[] = [];
-    for (let y = 12; y < 20; y += 1) {
-      for (let x = 12; x < 20; x += 1) centerSamples.push(pixel(x, y));
-    }
+	    const centerSamples: { luminance: number; alpha: number }[] = [];
+	    for (let y = 12; y < 20; y += 1) {
+	      for (let x = 12; x < 20; x += 1) centerSamples.push(pixel(x, y));
+	    }
+	    const edgeSamples: { luminance: number; alpha: number }[] = [];
+	    for (let x = 9; x < 23; x += 1) {
+	      for (const y of [0, 1, 2, 3]) edgeSamples.push(pixel(x, y), pixel(x, 31 - y));
+	    }
+	    for (let y = 9; y < 23; y += 1) {
+	      for (const x of [0, 1, 2, 3]) edgeSamples.push(pixel(x, y), pixel(31 - x, y));
+	    }
 
-    const average = (items: { luminance: number; alpha: number }[], key: "luminance" | "alpha") =>
-      items.reduce((sum, item) => sum + item[key], 0) / Math.max(1, items.length);
-    const cornerAlpha = average(samples, "alpha");
-    const centerAlpha = average(centerSamples, "alpha");
-    const cornerLuminance = average(samples, "luminance");
-    const centerLuminance = average(centerSamples, "luminance");
+	    const average = (items: { luminance: number; alpha: number }[], key: "luminance" | "alpha") =>
+	      items.reduce((sum, item) => sum + item[key], 0) / Math.max(1, items.length);
+	    const cornerAlpha = average(samples, "alpha");
+	    const centerAlpha = average(centerSamples, "alpha");
+	    const cornerLuminance = average(samples, "luminance");
+	    const outerCornerLuminance = average(outerCornerSamples, "luminance");
+	    const outerCornerAlpha = average(outerCornerSamples, "alpha");
+	    const centerLuminance = average(centerSamples, "luminance");
+	    const edgeLuminance = average(edgeSamples, "luminance");
+	    const edgeAlpha = average(edgeSamples, "alpha");
+	    const lightCornerDarkEdgeRisk = outerCornerLuminance > 0.62 &&
+	      edgeLuminance < 0.32 &&
+	      outerCornerLuminance - edgeLuminance > 0.33 &&
+	      centerAlpha > 0.94 &&
+	      edgeAlpha > 0.94 &&
+	      outerCornerAlpha > 0.94;
 
-    return {
-      iconCornerAlpha: Number(cornerAlpha.toFixed(4)),
-      iconCenterAlpha: Number(centerAlpha.toFixed(4)),
-      iconCornerLuminance: Number(cornerLuminance.toFixed(4)),
-      iconCenterLuminance: Number(centerLuminance.toFixed(4)),
-      iconTransparentCornerRisk: cornerAlpha < 0.86 && centerAlpha > 0.94,
-      iconDarkCornerContainerRisk: cornerLuminance < 0.1 && centerLuminance - cornerLuminance > 0.22,
-    };
+	    return {
+	      iconCornerAlpha: Number(cornerAlpha.toFixed(4)),
+	      iconOuterCornerAlpha: Number(outerCornerAlpha.toFixed(4)),
+	      iconCenterAlpha: Number(centerAlpha.toFixed(4)),
+	      iconCornerLuminance: Number(cornerLuminance.toFixed(4)),
+	      iconOuterCornerLuminance: Number(outerCornerLuminance.toFixed(4)),
+	      iconCenterLuminance: Number(centerLuminance.toFixed(4)),
+	      iconEdgeLuminance: Number(edgeLuminance.toFixed(4)),
+	      iconEdgeAlpha: Number(edgeAlpha.toFixed(4)),
+	      iconTransparentCornerRisk: cornerAlpha < 0.86 && centerAlpha > 0.94,
+	      iconDarkCornerContainerRisk: cornerLuminance < 0.1 && centerLuminance - cornerLuminance > 0.22,
+	      iconLightCornerDarkEdgeContainerRisk: lightCornerDarkEdgeRisk,
+	    };
   } catch {
     return { iconCanvasAudit: "failed" };
   }
@@ -194,7 +226,11 @@ export async function auditResultQuality(input: {
 
   if (input.mode === "icon") {
     Object.assign(metrics, await iconCanvasMetrics(input.dataUrl));
-    if (metrics.iconTransparentCornerRisk || metrics.iconDarkCornerContainerRisk) {
+	    if (
+	      metrics.iconTransparentCornerRisk ||
+	      metrics.iconDarkCornerContainerRisk ||
+	      metrics.iconLightCornerDarkEdgeContainerRisk
+	    ) {
       findings.push(finding({
         code: "icon-rounded-mask-risk",
         severity: "review",

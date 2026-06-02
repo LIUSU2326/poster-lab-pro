@@ -1,5 +1,37 @@
 # ROADMAP.md
 
+## 2026-06-02 1.1.0-beta.3 Icon Edge Container Detection Release Update
+
+### Completed In This Pass
+
+- Promoted the Icon real-validation fix to `1.1.0-beta.3`.
+- Real beta.2 Icon validation confirmed the mode-aware brief fix worked, but the output still used a black rounded app-icon container with white outside corners.
+- Extended Icon Result Quality Audit with `iconOuterCornerLuminance`, `iconEdgeLuminance`, and `iconLightCornerDarkEdgeContainerRisk`.
+- Updated local Icon edge repair so rounded-mask repairs also fade the full outer edge band, not only the four corners.
+- Added a regression fixture for white outside corners plus dark rounded-edge containers.
+
+### Release Intent
+
+- This beta closes a real Icon failure that the earlier rounded-mask audit missed.
+- It remains local-only and token-free after generation.
+- It prepares another one-image Icon Desktop Test Path rerun using the packaged app.
+
+## 2026-06-02 1.1.0-beta.2 Mode-Aware Brief Release Update
+
+### Completed In This Pass
+
+- Promoted the current multimode validation build to `1.1.0-beta.2`.
+- Fixed the live validation failure where Icon, Logo, and Announcement schemes inherited Poster KV architecture language.
+- Split brief generation so Poster keeps the cinematic KV architecture path, while Icon/Logo/Announcement/Collab use mode-specific planning rules.
+- Added Icon hard locks at the brief normalization stage: 1:1, one dominant subject, no text, no poster scene, no multi-character battle, and 64px readability.
+- Added regression coverage that simulates contaminated Icon brief output and verifies `ICON MODE ONLY` normalization, slogan removal, and Poster/KV cleanup.
+
+### Release Intent
+
+- This beta keeps the optimized Poster chain intact while preventing non-Poster modes from becoming accidental posters.
+- It prepares the next Desktop Test Path pass for one low-cost Icon real-generation rerun.
+- It does not add provider calls to automated checks.
+
 ## 2026-06-02 1.1.0-beta.1 Quality Audit Refresh Release Update
 
 ### Completed In This Pass
