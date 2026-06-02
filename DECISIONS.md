@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D106: 1.1.0-rc.3 Requires A Multimode Acceptance Matrix
+
+Status: accepted
+
+Context: RC2 made user testing possible, but the acceptance criteria for Poster, Icon, Logo, Announcement, and Collab were still spread across the guide, old test notes, and regression scripts. The user also does not currently have partner/collab IP material, so Collab testing needs a safe synthetic input that does not accidentally become a fake brand/logo test.
+
+Decision: Add `MULTIMODE_ACCEPTANCE.md` and a zero-cost `multimode-acceptance:check` release gate. Add `public/mock-assets/collab-partner-sundae-ranger.svg` as the rc.3 synthetic `collabCharacter` fixture. The fixture is a fictional visual partner only, contains no readable text, and is not a partner `brandLogo`. Missing partner brandLogo must still use a blank partner brand plate or neutral emblem.
+
+Impact:
+
+- Multimode testing has explicit pass/fail criteria instead of scattered judgment calls.
+- Collab can be tested without waiting for a real partner asset and without reusing BOSS, Logo, or prop assets as the partner.
+- Real generation remains bounded to max 1 real generation per mode for the rc.3 pass unless one focused rerun is needed.
+- Future real partner assets can replace the synthetic fixture without changing the Collab brand-safety rule.
+
 ## D105: 1.1.0-rc.2 Requires A User Test Readiness Guide
 
 Status: accepted

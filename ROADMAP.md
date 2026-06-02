@@ -1,5 +1,22 @@
 # ROADMAP.md
 
+## 2026-06-03 1.1.0-rc.3 Multimode Acceptance Matrix Release Update
+
+### Completed In This Pass
+
+- Promoted the build to `1.1.0-rc.3`.
+- Added `MULTIMODE_ACCEPTANCE.md` as the shared acceptance matrix for Poster, Icon, Logo, Announcement, and Collab.
+- Added the Synthetic Collab Partner Asset `public/mock-assets/collab-partner-sundae-ranger.svg` so no-partner Collab testing can use a clear `collabCharacter` fixture instead of misusing BOSS, Logo, or prop assets.
+- Added `npm run multimode-acceptance:check` and included it in the full `npm run check` chain.
+- Bound rc.3 acceptance to max 1 real generation per mode unless one focused rerun is needed.
+- Kept partner brand safety explicit: the synthetic partner is not a logo, so missing partner `brandLogo` must still produce a blank partner brand plate, neutral emblem, or copy-safe lockup.
+
+### Release Intent
+
+- This RC turns the multi-mode user trial from loose judgment into a repeatable matrix.
+- It makes Collab testable even when the user has no real partner IP material.
+- The next pass should use the matrix for one bounded desktop walk-through and only fix blocking visual or UX issues before `1.1.0` stable.
+
 ## 2026-06-03 1.1.0-rc.2 User Test Readiness Release Update
 
 ### Completed In This Pass

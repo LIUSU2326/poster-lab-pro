@@ -1,5 +1,28 @@
 # TESTING.md
 
+## 2026-06-03 1.1.0-rc.3 Multimode Acceptance Matrix Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-rc.3`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify `MULTIMODE_ACCEPTANCE.md` exists and defines Poster, Icon, Logo, Announcement, and Collab pass/fail criteria.
+- Verify `public/mock-assets/collab-partner-sundae-ranger.svg` is available as a synthetic `collabCharacter` fixture when no real partner asset exists.
+- Verify the synthetic Collab partner fixture contains no readable text or partner logo.
+- Verify Collab acceptance still requires game character, collabCharacter, and game logo, while missing partner `brandLogo` expects a blank partner brand plate.
+- Verify real generation remains manual, opt-in, and limited to max 1 real generation per mode for this RC pass unless one focused rerun is needed.
+
+Automated checks:
+
+- Run `npm run multimode-acceptance:check`.
+- Run `npm run multimode-regression:check`.
+- Run `npm run result-quality-audit:check`.
+- Run `npm run user-test-readiness:check`.
+- Run `npm run ux-regression:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-03 1.1.0-rc.2 User Test Readiness Release Update
 
 Desktop Test Path checks:

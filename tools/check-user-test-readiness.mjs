@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.2";
+const currentVersion = "1.1.0-rc.3";
 
 function read(filePath) {
   try {
@@ -15,6 +15,7 @@ function read(filePath) {
 const pkg = read("package.json");
 const readme = read("README.md");
 const guide = read("USER_TESTING.md");
+const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 const desktopTesting = read("DESKTOP_TESTING.md");
 const testing = read("TESTING.md");
@@ -32,6 +33,7 @@ for (const token of [
 for (const token of [
   currentVersion,
   "USER_TESTING.md",
+  "MULTIMODE_ACCEPTANCE.md",
   "Desktop Test Path",
   "release/mac/Poster Lab Pro.app",
 ]) {
@@ -47,6 +49,9 @@ for (const token of [
   "accepted cost cap",
   "Default automated checks must not spend provider credits",
   "1-2 real generations per mode",
+  "MULTIMODE_ACCEPTANCE.md",
+  "max 1 real generation per mode",
+  "public/mock-assets/collab-partner-sundae-ranger.svg",
   "old Logo/BOSS/partner assets do not reappear",
   "Poster:",
   "Icon:",
@@ -59,6 +64,17 @@ for (const token of [
   "second confirmation click",
 ]) {
   if (!guide.includes(token)) issues.push(`USER_TESTING.md: missing ${token}`);
+}
+
+for (const token of [
+  currentVersion,
+  "Synthetic Collab Partner Asset",
+  "public/mock-assets/collab-partner-sundae-ranger.svg",
+  "Role: `collabCharacter`",
+  "blank partner brand plate",
+  "max 1 real generation per mode",
+]) {
+  if (!multimodeAcceptance.includes(token)) issues.push(`MULTIMODE_ACCEPTANCE.md: missing ${token}`);
 }
 
 for (const token of [

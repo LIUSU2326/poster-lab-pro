@@ -23,13 +23,15 @@ const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 const userTesting = read("USER_TESTING.md");
+const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
 
-const currentVersion = "1.1.0-rc.2";
+const currentVersion = "1.1.0-rc.3";
 
 for (const token of [
   `"version": "${currentVersion}"`,
   "\"check\"",
   "\"multimode-regression:check\"",
+  "\"multimode-acceptance:check\"",
   "\"ux-regression:check\"",
   "\"user-test-readiness:check\"",
   "\"desktop:pack:mac\"",
@@ -66,6 +68,7 @@ for (const [file, source] of [
   ["ROADMAP.md", roadmap],
   ["RELEASE_CHECKLIST.md", releaseChecklist],
   ["USER_TESTING.md", userTesting],
+  ["MULTIMODE_ACCEPTANCE.md", multimodeAcceptance],
 ]) {
   for (const token of [currentVersion, "Desktop Test Path", "release/mac/Poster Lab Pro.app"]) {
     if (!source.includes(token)) issues.push(`${file}: missing ${token}`);
@@ -89,6 +92,13 @@ if (!decisions.includes("D092")) {
 
 if (!testing.includes("1.1.0-rc.2 User Test Readiness Release Update")) {
   issues.push("TESTING.md: missing 1.1.0-rc.2 user test readiness release section");
+}
+
+for (const token of [
+  "1.1.0-rc.3 Multimode Acceptance Matrix Release Update",
+  "npm run multimode-acceptance:check",
+]) {
+  if (!testing.includes(token)) issues.push(`TESTING.md: missing ${token}`);
 }
 
 if (issues.length > 0) {
