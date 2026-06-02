@@ -44,6 +44,10 @@ for (const token of [
   "modeReferenceInstruction",
   "Icon reference handling",
   "Collab reference handling",
+  "Uploaded subject accessory lock",
+  "no invented shield/weapon/tool/accessory",
+  "invent partner brand names",
+  "polished blank partner brand plate",
   "Icon logo rule",
   "Collab logo rule",
 ]) {

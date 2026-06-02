@@ -101,7 +101,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
     case "icon":
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
-        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, and no poster scene complexity.",
+        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory.",
       ].join(" ");
     case "logo":
       return [
@@ -117,7 +117,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
     case "collab":
       return [
         "Quality bar: premium collaboration campaign visual with two identities kept separate but unified by shared lighting, materials, scene, and interaction story.",
-        "Composition bar: dual-character and dual-logo balance without merging identities or creating fake hybrid marks.",
+        "Composition bar: dual-character and dual-logo balance without merging identities, inventing partner brand names, or creating fake hybrid marks.",
       ].join(" ");
     case "poster":
     default:
@@ -133,6 +133,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterMode = request.context.mode === "poster";
   const fusionDirective = request.assets.length ? modeAssetFusionDirective(request.context.mode, request.assets) : "";
   const referenceInstruction = modeReferenceInstruction(request);
+  const subjectAccessoryInstruction = modeSubjectAccessoryInstruction(request);
   const protagonistInstruction = modeSpecificProtagonistInstruction(request);
   const brandLogoInstruction = modeSpecificBrandLogoInstruction(request);
   const assetInstruction = request.assets.length
@@ -144,6 +145,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
         hasPosterMode
           ? "Characters and BOSS may change pose, expression, action, camera angle, lighting, and perspective, but must preserve recognizable identity. Use each uploaded character, BOSS/key subject, and logo once; no duplicate large/small copies."
           : referenceInstruction,
+        subjectAccessoryInstruction,
         fusionDirective,
         request.assets.some((asset) => asset.role === "styleReference")
           ? "A styleReference image is present and has priority over selected style tags and character-derived style for rendering, palette, lighting, and finish."
@@ -179,17 +181,22 @@ function hasSemanticRole(request: ImageGenerationRequest, role: ReturnType<typeo
 function modeReferenceInstruction(request: ImageGenerationRequest): string {
   switch (request.context.mode) {
     case "icon":
-      return "Icon reference handling: choose one dominant uploaded subject or motif and simplify/redraw it into a clean 1:1 icon silhouette. Do not create a poster scene, multi-character battle, copied sticker, or any text.";
+      return "Icon reference handling: choose one dominant uploaded subject or motif and simplify/redraw it into a clean 1:1 icon silhouette. Do not create a poster scene, multi-character battle, copied sticker, invented shield/weapon/tool/accessory, or any text.";
     case "logo":
       return "Logo reference handling: use uploaded assets as brand continuity, motif, material, or shape references for a wordmark/mark system. Do not turn them into a scene or pasted collage.";
     case "announcement":
       return "Announcement reference handling: use uploaded assets as supporting art around a readable copy-safe announcement panel. Do not cover the title/copy area or generate garbled operational text.";
     case "collab":
-      return "Collab reference handling: keep uploaded characters and logos as separate identities unified by one scene, shared lighting, materials, and interaction. Do not merge identities or create hybrid marks.";
+      return "Collab reference handling: keep uploaded characters and logos as separate identities unified by one scene, shared lighting, materials, and interaction. Do not merge identities, invent partner brand names, or create hybrid marks.";
     case "poster":
     default:
       return "Use each uploaded character, BOSS/key subject, and logo once as an integrated in-world element. Do not create duplicate large/small copies or sticker-like pasted versions of the same asset.";
   }
+}
+
+function modeSubjectAccessoryInstruction(request: ImageGenerationRequest): string {
+  if (request.assets.length === 0 || request.context.mode === "poster") return "";
+  return "Uploaded subject accessory lock: do not add new shields, weapons, armor, tools, costume parts, horns, crowns, props, facial features, facial hair, or signature accessories to uploaded characters, BOSS/key subjects, collab characters, or icon subjects unless those details are clearly visible in the reference. Express action through pose, camera, lighting, particles, environment, and existing visible props only.";
 }
 
 function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): string {
@@ -210,7 +217,11 @@ function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): st
 }
 
 function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): string {
-  if (!hasSemanticRole(request, "brandLogo")) return "";
+  const hasBrandLogo = hasSemanticRole(request, "brandLogo");
+  if (request.context.mode === "collab" && !hasBrandLogo) {
+    return "Collab logo rule: no uploaded partner brandLogo is present. Do not invent partner brand names, fake sponsor logos, fake brand slogans, or readable partner wordmarks; reserve a polished blank partner brand plate, neutral emblem, or copy-safe lockup area instead.";
+  }
+  if (!hasBrandLogo) return "";
   switch (request.context.mode) {
     case "icon":
       return "Icon logo rule: uploaded logos may guide color, symbol shape, or brand style, but icon mode must not render logo lettering or readable text.";
@@ -219,7 +230,7 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
     case "announcement":
       return "Announcement logo rule: use uploaded logos as small clean lockups or reserved brand-safe areas, never as fake repeated watermark text.";
     case "collab":
-      return "Collab logo rule: keep each uploaded logo/brand identity separate and readable; do not fuse two logos into one fake hybrid mark.";
+      return "Collab logo rule: keep each uploaded logo/brand identity separate and readable; do not fuse two logos into one fake hybrid mark, and do not invent partner brand names or fake sponsor slogans for missing logo slots.";
     case "poster":
     default:
       return "Logo text safety: use the exact uploaded logo only when lettering can stay accurate; otherwise reserve a polished blank logo-safe title plate/sign that fits the scene. Do not invent fake logo words, substitute letters, or generate garbled text.";

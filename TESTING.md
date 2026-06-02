@@ -1,5 +1,40 @@
 # TESTING.md
 
+## 2026-06-02 1.0.0-beta.3 Real Generation Acceptance Update
+
+Real generation checks:
+
+- Poster: one Google live image run with uploaded character, BOSS/key subject, logo, and composition reference.
+- Icon: one Google live image run using uploaded subject identity as an integrated redraw reference.
+- Logo: one Google live image run with Logo mode wordmark/mark-first constraints.
+- Announcement: one Google live image run with copy-safe panel constraints.
+- Collab: one Google live image run with separate game and partner identities.
+- Total live cost for this acceptance pass was about USD 0.25.
+- All checked outputs used AI integrated redraw; local overlay was not applied.
+
+Accepted fixes from the pass:
+
+- Shared prompt rules now forbid new shield/weapon/tool/accessory details unless visible in uploaded references.
+- Google and OpenAI live adapters now repeat the same subject accessory lock in final provider prompts.
+- Collab prompts now forbid fake partner brand names, fake sponsor logos, and readable partner wordmarks when no partner `brandLogo` was uploaded.
+- Missing partner brand identity should become a polished blank partner brand plate, neutral emblem, or copy-safe lockup.
+
+Regression checks:
+
+- Run `npm run prompts:check`.
+- Run `npm run provider-requests:check`.
+- Run `npm run google-live-adapter:check`.
+- Run `npm run openai-live-adapter:check`.
+- Run `npm run check` before packaging.
+- Verify the visible app version is `1.0.0-beta.3`.
+
+Known beta watch items:
+
+- Icon mode can still inherit an app-icon mask or dark rounded-container prior; keep this for 1.1 icon-specific post-processing.
+- Logo spelling remains model-dependent; keep dedicated logo/text refinement for 1.1.
+- Announcement should prefer editable blank copy-safe areas when exact operational copy matters.
+- Collab should reserve blank partner brand areas unless the user uploads an explicit partner logo.
+
 ## 2026-06-02 1.0.0-beta.2 UX Regression Update
 
 UX regression checks:

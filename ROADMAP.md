@@ -1,5 +1,28 @@
 # ROADMAP.md
 
+## 2026-06-02 1.0.0-beta.3 Real Generation Acceptance Update
+
+### Completed In This Pass
+
+- Ran five low-cost real generation checks through the current Google live image path: Poster, Icon, Logo, Announcement, and Collab.
+- Confirmed all checked outputs used AI integrated redraw as the main path; no local asset overlay was applied.
+- Confirmed Poster slogan treatment can become larger and more scene-integrated when the prompt asks for in-world signage or campaign lettering.
+- Tightened shared prompt/provider rules so uploaded subjects are not given new shields, weapons, tools, props, costume parts, or signature accessories unless visible in the reference.
+- Tightened Collab rules so missing partner brand logos produce blank partner brand plates or neutral emblems instead of fake partner wordmarks.
+- Added prompt, Google adapter, and OpenAI adapter checks so the new accessory and fake-brand locks cannot be removed silently.
+
+### Real Generation Notes
+
+- Poster: stronger scene integration, one logo, and better campaign lettering; watch item is hero scale and invented props.
+- Icon: correct square/no-text/single-subject direction; watch item is the model's app-icon mask prior and invented accessory drift.
+- Logo: no BOSS pollution and wordmark-first direction; watch item is spelling accuracy, which still needs a dedicated logo/text refinement path.
+- Announcement: copy-safe panel direction works; watch item is avoiding direct generated operational body copy when exact spelling matters.
+- Collab: both parties remained separate in one scene; watch item is avoiding fake partner brand text when no partner logo was uploaded.
+
+### Next Step
+
+- Package and smoke the `1.0.0-beta.3` desktop app, push to `main`, then move into 1.0 RC release-candidate preparation.
+
 ## 2026-06-02 1.0.0-beta.2 UX Regression Update
 
 ### Completed In This Pass

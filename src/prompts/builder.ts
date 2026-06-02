@@ -534,6 +534,7 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
     "Mode quality target: use uploaded assets as semantic visual references for AI integrated redraw, not as pasted sticker layers.",
     fusionDirective,
     "Preserve each asset's assigned semantic duty from the Mode Asset References section while adapting it to this mode's visual goal.",
+    "Uploaded subject accessory lock: do not add new shields, weapons, armor, tools, costume parts, horns, crowns, props, facial details, beard/mustache, or signature accessories to uploaded subjects unless those details are clearly visible in the reference. Express action through pose, camera, lighting, particles, environment, and existing visible props only.",
   ].filter(Boolean).join("\n");
 
   if (modeState.mode === "icon") {
@@ -542,7 +543,7 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
       "Icon quality target: premium game/app icon, perfect 1:1 square, one single dominant subject, bold readable silhouette, high contrast, minimal background, crisp focal detail, and readable at 64px.",
       "Icon asset handling: uploaded character, prop, BOSS-like subject, or logo reference can become the main icon subject, but it must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
       "Icon canvas lock: generate square artwork that fills the full canvas to all four corners. Do not render an OS app-icon mask, rounded black square, rounded container, white border, badge frame, or empty corner padding.",
-      "Icon exclusions: ABSOLUTELY NO TEXT, no logo lettering, no captions, no UI copy, no poster scene complexity, no multi-character battle scene, no white border, no rounded container, and no copied static asset pose.",
+      "Icon exclusions: ABSOLUTELY NO TEXT, no logo lettering, no captions, no UI copy, no poster scene complexity, no multi-character battle scene, no invented shield/weapon/tool/accessory, no white border, no rounded container, and no copied static asset pose.",
     ].join("\n");
   }
 
@@ -569,7 +570,8 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
       sharedRules,
       "Collab quality target: premium collaboration campaign visual where both identities stay separate but feel unified through one scene, shared lighting, matching materials, clear interaction story, and balanced brand presence.",
       "Collab asset handling: [Game Character] and [Collab Partner] must remain separate visible entities. Keep each uploaded character/logo identity independent; show relationship through exchanged props, mirrored actions, shared set piece, or in-world event staging.",
-      "Collab exclusions: do not merge characters, average traits, swap identities, create a hybrid mascot, fuse two logos into one fake mark, paste logos side-by-side without a story, or let one brand erase the other.",
+      "Collab exclusions: do not merge characters, average traits, swap identities, create a hybrid mascot, fuse two logos into one fake mark, invent partner brand names, invent fake sponsor logos, render fake partner slogans, paste logos side-by-side without a story, or let one brand erase the other.",
+      "Collab missing-brandLogo rule: if no uploaded brandLogo exists for a partner, reserve a polished blank partner brand plate, neutral emblem, or copy-safe lockup area instead of generating readable fake partner wordmarks.",
     ].join("\n");
   }
 
@@ -620,6 +622,7 @@ function formatModeTypographyDirection(
     Object.entries(slogans).map(([language, slogan]) => `${language}: ${slogan}`).join("\n"),
     "Use only short readable campaign copy when clean spelling is likely; otherwise reserve a polished blank copy-safe lockup.",
     "Keep both brand/logo identities separate and avoid fake hybrid logo text.",
+    "Do not invent partner brand names, fake sponsor logos, or readable partner wordmarks when no uploaded brandLogo is present; use a polished blank partner brand plate or neutral emblem instead.",
   ].filter(Boolean).join("\n");
 }
 

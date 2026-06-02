@@ -200,6 +200,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
   const assetInventory = request.assets.length ? assetSemanticInventory(request.assets, { mode: request.context.mode }) : "";
   const fusionDirective = modeAssetFusionDirective(request.context.mode, request.assets);
   const referenceIdentityInstruction = modeReferenceIdentityInstruction(request);
+  const subjectAccessoryInstruction = modeSubjectAccessoryInstruction(request);
   const antagonistInstruction = modeSpecificAntagonistInstruction(request);
   const brandLogoInstruction = modeSpecificBrandLogoInstruction(request);
   const protagonistInstruction = modeSpecificProtagonistInstruction(request);
@@ -208,7 +209,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
     if (request.context.mode === "icon") {
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
-        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, no poster scene complexity.",
+        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, no poster scene complexity, no invented shield/weapon/tool/accessory.",
       ].join(" ");
     }
     if (request.context.mode === "logo") {
@@ -226,7 +227,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
     if (request.context.mode === "collab") {
       return [
         "Quality bar: premium collaboration campaign visual with two identities kept separate but unified by shared lighting, materials, scene, and interaction story.",
-        "Composition bar: dual-character and dual-logo balance without merging identities or creating fake hybrid marks.",
+        "Composition bar: dual-character and dual-logo balance without merging identities, inventing partner brand names, or creating fake hybrid marks.",
       ].join(" ");
     }
     return [
@@ -290,6 +291,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
           ? "Use each uploaded protagonist, antagonist/key subject, brand logo, prop, and environment reference according to its semantic duty. Keep identity consistent while changing pose, expression, action, lighting, scale, and perspective for a vivid KV moment. Do not create large/small duplicate copies."
           : "Use each uploaded asset once according to its role unless the mode explicitly asks for variants. Do not create duplicate large/small copies, alternate redraws, or sticker-like pasted versions of the same asset.",
         referenceIdentityInstruction,
+        subjectAccessoryInstruction,
         fusionDirective,
         assetInventory ? `Uploaded asset semantic duties:\n${assetInventory}` : "",
         request.assets.some((asset) => assetSemanticRole(asset) === "styleReference")
@@ -353,13 +355,13 @@ function modeReferenceIdentityInstruction(request: ImageGenerationRequest): stri
   if (request.assets.length === 0) return "";
   switch (request.context.mode) {
     case "icon":
-      return "Icon reference lock: uploaded subject assets are identity/silhouette anchors for one simplified icon subject. Preserve recognizable colors, proportions, markings, and key props while redrawing into a bold small-size-readable icon form. No copied static pose and no text.";
+      return "Icon reference lock: uploaded subject assets are identity/silhouette anchors for one simplified icon subject. Preserve recognizable colors, proportions, markings, and visible key props while redrawing into a bold small-size-readable icon form. No invented shield/weapon/tool/accessory, no copied static pose, and no text.";
     case "logo":
       return "Logo reference lock: uploaded visual assets are brand-continuity or motif references for a mark/wordmark system. Extract shape rhythm, color, material, and symbolic cues without turning the output into a character scene or poster.";
     case "announcement":
       return "Announcement reference lock: uploaded characters, subjects, logos, UI, and environments are supporting references around a readable announcement surface. Preserve identity where used, but keep the title/copy zone clear.";
     case "collab":
-      return "Collab reference lock: uploaded character and logo references remain separate identities. Preserve each side's recognizable silhouette, colors, styling, and brand cues while unifying them through scene lighting, material, and interaction.";
+      return "Collab reference lock: uploaded character and logo references remain separate identities. Preserve each side's recognizable silhouette, colors, styling, and brand cues while unifying them through scene lighting, material, and interaction. Do not invent partner brand names or fake sponsor wordmarks for any side that lacks an uploaded brandLogo.";
     case "poster":
     default:
       return [
@@ -367,6 +369,11 @@ function modeReferenceIdentityInstruction(request: ImageGenerationRequest): stri
         "Identity lock means no new facial hair, age shift, body-type shift, hairstyle swap, costume swap, or generic chef redesign. If a character reference is a small chibi/mascot, keep that exact chibi/mascot identity while only changing pose and expression.",
       ].join("\n");
   }
+}
+
+function modeSubjectAccessoryInstruction(request: ImageGenerationRequest): string {
+  if (request.assets.length === 0 || request.context.mode === "poster") return "";
+  return "Uploaded subject accessory lock: do not add new shields, weapons, armor, tools, costume parts, horns, crowns, props, facial features, facial hair, or signature accessories to uploaded characters, BOSS/key subjects, collab characters, or icon subjects unless those details are clearly visible in the reference. Express action through pose, camera, lighting, particles, environment, and existing visible props only.";
 }
 
 function modeSpecificMultiProtagonistInstruction(request: ImageGenerationRequest): string {
@@ -404,7 +411,11 @@ function modeSpecificAntagonistInstruction(request: ImageGenerationRequest): str
 }
 
 function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): string {
-  if (!hasSemanticRole(request, "brandLogo")) return "";
+  const hasBrandLogo = hasSemanticRole(request, "brandLogo");
+  if (request.context.mode === "collab" && !hasBrandLogo) {
+    return "Brand collab rule: no uploaded partner brandLogo is present. Do not invent partner brand names, fake sponsor logos, fake brand slogans, or readable partner wordmarks; reserve a polished blank partner brand plate, neutral emblem, or copy-safe lockup area instead.";
+  }
+  if (!hasBrandLogo) return "";
   switch (request.context.mode) {
     case "icon":
       return "Brand icon rule: uploaded logos may guide colors, symbol shape, or brand energy, but icon mode must not render logo lettering, captions, or readable text.";
@@ -413,7 +424,7 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
     case "announcement":
       return "Brand announcement rule: use uploaded logos as clean small lockups or reserved brand-safe areas. Do not create fake replacement logo text or repeated watermark patterns.";
     case "collab":
-      return "Brand collab rule: keep each uploaded logo/brand identity separate and readable within one unified scene; do not fuse two logos into one fake hybrid mark.";
+      return "Brand collab rule: keep each uploaded logo/brand identity separate and readable within one unified scene; do not fuse two logos into one fake hybrid mark, and do not invent partner brand names or fake sponsor slogans for missing logo slots.";
     case "poster":
     default:
       return "A gameLogo reference is present. Allocate one readable logo-safe treatment. Use the exact uploaded logo/wordmark only if letterforms can stay accurate; otherwise leave a polished blank logo-safe plate/sign. Do not redraw a different logo, invent look-alike words, substitute letters, or add a second logo.";
@@ -720,11 +731,13 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
       modeAssetFusionDirective(request.context.mode, request.assets),
       "The inline visual references above override loose text guesses. Preserve each reference according to its semantic duty while adapting it to the current mode's visual goal.",
       request.context.mode === "icon"
-        ? "Icon mode requires clean full-canvas 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no OS app-icon mask or rounded black container, minimal background detail, high contrast, and 64px readability."
+        ? "Icon mode requires clean full-canvas 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no OS app-icon mask or rounded black container, no invented shield/weapon/tool/accessory, minimal background detail, high contrast, and 64px readability."
         : "",
       request.context.mode === "logo"
         ? "Logo mode requires wordmark readability and brand system clarity. Do not turn the result into a cinematic scene, and do not invent fake replacement lettering for uploaded logo references."
         : "",
+      modeSubjectAccessoryInstruction(request),
+      modeSpecificBrandLogoInstruction(request),
     ].filter(Boolean).join("\n")
     : "";
   return [

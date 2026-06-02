@@ -63,6 +63,10 @@ for (const token of [
   "Logo reference lock",
   "Announcement reference lock",
   "Collab reference lock",
+  "Uploaded subject accessory lock",
+  "no invented shield/weapon/tool/accessory",
+  "invent partner brand names",
+  "polished blank partner brand plate",
   "Brand icon rule",
   "Brand collab rule",
 ]) {

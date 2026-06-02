@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D092: Real Generation QA Locks Reference Accessories And Missing Partner Brands
+
+Status: accepted
+
+Context: The `1.0.0-beta.3` real generation pass showed that AI integrated redraw is the right default path, but image models can still add attractive details that were not present in uploaded assets. Icon generation added shield-like accessories, and Collab generation created a readable fake partner brand even though no partner logo was uploaded.
+
+Decision: Treat uploaded subject accessories as locked visual identity across non-poster modes as well as Poster. Do not add new shields, weapons, tools, props, costume parts, or signature accessories unless visible in the uploaded reference. In Collab mode, missing partner `brandLogo` means a blank partner brand plate, neutral emblem, or copy-safe lockup, not generated fake partner wording.
+
+Impact:
+
+- Shared prompt packages include a subject accessory lock for all AI integrated redraw modes.
+- Google and OpenAI live image prompts repeat the rule at provider boundary.
+- Collab prompts and provider prompts prevent fake partner brand names or fake sponsor logos when no partner logo reference exists.
+- Prompt and provider checks now guard these rules.
+
 ## D091: Beta UX Gives Blocked Generation A Direct Setup Path
 
 Status: accepted
