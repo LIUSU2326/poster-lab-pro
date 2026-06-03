@@ -4,7 +4,7 @@ Poster Lab Pro is a local creative workbench for game marketing assets. The curr
 
 ## Current Release Candidate
 
-- Visible version: `1.1.0-rc.3`
+- Visible version: `1.1.0-rc.4`
 - Main branch: `main`
 - Desktop bundle hint: `release/mac/Poster Lab Pro.app`
 - Local desktop test bundle can also be placed at `/Users/liusu/Desktop/Poster Lab Pro.app`.
@@ -58,6 +58,7 @@ Real provider image generation is manual and opt-in. It requires saved provider 
 - Poster QA: `POSTER_QA.md`
 - User Test Guide: `USER_TESTING.md`
 - Multimode Acceptance Matrix: `MULTIMODE_ACCEPTANCE.md`
+- Controlled Real Acceptance Log: `REAL_GENERATION_ACCEPTANCE.md`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Regression notes: `TESTING.md`
 - Roadmap and remaining risks: `ROADMAP.md`

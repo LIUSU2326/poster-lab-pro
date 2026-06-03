@@ -1,5 +1,29 @@
 # TESTING.md
 
+## 2026-06-03 1.1.0-rc.4 Controlled Real Acceptance Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-rc.4`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify `REAL_GENERATION_ACCEPTANCE.md` exists and records controlled real-generation acceptance status.
+- Verify the local workspace has baseline results for Poster, Icon, Logo, Announcement, and Collab.
+- Verify fresh rc.4 real generation remains pending behind the App live safety gate unless the tester manually enables it.
+- Verify the log forbids direct API/script execution that bypasses visible live safety confirmations.
+- Verify `REAL_GENERATION_ACCEPTANCE.md` links back to `MULTIMODE_ACCEPTANCE.md` for pass/fail criteria.
+
+Automated checks:
+
+- Run `npm run real-acceptance:check`.
+- Run `npm run multimode-acceptance:check`.
+- Run `npm run multimode-regression:check`.
+- Run `npm run result-quality-audit:check`.
+- Run `npm run user-test-readiness:check`.
+- Run `npm run ux-regression:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-03 1.1.0-rc.3 Multimode Acceptance Matrix Release Update
 
 Desktop Test Path checks:

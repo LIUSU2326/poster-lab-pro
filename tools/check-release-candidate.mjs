@@ -24,14 +24,16 @@ const decisions = read("DECISIONS.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 const userTesting = read("USER_TESTING.md");
 const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
+const realAcceptance = read("REAL_GENERATION_ACCEPTANCE.md");
 
-const currentVersion = "1.1.0-rc.3";
+const currentVersion = "1.1.0-rc.4";
 
 for (const token of [
   `"version": "${currentVersion}"`,
   "\"check\"",
   "\"multimode-regression:check\"",
   "\"multimode-acceptance:check\"",
+  "\"real-acceptance:check\"",
   "\"ux-regression:check\"",
   "\"user-test-readiness:check\"",
   "\"desktop:pack:mac\"",
@@ -69,6 +71,7 @@ for (const [file, source] of [
   ["RELEASE_CHECKLIST.md", releaseChecklist],
   ["USER_TESTING.md", userTesting],
   ["MULTIMODE_ACCEPTANCE.md", multimodeAcceptance],
+  ["REAL_GENERATION_ACCEPTANCE.md", realAcceptance],
 ]) {
   for (const token of [currentVersion, "Desktop Test Path", "release/mac/Poster Lab Pro.app"]) {
     if (!source.includes(token)) issues.push(`${file}: missing ${token}`);
@@ -97,8 +100,18 @@ if (!testing.includes("1.1.0-rc.2 User Test Readiness Release Update")) {
 for (const token of [
   "1.1.0-rc.3 Multimode Acceptance Matrix Release Update",
   "npm run multimode-acceptance:check",
+  "1.1.0-rc.4 Controlled Real Acceptance Release Update",
+  "npm run real-acceptance:check",
 ]) {
   if (!testing.includes(token)) issues.push(`TESTING.md: missing ${token}`);
+}
+
+for (const token of [
+  "Fresh real generation is manual and opt-in only",
+  "Never use a direct API/script path to bypass the App live safety gate",
+  "pending live safety gate",
+]) {
+  if (!realAcceptance.includes(token)) issues.push(`REAL_GENERATION_ACCEPTANCE.md: missing ${token}`);
 }
 
 if (issues.length > 0) {

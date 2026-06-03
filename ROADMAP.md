@@ -1,5 +1,21 @@
 # ROADMAP.md
 
+## 2026-06-03 1.1.0-rc.4 Controlled Real Acceptance Release Update
+
+### Completed In This Pass
+
+- Promoted the build to `1.1.0-rc.4`.
+- Added `REAL_GENERATION_ACCEPTANCE.md` as the controlled real-generation acceptance log for the 1.1 stable decision.
+- Added `npm run real-acceptance:check` and included it in the full `npm run check` chain.
+- Recorded current workspace readiness: Google provider configured, masked credential present, five core asset roles present, synthetic Collab partner fixture available, and stored baseline results exist for Poster, Icon, Logo, Announcement, and Collab.
+- Kept fresh rc.4 real generation marked as pending live safety gate instead of triggering paid provider calls through a direct API/script path.
+- Preserved `MULTIMODE_ACCEPTANCE.md` as the visual pass/fail source for each mode.
+
+### Release Intent
+
+- This RC makes the final stable promotion decision auditable: baseline evidence is recorded, fresh run status is explicit, and paid provider calls stay visible and user-controlled.
+- The next pass should either run one bounded fresh generation per mode through the App live safety gate, or promote stable with any deferred modes listed as known risks.
+
 ## 2026-06-03 1.1.0-rc.3 Multimode Acceptance Matrix Release Update
 
 ### Completed In This Pass

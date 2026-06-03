@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.3";
+const currentVersion = "1.1.0-rc.4";
 
 function read(filePath) {
   try {
@@ -16,6 +16,7 @@ const pkg = read("package.json");
 const readme = read("README.md");
 const guide = read("USER_TESTING.md");
 const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
+const realAcceptance = read("REAL_GENERATION_ACCEPTANCE.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 const desktopTesting = read("DESKTOP_TESTING.md");
 const testing = read("TESTING.md");
@@ -34,6 +35,7 @@ for (const token of [
   currentVersion,
   "USER_TESTING.md",
   "MULTIMODE_ACCEPTANCE.md",
+  "REAL_GENERATION_ACCEPTANCE.md",
   "Desktop Test Path",
   "release/mac/Poster Lab Pro.app",
 ]) {
@@ -50,7 +52,9 @@ for (const token of [
   "Default automated checks must not spend provider credits",
   "1-2 real generations per mode",
   "MULTIMODE_ACCEPTANCE.md",
+  "REAL_GENERATION_ACCEPTANCE.md",
   "max 1 real generation per mode",
+  "max 1 fresh real generation per mode",
   "public/mock-assets/collab-partner-sundae-ranger.svg",
   "old Logo/BOSS/partner assets do not reappear",
   "Poster:",
@@ -75,6 +79,17 @@ for (const token of [
   "max 1 real generation per mode",
 ]) {
   if (!multimodeAcceptance.includes(token)) issues.push(`MULTIMODE_ACCEPTANCE.md: missing ${token}`);
+}
+
+for (const token of [
+  currentVersion,
+  "Fresh real generation is manual and opt-in only",
+  "Never use a direct API/script path to bypass the App live safety gate",
+  "Baseline Result Evidence",
+  "Fresh rc.4 Acceptance Status",
+  "pending live safety gate",
+]) {
+  if (!realAcceptance.includes(token)) issues.push(`REAL_GENERATION_ACCEPTANCE.md: missing ${token}`);
 }
 
 for (const token of [

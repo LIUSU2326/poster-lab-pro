@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-rc.3`
+- Version: `1.1.0-rc.4`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -16,13 +16,14 @@ Run these before promoting a build:
 2. `npm run release-candidate:check`
 3. `npm run user-test-readiness:check`
 4. `npm run multimode-acceptance:check`
-5. `npm run desktop:pack:mac`
-6. Replace `/Users/liusu/Desktop/Poster Lab Pro.app` with `release/mac/Poster Lab Pro.app`.
-7. Verify `CFBundleShortVersionString` matches the current version.
-8. Launch the desktop app and verify `http://127.0.0.1:3000` returns the workbench HTML.
-9. Verify the top bar shows the version and desktop bundle path.
-10. Verify settings shows provider setup order, connection test, live safety gate, estimated cost, and accepted cost cap.
-11. Use `USER_TESTING.md` and `MULTIMODE_ACCEPTANCE.md` for the manual user trial.
+5. `npm run real-acceptance:check`
+6. `npm run desktop:pack:mac`
+7. Replace `/Users/liusu/Desktop/Poster Lab Pro.app` with `release/mac/Poster Lab Pro.app`.
+8. Verify `CFBundleShortVersionString` matches the current version.
+9. Launch the desktop app and verify `http://127.0.0.1:3000` returns the workbench HTML.
+10. Verify the top bar shows the version and desktop bundle path.
+11. Verify settings shows provider setup order, connection test, live safety gate, estimated cost, and accepted cost cap.
+12. Use `USER_TESTING.md`, `MULTIMODE_ACCEPTANCE.md`, and `REAL_GENERATION_ACCEPTANCE.md` for the manual user trial.
 
 ## Manual Live Generation Gate
 
@@ -59,4 +60,5 @@ Live provider calls remain opt-in:
 - RC1 adds `npm run ux-regression:check` as a zero-cost UX/reliability gate for mode navigation, blocked live generation, result management, settings safety, project library, queue failure recovery, and destructive-action confirmation.
 - RC2 adds a User Test Readiness Gate with `USER_TESTING.md` and `npm run user-test-readiness:check`; manual acceptance should run only 1-2 real generations per mode when needed.
 - RC3 adds `MULTIMODE_ACCEPTANCE.md`, `npm run multimode-acceptance:check`, and the synthetic Collab partner fixture `public/mock-assets/collab-partner-sundae-ranger.svg`; this keeps no-partner Collab testing explicit and limits the RC pass to max 1 real generation per mode unless one focused rerun is needed.
+- RC4 adds `REAL_GENERATION_ACCEPTANCE.md` and `npm run real-acceptance:check`; Fresh real generation is manual and opt-in only, pending the App live safety gate, and must not be triggered through a direct API/script path that bypasses the visible safety confirmations.
 - Signed installer, auto-update, crash reporting, and a production release channel are not part of this local RC gate.

@@ -1,22 +1,23 @@
 # USER_TESTING.md
 
-## Poster Lab Pro 1.1.0-rc.3 User Test Guide
+## Poster Lab Pro 1.1.0-rc.4 User Test Guide
 
 This guide is for a local desktop trial of Poster Lab Pro before the 1.1 stable release.
 
 ## Test App
 
-- Version: `1.1.0-rc.3`
+- Version: `1.1.0-rc.4`
 - Desktop app path: `/Users/liusu/Desktop/Poster Lab Pro.app`
 - Release bundle path: `release/mac/Poster Lab Pro.app`
 - Local service URL after the app opens: `http://127.0.0.1:3000`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Multimode Acceptance Matrix: `MULTIMODE_ACCEPTANCE.md`
+- Controlled Real Acceptance Log: `REAL_GENERATION_ACCEPTANCE.md`
 
 ## Before Testing
 
 1. Open `/Users/liusu/Desktop/Poster Lab Pro.app`.
-2. Confirm the top bar shows `v1.1.0-rc.3`, `main`, the desktop bundle path, and the workspace revision.
+2. Confirm the top bar shows `v1.1.0-rc.4`, `main`, the desktop bundle path, and the workspace revision.
 3. Open `模型与 Key`.
 4. Save or confirm the provider API Key.
 5. Run the provider connection test.
@@ -29,6 +30,8 @@ This guide is for a local desktop trial of Poster Lab Pro before the 1.1 stable 
 - Real generation is manual and opt-in only.
 - For acceptance, run only 1-2 real generations per mode when needed.
 - For the rc.3 multimode pass, use `MULTIMODE_ACCEPTANCE.md` and run max 1 real generation per mode unless there is one clear blocking bug.
+- For the rc.4 real acceptance pass, use `REAL_GENERATION_ACCEPTANCE.md` and run max 1 fresh real generation per mode unless one clear blocking bug needs a focused rerun.
+- Never use a direct API/script path to bypass the App live safety gate.
 - Stop tuning prompts after obvious pass/fail evidence; do not run unlimited retries.
 - If the live safety gate blocks a run, treat that as correct behavior until credentials, connection, confirmations, storage, and cost cap are ready.
 

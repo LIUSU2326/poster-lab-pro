@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D107: 1.1.0-rc.4 Keeps Real Generation Behind The App Safety Gate
+
+Status: accepted
+
+Context: The workspace has Google configured, masked credentials present, the required five-mode asset roles, and stored baseline results for Poster, Icon, Logo, Announcement, and Collab. However, fresh rc.4 real generation would spend provider credits. Running a direct route or script with confirmations injected would technically exercise the service, but it would bypass the visible App live-safety flow that users rely on to understand cost and external-provider execution.
+
+Decision: Add `REAL_GENERATION_ACCEPTANCE.md` and `real-acceptance:check`. Record current baseline result evidence and mark fresh rc.4 generation as pending live safety gate. Never use a direct API/script path to bypass the App live safety gate. Fresh runs must be started through the App safety workflow with live run, provider cost, external provider, result storage, and cost-cap confirmations visible.
+
+Impact:
+
+- The final 1.1 stable decision can separate existing baseline evidence from fresh rc.4 live acceptance.
+- Provider spend remains visible and intentional.
+- Automation can verify the acceptance record and safety contract without triggering paid calls.
+- The next pass can run one bounded fresh generation per mode through the App, or promote with deferred modes documented as stable risks.
+
 ## D106: 1.1.0-rc.3 Requires A Multimode Acceptance Matrix
 
 Status: accepted

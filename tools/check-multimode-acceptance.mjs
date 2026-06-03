@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.3";
+const currentVersion = "1.1.0-rc.4";
 
 function read(filePath) {
   try {

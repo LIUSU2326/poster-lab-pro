@@ -203,7 +203,7 @@ async function run() {
     includes(shell, "live-gate-chip", label);
     includes(shell, "run-mode-chip", label);
     includes(shell, "data-action=\"toggle-theme\"", label);
-    includes(shell, "v1.1.0-rc.3", label);
+    includes(shell, "v1.1.0-rc.4", label);
     includes(shell, "release/mac/Poster Lab Pro.app", label);
     includes(shell, "data-action=\"generate-schemes\"", label);
     includes(shell, "data-action=\"simulate-asset-upload\"", label);
