@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-rc.6`
+- Version: `1.1.0-rc.7`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -61,4 +61,5 @@ Live provider calls remain opt-in:
 - RC2 adds a User Test Readiness Gate with `USER_TESTING.md` and `npm run user-test-readiness:check`; manual acceptance should run only 1-2 real generations per mode when needed.
 - RC3 adds `MULTIMODE_ACCEPTANCE.md`, `npm run multimode-acceptance:check`, and the synthetic Collab partner fixture `public/mock-assets/collab-partner-sundae-ranger.svg`; this keeps no-partner Collab testing explicit and limits the RC pass to max 1 real generation per mode unless one focused rerun is needed.
 - RC4 adds `REAL_GENERATION_ACCEPTANCE.md` and `npm run real-acceptance:check`; Fresh real generation is manual and opt-in only, pending the App live safety gate, and must not be triggered through a direct API/script path that bypasses the visible safety confirmations.
+- RC7 front-loads Poster `KV ACTION MINI-BRIEF` and Collab partner-first dual-subject locks for compressed providers. Agnes Poster/Collab are still quality-risk modes requiring manual visual review; capability/storage success alone is not stable-quality acceptance.
 - Signed installer, auto-update, crash reporting, and a production release channel are not part of this local RC gate.

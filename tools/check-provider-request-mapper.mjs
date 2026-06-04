@@ -264,6 +264,7 @@ async function runRuntimeCheck() {
       "large secondary campaign object",
       "scene-derived",
       "No duplicate uploaded asset",
+      "KV ACTION MINI-BRIEF",
     ]) {
       if (!mapped.request.prompt.includes(priorityToken)) {
         issues.push(`poster image request should keep priority integrated-redraw rule before prompt truncation: ${priorityToken}`);
@@ -576,6 +577,9 @@ async function runRuntimeCheck() {
         "Mode Quality Bar",
         "Collab quality target",
         "Non-Negotiable Collab Dual-Subject Contract",
+        "Partner-first co-star lock",
+        "Two-character audit",
+        "Shared-scene integration",
         "Collab Brand Safety Strategy",
         "blankPartnerBrandPlate",
         "[Game Character]",

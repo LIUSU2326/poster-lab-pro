@@ -1,5 +1,27 @@
 # ROADMAP.md
 
+## 2026-06-04 1.1.0-rc.7 Poster/Collab/Announcement Quality Sprint
+
+### Completed In This Pass
+
+- Promoted the visible desktop build target to `1.1.0-rc.7` for the next quality sprint.
+- Kept Icon and Logo as deferred dedicated-quality modes pending the Gemini reference implementation.
+- Strengthened Poster prompts for compressed image providers with a short `KV ACTION MINI-BRIEF` before the long creative direction so required anchors stay visible.
+- Strengthened Collab prompts with a partner-first dual-subject lock: exactly one uploaded collab partner and exactly one uploaded game character should be the primary co-stars, with comparable scale, shared lighting, contact shadows, and one visible interaction touchpoint.
+- Preserved Announcement as the known safer Agnes mode by keeping the blank editable copy-safe panel strategy.
+
+### Release Intent
+
+- rc.7 is a bounded quality-sprint release for Poster, Collab, and Announcement. It is not a claim that Agnes can match high-end multi-reference Poster/Collab quality in every case.
+- Agnes remains useful for free provider-chain and storage testing, while all-Agnes Poster/Collab stay marked as quality-risk requiring manual review.
+- Stable promotion should depend on flow reliability plus clearly documented visual caveats, not on unlimited prompt churn.
+
+### Next Version Plan
+
+- `1.1.0 Stable`: freeze if rc.7 checks pass and known Agnes Poster/Collab quality risks are documented clearly enough for users.
+- `1.2.0`: integrate the Gemini Icon/Logo reference implementation as a dedicated mode-specific engine pass.
+- `1.3.0`: improve result management, failure recovery, archive/history UX, and broader UI consistency.
+
 ## 2026-06-04 1.1.0-rc.6 Icon/Logo UI Reference Alignment
 
 ### Completed In This Pass

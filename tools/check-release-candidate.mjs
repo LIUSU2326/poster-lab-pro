@@ -26,7 +26,7 @@ const userTesting = read("USER_TESTING.md");
 const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
 const realAcceptance = read("REAL_GENERATION_ACCEPTANCE.md");
 
-const currentVersion = "1.1.0-rc.6";
+const currentVersion = "1.1.0-rc.7";
 
 for (const token of [
   `"version": "${currentVersion}"`,

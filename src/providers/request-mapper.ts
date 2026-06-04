@@ -667,6 +667,9 @@ function collabMandatoryVisualContract(assets: ProviderAssetReference[]): string
 
   return [
     "## Non-Negotiable Collab Dual-Subject Contract",
+    collabPartner && gameCharacter
+      ? "Partner-first co-star lock: design the composition around TWO large readable co-stars before adding backgrounds, props, brand plates, particles, or decorations. [Collab Partner] must receive a clear foreground or strong-midground co-star action moment; [Game Character] must receive comparable scale and clarity."
+      : "",
     collabPartner
       ? `The uploaded collabCharacter reference (${collabPartner.id}) is [Collab Partner]. It must appear as a separate readable co-star, never as a tiny background mascot, hidden decoration, merged hybrid, or omitted partner.`
       : "",
@@ -674,12 +677,21 @@ function collabMandatoryVisualContract(assets: ProviderAssetReference[]): string
       ? `The uploaded gameCharacter reference (${gameCharacter.id}) is [Game Character]. It must appear as a separate readable co-star with its own preserved identity.`
       : "",
     collabPartner && gameCharacter
+      ? "do not merge characters: [Collab Partner] and [Game Character] must remain two separate identities with separate silhouettes and roles."
+      : "",
+    collabPartner && gameCharacter
       ? "Both co-stars must have comparable visual importance: balanced foreground/midground scale, readable silhouettes, shared lighting, and a visible interaction touchpoint such as exchanged props, cooking together, guarding the same objective, racing through the same portal, or reacting to the same impact."
+      : "",
+    collabPartner && gameCharacter
+      ? "Two-character audit: render exactly one [Collab Partner] and exactly one [Game Character] as the primary characters. Do not add a third lead, do not replace either side with a logo-only presence, and do not hide either character behind a prop, plate, or crowd."
+      : "",
+    collabPartner && gameCharacter
+      ? "Shared-scene integration: the two co-stars must share the same perspective, ground plane, contact shadows, rim light, color grading, and environmental VFX so the collab feels native to one world rather than two stickers placed side by side."
       : "",
     "The image fails if the two sides are fused into one character, one side disappears, one side becomes a logo-only presence, or the partner is reduced to a background icon.",
     brandReferences.length > 0
       ? "Brand/logo handling: keep uploaded brand references separate. Use exact lettering only when clean; otherwise use blank non-letter plates or neutral emblems. Do not invent fake partner names, fake sponsor words, or hybrid logo text."
-      : "Brand/logo handling: if no complete partner brandLogo is available, create blank non-letter partner/game brand plates or neutral emblems only. Do not generate readable fake partner names or distorted game-logo text.",
+      : "Brand/logo handling: no uploaded brandLogo exists for a partner. Create blank non-letter partner/game brand plates or neutral emblems only; do not generate readable partner names, fake sponsor words, or distorted game-logo text.",
   ].filter(Boolean).join("\n");
 }
 
@@ -785,6 +797,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     "Default pipeline: AI integrated redraw. Use uploaded image references as identity, semantic, style, composition, and brand anchors inside the model generation. Do not plan a separate background plate for local sticker compositing.",
     schemeAnchor,
     visualContract,
+    "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
     "Use uploaded image references as binding visual anchors, not as static stickers. Subject assets may change pose, expression, action, camera angle, lighting, scale, and perspective to become vivid in-world actors or objects while preserving their recognizable identity.",
     assetRoleInventory ? "## Uploaded Asset Role Semantics and Fusion Strategies\nUse each uploaded asset according to its semantic duty and fusion strategy; these duties override loose scheme wording." : "",
     "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",

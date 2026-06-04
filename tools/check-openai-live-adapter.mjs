@@ -367,6 +367,8 @@ async function runRuntimeCheck() {
       || !agnesPrompt.includes("EXACT HERO ROSTER LOCK")
       || !agnesPrompt.includes("EXACT BOSS ROSTER LOCK")
       || !agnesPrompt.includes("STYLE CONSISTENCY LOCK")
+      || !agnesPrompt.includes("AGNES/COMPRESSED POSTER ORDER")
+      || !agnesPrompt.includes("KV ACTION MINI-BRIEF")
     ) {
       issues.push("Agnes image prompt should front-load compressed-provider Poster priority anchors");
     }
@@ -424,6 +426,8 @@ async function runRuntimeCheck() {
       !agnesCollabResult.ok
       || !agnesCollabPrompt.includes("Collab partner anchor")
       || !agnesCollabPrompt.includes("Both co-stars need comparable visual weight")
+      || !agnesCollabPrompt.includes("COLLAB DUAL-STAR ORDER")
+      || !agnesCollabPrompt.includes("Two-character audit")
     ) {
       issues.push("Agnes collab prompt should front-load dual-subject co-star priority anchors");
     }

@@ -1,5 +1,25 @@
 # TESTING.md
 
+## 2026-06-04 1.1.0-rc.7 Poster/Collab/Announcement Quality Sprint
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-rc.7`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Poster image prompts keep `Default pipeline: AI integrated redraw`, `Non-Negotiable Poster Visual Contract`, and `KV ACTION MINI-BRIEF`.
+- Verify Collab image prompts keep `Non-Negotiable Collab Dual-Subject Contract`, `Partner-first co-star lock`, and `Two-character audit`.
+- Verify Announcement still produces a game announcement card with a large blank editable copy area and no generated operational text.
+- Verify all-Agnes Poster/Collab remain visible as quality-risk requiring manual review rather than being marked stable by capability alone.
+
+Automated checks:
+
+- Run `npm run provider-requests:check`.
+- Run `npm run openai-live-adapter:check`.
+- Run `npm run prompts:check`.
+- Run `npm run real-acceptance:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run check`.
+
 ## 2026-06-04 1.1.0-rc.6 Icon/Logo UI Alignment Release Update
 
 Desktop Test Path checks:

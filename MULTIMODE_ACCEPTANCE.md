@@ -1,12 +1,12 @@
 # MULTIMODE_ACCEPTANCE.md
 
-## Poster Lab Pro 1.1.0-rc.6 Multimode Acceptance Matrix
+## Poster Lab Pro 1.1.0-rc.7 Multimode Acceptance Matrix
 
 This matrix defines the 1.1 release-candidate acceptance pass for Poster, Icon, Logo, Announcement, and Collab. It is meant to keep real generation bounded while preserving each mode's distinct visual goal.
 
 ## Test App
 
-- Version: `1.1.0-rc.6`
+- Version: `1.1.0-rc.7`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Release bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop app: `/Users/liusu/Desktop/Poster Lab Pro.app`

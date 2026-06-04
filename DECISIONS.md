@@ -1,5 +1,20 @@
 # DECISIONS.md
 
+## D111: rc.7 Prioritizes Prompt Anchor Compression For Poster And Collab
+
+Status: accepted
+
+Context: Agnes is useful for free real-generation smoke tests, but earlier Poster and Collab outputs showed that long provider-neutral prompts can dilute the most important visual anchors in compressed prompt profiles. Poster failures included missing/weak BOSS threat, duplicate/generic characters, fake text, and sticker-like integration. Collab failures included the uploaded partner being demoted, omitted, or reading as a separate sticker instead of an equal co-star.
+
+Decision: `1.1.0-rc.7` keeps the provider-neutral integrated-redraw architecture, but adds short front-loaded quality contracts for compressed providers. Poster receives a `KV ACTION MINI-BRIEF` that prioritizes uploaded hero, uploaded BOSS/key threat, single logo/copy-safe area, shared ground plane, contact shadows, occlusion, rim light, and VFX integration. Collab receives a partner-first dual-subject contract that makes the uploaded collabCharacter and gameCharacter the two primary readable co-stars before logos, plates, backgrounds, or decorations.
+
+Impact:
+
+- The default pipeline remains AI integrated redraw, not local sticker overlay.
+- Collab image prompts now explicitly reject partner disappearance, logo-only partner presence, third lead characters, and merged/hybrid identities.
+- Poster prompts now protect required visual anchors earlier for models with shorter prompt attention.
+- Agnes Poster/Collab remain quality-risk modes requiring manual review; this decision improves handoff quality but does not promise model-independent identical results.
+
 ## D110: Icon And Logo UI Alignment Does Not Change The Quality Priority
 
 Status: accepted

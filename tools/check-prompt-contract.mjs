@@ -98,6 +98,8 @@ for (const token of [
   "announcementCopySafetyBlock",
   "blankCopySafePanel",
   "Collab quality target",
+  "Collab partner-first lock",
+  "Collab two-character audit",
   "Collab Brand Safety Strategy",
   "collabBrandSafetyBlock",
   "blankPartnerBrandPlate",

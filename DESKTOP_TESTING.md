@@ -6,7 +6,7 @@ This is the local desktop test runbook for the current MVP workbench. It verifie
 
 ## 1.0 Beta Identity
 
-- Visible version: `1.1.0-rc.6`
+- Visible version: `1.1.0-rc.7`
 - Desktop bundle hint: `release/mac/Poster Lab Pro.app`
 - Main branch: `main`
 - Desktop Test Path still starts with static checks before any live provider call.

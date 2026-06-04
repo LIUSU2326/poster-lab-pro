@@ -1,12 +1,12 @@
 # USER_TESTING.md
 
-## Poster Lab Pro 1.1.0-rc.6 User Test Guide
+## Poster Lab Pro 1.1.0-rc.7 User Test Guide
 
 This guide is for a local desktop trial of Poster Lab Pro before the 1.1 stable release.
 
 ## Test App
 
-- Version: `1.1.0-rc.6`
+- Version: `1.1.0-rc.7`
 - Desktop app path: `/Users/liusu/Desktop/Poster Lab Pro.app`
 - Release bundle path: `release/mac/Poster Lab Pro.app`
 - Local service URL after the app opens: `http://127.0.0.1:3000`
@@ -17,7 +17,7 @@ This guide is for a local desktop trial of Poster Lab Pro before the 1.1 stable 
 ## Before Testing
 
 1. Open `/Users/liusu/Desktop/Poster Lab Pro.app`.
-2. Confirm the top bar shows `v1.1.0-rc.6`, `main`, the desktop bundle path, and the workspace revision.
+2. Confirm the top bar shows `v1.1.0-rc.7`, `main`, the desktop bundle path, and the workspace revision.
 3. Open `模型与 Key`.
 4. Save or confirm the provider API Key.
 5. Run the provider connection test.

@@ -1,12 +1,12 @@
 # REAL_GENERATION_ACCEPTANCE.md
 
-## Poster Lab Pro 1.1.0-rc.6 Controlled Real Acceptance Log
+## Poster Lab Pro 1.1.0-rc.7 Controlled Real Acceptance Log
 
 This file tracks the real-generation acceptance state before promoting 1.1. It keeps paid provider runs intentional, bounded, and reviewable.
 
 ## Current App
 
-- Version: `1.1.0-rc.6`
+- Version: `1.1.0-rc.7`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Desktop app path: `/Users/liusu/Desktop/Poster Lab Pro.app`
 - Release bundle path: `release/mac/Poster Lab Pro.app`
@@ -21,7 +21,7 @@ This file tracks the real-generation acceptance state before promoting 1.1. It k
 - The App live safety gate must be enabled before any provider call.
 - Required confirmations: live run, provider cost, external provider, and local result storage.
 - Accepted cost cap must be greater than or equal to the estimated run cost.
-- rc.5 allows max 1 fresh real generation per mode unless one clear blocking bug requires a focused rerun.
+- rc.7 allows max 1 fresh real generation per mode, focused on Poster/Collab/Announcement first, unless one clear blocking bug requires a focused rerun.
 - Never use a direct API/script path to bypass the App live safety gate.
 
 ## Workspace Readiness Snapshot
@@ -52,6 +52,15 @@ Existing stored results provide regression context:
 Baseline acceptance is useful for regression comparison, but the final stable promotion should still prefer one fresh rc.5 run for any mode whose quality remains uncertain.
 
 ## Fresh rc.5 Acceptance Status
+
+## Fresh rc.7 Quality Sprint Status
+
+Code-level prompt/request changes prepared before the next bounded visual run:
+
+- Poster: added `KV ACTION MINI-BRIEF` and compressed-provider ordering so uploaded hero, uploaded BOSS/key threat, single logo/copy-safe area, shared ground plane, contact shadows, foreground occlusion, rim light, and VFX remain front-loaded.
+- Collab: added `Partner-first co-star lock`, `Two-character audit`, and shared-scene integration rules so the uploaded collabCharacter cannot be omitted, hidden, merged, or reduced to a logo-only/mascot presence.
+- Announcement: retained the large blank editable copy area strategy as the Agnes-friendly mode; no new risky text-rendering requirement was added.
+- Fresh visual run status: pending App live safety gate. Use all-Agnes only for free provider-chain testing, and record Poster/Collab as quality-risk unless the actual image visibly satisfies the acceptance matrix.
 
 Agnes provider integration smoke, 2026-06-03:
 
