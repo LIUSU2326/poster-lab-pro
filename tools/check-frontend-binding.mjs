@@ -82,7 +82,7 @@ for (const token of [
   if (!resultManagementClient.includes(token)) issues.push(`result-management-client.js: missing ${token}`);
 }
 
-for (const token of ["getLiveGateViewModel", "liveExecution", "请先开启并通过实机安全闸"]) {
+for (const token of ["getLiveGateViewModel", "liveExecution", "请先开启真实生成保护"]) {
   if (!resultOperationClient.includes(token)) issues.push(`result-operation-client.js: missing live gate token ${token}`);
 }
 
@@ -132,7 +132,7 @@ for (const token of [
   "生成方案批次",
   "result-empty-actions",
   "查看已有方案",
-  "先开启并通过实机安全闸",
+  "先确认真实生成保护",
   "resultMatchesFilter",
   "goto-result-scheme",
   "regenerate-result",
@@ -142,7 +142,7 @@ for (const token of [
   "is-live-blocked",
   "is-unsupported-route",
   "resolveResultOperationRoute",
-  "请先开启并通过实机安全闸",
+  "请先确认真实生成保护",
 ]) {
   if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
 }
@@ -159,7 +159,7 @@ for (const token of ['data-result-view="results"', 'data-action="open-result-vie
   if (!archiveBoard.includes(token)) issues.push(`archive-board.js: missing archive result action token ${token}`);
 }
 
-for (const token of ["config-action-note", "先在顶部开启并通过实机安全闸"]) {
+for (const token of ["config-action-note", "先在顶部确认真实生成保护"]) {
   if (!configPanel.includes(token)) issues.push(`config-panel.js: missing gated generation helper token ${token}`);
 }
 if (!configPanel.includes("Agnes 多素材 KV/联名质量仍需人工验收")) {

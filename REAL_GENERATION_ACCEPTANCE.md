@@ -1,12 +1,12 @@
 # REAL_GENERATION_ACCEPTANCE.md
 
-## Poster Lab Pro 1.1.0-rc.7 Controlled Real Acceptance Log
+## Poster Lab Pro 1.1.0 Controlled Real Acceptance Log
 
-This file tracks the real-generation acceptance state before promoting 1.1. It keeps paid provider runs intentional, bounded, and reviewable.
+This file tracks the real-generation acceptance state for 1.1.0 stable. It keeps provider runs intentional, bounded, and reviewable.
 
 ## Current App
 
-- Version: `1.1.0-rc.7`
+- Version: `1.1.0`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Desktop app path: `/Users/liusu/Desktop/Poster Lab Pro.app`
 - Release bundle path: `release/mac/Poster Lab Pro.app`
@@ -18,11 +18,11 @@ This file tracks the real-generation acceptance state before promoting 1.1. It k
 
 - Default automated checks must not spend provider credits.
 - Fresh real generation is manual and opt-in only.
-- The App live safety gate must be enabled before any provider call.
+- The App live generation protection must be enabled before any provider call.
 - Required confirmations: live run, provider cost, external provider, and local result storage.
 - Accepted cost cap must be greater than or equal to the estimated run cost.
-- rc.7 allows max 1 fresh real generation per mode, focused on Poster/Collab/Announcement first, unless one clear blocking bug requires a focused rerun.
-- Never use a direct API/script path to bypass the App live safety gate.
+- 1.1.0 allows max 1 fresh real generation per mode, focused on Poster/Collab/Announcement first, unless one clear blocking bug requires a focused rerun.
+- Never use a direct API/script path to bypass the App live generation protection.
 
 ## Workspace Readiness Snapshot
 
@@ -37,7 +37,7 @@ Observed local service state on 2026-06-04:
 - Synthetic Collab partner fixture available: `public/mock-assets/collab-partner-sundae-ranger.svg`
 - Existing stored result modes present: Poster, Icon, Logo, Announcement, Collab
 
-This proves the rc.5 workspace is ready for a bounded manual real-generation pass, but it does not by itself prove fresh rc.5 visual acceptance.
+This proves the workspace is ready for a bounded manual real-generation pass, but it does not by itself prove fresh 1.1.0 visual acceptance.
 
 ## Baseline Result Evidence
 
@@ -49,18 +49,18 @@ Existing stored results provide regression context:
 - Announcement baseline: `result-job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf-image-1-1`
 - Collab baseline: `result-job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s-image-1-1`
 
-Baseline acceptance is useful for regression comparison, but the final stable promotion should still prefer one fresh rc.5 run for any mode whose quality remains uncertain.
+Baseline acceptance is useful for regression comparison, but the final stable promotion should still prefer one fresh 1.1.0 run for any mode whose quality remains uncertain.
 
-## Fresh rc.5 Acceptance Status
+## Fresh 1.1.0 Acceptance Status
 
-## Fresh rc.7 Quality Sprint Status
+## Fresh 1.1.0 Quality Sprint Status
 
 Code-level prompt/request changes prepared before the next bounded visual run:
 
 - Poster: added `KV ACTION MINI-BRIEF` and compressed-provider ordering so uploaded hero, uploaded BOSS/key threat, single logo/copy-safe area, shared ground plane, contact shadows, foreground occlusion, rim light, and VFX remain front-loaded.
 - Collab: added `Partner-first co-star lock`, `Two-character audit`, and shared-scene integration rules so the uploaded collabCharacter cannot be omitted, hidden, merged, or reduced to a logo-only/mascot presence.
 - Announcement: retained the large blank editable copy area strategy as the Agnes-friendly mode; no new risky text-rendering requirement was added.
-- Fresh visual run status: pending App live safety gate. Use all-Agnes only for free provider-chain testing, and record Poster/Collab as quality-risk unless the actual image visibly satisfies the acceptance matrix.
+- Fresh visual run status: pending App live generation protection. Use all-Agnes only for free provider-chain testing, and record Poster/Collab as quality-risk unless the actual image visibly satisfies the acceptance matrix.
 
 Agnes provider integration smoke, 2026-06-03:
 
@@ -129,13 +129,13 @@ Agnes Collab retest, 2026-06-04:
 
 Poster:
 
-- Fresh rc.5 run: attempted through Agnes rounds above; visual acceptance still failing for Poster KV quality.
+- Fresh 1.1.0 run: attempted through Agnes rounds above; visual acceptance still failing for Poster KV quality.
 - Acceptance source: `MULTIMODE_ACCEPTANCE.md`.
 - Must check: integrated redraw, BOSS threat, one logo treatment, scene-linked slogan/copy, no sticker overlay.
 
 Icon:
 
-- Fresh rc.5 run: `job-icon-project-pizza-kitchen-agnes-final-icon-softrepair-mpyvbpc2`
+- Fresh 1.1.0 run: `job-icon-project-pizza-kitchen-agnes-final-icon-softrepair-mpyvbpc2`
 - Provider/model: Agnes AI `agnes-image-2.1-flash`
 - Route: all-core Agnes image render; scheme `generated-icon-agnes-full-icon-mpybee7t-1`; `512x512`, 1 image.
 - Safety path: local App queue API with live execution enabled, provider-cost/external-provider/result-storage confirmations true and accepted cap `999`.
@@ -148,7 +148,7 @@ Icon:
 
 Logo:
 
-- Fresh rc.5 run: `job-logo-project-pizza-kitchen-agnes-fresh-logo-mpytzx1d`
+- Fresh 1.1.0 run: `job-logo-project-pizza-kitchen-agnes-fresh-logo-mpytzx1d`
 - Provider/model: Agnes AI `agnes-image-2.1-flash`
 - Route: all-core Agnes image render; scheme `generated-logo-agnes-full-logo-mpybg8x3-1`; `768x768`, 1 image.
 - Safety path: local App queue API with live execution enabled, provider-cost/external-provider/result-storage confirmations true and accepted cap `999`.
@@ -161,7 +161,7 @@ Logo:
 
 Announcement:
 
-- Fresh rc.5 run: `job-announcement-project-pizza-kitchen-agnes-announcement-capgate-mpysz0c8`
+- Fresh 1.1.0 run: `job-announcement-project-pizza-kitchen-agnes-announcement-capgate-mpysz0c8`
 - Provider/model: Agnes AI `agnes-image-2.1-flash`
 - Route: all-core Agnes image render; `regenerateSchemes: false`; existing scheme `announcement-beta4-copy-safe-mpwt6kqf-1`; `1024x576`, 1 image
 - Safety path: local App queue API with live execution enabled, provider-cost/external-provider/result-storage confirmations true, accepted cap `999`
@@ -174,7 +174,7 @@ Announcement:
 
 Collab:
 
-- Fresh rc.5 run: `job-collab-project-pizza-kitchen-agnes-collab-quality-r2-1780550849247`
+- Fresh 1.1.0 run: `job-collab-project-pizza-kitchen-agnes-collab-quality-r2-1780550849247`
 - Provider/model: Agnes AI `agnes-image-2.1-flash`
 - Route: all-core Agnes image render; scheme `generated-collab-agnes-full-collab-mpybidt6-1`; `1920x1080`, 1 image.
 - Safety path: local App queue API with live execution enabled, provider-cost/external-provider/result-storage confirmations true and accepted cap `1`.

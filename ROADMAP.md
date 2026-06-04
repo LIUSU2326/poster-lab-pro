@@ -1,10 +1,10 @@
 # ROADMAP.md
 
-## 2026-06-04 1.1.0-rc.7 Poster/Collab/Announcement Quality Sprint
+## 2026-06-04 1.1.0 Poster/Collab/Announcement Quality Sprint
 
 ### Completed In This Pass
 
-- Promoted the visible desktop build target to `1.1.0-rc.7` for the next quality sprint.
+- Promoted the visible desktop build target to `1.1.0` for the next quality sprint.
 - Kept Icon and Logo as deferred dedicated-quality modes pending the Gemini reference implementation.
 - Strengthened Poster prompts for compressed image providers with a short `KV ACTION MINI-BRIEF` before the long creative direction so required anchors stay visible.
 - Strengthened Collab prompts with a partner-first dual-subject lock: exactly one uploaded collab partner and exactly one uploaded game character should be the primary co-stars, with comparable scale, shared lighting, contact shadows, and one visible interaction touchpoint.
@@ -12,21 +12,21 @@
 
 ### Release Intent
 
-- rc.7 is a bounded quality-sprint release for Poster, Collab, and Announcement. It is not a claim that Agnes can match high-end multi-reference Poster/Collab quality in every case.
+- 1.1.0 is a bounded quality-sprint release for Poster, Collab, and Announcement. It is not a claim that Agnes can match high-end multi-reference Poster/Collab quality in every case.
 - Agnes remains useful for free provider-chain and storage testing, while all-Agnes Poster/Collab stay marked as quality-risk requiring manual review.
 - Stable promotion should depend on flow reliability plus clearly documented visual caveats, not on unlimited prompt churn.
 
 ### Next Version Plan
 
-- `1.1.0 Stable`: freeze if rc.7 checks pass and known Agnes Poster/Collab quality risks are documented clearly enough for users.
+- `1.1.0 Stable`: freeze if 1.1.0 checks pass and known Agnes Poster/Collab quality risks are documented clearly enough for users.
 - `1.2.0`: integrate the Gemini Icon/Logo reference implementation as a dedicated mode-specific engine pass.
 - `1.3.0`: improve result management, failure recovery, archive/history UX, and broader UI consistency.
 
-## 2026-06-04 1.1.0-rc.6 Icon/Logo UI Reference Alignment
+## 2026-06-04 1.1.0 Icon/Logo UI Reference Alignment
 
 ### Completed In This Pass
 
-- Promoted the visible desktop build to `1.1.0-rc.6` after the Icon/Logo interface alignment pass.
+- Promoted the visible desktop build to `1.1.0` after the Icon/Logo interface alignment pass.
 - Reviewed `/Users/liusu/Downloads/gameicon_pro.tsx` and the supplied GameIcon Pro screenshots for the App Icon / Brand Logo sidebar model.
 - Updated Icon and Logo mode labels, asset slots, mode copy, style presets, output copy, and CTA language so they behave like distinct production modes instead of thin Poster variants.
 - Added formal `styleTags` support to Icon and Logo mode forms, defaults, validation, adapters, runtime normalization, and prompt builder output.
@@ -38,22 +38,22 @@
 
 ### Release Intent
 
-- rc.6 is a UI/state alignment release for Icon and Logo, not a claim that Icon/Logo final image quality is finished.
+- 1.1.0 is a UI/state alignment release for Icon and Logo, not a claim that Icon/Logo final image quality is finished.
 - Poster, Collab, and Announcement remain the next quality priority.
 - Icon and Logo deep generation logic should wait for the Gemini reference implementation and functional description, then be merged as a dedicated 1.2 pass.
 
 ### Next Version Plan
 
-- `1.1.0-rc.7`: Poster, Collab, and Announcement quality sprint using Agnes where appropriate, with bounded real-generation checks and no unlimited prompt churn.
+- `1.1.0`: Poster, Collab, and Announcement quality sprint using Agnes where appropriate, with bounded real-generation checks and no unlimited prompt churn.
 - `1.1.0 Stable`: freeze once Poster/Collab/Announcement have acceptable flow and the known Icon/Logo UI caveat is documented.
 - `1.2.0`: Icon/Logo dedicated engine pass, integrating the supplied Gemini reference logic, mode-specific refinement tools, and real visual acceptance.
 - `1.3.0`: broader UX/result-management polish after all five modes have mode-specific quality gates.
 
-## 2026-06-04 1.1.0-rc.5 Capability Gate And Agnes Acceptance Follow-Up
+## 2026-06-04 1.1.0 Capability Gate And Agnes Acceptance Follow-Up
 
 ### Completed In This Pass
 
-- Confirmed the latest desktop App is `/Users/liusu/Desktop/Poster Lab Pro.app`, served at `http://127.0.0.1:3000`, showing `v1.1.0-rc.5`.
+- Confirmed the latest desktop App is `/Users/liusu/Desktop/Poster Lab Pro.app`, served at `http://127.0.0.1:3000`, showing `v1.1.0`.
 - Ran the full local gate chain with `npm run check`.
 - Repacked the macOS desktop bundle and replaced the desktop App copy.
 - Added result-operation provider capability checks: unsupported current-provider actions are disabled with explicit messages instead of silently rerouting to another provider.
@@ -71,65 +71,65 @@
 - Before stable, continue improving Poster/Collab quality or document them as known risks for Agnes while recommending stronger multi-reference providers for KV-grade acceptance.
 - Next UX pass should focus on result viewer operability, post-processing disabled states, and making quality-risk review easier for end users.
 
-## 2026-06-03 1.1.0-rc.5 Controlled Real Acceptance Release Update
+## 2026-06-03 1.1.0 Controlled Real Acceptance Release Update
 
 ### Completed In This Pass
 
-- Promoted the build to `1.1.0-rc.5`.
+- Promoted the build to `1.1.0`.
 - Added `REAL_GENERATION_ACCEPTANCE.md` as the controlled real-generation acceptance log for the 1.1 stable decision.
 - Added `npm run real-acceptance:check` and included it in the full `npm run check` chain.
 - Recorded current workspace readiness: Google provider configured, masked credential present, five core asset roles present, synthetic Collab partner fixture available, and stored baseline results exist for Poster, Icon, Logo, Announcement, and Collab.
-- Kept fresh rc.5 real generation marked as pending live safety gate instead of triggering paid provider calls through a direct API/script path.
+- Kept fresh 1.1.0 real generation marked as pending live generation protection instead of triggering paid provider calls through a direct API/script path.
 - Preserved `MULTIMODE_ACCEPTANCE.md` as the visual pass/fail source for each mode.
 
 ### Release Intent
 
-- This RC makes the final stable promotion decision auditable: baseline evidence is recorded, fresh run status is explicit, and paid provider calls stay visible and user-controlled.
-- The next pass should either run one bounded fresh generation per mode through the App live safety gate, or promote stable with any deferred modes listed as known risks.
+- This release makes the final stable promotion decision auditable: baseline evidence is recorded, fresh run status is explicit, and paid provider calls stay visible and user-controlled.
+- The next pass should either run one bounded fresh generation per mode through the App live generation protection, or promote stable with any deferred modes listed as known risks.
 
-## 2026-06-03 1.1.0-rc.3 Multimode Acceptance Matrix Release Update
+## 2026-06-03 1.1.0 Multimode Acceptance Matrix Release Update
 
 ### Completed In This Pass
 
-- Promoted the build to `1.1.0-rc.3`.
+- Promoted the build to `1.1.0`.
 - Added `MULTIMODE_ACCEPTANCE.md` as the shared acceptance matrix for Poster, Icon, Logo, Announcement, and Collab.
 - Added the Synthetic Collab Partner Asset `public/mock-assets/collab-partner-sundae-ranger.svg` so no-partner Collab testing can use a clear `collabCharacter` fixture instead of misusing BOSS, Logo, or prop assets.
 - Added `npm run multimode-acceptance:check` and included it in the full `npm run check` chain.
-- Bound rc.3 acceptance to max 1 real generation per mode unless one focused rerun is needed.
+- Bound 1.1.0 acceptance to max 1 real generation per mode unless one focused rerun is needed.
 - Kept partner brand safety explicit: the synthetic partner is not a logo, so missing partner `brandLogo` must still produce a blank partner brand plate, neutral emblem, or copy-safe lockup.
 
 ### Release Intent
 
-- This RC turns the multi-mode user trial from loose judgment into a repeatable matrix.
+- This release turns the multi-mode user trial from loose judgment into a repeatable matrix.
 - It makes Collab testable even when the user has no real partner IP material.
 - The next pass should use the matrix for one bounded desktop walk-through and only fix blocking visual or UX issues before `1.1.0` stable.
 
-## 2026-06-03 1.1.0-rc.2 User Test Readiness Release Update
+## 2026-06-03 1.1.0 User Test Readiness Release Update
 
 ### Completed In This Pass
 
-- Promoted the build to `1.1.0-rc.2`.
-- Added `USER_TESTING.md` as the desktop user trial guide for the 1.1 release candidate.
+- Promoted the build to `1.1.0`.
+- Added `USER_TESTING.md` as the desktop user trial guide for the 1.1 release.
 - Added `npm run user-test-readiness:check` and included it in the full `npm run check` chain.
-- Documented the safe manual testing flow: open the desktop app, confirm visible version/path, configure provider credentials, test connection, enable live safety gate, set accepted cost cap, and limit real-generation acceptance to 1-2 runs per mode when needed.
+- Documented the safe manual testing flow: open the desktop app, confirm visible version/path, configure provider credentials, test connection, enable live generation protection, set accepted cost cap, and limit real-generation acceptance to 1-2 runs per mode when needed.
 - Added per-mode acceptance criteria for Poster, Icon, Logo, Announcement, and Collab.
 - Added result review and failure recovery instructions, including Result Quality Audit, second-click deletion confirmation, `失败原因`, and `重试失败图片`.
 - Added a check for stale asset reappearance after deleting and reuploading assets.
 
 ### Release Intent
 
-- This RC makes the app ready for a focused local user trial, not just developer regression checks.
-- It keeps real provider usage opt-in and bounded by the safety gate and cost cap.
+- This release makes the app ready for a focused local user trial, not just developer regression checks.
+- It keeps real provider usage opt-in and bounded by the live generation protection and cost cap.
 - Remaining work should be limited to issues found during hands-on user testing before the 1.1 stable promotion.
 
-## 2026-06-03 1.1.0-rc.1 UX Reliability Gate Release Update
+## 2026-06-03 1.1.0 UX Reliability Gate Release Update
 
 ### Completed In This Pass
 
-- Promoted the current build to `1.1.0-rc.1`.
+- Promoted the current build to `1.1.0`.
 - Added `npm run ux-regression:check` as a zero-cost UI/UX reliability gate that renders key shell states without provider calls.
 - Covered all five mode shells for navigation, settings access, live safety status, run mode status, theme switching, scheme generation, and asset upload entry points.
-- Covered blocked live-generation UX so scheme/image generation is disabled with a clear path to the live safety gate.
+- Covered blocked live-generation UX so scheme/image generation is disabled with a clear path to the live generation protection.
 - Covered result management UX: filters, viewer, return-to-scheme, regenerate, download, delete confirmation, and Result Quality Audit guidance.
 - Covered settings UX: provider setup steps, credential save/test, route plan test, resizable sheet, cost cap, and live gate confirmations.
 - Covered project library entry points and failed-image queue recovery controls.
@@ -137,9 +137,9 @@
 
 ### Release Intent
 
-- This RC starts the product-level reliability phase after the multimode generation chain stabilized.
+- This release starts the product-level reliability phase after the multimode generation chain stabilized.
 - It protects the main desktop workflow from quiet UX regressions without spending provider credits.
-- Remaining RC work should focus on hands-on desktop walkthrough polish, user-facing copy, and any critical issues found during manual use.
+- Remaining Release work should focus on hands-on desktop walkthrough polish, user-facing copy, and any critical issues found during manual use.
 
 ## 2026-06-03 1.1.0-beta.6 Multimode Regression Gate Release Update
 
@@ -158,7 +158,7 @@
 
 - This beta makes the 1.1 multimode generation chain harder to regress while avoiding extra provider cost.
 - It turns the previously scattered multimode assertions into a named gate that is easy to run before packaging.
-- It prepares the next pass for `1.1.0-rc.1`, focused on full UX/reliability walk-through rather than more prompt churn.
+- It prepares the next pass for `1.1.0`, focused on full UX/reliability walk-through rather than more prompt churn.
 
 ## 2026-06-03 1.1.0-beta.5 Collab Synthetic Partner Validation Release Update
 
@@ -344,19 +344,19 @@
 - It creates a foundation for future UI warnings, one-click rerun guidance, and 1.1 failure detection.
 - It keeps prompt tuning separate from post-result review, which makes real generation tests easier to interpret.
 
-## 2026-06-02 1.0 RC Release Candidate Preparation Update
+## 2026-06-02 1.0 release Release Preparation Update
 
 ### Completed In This Pass
 
 - Added `RELEASE_CHECKLIST.md` as the release-candidate gate for local beta/RC promotion.
-- Added `npm run release-candidate:check` to verify version identity, desktop bundle path, visible app metadata, live safety gate, cost cap UI, and release documentation.
-- Added `release-candidate:check` to the full `npm run check` chain so RC readiness cannot drift outside normal validation.
+- Added `npm run release-candidate:check` to verify version identity, desktop bundle path, visible app metadata, live generation protection, cost cap UI, and release documentation.
+- Added `release-candidate:check` to the full `npm run check` chain so release readiness cannot drift outside normal validation.
 - Confirmed the release gate keeps live provider calls manual and opt-in; automated checks still use fake transports and spend no provider credits.
 
-### Remaining RC Watch Items
+### Remaining Release Watch Items
 
 - Result history, rerun, and recovery flows are usable but still deserve a guided product pass before a broader user beta.
-- Signed installer, auto-update, crash reporting, and production release channels remain outside the local RC gate.
+- Signed installer, auto-update, crash reporting, and production release channels remain outside the local stable gate.
 - 1.1 quality work should focus on Icon post-processing, Logo/text refinement, Announcement copy-safe output, Collab missing-brand handling, and automatic image-quality failure detection.
 
 ## 2026-06-02 1.0.0-beta.3 Real Generation Acceptance Update
@@ -380,15 +380,15 @@
 
 ### Next Step
 
-- Package and smoke the `1.0.0-beta.3` desktop app at `release/mac/Poster Lab Pro.app`, push to `main`, then move into 1.0 RC release-candidate preparation.
+- Package and smoke the `1.0.0-beta.3` desktop app at `release/mac/Poster Lab Pro.app`, push to `main`, then move into 1.0 release release-candidate preparation.
 
 ## 2026-06-02 1.0.0-beta.2 UX Regression Update
 
 ### Completed In This Pass
 
-- Made the top `实机安全` chip open the Model/API Key settings sheet directly.
+- Made the top `真实生成` chip open the Model/API Key settings sheet directly.
 - Added a four-step setup strip inside settings: save Key, test connection, pass live gate, then generate.
-- Added active `打开实机安全闸` buttons to blocked empty states so users are not left with only disabled generation buttons.
+- Added active `确认真实生成保护` buttons to blocked empty states so users are not left with only disabled generation buttons.
 - Hid editable slogan controls in Icon and Logo modes; Icon now shows a locked no-text strategy, and Logo now points users to the wordmark/Logo reference path.
 - Reduced bottom safety status wording from failure-like `受阻` copy to clearer pending safety-check copy.
 
@@ -460,7 +460,7 @@
 
 - No signed installer, auto-update, crash reporting, or production release channel.
 - No live provider execution from Electron main/preload code.
-- No change to the existing API Key vault or provider safety gate.
+- No change to the existing API Key vault or provider live generation protection.
 
 ### Next Step
 
@@ -473,7 +473,7 @@
 - Persist optional Base URL and default model values from the provider settings surface.
 - Let OpenAI-compatible relay users test `/models` and image generation through the existing OpenAI adapter shape.
 - Add Google AI Studio as a provider id, manifest, settings option, connection diagnostic target, and image generation adapter.
-- Add a Google manual live queue path that reuses the existing safety gate, credential vault, queue worker, and local result file store.
+- Add a Google manual live queue path that reuses the existing live generation protection, credential vault, queue worker, and local result file store.
 - Keep the normal production CTA mock-safe until manual provider tests are validated.
 
 ### Not In This Step
@@ -536,7 +536,7 @@
 
 - Add a manual OpenAI live generation test route for a prepared queue job.
 - Require a saved encrypted credential, a successful provider connection diagnostic, live safety confirmations, accepted cost cap, injected HTTP transport, and local result file storage.
-- Run the existing OpenAI live queue helper only after the diagnostic and safety gate pass.
+- Run the existing OpenAI live queue helper only after the diagnostic and live generation protection pass.
 - Persist returned `dataUrl` image bytes as local result files and keep workspace snapshots free of raw API Keys and raw base64 payloads.
 
 ### Not In This Step
@@ -613,7 +613,7 @@
 
 - Add a manual desktop live test command/surface that can be run only after the gate is allowed.
 
-## 2026-05-23 Implementation Update: Live Execution Safety Gate
+## 2026-05-23 Implementation Update: Live Execution Protection
 
 ### MVP Implementation Step
 

@@ -1773,6 +1773,20 @@ select {
   gap: 6px;
 }
 
+.live-gate-system-checks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.live-gate-system-checks > strong {
+  grid-column: 1 / -1;
+  color: var(--panel-label);
+  font-size: var(--type-label);
+  font-weight: 820;
+  letter-spacing: 0.06em;
+}
+
 .live-gate-row {
   min-height: 28px;
   padding: 0 8px;

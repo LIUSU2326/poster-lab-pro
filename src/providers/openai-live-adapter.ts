@@ -25,6 +25,7 @@ import {
 } from "./provider-capability-profiles";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
+const AGNES_PROVIDER_ID = "agnes" as const;
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
@@ -178,6 +179,9 @@ function compressedProviderPriorityInstruction(
       "COMPRESSED MODEL PRIORITY CONTRACT:",
       "Follow this short contract before the longer creative prompt below.",
       "AGNES/COMPRESSED POSTER ORDER: first solve required uploaded anchors and story action; only then add background detail. The image is rejected if it becomes a generic pretty scene with small pasted references.",
+      providerId === AGNES_PROVIDER_ID
+        ? "AGNES POSTER RAW-IMAGE SAFETY: do not use uploaded subject images as source canvases. Subject references are treated as private identity/model-sheet instructions only; the final canvas must be newly drawn full-bleed artwork, never an img2img expansion of a reference asset."
+        : "",
       required ? `Poster required anchors: ${required}.` : "",
       protagonistAssets.length === 1
         ? `EXACT HERO ROSTER LOCK: render one and only one playable hero from ${protagonistAssets[0]?.id}. If the prompt says squad/team/staff/chefs/helpers, reinterpret it as this single uploaded hero only. No extra human chefs, no helper crowd, no background duplicate heroes.`
@@ -195,6 +199,7 @@ function compressedProviderPriorityInstruction(
         ? "LOW TEXT RELIABILITY LOCK: this provider is not reliable for spelling. Do NOT render readable words, pseudo-letters, warped logo text, title text, slogan text, or glyph-like strokes. Use large polished blank in-world logo/slogan plates only, with clean empty surfaces for later copy."
         : "",
       "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+      "REFERENCE PANEL BAN: reference images are private model sheets, not picture-in-picture content. Do not place a copied reference image, black-background cutout, side-by-side comparison panel, model-sheet panel, empty black block, or sticker pasted from an uploaded asset anywhere on the final canvas.",
       "STYLE CONSISTENCY LOCK: keep the entire image in one stylized game illustration language. No photorealistic people, no real-world crowd, no spectators, no adult realistic knight, no stock-photo background, no live-action advertising look, and no pasted cartoon stickers over a realistic scene.",
       "The poster fails if a required anchor is absent, tiny, hidden, duplicated, or replaced by a generic subject.",
       "Hero and BOSS must share the same camera, perspective, lighting, contact shadows, occlusion, particles/VFX, and story action. Do not make a pretty background with small sticker-like subjects.",
@@ -642,7 +647,13 @@ export function createOpenAIHttpTransport(fetchImpl: typeof fetch): OpenAIImageT
   };
 }
 
-function referenceImageUrls(request: ImageGenerationRequest): string[] {
+function referenceImageUrls(
+  providerId: OpenAICompatibleImageProviderId,
+  request: ImageGenerationRequest,
+): string[] {
+  if (providerId === AGNES_PROVIDER_ID && request.context.mode === "poster") {
+    return [];
+  }
   return Array.from(new Set(
     request.assets
       .map((asset) => asset.url || "")
@@ -663,7 +674,7 @@ function imageRequestBody(
   };
 
   if (providerUsesExtraBodyImageReferences(providerId)) {
-    const imageUrls = referenceImageUrls(request);
+    const imageUrls = referenceImageUrls(providerId, request);
     if (imageUrls.length > 0) {
       body.extra_body = {
         image: imageUrls,

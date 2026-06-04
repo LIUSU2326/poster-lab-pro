@@ -6,7 +6,7 @@ function read(path) {
   try {
     return readFileSync(path, "utf8");
   } catch {
-    issues.push(`${path}: missing required RC file`);
+    issues.push(`${path}: missing required release file`);
     return "";
   }
 }
@@ -26,7 +26,7 @@ const userTesting = read("USER_TESTING.md");
 const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
 const realAcceptance = read("REAL_GENERATION_ACCEPTANCE.md");
 
-const currentVersion = "1.1.0-rc.7";
+const currentVersion = "1.1.0";
 
 for (const token of [
   `"version": "${currentVersion}"`,
@@ -52,7 +52,7 @@ for (const token of ["APP_VERSION", "bundle-path", "APP_MAIN_BRANCH", "posterLab
 
 for (const token of [
   "provider-setup-steps",
-  "实机安全闸",
+  "真实生成保护",
   "estimatedCostLabel",
   "maxAcceptedCost",
   "data-live-cost-cap",
@@ -79,7 +79,7 @@ for (const [file, source] of [
 }
 
 for (const token of [
-  "Manual Live Generation Gate",
+  "Manual Live Generation Protection",
   "Accepted cost cap",
   "Default automated checks must not spend provider credits",
   "AI integrated redraw",
@@ -93,14 +93,14 @@ if (!decisions.includes("D092")) {
   issues.push("DECISIONS.md: missing D092 real generation QA decision");
 }
 
-if (!testing.includes("1.1.0-rc.2 User Test Readiness Release Update")) {
-  issues.push("TESTING.md: missing 1.1.0-rc.2 user test readiness release section");
+if (!testing.includes("1.1.0 User Test Readiness Release Update")) {
+  issues.push("TESTING.md: missing 1.1.0 user test readiness release section");
 }
 
 for (const token of [
-  "1.1.0-rc.3 Multimode Acceptance Matrix Release Update",
+  "1.1.0 Multimode Acceptance Matrix Release Update",
   "npm run multimode-acceptance:check",
-  "1.1.0-rc.5 Controlled Real Acceptance Release Update",
+  "1.1.0 Controlled Real Acceptance Release Update",
   "npm run real-acceptance:check",
 ]) {
   if (!testing.includes(token)) issues.push(`TESTING.md: missing ${token}`);
@@ -108,7 +108,7 @@ for (const token of [
 
 for (const token of [
   "Fresh real generation is manual and opt-in only",
-  "Never use a direct API/script path to bypass the App live safety gate",
+  "Never use a direct API/script path to bypass the App live generation protection",
   "Agnes all-core multimode pass",
   "quality-risk",
 ]) {

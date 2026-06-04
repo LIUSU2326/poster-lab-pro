@@ -16,7 +16,7 @@ export function renderTopbar(activeMode) {
   const imageGeneration = getImageGenerationStatus(activeMode);
   const generatingImages = imageGeneration.active;
   const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
-  const liveBlockedTitle = liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "";
+  const liveBlockedTitle = liveBlocked ? "先确认真实生成保护，再调用外部模型服务" : "";
   const selectedSchemeRenderDisabled = !selectedScheme || generatingImages || liveBlocked;
   const runMode = getRunModeViewModel(liveGate);
   const bundlePath = getDesktopBundlePath();
@@ -49,11 +49,11 @@ export function renderTopbar(activeMode) {
           class="live-gate-chip ${liveGate.tone}"
           type="button"
           data-action="open-settings"
-          aria-label="打开实机安全闸"
-          title="打开模型与 API Key，配置实机安全闸"
+          aria-label="打开真实生成保护"
+          title="打开模型与 API Key，确认真实生成保护"
         >
           <i aria-hidden="true"></i>
-          <span>实机安全</span>
+          <span>真实生成</span>
           <strong>${escapeHtml(liveGate.stateLabel)}</strong>
         </button>
         <span class="run-mode-chip ${escapeHtml(runMode.tone)}" aria-label="当前运行模式">
@@ -136,7 +136,7 @@ function getRunModeViewModel(liveGate) {
   return {
     tone: "local",
     label: "本地服务",
-    detail: `实机关闭 · ${liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定"}`,
+    detail: `真实生成关闭 · ${liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定"}`,
   };
 }
 

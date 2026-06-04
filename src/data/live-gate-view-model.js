@@ -8,19 +8,19 @@ import {
 
 const blockerCopy = {
   not_enabled: {
-    label: "实机预检未开启",
-    message: "开启后才允许调用真实模型服务。",
+    label: "真实生成保护未确认",
+    message: "请先确认真实生成保护，之后才会调用外部模型并保存生成结果。",
   },
   missing_live_confirmation: {
-    label: "确认实机运行",
-    message: "确认本次会调用真实模型服务。",
+    label: "确认真实生成",
+    message: "确认本次会调用外部模型服务。",
   },
   missing_cost_confirmation: {
-    label: "确认模型费用",
-    message: "确认可能产生第三方模型费用。",
+    label: "确认费用或配额",
+    message: "确认本次生成可能消耗第三方额度或费用。",
   },
   missing_external_provider_confirmation: {
-    label: "确认外部服务",
+    label: "确认外部模型服务",
     message: "确认会访问外部模型服务。",
   },
   missing_result_storage_confirmation: {
@@ -46,9 +46,9 @@ const blockerCopy = {
 };
 
 const confirmationRows = [
-  { key: "confirmations.liveRun", label: "允许实机运行", blocker: "missing_live_confirmation" },
-  { key: "confirmations.providerCost", label: "确认费用", blocker: "missing_cost_confirmation" },
-  { key: "confirmations.externalProvider", label: "允许外部服务", blocker: "missing_external_provider_confirmation" },
+  { key: "confirmations.liveRun", label: "允许真实生成", blocker: "missing_live_confirmation" },
+  { key: "confirmations.providerCost", label: "确认费用/配额", blocker: "missing_cost_confirmation" },
+  { key: "confirmations.externalProvider", label: "允许外部模型", blocker: "missing_external_provider_confirmation" },
   { key: "confirmations.resultStorage", label: "保存结果", blocker: "missing_result_storage_confirmation" },
 ];
 
@@ -153,10 +153,10 @@ function getGenerationQualityWarnings(activeMode) {
   const modeLabel = modeId === "collab" ? "联名" : "海报";
   return [{
     code: "agnes_multireference_quality_review",
-    label: "Agnes 质量复核",
-    message: `Agnes 可用于 ${modeLabel} 免费链路测试，但多素材 KV/联名真实视觉验收未通过；正式交付前需要人工复核或切换更强多参考图像模型。`,
-    shortLabel: "质量需复核",
-    shortMessage: "Agnes KV/联名未作稳定质量验收。",
+    label: "Agnes 多素材质量提示",
+    message: `Agnes 可用于 ${modeLabel} 免费链路验证；复杂多素材 KV/联名结果仍建议人工复核，必要时切换更强多参考图像模型。`,
+    shortLabel: "模型需复核",
+    shortMessage: "Agnes 多素材结果需人工确认。",
   }];
 }
 
@@ -193,7 +193,7 @@ function manualLiveCapabilityBlockers(activeMode) {
   const qualityWarnings = getGenerationQualityWarnings(activeMode);
   if (!gate.ok) blockers.push(providerCapabilityGateUserMessage(gate));
   if (conceptProviderId !== imageProviderId) {
-    blockers.push("手动实机测试当前要求方案生成和图像生成使用同一个 Provider；请切到全 Agnes、全 OpenAI 或全 Google 后再测。");
+    blockers.push("手动验证当前要求方案生成和图像生成使用同一个 Provider；请切到全 Agnes、全 OpenAI 或全 Google 后再运行。");
   }
   return blockers;
 }
@@ -276,7 +276,7 @@ export function getLiveGateViewModel(activeMode) {
 
   const status = !liveGate.enabled ? "skipped" : blockers.length > 0 ? "blocked" : "allowed";
   const tone = status === "allowed" ? "success" : status === "blocked" ? "warning" : "neutral";
-  const stateLabel = status === "allowed" ? "可测试" : status === "blocked" ? "受阻" : "关闭";
+  const stateLabel = status === "allowed" ? "已授权" : status === "blocked" ? "待确认" : "关闭";
 
   return {
     status,
@@ -312,13 +312,13 @@ export function getLiveGateViewModel(activeMode) {
     })),
     helper: status === "allowed"
       ? qualityWarnings.length > 0
-        ? "安全闸已满足；当前路线适合继续测试，但质量风险需人工复核。"
-        : "安全闸已满足，可以手动执行一次实机测试；主生成按钮仍保持安全流程。"
+        ? "真实生成保护已确认；当前模型可运行，但复杂多素材质量仍需人工复核。"
+        : "真实生成保护已确认，可以调用外部模型并保存结果。"
       : status === "blocked"
-        ? `还有 ${blockers.length} 项要求未满足，暂不能执行实机测试。`
+        ? `还有 ${blockers.length} 项确认或系统检查未满足，暂不能调用外部模型。`
         : qualityWarnings.length > 0
-          ? "真实模型调用默认关闭；当前 Agnes 路线可测试但不代表稳定交付质量。"
-          : "真实模型调用默认关闭，只在明确测试时开启。",
+          ? "真实生成默认关闭；当前 Agnes 路线可用于验证，但复杂多素材质量需要人工确认。"
+          : "真实生成默认关闭，确认后才会调用外部模型并保存结果。",
     allowed: status === "allowed",
   };
 }
@@ -346,9 +346,9 @@ export function getManualLiveTestViewModel(activeMode) {
   if (!jobId && !queueCanBePrepared) blockers.push(missingQueueJobMessage);
   if (!credentialReady) blockers.push("请先保存 模型服务 API Key。");
   if (!connectionReady) blockers.push("请先完成一次成功的连接测试。");
-  if (!gate.allowed) blockers.push("请先通过实机安全闸。");
+  if (!gate.allowed) blockers.push("请先确认真实生成保护。");
   blockers.push(...manualLiveCapabilityBlockers(activeMode));
-  if (!idle) blockers.push("手动实机测试正在运行。");
+  if (!idle) blockers.push("手动验证正在运行。");
 
   const ready = blockers.length === 0;
   const phase = state.manualLiveTest?.phase || "idle";
@@ -371,18 +371,18 @@ export function getManualLiveTestViewModel(activeMode) {
     needsQueuePreparation: !jobId,
     phase,
     status,
-    message: state.manualLiveTest?.message || "尚未执行手动实机测试。",
+    message: state.manualLiveTest?.message || "尚未执行手动验证。",
     resultCount: resultFileCounts.resultCount,
     persistedFileCount: resultFileCounts.persistedFileCount,
     traceId: state.manualLiveTest?.traceId || "",
     connectionStatus: state.manualLiveTest?.connectionStatus || "",
     label: phase === "running"
-      ? "实机测试运行中"
+      ? "手动验证运行中"
       : ready
         ? jobId
-          ? "运行实机测试"
-          : "准备并运行实机测试"
-        : "实机测试受阻",
+          ? "运行手动验证"
+          : "准备并运行手动验证"
+        : "手动验证受阻",
     tone: phase === "succeeded"
       ? "success"
       : phase === "failed" || phase === "blocked"

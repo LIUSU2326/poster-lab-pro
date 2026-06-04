@@ -478,27 +478,16 @@ function providerImageAssetsForRequest(input: {
   });
 
   if (input.providerId === "agnes" && input.promptPackage.mode === "poster") {
-    const priority: Record<AssetSemanticRole, number> = {
-      protagonist: 0,
-      antagonist: 1,
-      keySubject: 1,
-      prop: 2,
-      styleReference: 3,
-      brandLogo: 99,
-      environment: 99,
-      compositionReference: 99,
-      supportingAsset: 99,
-    };
-    return assets
-      .filter((asset) => {
-        const role = assetSemanticRole(asset);
-        return role === "protagonist" || role === "antagonist" || role === "keySubject" || role === "styleReference";
-      })
-      .sort((left, right) => {
-        const roleDelta = priority[assetSemanticRole(left)] - priority[assetSemanticRole(right)];
-        if (roleDelta !== 0) return roleDelta;
-        return assets.indexOf(left) - assets.indexOf(right);
-      });
+    return assets.map((asset) => ProviderAssetReferenceSchema.parse({
+      id: asset.id,
+      role: asset.role,
+      ...(asset.mimeType ? { mimeType: asset.mimeType } : {}),
+      description: [
+        "agnesRawImageWithheld=true",
+        "reason=Agnes poster treats extra_body.image as source imagery; keep semantic role in prompt but do not send raw URL.",
+        asset.description || "",
+      ].filter(Boolean).join("; ").slice(0, 500),
+    }));
   }
 
   return assets;
@@ -798,6 +787,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     schemeAnchor,
     visualContract,
     "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+    "REFERENCE PANEL BAN: reference images are private model sheets, not picture-in-picture content. Do not place a copied reference image, black-background cutout, side-by-side comparison panel, model-sheet panel, empty black block, or sticker pasted from an uploaded asset anywhere on the final canvas.",
     "Use uploaded image references as binding visual anchors, not as static stickers. Subject assets may change pose, expression, action, camera angle, lighting, scale, and perspective to become vivid in-world actors or objects while preserving their recognizable identity.",
     assetRoleInventory ? "## Uploaded Asset Role Semantics and Fusion Strategies\nUse each uploaded asset according to its semantic duty and fusion strategy; these duties override loose scheme wording." : "",
     "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
@@ -854,7 +844,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     "Show the story through character action and environment response: impact glow, sauce splash arcs, cheese stretch trails, dust, flying ingredients, motion trails, atmospheric haze, rim-light pockets, foreground framing, and scale cues.",
     "World-building direction: turn the food theme into a fantasy adventure battlefield or giant edible landscape with illustrated terrain, not a flat pizza surface or close-up product photo.",
     "## Hard KV Exclusions",
-    "No duplicate uploaded asset. No generic replacement hero. No extra random chef protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic pizza macro photography. No realistic food commercial render. No black bars. No letterbox. No border frame.",
+    "No duplicate uploaded asset. No copied reference image. No black-background cutout. No side-by-side comparison panel. No model-sheet panel. No empty black block. No generic replacement hero. No extra random chef protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic pizza macro photography. No realistic food commercial render. No black bars. No letterbox. No border frame.",
     "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override the assigned KV architecture, uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant pizza/giant food/micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat pizza-floor scene.",
     "## Mode Guardrails",
     guardrails,

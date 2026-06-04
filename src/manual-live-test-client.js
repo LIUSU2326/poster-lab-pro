@@ -63,7 +63,7 @@ function getManualLiveCapabilityBlockers(activeMode) {
   const blockers = [];
   if (!gate.ok) blockers.push(providerCapabilityGateUserMessage(gate));
   if (conceptProviderId !== imageProviderId) {
-    blockers.push("手动实机测试当前要求方案生成和图像生成使用同一个 Provider；请切到全 Agnes、全 OpenAI 或全 Google 后再测。");
+    blockers.push("手动验证当前要求方案生成和图像生成使用同一个 Provider；请切到全 Agnes、全 OpenAI 或全 Google 后再运行。");
   }
   return blockers;
 }

@@ -1,10 +1,40 @@
 import { getRuntimeWorkspaceSnapshot, state } from '../state.js';
 
+const activeQueueStatuses = new Set(["queued", "running", "blocked"]);
+const terminalJobStatuses = new Set(["completed", "failed", "cancelled", "partial"]);
+const generationTaskKinds = new Set(["conceptGeneration", "imageGeneration"]);
+
 function activeSubmissionForMode(activeMode) {
   const submission = state.submission || null;
   if (!submission || submission.status !== "submitting") return null;
   if (submission.mode !== activeMode.id) return null;
+  if (isTerminalQueueSubmission(activeMode, submission)) return null;
   return submission;
+}
+
+function isTerminalQueueSubmission(activeMode, submission) {
+  const plan = latestQueuePlanForSubmission(activeMode, submission);
+  if (!plan) return false;
+  if (terminalJobStatuses.has(plan.job?.status)) return true;
+  const generationTasks = (plan.tasks || []).filter((task) => generationTaskKinds.has(task.kind));
+  if (generationTasks.length === 0) return false;
+  return !generationTasks.some((task) => activeQueueStatuses.has(task.status));
+}
+
+function latestQueuePlanForSubmission(activeMode, submission) {
+  const modeId = activeMode?.id || state.activeMode;
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const createdAt = Date.parse(submission.createdAt || "");
+  const minCreatedAt = Number.isFinite(createdAt) ? createdAt - 15000 : 0;
+  const plans = Array.isArray(snapshot.queuePlans)
+    ? snapshot.queuePlans.filter((plan) => {
+        if (plan.job?.mode !== modeId) return false;
+        if (!Number.isFinite(createdAt)) return true;
+        const jobCreatedAt = Date.parse(plan.job?.createdAt || plan.job?.updatedAt || "");
+        return Number.isFinite(jobCreatedAt) && jobCreatedAt >= minCreatedAt;
+      })
+    : [];
+  return plans[plans.length - 1] || null;
 }
 
 function submissionSchemeIds(submission) {

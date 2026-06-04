@@ -71,7 +71,7 @@ function renderSchemeBoardEmpty(activeMode) {
       <strong>还没有可展示的${escapeHtml(modeLabel)}方案</strong>
       <small>${escapeHtml(modelReady
         ? liveBlocked
-          ? "左侧配置已就绪，但真实模型调用需要先通过实机安全闸。"
+          ? "左侧配置已就绪，但真实生成需要先确认保护。"
           : "左侧配置已经就绪。先生成一组方案，再选择具体方案出图。"
         : "先检查模型与 Key，再生成方案批次。已有上传素材会作为视觉参考进入方案与生图链路。"
       )}</small>
@@ -80,11 +80,11 @@ function renderSchemeBoardEmpty(activeMode) {
           class="primary-button"
           type="button"
           data-action="generate-schemes"
-          title="${escapeAttribute(liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "")}"
+          title="${escapeAttribute(liveBlocked ? "先确认真实生成保护，再调用外部模型服务" : "")}"
           ${liveBlocked ? "disabled" : ""}
         >生成方案批次</button>
         ${liveBlocked
-          ? `<button type="button" data-action="open-settings">打开实机安全闸</button>`
+          ? `<button type="button" data-action="open-settings">确认真实生成保护</button>`
           : modelReady
             ? ""
             : `<button type="button" data-action="open-settings">检查模型与 Key</button>`}
@@ -268,10 +268,10 @@ function renderResultEmpty(activeMode) {
   const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
   const helper = hasSchemes
     ? liveBlocked
-      ? "已有方案可用于出图。先通过实机安全闸，再调用真实模型服务生成图片。"
+      ? "已有方案可用于出图。先确认真实生成保护，再调用外部模型服务生成图片。"
       : "已有方案可用于出图。继续生成后，这里会显示图片、尺寸、模型输出和下载操作。"
     : liveBlocked
-      ? `还没有${modeLabel}方案。先通过实机安全闸，再生成方案与图片。`
+      ? `还没有${modeLabel}方案。先确认真实生成保护，再生成方案与图片。`
       : `还没有${modeLabel}方案。可以直接生成${modeLabel}，系统会先出方案再进入图片渲染。`;
   return `
     <div class="result-empty">
@@ -283,10 +283,10 @@ function renderResultEmpty(activeMode) {
           class="primary-button"
           type="button"
           data-action="submit-generation"
-          title="${escapeAttribute(liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "")}"
+          title="${escapeAttribute(liveBlocked ? "先确认真实生成保护，再调用外部模型服务" : "")}"
           ${liveBlocked ? "disabled" : ""}
         >生成${escapeHtml(modeLabel)}</button>
-        ${liveBlocked ? `<button type="button" data-action="open-settings">打开实机安全闸</button>` : ""}
+        ${liveBlocked ? `<button type="button" data-action="open-settings">确认真实生成保护</button>` : ""}
         <button type="button" data-view="schemes">${hasSchemes ? "查看已有方案" : "回到方案"}</button>
       </div>
     </div>
@@ -525,7 +525,7 @@ function renderResultActionButton(result, action, label) {
   const liveGate = getLiveGateViewModel(activeMode);
   const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
   const disabledTitle = liveBlocked
-    ? liveGate.blockers?.[0]?.message || "请先开启并通过实机安全闸，再调用真实模型服务。"
+    ? liveGate.blockers?.[0]?.message || "请先确认真实生成保护，再调用外部模型服务。"
     : route.title;
   return `
     <button
@@ -549,7 +549,7 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
   const liveGate = getLiveGateViewModel(activeMode);
   const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
   const liveBlockedTitle = liveBlocked
-    ? liveGate.blockers?.[0]?.message || "先开启并通过实机安全闸，再调用真实模型服务"
+    ? liveGate.blockers?.[0]?.message || "先确认真实生成保护，再调用外部模型服务"
     : "";
   const rendering = scheme.status === "loading" || imageGeneration.active;
   const refreshing = schemeGeneration.active;

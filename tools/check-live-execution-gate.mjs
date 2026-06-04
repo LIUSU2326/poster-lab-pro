@@ -51,12 +51,12 @@ for (const [file, source] of [
   ["ROADMAP.md", roadmap],
   ["TESTING.md", testing],
 ]) {
-  if (!source.includes("Live Execution Safety Gate") && !source.includes("live execution gate")) {
-    issues.push(`${file}: missing live execution safety gate update`);
+  if (!source.includes("Live Execution Protection") && !source.includes("live execution gate")) {
+    issues.push(`${file}: missing live execution protection update`);
   }
 }
 
-if (!decisions.includes("D073")) issues.push("DECISIONS.md: missing D073 live execution safety gate decision");
+if (!decisions.includes("D073")) issues.push("DECISIONS.md: missing D073 live execution protection decision");
 if (!pkg.includes("live-execution-gate:check")) issues.push("package.json: missing live-execution-gate:check script");
 
 for (const forbidden of ["fetch(", "XMLHttpRequest", "axios", "localStorage", "sessionStorage", "process.env", "writeFile", "readFile"]) {

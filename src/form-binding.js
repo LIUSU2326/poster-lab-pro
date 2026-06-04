@@ -76,7 +76,7 @@ function createLiveGateBlockedServiceFlow(gate) {
     transport: "http",
     error: {
       name: "LiveGateBlocked",
-      message: gate.blockers?.[0]?.message || "请先开启并通过实机安全闸，再调用真实模型服务。",
+      message: gate.blockers?.[0]?.message || "请先开启真实生成保护，再调用外部模型服务。",
       details: {
         blockers: gate.blockers || [],
         stateLabel: gate.stateLabel,

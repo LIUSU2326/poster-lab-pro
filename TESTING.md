@@ -1,10 +1,10 @@
 # TESTING.md
 
-## 2026-06-04 1.1.0-rc.7 Poster/Collab/Announcement Quality Sprint
+## 2026-06-04 1.1.0 Poster/Collab/Announcement Quality Sprint
 
 Desktop Test Path checks:
 
-- Verify the visible app version is `1.1.0-rc.7`.
+- Verify the visible app version is `1.1.0`.
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify Poster image prompts keep `Default pipeline: AI integrated redraw`, `Non-Negotiable Poster Visual Contract`, and `KV ACTION MINI-BRIEF`.
 - Verify Collab image prompts keep `Non-Negotiable Collab Dual-Subject Contract`, `Partner-first co-star lock`, and `Two-character audit`.
@@ -20,16 +20,16 @@ Automated checks:
 - Run `npm run release-candidate:check`.
 - Run `npm run check`.
 
-## 2026-06-04 1.1.0-rc.6 Icon/Logo UI Alignment Release Update
+## 2026-06-04 1.1.0 Icon/Logo UI Alignment Release Update
 
 Desktop Test Path checks:
 
-- Verify the visible app version is `1.1.0-rc.6`.
+- Verify the visible app version is `1.1.0`.
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify Logo mode exposes Logo 字标, pure background color choices, Logo 风格库, and the no-slogan text strategy.
 - Verify Icon mode exposes 画风预置, no-text/single-subject/64px-readable guardrails, and composition reference rotation.
 - Verify rounded Icon corners are not treated as a hard failure in current prompts or audit policy.
-- Verify the real-generation acceptance log remains bounded by the rc.5/rc.6 App live safety gate instead of direct API/script calls.
+- Verify the real-generation acceptance log remains bounded by the 1.1.0/1.1.0 App live generation protection instead of direct API/script calls.
 
 Automated checks:
 
@@ -39,15 +39,15 @@ Automated checks:
 - Run `npm run multimode-acceptance:check`.
 - Run `npm run real-acceptance:check`.
 
-## 2026-06-03 1.1.0-rc.5 Controlled Real Acceptance Release Update
+## 2026-06-03 1.1.0 Controlled Real Acceptance Release Update
 
 Desktop Test Path checks:
 
-- Verify the visible app version is `1.1.0-rc.6`.
+- Verify the visible app version is `1.1.0`.
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify `REAL_GENERATION_ACCEPTANCE.md` exists and records controlled real-generation acceptance status.
 - Verify the local workspace has baseline results for Poster, Icon, Logo, Announcement, and Collab.
-- Verify fresh rc.5 real generation remains pending behind the App live safety gate unless the tester manually enables it.
+- Verify fresh 1.1.0 real generation remains pending behind the App live generation protection unless the tester manually enables it.
 - Verify the log forbids direct API/script execution that bypasses visible live safety confirmations.
 - Verify `REAL_GENERATION_ACCEPTANCE.md` links back to `MULTIMODE_ACCEPTANCE.md` for pass/fail criteria.
 
@@ -63,17 +63,17 @@ Automated checks:
 - Run `npm run release-candidate:check`.
 - Run `npm run check`.
 
-## 2026-06-03 1.1.0-rc.3 Multimode Acceptance Matrix Release Update
+## 2026-06-03 1.1.0 Multimode Acceptance Matrix Release Update
 
 Desktop Test Path checks:
 
-- Verify the visible app version is `1.1.0-rc.3`.
+- Verify the visible app version is `1.1.0`.
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify `MULTIMODE_ACCEPTANCE.md` exists and defines Poster, Icon, Logo, Announcement, and Collab pass/fail criteria.
 - Verify `public/mock-assets/collab-partner-sundae-ranger.svg` is available as a synthetic `collabCharacter` fixture when no real partner asset exists.
 - Verify the synthetic Collab partner fixture contains no readable text or partner logo.
 - Verify Collab acceptance still requires game character, collabCharacter, and game logo, while missing partner `brandLogo` expects a blank partner brand plate.
-- Verify real generation remains manual, opt-in, and limited to max 1 real generation per mode for this RC pass unless one focused rerun is needed.
+- Verify real generation remains manual, opt-in, and limited to max 1 real generation per mode for this stable acceptance pass unless one focused rerun is needed.
 
 Automated checks:
 
@@ -86,14 +86,14 @@ Automated checks:
 - Run `npm run release-candidate:check`.
 - Run `npm run check`.
 
-## 2026-06-03 1.1.0-rc.2 User Test Readiness Release Update
+## 2026-06-03 1.1.0 User Test Readiness Release Update
 
 Desktop Test Path checks:
 
-- Verify the visible app version is `1.1.0-rc.2`.
+- Verify the visible app version is `1.1.0`.
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify `/Users/liusu/Desktop/Poster Lab Pro.app` launches and serves `http://127.0.0.1:3000`.
-- Verify `USER_TESTING.md` tells a tester where to open the App, how to confirm version/path, how to configure `模型与 Key`, and how the live safety gate/cost cap works.
+- Verify `USER_TESTING.md` tells a tester where to open the App, how to confirm version/path, how to configure `模型与 Key`, and how the live generation protection/cost cap works.
 - Verify user testing limits real generation to 1-2 runs per mode when needed and warns against unlimited retries.
 - Verify the guide covers Poster, Icon, Logo, Announcement, and Collab acceptance criteria.
 - Verify the guide explains old asset reappearance checks after deleting/reuploading assets.
@@ -108,15 +108,15 @@ Automated checks:
 - Run `npm run release-candidate:check`.
 - Run `npm run check`.
 
-## 2026-06-03 1.1.0-rc.1 UX Reliability Gate Release Update
+## 2026-06-03 1.1.0 UX Reliability Gate Release Update
 
 Desktop Test Path checks:
 
-- Verify the visible app version is `1.1.0-rc.1`.
+- Verify the visible app version is `1.1.0`.
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify `npm run ux-regression:check` is present and included in `npm run check`.
 - Verify all five mode shells render core navigation: schemes, results, archive, settings, live safety, run mode, theme switch, scheme generation, and asset upload entry points.
-- Verify blocked live generation clearly disables scheme/image generation and offers an `打开实机安全闸` path instead of silently failing.
+- Verify blocked live generation clearly disables scheme/image generation and offers a `确认真实生成保护` path instead of silently failing.
 - Verify result management includes filters, viewer, return-to-scheme, regenerate, delete confirmation, download, and Result Quality Audit guidance.
 - Verify scheme deletion uses a second-click confirmation state instead of immediate deletion.
 - Verify settings exposes provider setup steps, API Key save/test, route-plan test, resizable sheet, live cost cap, and live safety confirmations.
@@ -413,9 +413,9 @@ Known beta watch items:
 
 UX regression checks:
 
-- Verify the top `实机安全` chip opens settings and exposes the live gate panel path.
+- Verify the top `真实生成` chip opens settings and exposes the live generation protection panel path.
 - Verify settings shows the setup order: save API Key, test connection, pass live gate, then generate.
-- Verify blocked scheme/result empty states include an enabled `打开实机安全闸` action next to disabled generation buttons.
+- Verify blocked scheme/result empty states include an enabled `确认真实生成保护` action next to disabled generation buttons.
 - Verify Icon and Logo modes do not expose editable slogan controls.
 - Verify Poster, Announcement, and Collab modes keep the slogan controls available.
 - Verify queue and safety status copy reads like pending setup, not like a failed generation.
@@ -501,7 +501,7 @@ Provider setup checks:
 - Verify OpenAI-compatible relay Base URLs are used for connection tests and image generation requests.
 - Verify Google connection diagnostics call the Gemini model-list endpoint with API-key authentication and user-safe errors.
 - Verify Google image generation maps Gemini `inlineData` image parts to persisted result files.
-- Verify manual live tests for Google use the same safety gate, encrypted credential vault, queue worker, and result storage path as OpenAI.
+- Verify manual live tests for Google use the same live generation protection, encrypted credential vault, queue worker, and result storage path as OpenAI.
 - Verify default automated checks use fake transports and never call real OpenAI, relay, or Google endpoints.
 
 Real provider tests remain manual and opt-in because they can spend provider credits and depend on account/model availability.
@@ -584,7 +584,7 @@ Workbench live gate UI checks:
 
 Real provider UI execution remains disabled until a separate manual desktop live test path is approved.
 
-## 2026-05-23 Live Execution Safety Gate Testing Update
+## 2026-05-23 Live Execution Protection Testing Update
 
 Safety gate checks:
 

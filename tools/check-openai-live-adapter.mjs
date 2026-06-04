@@ -368,13 +368,15 @@ async function runRuntimeCheck() {
       || !agnesPrompt.includes("EXACT BOSS ROSTER LOCK")
       || !agnesPrompt.includes("STYLE CONSISTENCY LOCK")
       || !agnesPrompt.includes("AGNES/COMPRESSED POSTER ORDER")
+      || !agnesPrompt.includes("AGNES POSTER RAW-IMAGE SAFETY")
       || !agnesPrompt.includes("KV ACTION MINI-BRIEF")
+      || !agnesPrompt.includes("REFERENCE PANEL BAN")
     ) {
       issues.push("Agnes image prompt should front-load compressed-provider Poster priority anchors");
     }
     const agnesImages = capturedAgnesRequest?.body?.extra_body?.image || [];
-    if (!Array.isArray(agnesImages) || agnesImages.length !== 3) {
-      issues.push("Agnes image request should send visual references through extra_body.image");
+    if (Array.isArray(agnesImages) && agnesImages.length > 0) {
+      issues.push("Agnes poster image request should not send raw visual references through extra_body.image because Agnes treats them as source imagery");
     }
 
     let capturedAgnesCollabRequest;

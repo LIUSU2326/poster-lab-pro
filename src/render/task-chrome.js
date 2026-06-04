@@ -18,18 +18,18 @@ export function renderTaskChrome(activeMode) {
     : "无任务";
 
   return `
-    <aside class="task-chrome compact-only ${detailsOpen ? "open" : "collapsed"}" aria-label="任务与实机安全" data-task-open="${detailsOpen ? "true" : "false"}">
+    <aside class="task-chrome compact-only ${detailsOpen ? "open" : "collapsed"}" aria-label="任务与真实生成保护" data-task-open="${detailsOpen ? "true" : "false"}">
       <button class="task-slim queue-slim ${queueTone}" type="button" data-action="toggle-task-panel" aria-expanded="${detailsOpen ? "true" : "false"}" aria-controls="task-detail-panel" aria-label="${detailsOpen ? "收起任务详情" : "展开任务详情"}">
         <span>QUEUE</span>
         <b>${escapeHtml(queueLabel)}</b>
         <small class="task-slim-cue">${detailsOpen ? "收起" : "展开"}</small>
       </button>
       <button class="task-slim live-gate-slim ${liveGate.tone}" type="button" data-action="open-settings">
-        <span>安全开关</span>
+        <span>真实生成</span>
         <b>${escapeHtml(liveGate.stateLabel)}</b>
       </button>
       <button class="task-slim manual-live-slim ${manual.tone}" type="button" data-action="run-manual-live-test" ${manual.disabled ? "disabled" : ""}>
-        <span>MANUAL LIVE TEST</span>
+        <span>MANUAL CHECK</span>
         <b>${escapeHtml(manual.status)}</b>
       </button>
       ${detailsOpen ? `
@@ -38,7 +38,7 @@ export function renderTaskChrome(activeMode) {
           ${renderResultOperationContext()}
           <div class="live-gate-context ${liveGate.tone}">
             <span>${escapeHtml(liveGate.providerName)}</span>
-            <strong>${escapeHtml(liveGate.qualityRisk ? liveGate.qualityRiskLabel : liveGate.blockerCount ? `待完成 ${liveGate.blockerCount} 项安全检查` : liveGate.stateLabel)}</strong>
+            <strong>${escapeHtml(liveGate.qualityRisk ? liveGate.qualityRiskLabel : liveGate.blockerCount ? `待确认 ${liveGate.blockerCount} 项` : liveGate.stateLabel)}</strong>
             ${liveGate.qualityRiskDetail ? `<small>${escapeHtml(liveGate.qualityRiskDetail)}</small>` : ""}
           </div>
           <div class="manual-live-context ${manual.tone}">

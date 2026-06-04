@@ -231,27 +231,55 @@ async function posterCanvasMetrics(dataUrl: string | null | undefined): Promise<
     const values: number[] = [];
     const borderValues: number[] = [];
     const centerValues: number[] = [];
+    const leftPanelValues: number[] = [];
+    const middlePanelValues: number[] = [];
+    const rightPanelValues: number[] = [];
     for (let y = 0; y < info.height; y += 1) {
       for (let x = 0; x < info.width; x += 1) {
         const value = luminanceAt(x, y);
         values.push(value);
         if (x < 3 || y < 3 || x >= info.width - 3 || y >= info.height - 3) borderValues.push(value);
         if (x >= 16 && x < 32 && y >= 16 && y < 32) centerValues.push(value);
+        if (x < 16) leftPanelValues.push(value);
+        else if (x < 32) middlePanelValues.push(value);
+        else rightPanelValues.push(value);
       }
     }
     const average = (items: number[]) => items.reduce((sum, value) => sum + value, 0) / Math.max(1, items.length);
+    const ratio = (items: number[], predicate: (value: number) => boolean) =>
+      items.filter(predicate).length / Math.max(1, items.length);
     const mean = average(values);
     const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / Math.max(1, values.length);
     const stdDev = Math.sqrt(variance);
     const borderMean = average(borderValues);
     const centerMean = average(centerValues);
+    const leftPanelMean = average(leftPanelValues);
+    const middlePanelMean = average(middlePanelValues);
+    const rightPanelMean = average(rightPanelValues);
+    const leftPanelDarkRatio = ratio(leftPanelValues, (value) => value < 0.16);
+    const rightPanelDarkRatio = ratio(rightPanelValues, (value) => value < 0.16);
+    const sidePanelRisk = (
+      leftPanelDarkRatio > 0.56 &&
+      middlePanelMean - leftPanelMean > 0.18 &&
+      rightPanelMean - leftPanelMean > 0.18
+    ) || (
+      rightPanelDarkRatio > 0.56 &&
+      middlePanelMean - rightPanelMean > 0.18 &&
+      leftPanelMean - rightPanelMean > 0.18
+    );
     return {
       posterLuminanceMean: Number(mean.toFixed(4)),
       posterLuminanceStdDev: Number(stdDev.toFixed(4)),
       posterBorderLuminance: Number(borderMean.toFixed(4)),
       posterCenterLuminance: Number(centerMean.toFixed(4)),
+      posterLeftPanelLuminance: Number(leftPanelMean.toFixed(4)),
+      posterMiddlePanelLuminance: Number(middlePanelMean.toFixed(4)),
+      posterRightPanelLuminance: Number(rightPanelMean.toFixed(4)),
+      posterLeftPanelDarkRatio: Number(leftPanelDarkRatio.toFixed(4)),
+      posterRightPanelDarkRatio: Number(rightPanelDarkRatio.toFixed(4)),
       posterLowThumbnailContrastRisk: stdDev < 0.055,
       posterLetterboxFrameRisk: borderMean < 0.08 && centerMean - borderMean > 0.18,
+      posterReferenceSheetPanelRisk: sidePanelRisk,
     };
   } catch {
     return { posterCanvasAudit: "failed" };
@@ -344,6 +372,14 @@ export async function auditResultQuality(input: {
         severity: "review",
         message: "Poster may contain dark border, letterbox, or frame-like edges.",
         recommendation: "Rerun with full-bleed artwork and no black bars, borders, frames, or presentation margins.",
+      }));
+    }
+    if (metrics.posterReferenceSheetPanelRisk) {
+      findings.push(finding({
+        code: "poster-reference-sheet-panel-risk",
+        severity: "warning",
+        message: "Poster appears to contain a copied reference image panel or black-background cutout area.",
+        recommendation: "Rerun with references treated as private model sheets only: no copied reference image, black side panel, model-sheet layout, or sticker pasted from an uploaded asset.",
       }));
     }
     if (hasIntegratedReference) {

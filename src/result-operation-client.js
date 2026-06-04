@@ -79,7 +79,7 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
     updateResultOperation(operation.id, {
       status: "failed",
       progress: 100,
-      message: liveExecutionPayload.gate.blockers?.[0]?.message || "请先开启并通过实机安全闸，再调用真实模型服务。",
+      message: liveExecutionPayload.gate.blockers?.[0]?.message || "请先开启真实生成保护，再调用外部模型服务。",
     });
     state.taskOpen = true;
     return null;

@@ -107,7 +107,7 @@ export function renderConfigPanel(activeMode) {
   const generationTitle = capabilityBlocked
     ? providerCapabilityGateUserMessage(generationCapabilityGate)
     : liveBlocked
-      ? "先开启并通过实机安全闸，再调用真实模型服务"
+      ? "先确认真实生成保护，再调用外部模型服务"
       : "";
 
   return `
@@ -116,7 +116,7 @@ export function renderConfigPanel(activeMode) {
         <span class="brand-mark">PL</span>
         <div>
           <strong>Poster Lab</strong>
-          <small>模型、Key 与实机状态在顶部统一查看</small>
+          <small>模型、Key 与真实生成状态在顶部统一查看</small>
         </div>
         <button class="panel-collapse-button" type="button" data-action="toggle-left-panel" aria-label="收起左侧配置">收起</button>
       </div>
@@ -128,9 +128,9 @@ export function renderConfigPanel(activeMode) {
           return `<button class="${mode.id === activeMode.id ? "active" : ""}" type="button" data-mode="${mode.id}" role="tab" aria-selected="${mode.id === activeMode.id}">${itemCopy.label}</button>`;
         }).join("")}
       </div>
-      <button class="manual-live-test" type="button" data-action="run-manual-live-test" title="MANUAL LIVE TEST">
-        <span>实机测试</span>
-        <small>MANUAL LIVE TEST</small>
+      <button class="manual-live-test" type="button" data-action="run-manual-live-test" title="手动真实生成验证">
+        <span>手动验证</span>
+        <small>MANUAL CHECK</small>
       </button>
 
       <div class="config-scroll">
@@ -241,7 +241,7 @@ export function renderConfigPanel(activeMode) {
           ${batchStatus.active ? `<span class="button-spinner" aria-hidden="true"></span><span>方案生成中</span><strong>${batchStatus.completed}/${batchStatus.total}</strong>` : copy.cta}
         </button>
         ${capabilityBlocked ? `<p class="config-action-note">${escapeHtml(providerCapabilityGateUserMessage(generationCapabilityGate))}</p>` : ""}
-        ${liveBlocked ? `<p class="config-action-note">先在顶部开启并通过实机安全闸，再调用真实模型服务。</p>` : ""}
+        ${liveBlocked ? `<p class="config-action-note">先在顶部确认真实生成保护，再调用外部模型服务。</p>` : ""}
         ${batchStatus.active ? `
           <div class="batch-progress" role="status" aria-live="polite">
             <div>

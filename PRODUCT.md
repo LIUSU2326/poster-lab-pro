@@ -1,5 +1,9 @@
 # PRODUCT.md
 
+## 2026-06-05 MVP Scope Update: Live Execution Protection
+
+The live execution gate remains a real product safety boundary, but the user-facing surface is live generation protection. Users should understand three things before any provider call runs: an external model will be called, provider quota or cost may be consumed, and generated files will be saved locally. System checks such as API Key, network, and result storage readiness must be visible but secondary to the user confirmations.
+
 ## 2026-05-28 MVP Scope Update: Scheme-First Poster Production
 
 Poster production separates concept planning from image rendering:

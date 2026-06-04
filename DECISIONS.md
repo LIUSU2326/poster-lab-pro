@@ -1,12 +1,12 @@
 # DECISIONS.md
 
-## D111: rc.7 Prioritizes Prompt Anchor Compression For Poster And Collab
+## D111: 1.1.0 Prioritizes Prompt Anchor Compression For Poster And Collab
 
 Status: accepted
 
 Context: Agnes is useful for free real-generation smoke tests, but earlier Poster and Collab outputs showed that long provider-neutral prompts can dilute the most important visual anchors in compressed prompt profiles. Poster failures included missing/weak BOSS threat, duplicate/generic characters, fake text, and sticker-like integration. Collab failures included the uploaded partner being demoted, omitted, or reading as a separate sticker instead of an equal co-star.
 
-Decision: `1.1.0-rc.7` keeps the provider-neutral integrated-redraw architecture, but adds short front-loaded quality contracts for compressed providers. Poster receives a `KV ACTION MINI-BRIEF` that prioritizes uploaded hero, uploaded BOSS/key threat, single logo/copy-safe area, shared ground plane, contact shadows, occlusion, rim light, and VFX integration. Collab receives a partner-first dual-subject contract that makes the uploaded collabCharacter and gameCharacter the two primary readable co-stars before logos, plates, backgrounds, or decorations.
+Decision: `1.1.0` keeps the provider-neutral integrated-redraw architecture, but adds short front-loaded quality contracts for compressed providers. Poster receives a `KV ACTION MINI-BRIEF` that prioritizes uploaded hero, uploaded BOSS/key threat, single logo/copy-safe area, shared ground plane, contact shadows, occlusion, rim light, and VFX integration. Collab receives a partner-first dual-subject contract that makes the uploaded collabCharacter and gameCharacter the two primary readable co-stars before logos, plates, backgrounds, or decorations.
 
 Impact:
 
@@ -21,7 +21,7 @@ Status: accepted
 
 Context: The user supplied the GameIcon Pro source and screenshots as reference for Icon and Logo interfaces, while also clarifying that Poster, Collab, and Announcement should be optimized first and Icon/Logo generation quality can later use the Gemini reference implementation.
 
-Decision: `1.1.0-rc.6` aligns Icon and Logo UI, state, schema, and prompt handoff with the reference sidebar pattern: mode-specific asset slots, style presets, wordmark/background controls for Logo, style selection for Icon/Logo, and clear no-text/single-subject/icon-readability rules. This is not treated as the final Icon/Logo quality pass. Rounded Icon corners remain acceptable when intentional and polished.
+Decision: `1.1.0` aligns Icon and Logo UI, state, schema, and prompt handoff with the reference sidebar pattern: mode-specific asset slots, style presets, wordmark/background controls for Logo, style selection for Icon/Logo, and clear no-text/single-subject/icon-readability rules. This is not treated as the final Icon/Logo quality pass. Rounded Icon corners remain acceptable when intentional and polished.
 
 Impact:
 
@@ -60,41 +60,41 @@ Impact:
 - Agnes concept/image generation remains allowed, but all-Agnes Poster and Collab stay marked as visual quality risks requiring manual review.
 - Tests must cover unsupported action buttons, provider capability routes, and the distinction between capability pass and visual acceptance.
 
-## D107: 1.1.0-rc.5 Keeps Real Generation Behind The App Safety Gate
+## D107: 1.1.0 Keeps Real Generation Behind App Live Generation Protection
 
 Status: accepted
 
-Context: The workspace has Google configured, masked credentials present, the required five-mode asset roles, and stored baseline results for Poster, Icon, Logo, Announcement, and Collab. However, fresh rc.5 real generation would spend provider credits. Running a direct route or script with confirmations injected would technically exercise the service, but it would bypass the visible App live-safety flow that users rely on to understand cost and external-provider execution.
+Context: The workspace has Google configured, masked credentials present, the required five-mode asset roles, and stored baseline results for Poster, Icon, Logo, Announcement, and Collab. However, fresh 1.1.0 real generation would spend provider credits. Running a direct route or script with confirmations injected would technically exercise the service, but it would bypass the visible App live generation protection flow that users rely on to understand cost and external-provider execution.
 
-Decision: Add `REAL_GENERATION_ACCEPTANCE.md` and `real-acceptance:check`. Record current baseline result evidence and mark fresh rc.5 generation as pending live safety gate. Never use a direct API/script path to bypass the App live safety gate. Fresh runs must be started through the App safety workflow with live run, provider cost, external provider, result storage, and cost-cap confirmations visible.
+Decision: Add `REAL_GENERATION_ACCEPTANCE.md` and `real-acceptance:check`. Record current baseline result evidence and mark fresh 1.1.0 generation as pending live generation protection. Never use a direct API/script path to bypass the App live generation protection. Fresh runs must be started through the App live generation protection workflow with live run, provider cost, external provider, result storage, and cost-cap confirmations visible.
 
 Impact:
 
-- The final 1.1 stable decision can separate existing baseline evidence from fresh rc.5 live acceptance.
+- The final 1.1 stable decision can separate existing baseline evidence from fresh 1.1.0 live acceptance.
 - Provider spend remains visible and intentional.
 - Automation can verify the acceptance record and safety contract without triggering paid calls.
 - The next pass can run one bounded fresh generation per mode through the App, or promote with deferred modes documented as stable risks.
 
-## D106: 1.1.0-rc.3 Requires A Multimode Acceptance Matrix
+## D106: 1.1.0 Requires A Multimode Acceptance Matrix
 
 Status: accepted
 
-Context: RC2 made user testing possible, but the acceptance criteria for Poster, Icon, Logo, Announcement, and Collab were still spread across the guide, old test notes, and regression scripts. The user also does not currently have partner/collab IP material, so Collab testing needs a safe synthetic input that does not accidentally become a fake brand/logo test.
+Context: earlier UX readiness pass made user testing possible, but the acceptance criteria for Poster, Icon, Logo, Announcement, and Collab were still spread across the guide, old test notes, and regression scripts. The user also does not currently have partner/collab IP material, so Collab testing needs a safe synthetic input that does not accidentally become a fake brand/logo test.
 
-Decision: Add `MULTIMODE_ACCEPTANCE.md` and a zero-cost `multimode-acceptance:check` release gate. Add `public/mock-assets/collab-partner-sundae-ranger.svg` as the rc.3 synthetic `collabCharacter` fixture. The fixture is a fictional visual partner only, contains no readable text, and is not a partner `brandLogo`. Missing partner brandLogo must still use a blank partner brand plate or neutral emblem.
+Decision: Add `MULTIMODE_ACCEPTANCE.md` and a zero-cost `multimode-acceptance:check` release gate. Add `public/mock-assets/collab-partner-sundae-ranger.svg` as the 1.1.0 synthetic `collabCharacter` fixture. The fixture is a fictional visual partner only, contains no readable text, and is not a partner `brandLogo`. Missing partner brandLogo must still use a blank partner brand plate or neutral emblem.
 
 Impact:
 
 - Multimode testing has explicit pass/fail criteria instead of scattered judgment calls.
 - Collab can be tested without waiting for a real partner asset and without reusing BOSS, Logo, or prop assets as the partner.
-- Real generation remains bounded to max 1 real generation per mode for the rc.3 pass unless one focused rerun is needed.
+- Real generation remains bounded to max 1 real generation per mode for the 1.1.0 pass unless one focused rerun is needed.
 - Future real partner assets can replace the synthetic fixture without changing the Collab brand-safety rule.
 
-## D105: 1.1.0-rc.2 Requires A User Test Readiness Guide
+## D105: 1.1.0 Requires A User Test Readiness Guide
 
 Status: accepted
 
-Context: The RC1 UX gate verifies key UI states, but real users still need a clear testing path: which desktop app to open, how to confirm version/path, how to enable live generation safely, which assets to upload, what each mode should visually satisfy, and what to report when something fails.
+Context: The earlier UX gate UX gate verifies key UI states, but real users still need a clear testing path: which desktop app to open, how to confirm version/path, how to enable live generation safely, which assets to upload, what each mode should visually satisfy, and what to report when something fails.
 
 Decision: Add `USER_TESTING.md` and a zero-cost `user-test-readiness:check` release gate. The guide keeps live generation opt-in, limits acceptance runs to 1-2 generations per mode when needed, lists per-mode visual acceptance criteria, and explains result review/failure recovery. Release candidates must keep this guide version-aligned with the desktop app.
 
@@ -102,15 +102,15 @@ Impact:
 
 - User testing has a repeatable checklist instead of ad hoc instructions.
 - Real provider spend remains bounded and intentional.
-- Reports should include the app version, workspace revision, mode, asset roles, result id, live-gate state, audit findings, and visual failure.
+- Reports should include the app version, workspace revision, mode, asset roles, result id, live generation protection state, audit findings, and visual failure.
 
-## D104: RC Builds Require A UX Reliability Gate
+## D104: Release Builds Require A UX Reliability Gate
 
 Status: accepted
 
 Context: The 1.1 beta work stabilized the generation chain, but a usable desktop app also needs predictable navigation, visible state, clear safety blockers, result recovery, and confirmation before destructive actions. These UX expectations were partly covered by broad frontend checks, but not by a release-candidate gate that renders the key screens.
 
-Decision: Add a dedicated zero-cost `ux-regression:check` gate for RC builds. It renders the shell, blocked live-generation state, results board, result viewer, settings sheet, generation-choice dialog, project library, and failed queue state. It verifies that core entry points and safety messages remain visible. Scheme deletion now mirrors result deletion with a second-click confirmation.
+Decision: Add a dedicated zero-cost `ux-regression:check` gate for release builds. It renders the shell, blocked live-generation state, results board, result viewer, settings sheet, generation-choice dialog, project library, and failed queue state. It verifies that core entry points and safety messages remain visible. Scheme deletion now mirrors result deletion with a second-click confirmation.
 
 Impact:
 
@@ -304,7 +304,7 @@ Status: accepted
 
 Context: Several generation controls correctly disabled when live execution was not safe, but some empty states only showed a disabled button and explanatory text. Users could understand that something was blocked without having an obvious next click.
 
-Decision: Top-level live safety status opens the settings sheet directly. Blocked empty states now show an active `打开实机安全闸` action. Settings includes a four-step readiness strip that makes the required order visible before generation.
+Decision: Top-level live generation protection status opens the settings sheet directly. Blocked empty states now show an active `确认真实生成保护` action. Settings includes a four-step readiness strip that makes the required order visible before generation.
 
 Impact:
 
@@ -406,7 +406,7 @@ Impact:
 
 Status: accepted
 
-Context: The web workbench can now run locally with provider settings, live safety gates, and Google/OpenAI-compatible connection tests. The fastest path to desktop testing is to wrap the existing local Next workbench before building a signed Windows installer or changing the backend runtime model.
+Context: The web workbench can now run locally with provider settings, live generation protections, and Google/OpenAI-compatible connection tests. The fastest path to desktop testing is to wrap the existing local Next workbench before building a signed Windows installer or changing the backend runtime model.
 
 Decision: Add an Electron Desktop Shell as the first desktop step. The shell opens the local Next workbench in a `BrowserWindow`, reuses an existing local Next service when available, or starts `next dev` on a local port. Electron main/preload code must not call providers, read API Keys, or store browser credentials.
 
@@ -489,7 +489,7 @@ Status: accepted
 
 Context: The project can run a guarded OpenAI live test, but the user may only have an OpenAI-compatible relay key or a Google AI Studio key. Treating those as chat-only configuration details would either force users into one vendor or encourage unsafe credential workarounds.
 
-Decision: Add first-class provider setup support for optional OpenAI-compatible Base URLs and Google AI Studio image generation. OpenAI-compatible relays continue through the OpenAI adapter shape with saved Base URL and model settings. Google gets its own provider id, manifest, connection diagnostic path, Gemini image adapter, and manual live queue path. Both providers reuse the encrypted credential vault, live safety gate, queue worker, and local result file store.
+Decision: Add first-class provider setup support for optional OpenAI-compatible Base URLs and Google AI Studio image generation. OpenAI-compatible relays continue through the OpenAI adapter shape with saved Base URL and model settings. Google gets its own provider id, manifest, connection diagnostic path, Gemini image adapter, and manual live queue path. Both providers reuse the encrypted credential vault, live generation protection, queue worker, and local result file store.
 
 Reason:
 
@@ -548,18 +548,18 @@ Impact:
 - Add checks for disabled/allowed states, auto-preparation boundaries, and route payload shape.
 - Future end-user live generation can reuse this state model but should still have a separate confirmation flow.
 
-## D077: Manual Live Generation Test Reuses Diagnostics And The Safety Gate
+## D077: Manual Live Generation Check Reuses Diagnostics And Live Protection
 
 Status: accepted
 
 Context: Provider credentials can now be saved in an encrypted vault and checked through a lightweight connection diagnostic. The next risk is accidentally turning the normal workbench button into a live provider call before cost, result storage, and user confirmations are all enforced.
 
-Decision: Add a separate manual desktop live generation test boundary. The test route may run only for OpenAI MVP queue jobs, only with a saved credential, only after rerunning the provider connection diagnostic, and only after the live execution safety gate confirms cost acceptance, external-provider execution, and local result storage. It delegates real image generation to the existing OpenAI live queue helper and persists returned image bytes through the local result file store.
+Decision: Add a separate manual desktop live generation test boundary. The test route may run only for OpenAI MVP queue jobs, only with a saved credential, only after rerunning the provider connection diagnostic, and only after live generation protection confirms cost acceptance, external-provider execution, and local result storage. It delegates real image generation to the existing OpenAI live queue helper and persists returned image bytes through the local result file store.
 
 Reason:
 
 - Proves the real provider-to-queue-to-result-storage path without making live execution the default UX.
-- Reuses the credential vault, connection diagnostics, safety gate, provider adapter, queue worker, and result file store boundaries.
+- Reuses the credential vault, connection diagnostics, live generation protection, provider adapter, queue worker, and result file store boundaries.
 - Keeps automated checks fake-transport-only while allowing a manual desktop path for real provider validation.
 - Prevents API Keys and raw provider image payloads from entering workspace snapshots or result metadata.
 
@@ -576,7 +576,7 @@ Status: accepted
 
 Context: The app can now save provider API Keys in an encrypted vault, but users still need a trustworthy way to know whether the saved key works before attempting a real generation run. A full image generation smoke test can spend quota and produces artifacts, so it is too heavy for the normal settings surface.
 
-Decision: Add a provider connection diagnostic boundary. The settings UI can trigger an explicit test that resolves the provider credential through the vault and performs a lightweight readiness/model probe. The diagnostic returns typed status, model availability, elapsed time, and user-safe error copy. It does not generate images, store returned secrets, or bypass the live execution safety gate.
+Decision: Add a provider connection diagnostic boundary. The settings UI can trigger an explicit test that resolves the provider credential through the vault and performs a lightweight readiness/model probe. The diagnostic returns typed status, model availability, elapsed time, and user-safe error copy. It does not generate images, store returned secrets, or bypass live generation protection.
 
 Reason:
 
@@ -612,13 +612,13 @@ Impact:
 - Add credential save/status/revoke contracts and route handlers.
 - Add tests proving encrypted vault records do not contain clear-text API Keys.
 - Future settings UI should call these credential routes instead of storing keys in browser state.
-- Live execution must still pass the live safety gate before using a resolved credential.
+- Live execution must still pass the live generation protection before using a resolved credential.
 
 ## D074: Static Workbench Shows Live Gate Readiness Before Live UI Execution
 
 Status: accepted
 
-Context: The live execution safety gate is now a queue-level contract, but users need to see that state in the workbench before any manual desktop live test or future live UI action is added. Hiding gate blockers inside code would make the next UI step confusing and increase the chance of unsafe live controls.
+Context: Live generation protection is now a queue-level contract, but users need to see that state in the workbench before any manual desktop live test or future live UI action is added. Hiding gate blockers inside code would make the next UI step confusing and increase the chance of unsafe live controls.
 
 Decision: Add a static workbench live gate surface. The left Engine panel shows the actionable gate controls and blocker reasons; the top toolbar, inspector, and task drawer mirror compact gate state. This surface visualizes readiness only. It does not call live providers, persist API keys, or replace the mock-safe generation button.
 
@@ -636,11 +636,11 @@ Impact:
 - Add UI checks for gate copy, state transitions, and responsive layout.
 - Live provider calls from the UI remain out of scope for this step.
 
-## D073: Live Execution Requires A User Safety Gate
+## D073: Live Execution Requires User-Confirmed Protection
 
 Status: accepted
 
-Context: The OpenAI live queue helper can now execute through runtime credentials, an injected transport, and result file storage. Before any desktop or UI path can expose this, the project needs a user-facing safety gate so a real provider run cannot happen from a casual click, stale state, missing storage, or unclear cost acceptance.
+Context: The OpenAI live queue helper can now execute through runtime credentials, an injected transport, and result file storage. Before any desktop or UI path can expose this, the project needs a user-facing live generation protection so a real provider run cannot happen from a casual click, stale state, missing storage, or unclear cost acceptance.
 
 Decision: Add a reusable live execution gate contract. Live queue execution must be explicitly enabled and pass confirmations for provider cost, external-provider execution, and result storage. It must also prove runtime credential, transport, and result storage readiness before provider execution. The gate returns typed `skipped`, `blocked`, or `allowed` decisions with blocker codes and user-safe messages.
 

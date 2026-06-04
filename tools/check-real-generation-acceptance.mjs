@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.7";
+const currentVersion = "1.1.0";
 
 function read(filePath) {
   try {
@@ -50,14 +50,14 @@ requireIncludes(realAcceptance, "REAL_GENERATION_ACCEPTANCE.md", [
   "MULTIMODE_ACCEPTANCE.md",
   "Default automated checks must not spend provider credits",
   "Fresh real generation is manual and opt-in only",
-  "The App live safety gate must be enabled",
+  "The App live generation protection must be enabled",
   "Required confirmations: live run, provider cost, external provider, and local result storage",
   "Accepted cost cap must be greater than or equal to the estimated run cost",
   "max 1 fresh real generation per mode",
-  "Never use a direct API/script path to bypass the App live safety gate",
+  "Never use a direct API/script path to bypass the App live generation protection",
   "Workspace Readiness Snapshot",
   "Baseline Result Evidence",
-  "Fresh rc.5 Acceptance Status",
+  "Fresh 1.1.0 Acceptance Status",
   "Poster:",
   "Icon:",
   "Logo:",
@@ -100,14 +100,14 @@ requireIncludes(releaseChecklist, "RELEASE_CHECKLIST.md", [
 ]);
 
 requireIncludes(testing, "TESTING.md", [
-  "1.1.0-rc.5 Controlled Real Acceptance Release Update",
+  "1.1.0 Controlled Real Acceptance Release Update",
   "npm run real-acceptance:check",
   "REAL_GENERATION_ACCEPTANCE.md",
 ]);
 
 requireIncludes(roadmap, "ROADMAP.md", [
-  "1.1.0-rc.5 Capability Gate And Agnes Acceptance Follow-Up",
-  "1.1.0-rc.5 Controlled Real Acceptance Release Update",
+  "1.1.0 Capability Gate And Agnes Acceptance Follow-Up",
+  "1.1.0 Controlled Real Acceptance Release Update",
   "REAL_GENERATION_ACCEPTANCE.md",
   "unsupported current-provider actions are disabled",
   "Poster: capability/storage pass, visual quality fail",
@@ -117,9 +117,9 @@ requireIncludes(decisions, "DECISIONS.md", [
   "D108",
   "Unsupported Current Provider Actions Are Blocked",
   "D107",
-  "1.1.0-rc.5",
+  "1.1.0",
   "REAL_GENERATION_ACCEPTANCE.md",
-  "Never use a direct API/script path to bypass the App live safety gate",
+  "Never use a direct API/script path to bypass the App live generation protection",
 ]);
 
 requireIncludes(appMetadata, "src/app-metadata.js", ["APP_VERSION", currentVersion, "APP_BUNDLE_HINT"]);

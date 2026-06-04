@@ -1,10 +1,10 @@
 # Poster Lab Pro
 
-Poster Lab Pro is a local creative workbench for game marketing assets. The current release candidate focuses on AI-assisted poster, icon, logo, announcement, and collaboration visual generation with uploaded assets used as visual references instead of sticker overlays.
+Poster Lab Pro is a local creative workbench for game marketing assets. The current stable release focuses on AI-assisted poster, icon, logo, announcement, and collaboration visual generation with uploaded assets used as visual references instead of sticker overlays.
 
-## Current Release Candidate
+## Current Stable Release
 
-- Visible version: `1.1.0-rc.7`
+- Visible version: `1.1.0`
 - Main branch: `main`
 - Desktop bundle hint: `release/mac/Poster Lab Pro.app`
 - Local desktop test bundle can also be placed at `/Users/liusu/Desktop/Poster Lab Pro.app`.
@@ -51,7 +51,7 @@ release/mac/Poster Lab Pro.app
 
 ## Live Generation Safety
 
-Real provider image generation is manual and opt-in. It requires saved provider credentials, a successful provider connection check, enabled live safety gate confirmations, accepted cost cap, and local result storage readiness. Default automated checks use fake transports and must not spend provider credits.
+Real provider image generation is manual and opt-in. It requires saved provider credentials, a successful provider connection check, confirmed live generation protection, accepted cost cap, and local result storage readiness. Default automated checks use fake transports and must not spend provider credits.
 
 ## Manual QA
 

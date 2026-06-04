@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.7";
+const currentVersion = "1.1.0";
 
 function read(filePath) {
   try {
@@ -91,20 +91,20 @@ requireIncludes(releaseChecklist, "RELEASE_CHECKLIST.md", [
 ]);
 
 requireIncludes(testing, "TESTING.md", [
-  "1.1.0-rc.3 Multimode Acceptance Matrix Release Update",
+  "1.1.0 Multimode Acceptance Matrix Release Update",
   "npm run multimode-acceptance:check",
   "public/mock-assets/collab-partner-sundae-ranger.svg",
 ]);
 
 requireIncludes(roadmap, "ROADMAP.md", [
-  "1.1.0-rc.3 Multimode Acceptance Matrix Release Update",
+  "1.1.0 Multimode Acceptance Matrix Release Update",
   "Synthetic Collab Partner Asset",
   "multimode-acceptance:check",
 ]);
 
 requireIncludes(decisions, "DECISIONS.md", [
   "D106",
-  "1.1.0-rc.3",
+  "1.1.0",
   "MULTIMODE_ACCEPTANCE.md",
   "collab-partner-sundae-ranger.svg",
 ]);

@@ -339,8 +339,8 @@ function renderProviderSetupSteps({ configured, connection, gate }) {
       done: connectionReady,
     },
     {
-      label: "实机安全闸",
-      detail: gate.allowed ? "已通过" : `${gate.blockerCount || 0} 项待完成`,
+      label: "真实生成保护",
+      detail: gate.allowed ? "已确认" : `${gate.blockerCount || 0} 项待确认`,
       done: gate.allowed,
     },
     {
@@ -351,7 +351,7 @@ function renderProviderSetupSteps({ configured, connection, gate }) {
   ];
 
   return `
-    <section class="provider-setup-steps" aria-label="实机生成准备步骤">
+    <section class="provider-setup-steps" aria-label="真实生成准备步骤">
       ${steps.map((step, index) => `
         <div class="${step.done ? "done" : "pending"}">
           <span>${escapeHtml(index + 1)}</span>
@@ -367,7 +367,7 @@ function renderLiveGatePanel() {
   const gate = getLiveGateViewModel({ id: state.activeMode });
   const blockers = gate.blockers.length > 0
     ? gate.blockers.map((blocker) => `<li><strong>${escapeHtml(blocker.label)}</strong><span>${escapeHtml(blocker.message)}</span></li>`).join("")
-    : `<li class="live-gate-ok">所有实机安全要求已满足。</li>`;
+    : `<li class="live-gate-ok">真实生成保护已确认。</li>`;
   const qualityWarnings = gate.qualityWarnings?.length
     ? `
       <ul class="live-gate-quality-warnings" aria-label="生成质量风险提示">
@@ -377,15 +377,15 @@ function renderLiveGatePanel() {
     : "";
 
   return `
-    <section class="provider-config-card live-gate-panel ${escapeHtml(gate.tone)}" aria-label="实机安全闸">
+    <section class="provider-config-card live-gate-panel ${escapeHtml(gate.tone)}" aria-label="真实生成保护">
       <div class="live-gate-head">
         <div>
-          <span>Live Gate</span>
-          <strong>实机安全闸 · ${escapeHtml(gate.stateLabel)}</strong>
+          <span>Live Generation</span>
+          <strong>真实生成保护 · ${escapeHtml(gate.stateLabel)}</strong>
           <small>${escapeHtml(gate.helper)}</small>
         </div>
-        <label class="live-switch" aria-label="开启实机安全闸">
-          <input type="checkbox" data-live-toggle="enabled" aria-label="开启实机安全闸" ${state.liveGate.enabled ? "checked" : ""}>
+        <label class="live-switch" aria-label="开启真实生成保护">
+          <input type="checkbox" data-live-toggle="enabled" aria-label="开启真实生成保护" ${state.liveGate.enabled ? "checked" : ""}>
           <i aria-hidden="true"></i>
         </label>
       </div>
@@ -424,6 +424,9 @@ function renderLiveGatePanel() {
             <input type="checkbox" data-live-toggle="${escapeHtml(row.key)}" aria-label="${escapeHtml(row.label)}" ${row.checked ? "checked" : ""}>
           </label>
         `).join("")}
+      </div>
+      <div class="live-gate-system-checks" aria-label="系统检查">
+        <strong>系统检查</strong>
         ${gate.prerequisites.map((row) => `
           <label class="live-gate-row prerequisite">
             <span>${escapeHtml(row.label)}</span>

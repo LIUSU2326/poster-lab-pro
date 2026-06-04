@@ -37,7 +37,7 @@ for (const token of [
   "getPreparedLiveQueueJobId",
   "Manual live test currently supports OpenAI-compatible, Google, and Agnes providers only.",
   "Create a queue job with the normal batch action first.",
-  "手动实机测试当前要求方案生成和图像生成使用同一个 Provider",
+  "手动验证当前要求方案生成和图像生成使用同一个 Provider",
 ]) {
   if (!viewModelSource.includes(token)) issues.push(`live-gate-view-model.js: missing ${token}`);
 }
@@ -53,7 +53,7 @@ for (const token of [
 
 for (const [file, source, tokens] of [
   ["events.js", eventsSource, ["runManualLiveTestForWorkbench", "run-manual-live-test"]],
-  ["config-panel.js", configSource, ["manual-live-test", "run-manual-live-test", "MANUAL LIVE TEST"]],
+  ["config-panel.js", configSource, ["manual-live-test", "run-manual-live-test", "MANUAL CHECK"]],
   ["task-chrome.js", taskChromeSource, ["manual-live-slim", "manual-live-context", "RESULT FILES"]],
   ["styles.css", stylesSource, ["manual-live-test", "manual-live-context", "manual-live-slim"]],
 ]) {

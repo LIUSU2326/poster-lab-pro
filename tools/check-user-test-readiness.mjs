@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.7";
+const currentVersion = "1.1.0";
 
 function read(filePath) {
   try {
@@ -47,7 +47,7 @@ for (const token of [
   "/Users/liusu/Desktop/Poster Lab Pro.app",
   "http://127.0.0.1:3000",
   "模型与 Key",
-  "live safety gate",
+  "live generation protection",
   "accepted cost cap",
   "Default automated checks must not spend provider credits",
   "1-2 real generations per mode",
@@ -84,9 +84,9 @@ for (const token of [
 for (const token of [
   currentVersion,
   "Fresh real generation is manual and opt-in only",
-  "Never use a direct API/script path to bypass the App live safety gate",
+  "Never use a direct API/script path to bypass the App live generation protection",
   "Baseline Result Evidence",
-  "Fresh rc.5 Acceptance Status",
+  "Fresh 1.1.0 Acceptance Status",
   "Agnes all-core multimode pass",
   "Icon final job",
   "Logo job",

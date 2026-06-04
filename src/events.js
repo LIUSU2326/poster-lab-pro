@@ -161,7 +161,7 @@ async function handleActionControl(control, event, render) {
     if (gate) {
       state.submission = createLocalServiceError(
         "live_gate_blocked",
-        gate.blockers?.[0]?.message || "请先开启并通过实机安全闸，再调用真实模型服务。",
+        gate.blockers?.[0]?.message || "请先开启真实生成保护，再调用外部模型服务。",
       );
       state.taskOpen = true;
       state.settingsOpen = true;

@@ -234,12 +234,11 @@ async function runRuntimeCheck() {
     if (!agnesMapped.request.prompt.includes("Default pipeline: AI integrated redraw")) {
       issues.push("agnes provider profile must not replace the shared integrated redraw Poster logic");
     }
-    if (agnesMapped.request.assets.some((asset) =>
-      /semanticRole=(brandLogo|compositionReference)/.test(asset.description || ""))) {
-      issues.push("agnes poster image request should withhold raw logo/composition references and keep raw image intake to identity, threat, and style anchors");
+    if (!agnesMapped.request.assets.every((asset) => !asset.url && /agnesRawImageWithheld=true/.test(asset.description || ""))) {
+      issues.push("agnes poster image request should retain asset semantics but withhold every raw image URL");
     }
     if (!agnesMapped.request.assets.some((asset) => /semanticRole=protagonist/.test(asset.description || ""))) {
-      issues.push("agnes poster image request should keep uploaded protagonist raw reference");
+      issues.push("agnes poster image request should keep uploaded protagonist semantic reference");
     }
     for (const priorityToken of [
       "The uploaded subjects and brand elements must look repainted into the same scene",
@@ -265,6 +264,8 @@ async function runRuntimeCheck() {
       "scene-derived",
       "No duplicate uploaded asset",
       "KV ACTION MINI-BRIEF",
+      "REFERENCE PANEL BAN",
+      "No copied reference image",
     ]) {
       if (!mapped.request.prompt.includes(priorityToken)) {
         issues.push(`poster image request should keep priority integrated-redraw rule before prompt truncation: ${priorityToken}`);
@@ -451,15 +452,14 @@ async function runRuntimeCheck() {
       providerId: "agnes",
       kind: "imageGeneration",
     });
+    if (!userAgnesMapped.request.assets.every((asset) => !asset.url && /agnesRawImageWithheld=true/.test(asset.description || ""))) {
+      issues.push("agnes user-asset poster request should retain asset semantics but withhold every raw image URL");
+    }
     if (!userAgnesMapped.request.assets.some((asset) => /semanticRole=protagonist/.test(asset.description || ""))) {
-      issues.push("agnes user-asset poster request should keep uploaded protagonist raw reference");
+      issues.push("agnes user-asset poster request should keep uploaded protagonist semantic reference");
     }
     if (!userAgnesMapped.request.assets.some((asset) => /semanticRole=antagonist/.test(asset.description || ""))) {
-      issues.push("agnes user-asset poster request should keep uploaded BOSS/threat raw reference");
-    }
-    if (userAgnesMapped.request.assets.some((asset) =>
-      /semanticRole=(brandLogo|compositionReference)/.test(asset.description || ""))) {
-      issues.push("agnes user-asset poster request should withhold raw logo/composition references");
+      issues.push("agnes user-asset poster request should keep uploaded BOSS/threat semantic reference");
     }
     if (userMapped.request.prompt.includes("Identity-Safe Game Campaign KV Plate") || userMapped.request.prompt.includes("SCENE PLATE only")) {
       issues.push("user-asset poster request should not use scene-plate fallback unless explicitly forced");

@@ -1,14 +1,14 @@
 # RELEASE_CHECKLIST.md
 
-## Current Candidate
+## Current Stable Release
 
-- Version: `1.1.0-rc.7`
+- Version: `1.1.0`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 
-## Release Candidate Gate
+## Stable Release Gate
 
 Run these before promoting a build:
 
@@ -22,27 +22,27 @@ Run these before promoting a build:
 8. Verify `CFBundleShortVersionString` matches the current version.
 9. Launch the desktop app and verify `http://127.0.0.1:3000` returns the workbench HTML.
 10. Verify the top bar shows the version and desktop bundle path.
-11. Verify settings shows provider setup order, connection test, live safety gate, estimated cost, and accepted cost cap.
+11. Verify settings shows provider setup order, connection test, live generation protection, estimated cost, and accepted cost cap.
 12. Use `USER_TESTING.md`, `MULTIMODE_ACCEPTANCE.md`, and `REAL_GENERATION_ACCEPTANCE.md` for the manual user trial.
 
-## Manual Live Generation Gate
+## Manual Live Generation Protection
 
 Live provider calls remain opt-in:
 
 - Saved encrypted provider credential is required.
 - Connection test must pass.
-- Live safety gate must be enabled.
+- Live generation protection must be confirmed.
 - User must confirm live run, provider cost responsibility, external-provider execution, and result storage.
 - Accepted cost cap must be greater than or equal to estimated cost.
 - Default automated checks must not spend provider credits.
 
-## 1.0 RC Acceptance
+## 1.1 Stable Acceptance
 
 - Project creation, project brief editing, asset upload, asset deletion, mode switching, scheme generation, image rendering, result preview, archive export, failed-image retry, and settings access are usable from the desktop app.
 - Poster, Icon, Logo, Announcement, and Collab all use AI integrated redraw as the default asset path.
 - Local overlay is a fallback only when explicitly forced or when a failure condition is recorded.
 - The app version, branch, and desktop bundle path are visible enough to avoid old-App confusion.
-- README, TESTING, DESKTOP_TESTING, ROADMAP, DECISIONS, and this checklist agree on the current candidate.
+- README, TESTING, DESKTOP_TESTING, ROADMAP, DECISIONS, and this checklist agree on the current stable release.
 
 ## Known Non-Blocking Watch Items
 
@@ -57,9 +57,9 @@ Live provider calls remain opt-in:
 - Packaged beta.4 live validation passed for Logo (`job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8`) and Announcement (`job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf`).
 - Beta.5 Collab live validation passed with synthetic partner asset `asset-collab-star-cream-partner-beta5` and job `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`; the expected missing partner `brandLogo` audit stayed at review with a blank partner brand plate.
 - Beta.6 adds `npm run multimode-regression:check` as a zero-cost cross-mode gate for Poster, Icon, Logo, Announcement, and Collab prompt/provider requests; it also keeps `Mode Guardrails` preserved when long prompt packages are compacted.
-- RC1 adds `npm run ux-regression:check` as a zero-cost UX/reliability gate for mode navigation, blocked live generation, result management, settings safety, project library, queue failure recovery, and destructive-action confirmation.
-- RC2 adds a User Test Readiness Gate with `USER_TESTING.md` and `npm run user-test-readiness:check`; manual acceptance should run only 1-2 real generations per mode when needed.
-- RC3 adds `MULTIMODE_ACCEPTANCE.md`, `npm run multimode-acceptance:check`, and the synthetic Collab partner fixture `public/mock-assets/collab-partner-sundae-ranger.svg`; this keeps no-partner Collab testing explicit and limits the RC pass to max 1 real generation per mode unless one focused rerun is needed.
-- RC4 adds `REAL_GENERATION_ACCEPTANCE.md` and `npm run real-acceptance:check`; Fresh real generation is manual and opt-in only, pending the App live safety gate, and must not be triggered through a direct API/script path that bypasses the visible safety confirmations.
-- RC7 front-loads Poster `KV ACTION MINI-BRIEF` and Collab partner-first dual-subject locks for compressed providers. Agnes Poster/Collab are still quality-risk modes requiring manual visual review; capability/storage success alone is not stable-quality acceptance.
-- Signed installer, auto-update, crash reporting, and a production release channel are not part of this local RC gate.
+- UX/reliability gate: `npm run ux-regression:check` covers mode navigation, blocked live generation, result management, settings protection, project library, queue failure recovery, and destructive-action confirmation.
+- User Test Readiness Gate: `USER_TESTING.md` and `npm run user-test-readiness:check`; manual acceptance should run only 1-2 real generations per mode when needed.
+- Multimode Acceptance Gate: `MULTIMODE_ACCEPTANCE.md`, `npm run multimode-acceptance:check`, and the synthetic Collab partner fixture `public/mock-assets/collab-partner-sundae-ranger.svg`; no-partner Collab testing stays explicit and real generation remains bounded.
+- Real Acceptance Gate: `REAL_GENERATION_ACCEPTANCE.md` and `npm run real-acceptance:check`; Fresh real generation is manual and opt-in only, pending App live generation protection, and must not be triggered through a direct API/script path that bypasses visible safety confirmations.
+- 1.1.0 front-loads Poster `KV ACTION MINI-BRIEF` and Collab partner-first dual-subject locks for compressed providers. Agnes Poster/Collab are still quality-risk modes requiring manual visual review; capability/storage success alone is not stable-quality acceptance.
+- Signed installer, auto-update, crash reporting, and a production release channel are not part of this local stable gate.

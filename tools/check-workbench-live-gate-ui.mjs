@@ -68,13 +68,13 @@ for (const token of [
 }
 
 for (const [name, source, tokens] of [
-  ["config-panel.js", configSource, ["模型、Key 与实机状态在顶部统一查看"]],
-  ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "open-settings", "costSummaryLabel", "qualityRisk"]],
-  ["inspector.js", inspectorSource, ["live-gate-inspector", "实机安全闸"]],
-  ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关", "qualityRiskDetail"]],
-  ["center-board.js", centerBoardSource, ["getLiveGateViewModel", "liveBlocked", "先通过实机安全闸"]],
+  ["config-panel.js", configSource, ["模型、Key 与真实生成状态在顶部统一查看"]],
+  ["topbar.js", topbarSource, ["live-gate-chip", "真实生成", "open-settings", "costSummaryLabel", "qualityRisk"]],
+  ["inspector.js", inspectorSource, ["live-gate-inspector", "真实生成保护"]],
+  ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "真实生成", "qualityRiskDetail"]],
+  ["center-board.js", centerBoardSource, ["getLiveGateViewModel", "liveBlocked", "确认真实生成保护"]],
   ["task-chrome.js", taskChromeSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
-  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "provider-setup-steps", "data-live-toggle", "data-live-cost-cap", "实机安全闸", "预计数量", "live-gate-quality-warnings"]],
+  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "provider-setup-steps", "data-live-toggle", "data-live-cost-cap", "真实生成保护", "预计数量", "live-gate-quality-warnings", "live-gate-system-checks"]],
   ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim", "live-gate-metric small", "live-gate-quality-warnings", "run-mode-chip.warning"]],
 ]) {
   for (const token of tokens) {
@@ -92,7 +92,7 @@ for (const [name, source] of [
   ["ROADMAP.md", roadmap],
   ["TESTING.md", testing],
 ]) {
-  if (!source.includes("Live Gate") && !source.includes("live gate") && !source.includes("Live Safety Gate")) {
+  if (!source.includes("Live Gate") && !source.includes("live gate") && !source.includes("live generation protection")) {
     issues.push(`${name}: missing workbench live gate update`);
   }
 }
@@ -145,7 +145,7 @@ try {
     image: { providerId: "agnes", model: "agnes-image-2.1-flash" },
   };
   const agnesPosterGate = getLiveGateViewModel(modeSpecs.poster);
-  if (!agnesPosterGate.allowed || !agnesPosterGate.qualityRisk || !agnesPosterGate.qualityWarnings?.[0]?.message.includes("正式交付前需要人工复核")) {
+  if (!agnesPosterGate.allowed || !agnesPosterGate.qualityRisk || !agnesPosterGate.qualityWarnings?.[0]?.message.includes("复杂多素材 KV/联名结果仍建议人工复核")) {
     issues.push("Agnes poster live gate should remain allowed but expose a visible quality-risk warning");
   }
   const agnesAnnouncementGate = getLiveGateViewModel(modeSpecs.announcement);

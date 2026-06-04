@@ -1,12 +1,12 @@
 # MULTIMODE_ACCEPTANCE.md
 
-## Poster Lab Pro 1.1.0-rc.7 Multimode Acceptance Matrix
+## Poster Lab Pro 1.1.0 Multimode Acceptance Matrix
 
-This matrix defines the 1.1 release-candidate acceptance pass for Poster, Icon, Logo, Announcement, and Collab. It is meant to keep real generation bounded while preserving each mode's distinct visual goal.
+This matrix defines the 1.1.0 stable acceptance pass for Poster, Icon, Logo, Announcement, and Collab. It is meant to keep real generation bounded while preserving each mode's distinct visual goal.
 
 ## Test App
 
-- Version: `1.1.0-rc.7`
+- Version: `1.1.0`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Release bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -14,8 +14,8 @@ This matrix defines the 1.1 release-candidate acceptance pass for Poster, Icon, 
 ## Cost Rule
 
 - Default automated checks must not spend provider credits.
-- Real generation remains manual and opt-in through the live safety gate.
-- Run max 1 real generation per mode for this RC pass unless a clear blocking bug requires one focused rerun.
+- Real generation remains manual and opt-in through the live generation protection.
+- Run max 1 real generation per mode for this stable acceptance pass unless a clear blocking bug requires one focused rerun.
 - Stop once pass/fail evidence is obvious; do not keep tuning prompts by taste.
 
 ## Synthetic Collab Partner Asset

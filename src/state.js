@@ -93,7 +93,7 @@ export const state = {
     phase: "idle",
     status: "not_started",
     error: /** @type {string | null} */ (null),
-    message: "尚未执行手动实机测试。",
+    message: "尚未执行手动验证。",
     jobId: /** @type {string | null} */ (null),
     traceId: /** @type {string | null} */ (null),
     resultCount: 0,

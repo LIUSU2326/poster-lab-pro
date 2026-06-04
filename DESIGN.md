@@ -1,5 +1,11 @@
 # DESIGN.md
 
+## 2026-06-05 Live Generation Protection UI
+
+Status: accepted for the 1.1.0 stable surface.
+
+The former live gate UI is presented to users as live generation protection. The settings sheet should explain that real provider calls are opt-in, require cost/external-provider/result-storage confirmations, and keep system checks visually separate from user confirmations. Top-bar and empty-state entry points use `真实生成` / `确认真实生成保护` rather than test-only wording.
+
 ## 2026-05-25 Center Board Correction: Scheme-Owned Results
 
 Status: accepted for implementation as a v3 refinement.

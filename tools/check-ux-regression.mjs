@@ -46,17 +46,17 @@ function makeModeState(snapshot, mode, patch = {}) {
   ));
 }
 
-function makeRuntimeScheme(mode, id = `rc1-${mode}-scheme`) {
+function makeRuntimeScheme(mode, id = `stable-${mode}-scheme`) {
   return {
     id,
     projectId: "project-pizza-kitchen",
     mode,
-    code: "RC1",
-    title: `${mode} RC UX scheme`,
-    brief: "RC UX generated scheme for interaction testing.",
+    code: "UX1",
+    title: `${mode} stable UX scheme`,
+    brief: "Stable UX generated scheme for interaction testing.",
     slogans: { "en-US": "Serve Up Victory" },
     promptBlocks: [
-      { title: "English Prompt", text: "RC UX prompt keeps generated image actions available." },
+      { title: "English Prompt", text: "Stable UX prompt keeps generated image actions available." },
     ],
     lockedFields: [],
     outputPresets: ["custom"],
@@ -217,7 +217,7 @@ async function run() {
     includes(shell, "live-gate-chip", label);
     includes(shell, "run-mode-chip", label);
     includes(shell, "data-action=\"toggle-theme\"", label);
-    includes(shell, "v1.1.0-rc.7", label);
+    includes(shell, "v1.1.0", label);
     includes(shell, "release/mac/Poster Lab Pro.app", label);
     includes(shell, "data-action=\"generate-schemes\"", label);
     includes(shell, "data-action=\"simulate-asset-upload\"", label);
@@ -234,8 +234,8 @@ async function run() {
     snapshot: blockedSnapshot,
   });
   const blockedShell = renderShell(getActiveMode(), null);
-  includes(blockedShell, "先开启并通过实机安全闸", "blocked live shell");
-  includes(blockedShell, "打开实机安全闸", "blocked live shell");
+  includes(blockedShell, "先确认真实生成保护", "blocked live shell");
+  includes(blockedShell, "确认真实生成保护", "blocked live shell");
   includes(blockedShell, "data-action=\"open-settings\"", "blocked live shell");
   assert(/data-action="generate-schemes"[\s\S]*?disabled/.test(blockedShell), "blocked live shell: generate schemes should be disabled");
   assert(/data-action="submit-generation"[\s\S]*?disabled/.test(blockedShell), "blocked live shell: submit generation should be disabled");
@@ -254,7 +254,7 @@ async function run() {
   includes(blockedSchemeBoard, "scheme-card", "blocked live scheme board");
   assert(/data-action="refresh-scheme"[\s\S]*?disabled/.test(blockedSchemeBoard), "blocked live scheme board: scheme refresh should be disabled");
   assert(/class="render-button[^"]*is-live-blocked"[\s\S]*?data-action="submit-generation"[\s\S]*?disabled/.test(blockedSchemeBoard), "blocked live scheme board: card image render should be disabled");
-  includes(blockedSchemeBoard, "真实模型服务", "blocked live scheme board");
+  includes(blockedSchemeBoard, "确认真实生成保护", "blocked live scheme board");
 
   const resultSnapshot = makeSnapshot(workspaceSnapshot, "poster");
   resetState({
@@ -333,7 +333,7 @@ async function run() {
   includes(settings, "data-action=\"test-provider-connection\"", "settings sheet");
   includes(settings, "data-live-cost-cap", "settings sheet");
   includes(settings, "live-gate-checks", "settings sheet");
-  includes(settings, "data-live-toggle=\"enabled\" aria-label=\"开启实机安全闸\"", "settings sheet");
+  includes(settings, "data-live-toggle=\"enabled\" aria-label=\"开启真实生成保护\"", "settings sheet");
   assert(/data-live-toggle="confirmations\.liveRun"[\s\S]*?aria-label=/.test(settings), "settings sheet: live confirmation checkboxes should have aria labels");
   includes(settings, "data-action=\"test-provider-route-plan\"", "settings sheet");
   includes(settings, "Agnes 核心测试", "settings sheet");
@@ -341,8 +341,8 @@ async function run() {
   includes(settings, "data-action=\"apply-agnes-core-route\"", "settings sheet");
   includes(settings, "画风/构图参考分析仍按模型能力闸门处理", "settings sheet");
   includes(settings, "live-gate-quality-warnings", "settings sheet");
-  includes(settings, "Agnes 质量复核", "settings sheet");
-  includes(settings, "正式交付前需要人工复核", "settings sheet");
+  includes(settings, "Agnes 多素材质量提示", "settings sheet");
+  includes(settings, "复杂多素材 KV/联名结果仍建议人工复核", "settings sheet");
 
   state.generationChoiceOpen = true;
   state.settingsOpen = false;

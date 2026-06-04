@@ -353,6 +353,28 @@ async function runRuntimeCheck() {
       issues.push("poster quality audit should store logo/copy target metrics");
     }
 
+    const referencePanelPosterSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
+        <rect width="1920" height="1080" fill="#4d8a9a"/>
+        <rect width="640" height="1080" fill="#020202"/>
+        <circle cx="340" cy="560" r="180" fill="#d07a2c"/>
+      </svg>
+    `);
+    const referencePanelPosterBytes = await sharp(referencePanelPosterSvg).png().toBuffer();
+    const referencePanelPosterAudit = await results.auditResultQuality({
+      mode: "poster",
+      dataUrl: `data:image/png;base64,${referencePanelPosterBytes.toString("base64")}`,
+      width: 1920,
+      height: 1080,
+      targetWidth: 1920,
+      targetHeight: 1080,
+      assetRoles: ["gameCharacter", "prop", "gameLogo"],
+      textTargets: ["Serve Up Victory"],
+    });
+    if (!referencePanelPosterAudit.findings.some((item) => item.code === "poster-reference-sheet-panel-risk" && item.severity === "warning")) {
+      issues.push("poster quality audit should warn on copied reference-sheet or black side-panel compositions");
+    }
+
     const logoAudit = await results.auditResultQuality({
       mode: "logo",
       dataUrl: null,
