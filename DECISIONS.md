@@ -1,16 +1,61 @@
 # DECISIONS.md
 
-## D107: 1.1.0-rc.4 Keeps Real Generation Behind The App Safety Gate
+## D110: Icon And Logo UI Alignment Does Not Change The Quality Priority
 
 Status: accepted
 
-Context: The workspace has Google configured, masked credentials present, the required five-mode asset roles, and stored baseline results for Poster, Icon, Logo, Announcement, and Collab. However, fresh rc.4 real generation would spend provider credits. Running a direct route or script with confirmations injected would technically exercise the service, but it would bypass the visible App live-safety flow that users rely on to understand cost and external-provider execution.
+Context: The user supplied the GameIcon Pro source and screenshots as reference for Icon and Logo interfaces, while also clarifying that Poster, Collab, and Announcement should be optimized first and Icon/Logo generation quality can later use the Gemini reference implementation.
 
-Decision: Add `REAL_GENERATION_ACCEPTANCE.md` and `real-acceptance:check`. Record current baseline result evidence and mark fresh rc.4 generation as pending live safety gate. Never use a direct API/script path to bypass the App live safety gate. Fresh runs must be started through the App safety workflow with live run, provider cost, external provider, result storage, and cost-cap confirmations visible.
+Decision: `1.1.0-rc.6` aligns Icon and Logo UI, state, schema, and prompt handoff with the reference sidebar pattern: mode-specific asset slots, style presets, wordmark/background controls for Logo, style selection for Icon/Logo, and clear no-text/single-subject/icon-readability rules. This is not treated as the final Icon/Logo quality pass. Rounded Icon corners remain acceptable when intentional and polished.
 
 Impact:
 
-- The final 1.1 stable decision can separate existing baseline evidence from fresh rc.4 live acceptance.
+- Icon and Logo no longer look like lightweight Poster variants in the left configuration flow.
+- Icon/Logo style choices now persist and enter prompt construction.
+- The next quality sprint stays focused on Poster, Collab, and Announcement.
+- The dedicated Icon/Logo engine pass is deferred until the Gemini reference behavior and requirements are integrated.
+
+## D109: Intentional Rounded Icon Corners Are Allowed
+
+Status: accepted
+
+Context: Earlier Icon acceptance rules treated rounded app-icon masks as a hard failure because real generations often placed the subject inside a small dark rounded container on a white square canvas. The user has clarified that rounded corners themselves are acceptable now; the real problem is white borders, accidental padding, unreadable edge marks, or a low-quality container that shrinks the subject.
+
+Decision: Icon mode keeps hard locks for `1:1`, no text, one dominant readable subject, and clean edges. Rounded corners, badge-like framing, or app-icon styling are allowed when intentional and polished. Result Quality Audit should keep corner metrics for diagnostics but should only trigger `icon-rounded-mask-risk` when the icon appears inside a separate high-contrast padded container or frame.
+
+Impact:
+
+- Icon prompts no longer forbid rounded corners by default.
+- Transparent or intentionally rounded icon treatments no longer fail the automated audit by themselves.
+- Local Icon edge repair remains available only for harmful container/padding or edge-mark failures.
+- Manual acceptance should judge small-size readability and subject clarity before corner shape.
+
+## D108: Unsupported Current Provider Actions Are Blocked Instead Of Silently Rerouted
+
+Status: accepted
+
+Context: The product now supports per-slot provider routing and Agnes all-core testing, but result operations such as variants, upscaling, and background removal can be confusing if the current provider is selected in the UI while the action silently falls back to a different provider. The user expectation is that a chosen model/provider either supports the selected function or the tool clearly explains why it cannot run.
+
+Decision: Capability gates should separate core support from quality risk. If the selected provider does not support a function, the UI must disable or block that operation with an explicit provider/capability message. It must not silently swap to another provider unless a future UI makes that alternate route explicit and user-selected.
+
+Impact:
+
+- Result action buttons now resolve against the current provider only.
+- Google image generation can remain valid while Google image-edit result variants are disabled with a clear message.
+- Agnes concept/image generation remains allowed, but all-Agnes Poster and Collab stay marked as visual quality risks requiring manual review.
+- Tests must cover unsupported action buttons, provider capability routes, and the distinction between capability pass and visual acceptance.
+
+## D107: 1.1.0-rc.5 Keeps Real Generation Behind The App Safety Gate
+
+Status: accepted
+
+Context: The workspace has Google configured, masked credentials present, the required five-mode asset roles, and stored baseline results for Poster, Icon, Logo, Announcement, and Collab. However, fresh rc.5 real generation would spend provider credits. Running a direct route or script with confirmations injected would technically exercise the service, but it would bypass the visible App live-safety flow that users rely on to understand cost and external-provider execution.
+
+Decision: Add `REAL_GENERATION_ACCEPTANCE.md` and `real-acceptance:check`. Record current baseline result evidence and mark fresh rc.5 generation as pending live safety gate. Never use a direct API/script path to bypass the App live safety gate. Fresh runs must be started through the App safety workflow with live run, provider cost, external provider, result storage, and cost-cap confirmations visible.
+
+Impact:
+
+- The final 1.1 stable decision can separate existing baseline evidence from fresh rc.5 live acceptance.
 - Provider spend remains visible and intentional.
 - Automation can verify the acceptance record and safety contract without triggering paid calls.
 - The next pass can run one bounded fresh generation per mode through the App, or promote with deferred modes documented as stable risks.
@@ -1452,7 +1497,7 @@ Impact:
 状态：已接受
 
 背景：
-五种生产模式都依赖不同的提示词约束：联名需要角色占位符和防融合，公告需要排版模式和群像站位，Logo 需要纯色背景和字标主体，Icon 需要 1:1、无文字和满铺直角。若这些规则散落在 UI 文案、方案卡、Provider 请求和队列任务中，真实接模型后很容易出现约束遗漏。
+五种生产模式都依赖不同的提示词约束：联名需要角色占位符和防融合，公告需要排版模式和群像站位，Logo 需要纯色背景和字标主体，Icon 需要 1:1、无文字、主体清晰和干净边缘。若这些规则散落在 UI 文案、方案卡、Provider 请求和队列任务中，真实接模型后很容易出现约束遗漏。
 
 决策：
 先建立 Prompt Builder 合同层，不调用真实模型：
@@ -1748,7 +1793,7 @@ Zod schema 已经成为表单校验来源，但当前工作台仍是静态渲染
 Logo 和 Icon 不是普通海报。Logo 需要后期抠图友好，Icon 需要平台可用的满铺正方形图标。
 
 决策：
-Logo 模式强制提示纯色背景、字标主体、禁止复杂环境。Icon 模式强制 1:1、满铺直角、无文字、无边框、忠于上传素材。
+Logo 模式强制提示纯色背景、字标主体、禁止复杂环境。Icon 模式强制 1:1、主体清晰、无文字、无白边、忠于上传素材；圆角不是硬失败项。
 
 原因：
 
@@ -2271,7 +2316,7 @@ Context:
 Formal testing needs common mixed-provider workflows, for example DeepSeek for concept planning and Google, AIGoCode, OpenAI, or Qwen for image generation. Binding every model selector to the currently selected provider makes users unsure whether a `gpt-*` model is official OpenAI, an OpenAI-compatible relay, or the wrong provider entirely.
 
 Decision:
-Provider settings keep credential editing on the left provider list, but routing is saved per task slot. Concept generation, image generation, style reference analysis, composition reference analysis, and image post-processing may each carry their own provider id and model id through the submission DTO and queue tasks. Unsupported provider/model combinations are disabled or fall back to a provider that supports the task kind.
+Provider settings keep credential editing on the left provider list, but routing is saved per task slot. Concept generation, image generation, style reference analysis, composition reference analysis, and image post-processing may each carry their own provider id and model id through the submission DTO and queue tasks. Unsupported provider/model combinations are disabled with explicit provider/capability messages unless the user selects a supported route intentionally; the UI must not silently fall back to a different provider.
 
 Impact:
 - Queue plans store task-level `providerId` and model values instead of assuming one job provider for every task.

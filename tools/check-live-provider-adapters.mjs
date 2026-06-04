@@ -35,7 +35,7 @@ for (const token of [
   if (!liveAdapters.includes(token)) issues.push(`live-adapter-stubs.ts: missing ${token}`);
 }
 
-for (const providerId of ["openai", "aigocode", "google", "deepseek", "claude", "qwen"]) {
+for (const providerId of ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"]) {
   if (!liveAdapters.includes("providerManifestList")) {
     issues.push("live-adapter-stubs.ts: live registry should derive providers from providerManifestList");
     break;
@@ -150,7 +150,7 @@ async function runRuntimeCheck() {
     const defaults = await import(pathToFileURL(defaultsModulePath).href);
 
     const registry = providers.createLiveProviderRegistry();
-    for (const providerId of ["openai", "aigocode", "google", "deepseek", "claude", "qwen"]) {
+    for (const providerId of ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"]) {
       if (!registry[providerId]) issues.push(`live registry should include ${providerId}`);
     }
 

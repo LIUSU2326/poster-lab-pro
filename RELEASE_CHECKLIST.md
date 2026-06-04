@@ -2,7 +2,7 @@
 
 ## Current Candidate
 
-- Version: `1.1.0-rc.4`
+- Version: `1.1.0-rc.6`
 - Branch: `main`
 - Desktop bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop test app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -46,13 +46,13 @@ Live provider calls remain opt-in:
 
 ## Known Non-Blocking Watch Items
 
-- Icon mode now applies local zero-cost corner repair when the result audit detects a rounded-mask risk; still review 64px readability manually.
+- Icon mode now applies local zero-cost edge repair when the result audit detects harmful white-border/container or edge-mark risk; rounded corners are acceptable when intentional, and 64px readability still needs manual review.
 - Logo spelling is model-dependent; Logo Text Strategy now prefers exact short wordmarks only when reliable and otherwise reserves a blank wordmark plate for later vector/text refinement.
 - Announcement Copy Safety Strategy now reserves editable title/body copy-safe fields and uses blank fields when exact text is risky.
 - Collab Brand Safety Strategy now reserves blank partner brand plates unless a partner `brandLogo` is uploaded.
 - Result Quality Audit now refreshes stale result metadata from local stored image files so older results can pick up current Poster/Icon/Logo/Announcement/Collab review findings without provider spend.
 - Brief generation is now mode-aware so Icon, Logo, Announcement, and Collab no longer inherit Poster KV architecture prompts.
-- Icon Result Quality Audit now catches white-corner plus dark rounded-edge app containers and triggers the local edge repair.
+- Icon Result Quality Audit now catches white-corner plus dark-edge padded containers and triggers the local edge repair.
 - Logo copy-safe blank wordmark mode now redacts high-risk project title text, wordmark fragments, translated category terms, and readable-lettering cues from provider prompts/assets; Google withholds readable Logo inline references in this mode.
 - Packaged beta.4 live validation passed for Logo (`job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8`) and Announcement (`job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf`).
 - Beta.5 Collab live validation passed with synthetic partner asset `asset-collab-star-cream-partner-beta5` and job `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`; the expected missing partner `brandLogo` audit stayed at review with a blank partner brand plate.

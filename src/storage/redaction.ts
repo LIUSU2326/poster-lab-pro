@@ -41,21 +41,32 @@ export function redactProviderConfigs(
   }, {});
 }
 
-export function containsUnredactedSecret(value: unknown): boolean {
+function isMaskedSecret(value: string): boolean {
+  return value.includes("****") || value.includes("••••");
+}
+
+function looksLikeSecretValue(value: string): boolean {
+  return /(sk-[A-Za-z0-9_-]{8,}|AIza[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9_]{16,}|xox[baprs]-[A-Za-z0-9-]{10,}|Bearer\s+[A-Za-z0-9._-]{10,})/.test(value);
+}
+
+function isSecretFieldName(key: string): boolean {
+  return /^(apiKey|accessToken|refreshToken|secret|password|credential)$/i.test(key);
+}
+
+export function containsUnredactedSecret(value: unknown, keyName = ""): boolean {
   if (typeof value === "string") {
-    const appearsSecretLike = /(sk-|api[_-]?key|secret|token)/i.test(value);
-    const appearsMasked = value.includes("****") || value.includes("••••");
-    return appearsSecretLike && !appearsMasked;
+    if (!value.trim() || isMaskedSecret(value)) return false;
+    return looksLikeSecretValue(value) || isSecretFieldName(keyName);
   }
 
   if (Array.isArray(value)) {
-    return value.some((item) => containsUnredactedSecret(item));
+    return value.some((item) => containsUnredactedSecret(item, keyName));
   }
 
   if (value && typeof value === "object") {
     return Object.entries(value).some(([key, item]) => {
       if (/^apiKey$/i.test(key)) return Boolean(item);
-      return containsUnredactedSecret(item);
+      return containsUnredactedSecret(item, key);
     });
   }
 

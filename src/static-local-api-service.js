@@ -1,3 +1,8 @@
+import {
+  evaluateQueuePlanCapabilityGate,
+  providerCapabilityGateUserMessage,
+} from './provider-capabilities.js';
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -64,8 +69,10 @@ function selectedSloganLanguage(snapshot, mode) {
 }
 
 function findScheme(snapshot, schemeId, mode) {
-  return snapshot.schemes.find((item) => item.id === schemeId) ||
-    snapshot.schemes.find((item) => item.mode === mode);
+  if (schemeId) {
+    return snapshot.schemes.find((item) => item.id === schemeId && item.mode === mode) || null;
+  }
+  return snapshot.schemes.find((item) => item.mode === mode) || null;
 }
 
 function inferSize(aspectRatio) {
@@ -775,6 +782,13 @@ export function createStaticLocalApiService() {
         }
         if (Object.keys(fieldErrors).length > 0) {
           return failure("validation_error", "Queue plan request validation failed.", { fieldErrors });
+        }
+        const capabilityGate = evaluateQueuePlanCapabilityGate(request);
+        if (!capabilityGate.ok) {
+          return failure("unsupported_capability", providerCapabilityGateUserMessage(capabilityGate), {
+            details: { capabilityGate },
+            snapshot: request?.snapshot,
+          });
         }
         const queuePlan = createQueuePlanPayload(request);
         return success({ queuePlan, summary: summarizeQueue(queuePlan) });

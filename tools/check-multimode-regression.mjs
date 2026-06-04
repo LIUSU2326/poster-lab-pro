@@ -218,6 +218,10 @@ async function runRuntimeCheck() {
     requireIncludes(icon.mapped.request.prompt, "one single dominant subject", "icon provider request");
     requireIncludes(icon.mapped.request.prompt, "readable at 64px", "icon provider request");
     requireIncludes(icon.mapped.request.prompt, "ABSOLUTELY NO TEXT", "icon provider request");
+    requireIncludes(icon.mapped.request.prompt, "Icon edge cleanliness lock", "icon provider request");
+    requireIncludes(icon.mapped.request.prompt, "no numerals", "icon provider request");
+    requireIncludes(icon.mapped.request.prompt, "no pseudo-text edge marks", "icon provider request");
+    requireIncludes(icon.mapped.request.prompt, "no reference-sheet side markings", "icon provider request");
     requireIncludes(icon.mapped.request.prompt, "no poster scene complexity", "icon provider request");
     requireExcludes(icon.mapped.request.prompt, "Slogan mode is active", "icon provider request");
     if (icon.mapped.request.aspectRatio !== "1:1" || icon.mapped.request.width !== 1024 || icon.mapped.request.height !== 1024) {
@@ -225,10 +229,12 @@ async function runRuntimeCheck() {
     }
 
     const logo = buildAndMap({ prompts: runtime.prompts, mapper: runtime.mapper, snapshot, mode: "logo" });
-    requireIncludes(logo.mapped.request.prompt, "COPY-SAFE BLANK WORDMARK ENFORCEMENT", "logo provider request");
-    requireIncludes(logo.mapped.request.prompt, "polished blank wordmark plate", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "Logo Asset Task", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "blank non-letter title plaque", "logo provider request");
     requireIncludes(logo.mapped.request.prompt, "pure solid-color background", "logo provider request");
-    requireIncludes(logo.mapped.request.prompt, "do not render readable letters", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "No readable text anywhere", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "zero characters", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "zero scene", "logo provider request");
     requireNoRegex(logo.mapped.request.prompt, /\b(Pizza|Kitchen|Adventures)\b/i, "logo provider request");
     requireNoRegex(logo.mapped.request.prompt, /readable wordmark|lettering rhythm|letter rhythm/i, "logo provider request");
     if (logo.mapped.request.assets.some((asset) =>
@@ -237,11 +243,12 @@ async function runRuntimeCheck() {
     }
 
     const announcement = buildAndMap({ prompts: runtime.prompts, mapper: runtime.mapper, snapshot, mode: "announcement" });
-    requireIncludes(announcement.mapped.request.prompt, "Announcement quality target", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "Announcement Copy Safety Strategy", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "editable copy-safe panel", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "do not cover the headline/copy zone", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "blank text fields", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "Game Announcement Card Task", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "large calm editable copy area", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "natural UI panel", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "Keep the copy area intentionally blank", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "small blank decorative brand badge", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "No character squads", "announcement provider request");
     requireExcludes(announcement.mapped.request.prompt, "Integrated Game Campaign KV Task", "announcement provider request");
 
     const collab = buildAndMap({ prompts: runtime.prompts, mapper: runtime.mapper, snapshot, mode: "collab" });
@@ -250,12 +257,48 @@ async function runRuntimeCheck() {
     requireIncludes(collab.mapped.request.prompt, "blankPartnerBrandPlate", "collab provider request");
     requireIncludes(collab.mapped.request.prompt, "[Game Character]", "collab provider request");
     requireIncludes(collab.mapped.request.prompt, "[Collab Partner]", "collab provider request");
+    requireIncludes(collab.mapped.request.prompt, "Collab placeholder alias lock", "collab provider request");
     requireIncludes(collab.mapped.request.prompt, "do not merge characters", "collab provider request");
     requireIncludes(collab.mapped.request.prompt, "do not generate readable partner names", "collab provider request");
+    requireIncludes(collab.mapped.request.prompt, "Collab brand-copy lock", "collab provider request");
+    requireIncludes(collab.mapped.request.prompt, "Collab scale balance lock", "collab provider request");
+    requireIncludes(collab.mapped.request.prompt, "visible interaction touchpoint", "collab provider request");
+    requireIncludes(collab.mapped.request.prompt, "no uploaded brandLogo exists for a partner", "collab provider request");
+    requireIncludes(collab.mapped.request.prompt, "blank non-letter brand plates", "collab provider request");
     requireExcludes(collab.mapped.request.prompt, "uploadedPartnerBrandLockup", "collab provider request without partner brandLogo");
+    if (collab.mapped.request.assets.some((asset) => asset.role === "gameLogo")) {
+      issues.push("collab provider request without partner brandLogo: should not send raw gameLogo lettering to the image model");
+    }
+    if (collab.mapped.request.assets[0]?.role !== "collabCharacter") {
+      issues.push("collab provider request: collabCharacter should be the first raw visual reference to avoid being demoted");
+    }
     if (!collab.mapped.request.assets.some((asset) => asset.role === "collabCharacter" && /independentCharacterIndex=/.test(asset.description || ""))) {
       issues.push("collab provider request: collabCharacter should carry an independent character index");
     }
+    const collabAliasSnapshot = {
+      ...snapshot,
+      schemes: snapshot.schemes.map((scheme) => scheme.mode === "collab"
+        ? {
+          ...scheme,
+          brief: `${scheme.brief}\nAlias test: [Collab Character] must stand as a full-size co-star beside [Game Character].`,
+          promptBlocks: [
+            ...(scheme.promptBlocks || []),
+            {
+              title: "Alias Test",
+              text: "[Collab Character] trades a glowing ingredient with [Game Character] as an equal foreground co-star.",
+            },
+          ],
+        }
+        : scheme),
+    };
+    const collabAlias = buildAndMap({
+      prompts: runtime.prompts,
+      mapper: runtime.mapper,
+      snapshot: collabAliasSnapshot,
+      mode: "collab",
+    });
+    requireIncludes(collabAlias.mapped.request.prompt, "[Collab Partner] trades a glowing ingredient", "collab alias provider request");
+    requireExcludes(collabAlias.mapped.request.prompt, "[Collab Character]", "collab alias provider request");
 
     const partnerBrandSnapshot = {
       ...snapshot,
@@ -274,6 +317,20 @@ async function runRuntimeCheck() {
     requireExcludes(collabWithPartnerLogo.mapped.request.prompt, "blankPartnerBrandPlate", "collab provider request with partner brandLogo");
     if (!collabWithPartnerLogo.mapped.request.assets.some((asset) => asset.role === "brandLogo")) {
       issues.push("collab provider request with partner brandLogo: should bind uploaded partner brandLogo");
+    }
+
+    let crossModeSchemeRejected = false;
+    try {
+      runtime.prompts.createImagePromptPackage({
+        snapshot,
+        mode: "icon",
+        schemeId: "scheme-poster-01",
+      });
+    } catch (error) {
+      crossModeSchemeRejected = /require.*icon.*scheme/i.test(String(error?.message || ""));
+    }
+    if (!crossModeSchemeRejected) {
+      issues.push("prompt builder: cross-mode image schemeId should be rejected instead of falling back to a current-mode scheme");
     }
   } finally {
     runtime.cleanup?.();

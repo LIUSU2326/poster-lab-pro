@@ -68,7 +68,28 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 function routeProviderForSlot(slot: string): string {
-  return state.providerSlotRoutes?.[slot]?.providerId || state.provider;
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const routedProvider = state.providerSlotRoutes?.[slot]?.providerId || "";
+  const currentProvider = state.provider || "";
+  const configured = (providerId: string): boolean => {
+    const provider = snapshot.providerConfigs?.[providerId];
+    return Boolean(
+      (state.providerCredential?.providerId === providerId && state.providerCredential?.configured) ||
+      (state.providerConnection?.providerId === providerId && state.providerConnection?.ok) ||
+      provider?.hasApiKey ||
+      provider?.status === "success",
+    );
+  };
+  if (
+    (slot === "styleReference" || slot === "compositionReference")
+    && currentProvider
+    && !referenceAnalysisProviderIds.has(currentProvider)
+    && configured(currentProvider)
+    && (!routedProvider || !configured(routedProvider))
+  ) {
+    return currentProvider;
+  }
+  return routedProvider || currentProvider;
 }
 
 function analysisApiReady(providerId: string): boolean {

@@ -20,6 +20,7 @@ export function renderTopbar(activeMode) {
   const selectedSchemeRenderDisabled = !selectedScheme || generatingImages || liveBlocked;
   const runMode = getRunModeViewModel(liveGate);
   const bundlePath = getDesktopBundlePath();
+  const bundleLabel = formatDesktopBundlePath(bundlePath);
 
   return `
     <header class="topbar" data-workspace-revision="${escapeHtml(summary.revision)}" data-workspace-assets="${escapeHtml(summary.assetCount)}">
@@ -33,7 +34,7 @@ export function renderTopbar(activeMode) {
       <div class="topbar-meta" aria-label="当前应用版本">
         <span>v${escapeHtml(APP_VERSION)}</span>
         <span>${escapeHtml(APP_MAIN_BRANCH)}</span>
-        <span class="bundle-path" title="${escapeHtml(bundlePath)}">${escapeHtml(bundlePath)}</span>
+        <span class="bundle-path" title="${escapeHtml(bundlePath)}">${escapeHtml(bundleLabel)}</span>
         <span>rev ${escapeHtml(summary.revision)}</span>
       </div>
       <div class="view-switch top-view-switch" aria-label="主视图">
@@ -102,12 +103,27 @@ function getDesktopBundlePath() {
   return appPath || APP_BUNDLE_HINT;
 }
 
+function formatDesktopBundlePath(path) {
+  const value = String(path || APP_BUNDLE_HINT);
+  if (value.includes("/Desktop/Poster Lab Pro.app")) return "Desktop/Poster Lab Pro.app";
+  if (value.includes("/release/mac/Poster Lab Pro.app")) return "release/mac/Poster Lab Pro.app";
+  const match = value.match(/([^/]+\\.app)$/);
+  return match ? match[1] : value;
+}
+
 function getRunModeViewModel(liveGate) {
   if (state.apiMode !== "http") {
     return {
       tone: "test",
       label: "测试模式",
       detail: "不调用模型",
+    };
+  }
+  if (liveGate.qualityRisk) {
+    return {
+      tone: "warning",
+      label: liveGate.qualityRiskLabel || "质量待复核",
+      detail: liveGate.qualityRiskDetail || "当前模型结果需人工验收",
     };
   }
   if (liveGate.allowed) {

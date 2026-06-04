@@ -8,7 +8,7 @@ import {
 } from './src/state.js';
 import { renderShell } from './src/render/shell.js';
 import { bindEvents } from './src/events.js';
-import { clearLocalSubmissionDraft } from './src/local-draft-store.js';
+import { clearLocalSubmissionDraft, hydrateLocalProviderPreferences } from './src/local-draft-store.js';
 import { loadProviderCredentialStatusForWorkbench } from './src/provider-credential-client.js';
 import { loadWorkspaceSnapshotForWorkbench } from './src/workspace-data-service.js';
 
@@ -16,6 +16,7 @@ const app = document.querySelector('#app');
 
 applyPrototypeStateFromUrl();
 clearLocalSubmissionDraft();
+hydrateLocalProviderPreferences(state);
 state.submission = null;
 state.taskOpen = false;
 ensureSelectedScheme();

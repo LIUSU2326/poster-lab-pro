@@ -82,8 +82,9 @@ function createProviderSettings() {
   const deepseek: ProviderConfigForm = createProviderConfigDefaults("deepseek");
   const claude: ProviderConfigForm = createProviderConfigDefaults("claude");
   const qwen: ProviderConfigForm = createProviderConfigDefaults("qwen");
+  const agnes: ProviderConfigForm = createProviderConfigDefaults("agnes");
 
-  return redactProviderConfigs([openai, aigocode, google, deepseek, claude, qwen], { updatedAt: CREATED_AT });
+  return redactProviderConfigs([openai, aigocode, google, deepseek, claude, qwen, agnes], { updatedAt: CREATED_AT });
 }
 
 export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {

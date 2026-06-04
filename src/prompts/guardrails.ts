@@ -151,8 +151,8 @@ export const promptGuardrailsByMode: Record<ProductionMode, PromptGuardrailRule[
       id: "icon-locked-square",
       mode: "icon",
       severity: "hard",
-      rule: "Output must be a perfect 1:1 square icon with full-bleed composition and sharp square corners.",
-      negativeRule: "No rounded frame, white border, padding, letterbox, or decorative container.",
+      rule: "Output must be a perfect 1:1 square icon with full-bleed composition, one clear subject, and readable 64px silhouette.",
+      negativeRule: "No white border, accidental padding, letterbox, tiny edge labels, or decorative container that shrinks the subject. Rounded corners are acceptable when intentional.",
     }),
     rule({
       id: "icon-no-text",

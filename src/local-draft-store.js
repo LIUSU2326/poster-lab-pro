@@ -1,4 +1,5 @@
 const SUBMISSION_KEY = "poster-lab-pro:latest-submission";
+const PROVIDER_PREFERENCES_KEY = "poster-lab-pro:provider-preferences";
 
 function hasStorage() {
   try {
@@ -60,5 +61,63 @@ export function hydrateLocalSubmissionDraft(state) {
   const submission = loadLocalSubmissionDraft();
   if (!submission) return false;
   state.submission = submission;
+  return true;
+}
+
+function providerPreferencesFromState(state) {
+  return {
+    provider: state.provider,
+    providerModelOverrides: state.providerModelOverrides || {},
+    providerCustomModels: state.providerCustomModels || {},
+    providerSlotRoutes: state.providerSlotRoutes || {},
+    providerRoutePlan: state.providerRoutePlan || "standard",
+    providerRoutePlans: Array.isArray(state.providerRoutePlans) ? state.providerRoutePlans : [],
+  };
+}
+
+export function saveLocalProviderPreferences(state) {
+  if (!hasStorage() || !state) return false;
+  const preferences = providerPreferencesFromState(state);
+  if (containsPlainSecret(preferences)) {
+    throw new Error("Refusing to persist provider preferences with unredacted secrets.");
+  }
+
+  window.localStorage.setItem(PROVIDER_PREFERENCES_KEY, JSON.stringify(preferences));
+  return true;
+}
+
+export function loadLocalProviderPreferences() {
+  if (!hasStorage()) return null;
+  const raw = window.localStorage.getItem(PROVIDER_PREFERENCES_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return containsPlainSecret(parsed) ? null : parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function hydrateLocalProviderPreferences(state) {
+  const preferences = loadLocalProviderPreferences();
+  if (!preferences || !state) return false;
+
+  if (typeof preferences.provider === "string") state.provider = preferences.provider;
+  if (preferences.providerModelOverrides && typeof preferences.providerModelOverrides === "object") {
+    state.providerModelOverrides = preferences.providerModelOverrides;
+  }
+  if (preferences.providerCustomModels && typeof preferences.providerCustomModels === "object") {
+    state.providerCustomModels = preferences.providerCustomModels;
+  }
+  if (preferences.providerSlotRoutes && typeof preferences.providerSlotRoutes === "object") {
+    state.providerSlotRoutes = preferences.providerSlotRoutes;
+  }
+  if (typeof preferences.providerRoutePlan === "string") {
+    state.providerRoutePlan = preferences.providerRoutePlan;
+  }
+  if (Array.isArray(preferences.providerRoutePlans) && preferences.providerRoutePlans.length > 0) {
+    state.providerRoutePlans = preferences.providerRoutePlans;
+  }
   return true;
 }

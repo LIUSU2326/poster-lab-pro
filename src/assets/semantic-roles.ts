@@ -57,20 +57,24 @@ export function assetSemanticRole(asset: AssetSemanticInput): AssetSemanticRole 
   const binding = asset.binding || "";
   const text = searchableText(asset);
 
-  if (role === "styleReference" || binding === "styleReference" || STYLE_REFERENCE_RE.test(text)) return "styleReference";
-  if (role === "compositionReference" || binding === "compositionReference" || COMPOSITION_REFERENCE_RE.test(text)) {
+  if (role === "styleReference" || binding === "styleReference") return "styleReference";
+  if (role === "compositionReference" || binding === "compositionReference") {
     return "compositionReference";
   }
-  if (role === "gameLogo" || role === "brandLogo" || binding === "logoLock" || LOGO_REFERENCE_RE.test(text)) {
+  if (role === "gameLogo" || role === "brandLogo" || binding === "logoLock") {
     return "brandLogo";
   }
-  if (role === "gameCharacter" || role === "collabCharacter" || binding === "identityLock" || HERO_REFERENCE_RE.test(text)) {
+  if (role === "gameCharacter" || role === "collabCharacter" || binding === "identityLock") {
     return isBossLikeAsset(asset) ? "antagonist" : "protagonist";
   }
   if (isBossLikeAsset(asset)) return "antagonist";
   if (role === "background" || binding === "backgroundReference" || ENVIRONMENT_REFERENCE_RE.test(text)) return "environment";
   if (role === "prop" || PROP_REFERENCE_RE.test(text)) return "prop";
   if (role === "subjectReference" || binding === "subjectReference") return "keySubject";
+  if (STYLE_REFERENCE_RE.test(text)) return "styleReference";
+  if (COMPOSITION_REFERENCE_RE.test(text)) return "compositionReference";
+  if (LOGO_REFERENCE_RE.test(text)) return "brandLogo";
+  if (HERO_REFERENCE_RE.test(text)) return "protagonist";
   return "supportingAsset";
 }
 
@@ -199,7 +203,7 @@ function announcementFusionStrategy(role: AssetSemanticRole): string {
 function collabFusionStrategy(role: AssetSemanticRole): string {
   switch (role) {
     case "brandLogo":
-      return "keep each brand/logo identity separate but visually unified through shared lighting, materials, framing, and scene context; do not merge two logos into one fake mark";
+      return "keep each brand/logo identity separate but visually unified through shared lighting, materials, framing, and scene context; use blank non-letter plates or neutral emblems when spelling is uncertain; do not merge two logos into one fake mark and do not render pseudo-letters";
     case "protagonist":
     case "antagonist":
     case "keySubject":

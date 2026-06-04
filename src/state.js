@@ -10,6 +10,7 @@ const resultOperationLabels = {
 const imageRenderableSloganMaxChars = 40;
 const imageRenderableSloganMaxWords = 6;
 const imageRenderableCjkSloganMaxChars = 12;
+const posterKvContaminationPattern = /KV构图母版|Mandatory KV Composition Architecture|Cinematic Game KV|电影级游戏(?:海报|主视觉|关键视觉)|Logo\/文案安全区|Slogan处理|BOSS压迫/i;
 
 export const state = {
   theme: "light",
@@ -47,6 +48,7 @@ export const state = {
   providerRoutePlans: /** @type {Array<{ id: string, name: string }>} */ ([
     { id: "standard", name: "标准方案" },
     { id: "image-first", name: "图像优先" },
+    { id: "agnes-core", name: "Agnes 核心测试" },
   ]),
   providerRoutePlanTest: {
     phase: "idle",
@@ -177,7 +179,7 @@ export function getModeSchemes() {
   const activeMode = getActiveMode();
   const snapshot = getRuntimeWorkspaceSnapshot();
   const runtimeSchemes = Array.isArray(snapshot.schemes)
-    ? snapshot.schemes.filter((scheme) => scheme.mode === activeMode.id)
+    ? snapshot.schemes.filter((scheme) => scheme.mode === activeMode.id && isSchemeVisibleForMode(activeMode.id, scheme))
     : [];
 
   if (state.workspaceLoadStatus !== "static") {
@@ -185,6 +187,23 @@ export function getModeSchemes() {
   }
 
   return activeMode.schemes;
+}
+
+function isSchemeVisibleForMode(modeId, scheme) {
+  if (!["announcement", "logo", "icon"].includes(modeId)) return true;
+  const text = [
+    scheme?.title,
+    scheme?.brief,
+    scheme?.prompt,
+    scheme?.promptZh,
+    scheme?.promptEn,
+    ...(Array.isArray(scheme?.promptBlocks)
+      ? scheme.promptBlocks.flatMap((block) => [block?.title, block?.text])
+      : []),
+  ]
+    .filter((item) => typeof item === "string" && item.trim())
+    .join("\n");
+  return !posterKvContaminationPattern.test(text);
 }
 
 export function getModeResults() {

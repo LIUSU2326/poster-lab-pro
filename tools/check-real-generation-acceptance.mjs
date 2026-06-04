@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.4";
+const currentVersion = "1.1.0-rc.6";
 
 function read(filePath) {
   try {
@@ -57,13 +57,17 @@ requireIncludes(realAcceptance, "REAL_GENERATION_ACCEPTANCE.md", [
   "Never use a direct API/script path to bypass the App live safety gate",
   "Workspace Readiness Snapshot",
   "Baseline Result Evidence",
-  "Fresh rc.4 Acceptance Status",
+  "Fresh rc.5 Acceptance Status",
   "Poster:",
   "Icon:",
   "Logo:",
   "Announcement:",
   "Collab:",
-  "pending live safety gate",
+  "Agnes all-core multimode pass",
+  "Icon final job",
+  "Logo job",
+  "Agnes Collab retest",
+  "quality-risk",
   "public/mock-assets/collab-partner-sundae-ranger.svg",
   "Completion Rule For 1.1.0 Stable",
   "npm run real-acceptance:check",
@@ -96,20 +100,24 @@ requireIncludes(releaseChecklist, "RELEASE_CHECKLIST.md", [
 ]);
 
 requireIncludes(testing, "TESTING.md", [
-  "1.1.0-rc.4 Controlled Real Acceptance Release Update",
+  "1.1.0-rc.5 Controlled Real Acceptance Release Update",
   "npm run real-acceptance:check",
   "REAL_GENERATION_ACCEPTANCE.md",
 ]);
 
 requireIncludes(roadmap, "ROADMAP.md", [
-  "1.1.0-rc.4 Controlled Real Acceptance Release Update",
+  "1.1.0-rc.5 Capability Gate And Agnes Acceptance Follow-Up",
+  "1.1.0-rc.5 Controlled Real Acceptance Release Update",
   "REAL_GENERATION_ACCEPTANCE.md",
-  "pending live safety gate",
+  "unsupported current-provider actions are disabled",
+  "Poster: capability/storage pass, visual quality fail",
 ]);
 
 requireIncludes(decisions, "DECISIONS.md", [
+  "D108",
+  "Unsupported Current Provider Actions Are Blocked",
   "D107",
-  "1.1.0-rc.4",
+  "1.1.0-rc.5",
   "REAL_GENERATION_ACCEPTANCE.md",
   "Never use a direct API/script path to bypass the App live safety gate",
 ]);

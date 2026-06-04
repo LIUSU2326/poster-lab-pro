@@ -25,13 +25,18 @@ import {
   type StorageRepository,
   type StoredResultAsset,
 } from "../storage/contracts";
+import type { ProviderId } from "../schema/zod";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
+const AGNES_PROVIDER_ID = "agnes" as const;
+const OPENAI_COMPATIBLE_LIVE_PROVIDER_IDS = [OPENAI_PROVIDER_ID, AGNES_PROVIDER_ID] as const;
+type OpenAICompatibleLiveProviderId = Extract<ProviderId, typeof OPENAI_COMPATIBLE_LIVE_PROVIDER_IDS[number]>;
 
 export const OpenAILiveQueueRunInputSchema = z.object({
   enabled: z.boolean().default(false),
   workspaceId: z.string().min(1),
   jobId: z.string().min(1),
+  providerId: z.enum(OPENAI_COMPATIBLE_LIVE_PROVIDER_IDS).default(OPENAI_PROVIDER_ID),
   apiKey: z.string().min(1).optional(),
   safety: LiveExecutionSafetyInputSchema.optional(),
   expiresInMs: z.number().int().min(1_000).max(86_400_000).default(600_000),
@@ -40,7 +45,7 @@ export const OpenAILiveQueueRunInputSchema = z.object({
 
 export const OpenAILiveQueueRunResultSchema = z.object({
   status: z.enum(["skipped", "blocked", "attempted"]),
-  providerId: z.literal(OPENAI_PROVIDER_ID),
+  providerId: z.enum(OPENAI_COMPATIBLE_LIVE_PROVIDER_IDS),
   attempted: z.boolean(),
   message: z.string().min(1),
   apiKeyMasked: z.string().max(120).optional(),
@@ -67,11 +72,12 @@ function skippedResult(
   input: z.infer<typeof OpenAILiveQueueRunInputSchema>,
   gate: z.infer<typeof LiveExecutionGateDecisionSchema>,
 ): OpenAILiveQueueRunResult {
+  const displayName = getProviderManifest(input.providerId).displayName;
   return OpenAILiveQueueRunResultSchema.parse({
     status: "skipped",
-    providerId: OPENAI_PROVIDER_ID,
+    providerId: input.providerId,
     attempted: false,
-    message: "OpenAI live queue execution skipped because explicit live opt-in was not provided.",
+    message: `${displayName} live queue execution skipped because explicit live opt-in was not provided.`,
     gate,
     traceId: input.traceId,
   });
@@ -85,7 +91,7 @@ function blockedResult(
 ): OpenAILiveQueueRunResult {
   return OpenAILiveQueueRunResultSchema.parse({
     status: "blocked",
-    providerId: OPENAI_PROVIDER_ID,
+    providerId: input.providerId,
     attempted: false,
     message,
     ...(apiKeyMasked ? { apiKeyMasked } : {}),
@@ -94,10 +100,15 @@ function blockedResult(
   });
 }
 
-function openAIQueueRegistry(transport: OpenAIImageTransport, now?: () => number): ProviderAdapterRegistry {
-  const manifest = getProviderManifest(OPENAI_PROVIDER_ID);
+function openAIQueueRegistry(
+  providerId: OpenAICompatibleLiveProviderId,
+  transport: OpenAIImageTransport,
+  now?: () => number,
+): ProviderAdapterRegistry {
+  const manifest = getProviderManifest(providerId);
   const mockAdapter = createMockProviderAdapter(manifest);
   const liveImageAdapter = createOpenAILiveImageAdapter({
+    providerId,
     transport,
     ...(now ? { now } : {}),
   });
@@ -110,7 +121,7 @@ function openAIQueueRegistry(transport: OpenAIImageTransport, now?: () => number
   if (mockAdapter.generateBrief) adapter.generateBrief = mockAdapter.generateBrief.bind(mockAdapter);
   if (liveImageAdapter.generateImage) adapter.generateImage = liveImageAdapter.generateImage.bind(liveImageAdapter);
 
-  return { [OPENAI_PROVIDER_ID]: adapter };
+  return { [providerId]: adapter };
 }
 
 function resultHasPersistedFile(result: StoredResultAsset): boolean {
@@ -119,6 +130,7 @@ function resultHasPersistedFile(result: StoredResultAsset): boolean {
 }
 
 async function prepareOpenAILiveProviderConfig(input: {
+  providerId: OpenAICompatibleLiveProviderId;
   repository: StorageRepository;
   workspaceId: string;
   apiKeyMasked: string;
@@ -127,22 +139,26 @@ async function prepareOpenAILiveProviderConfig(input: {
   const loaded = await input.repository.loadSnapshot(input.workspaceId);
   if (!loaded.ok) return;
 
-  const current = loaded.snapshot.providerConfigs[OPENAI_PROVIDER_ID];
+  const current = loaded.snapshot.providerConfigs[input.providerId];
+  const manifest = getProviderManifest(input.providerId);
+  const imageModel = input.providerId === OPENAI_PROVIDER_ID
+    ? "gpt-image-1"
+    : current?.modelSlots?.image || current?.defaultModel || manifest.modelSlots.image?.[0] || "agnes-image-2.1-flash";
   const nextSnapshot = {
     ...loaded.snapshot,
     providerConfigs: {
       ...loaded.snapshot.providerConfigs,
-      [OPENAI_PROVIDER_ID]: {
-        providerId: OPENAI_PROVIDER_ID,
+      [input.providerId]: {
+        providerId: input.providerId,
         enabled: true,
         status: "success" as const,
         hasApiKey: true,
         apiKeyMasked: input.apiKeyMasked,
-        baseUrl: current?.baseUrl || "",
-        defaultModel: "gpt-image-1",
+        baseUrl: current?.baseUrl || (input.providerId === AGNES_PROVIDER_ID ? "https://apihub.agnes-ai.com/v1" : ""),
+        defaultModel: imageModel,
         modelSlots: {
           ...(current?.modelSlots || {}),
-          image: "gpt-image-1",
+          image: imageModel,
         },
         updatedAt: input.updatedAt,
       },
@@ -162,11 +178,13 @@ export async function runOpenAILiveQueue(
   options: OpenAILiveQueueRunOptions,
 ): Promise<OpenAILiveQueueRunResult> {
   const parsed = OpenAILiveQueueRunInputSchema.parse(input);
+  const providerId = parsed.providerId;
+  const displayName = getProviderManifest(providerId).displayName;
   const apiKey = parsed.apiKey?.trim();
   const safety = LiveExecutionSafetyInputSchema.parse(parsed.safety || {});
   const gate = evaluateLiveExecutionGate({
     enabled: parsed.enabled,
-    providerId: OPENAI_PROVIDER_ID,
+    providerId,
     credentialReady: Boolean(apiKey),
     transportReady: Boolean(options.transport),
     resultStorageReady: Boolean(options.resultFileStore),
@@ -183,11 +201,12 @@ export async function runOpenAILiveQueue(
 
   const credentialStore = createRuntimeProviderCredentialStore();
   const session = credentialStore.createSession({
-    providerId: OPENAI_PROVIDER_ID,
+    providerId,
     apiKey,
     expiresInMs: parsed.expiresInMs,
   });
   await prepareOpenAILiveProviderConfig({
+    providerId,
     repository: options.repository,
     workspaceId: parsed.workspaceId,
     apiKeyMasked: session.credentialRef.maskedValue,
@@ -196,8 +215,8 @@ export async function runOpenAILiveQueue(
   const worker = createWorkspaceQueueWorker({
     repository: options.repository,
     credentialResolver: credentialStore,
-    credentialRefs: { [OPENAI_PROVIDER_ID]: session.credentialRef },
-    providerRegistry: openAIQueueRegistry(options.transport, options.adapterNow),
+    credentialRefs: { [providerId]: session.credentialRef },
+    providerRegistry: openAIQueueRegistry(providerId, options.transport, options.adapterNow),
     resultFileStore: options.resultFileStore,
     useMockCredentials: false,
     ...(options.now ? { now: options.now } : {}),
@@ -216,11 +235,11 @@ export async function runOpenAILiveQueue(
 
     return OpenAILiveQueueRunResultSchema.parse({
       status: "attempted",
-      providerId: OPENAI_PROVIDER_ID,
+      providerId,
       attempted: true,
       message: result.summary.failed
-        ? "OpenAI live queue execution attempted and completed with failed tasks."
-        : "OpenAI live queue execution completed.",
+        ? `${displayName} live queue execution attempted and completed with failed tasks.`
+        : `${displayName} live queue execution completed.`,
       apiKeyMasked: session.credentialRef.maskedValue,
       gate,
       summary: result.summary,
@@ -232,9 +251,9 @@ export async function runOpenAILiveQueue(
   } catch (error) {
     return OpenAILiveQueueRunResultSchema.parse({
       status: "attempted",
-      providerId: OPENAI_PROVIDER_ID,
+      providerId,
       attempted: true,
-      message: error instanceof Error ? error.message : "OpenAI live queue execution failed.",
+      message: error instanceof Error ? error.message : `${displayName} live queue execution failed.`,
       apiKeyMasked: session.credentialRef.maskedValue,
       gate,
       traceId: parsed.traceId,

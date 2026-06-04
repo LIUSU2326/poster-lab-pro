@@ -65,6 +65,17 @@ export const providers = [
     caps: ["方案生成", "视觉理解", "中文优化"],
     note: "Qwen 适合中文宣发语境、方案生成和多模态参考分析；图像输出可路由到支持的图像模型。",
   },
+  {
+    id: "agnes",
+    name: "Agnes AI",
+    state: "未启用",
+    status: "idle",
+    key: "",
+    model: "agnes-image-2.1-flash",
+    url: "https://apihub.agnes-ai.com/v1",
+    caps: ["OpenAI 兼容", "图像生成", "多图参考"],
+    note: "Agnes AI / Sapiens AI 的 OpenAI-style API。支持 agnes-2.0-flash 文本方案和 agnes-image-2.x 图像生成/编辑。",
+  },
 ];
 
 export const modelSlots = [
@@ -73,27 +84,27 @@ export const modelSlots = [
     name: "方案生成",
     flow: "需求简报 -> 创意方案",
     value: "gemini-2.5-flash",
-    options: ["gemini-2.5-flash", "gemini-2.5-pro", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1", "deepseek-v4-flash", "deepseek-v4-pro", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.7-max"],
+    options: ["gemini-2.5-flash", "gemini-2.5-pro", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1", "deepseek-v4-flash", "deepseek-v4-pro", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.7-max", "agnes-2.0-flash"],
   },
   {
     id: "image",
     name: "图像生成",
     flow: "创意方案 -> 图像输出",
     value: "gemini-2.5-flash-image",
-    options: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro"],
+    options: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro", "agnes-image-2.1-flash", "agnes-image-2.0-flash"],
   },
   {
     id: "styleReference",
     name: "风格参考分析",
     flow: "风格参考识别",
     value: "gemini-2.5-flash",
-    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-3.1-pro-preview", "gemini-3.5-flash", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
+    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
   },
   {
     id: "compositionReference",
     name: "构图参考分析",
     flow: "构图参考识别",
     value: "gemini-2.5-flash",
-    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-3.1-pro-preview", "gemini-3.5-flash", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
+    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
   },
 ];

@@ -173,6 +173,9 @@ function storedConfigForTask(providerId: ProviderId, options: MockQueueRunOption
 
 function createBriefMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
   const providerId = providerIdForTask(initialPlan, task);
+  const schemeCount = Array.isArray(task.input.schemeIds) && task.input.schemeIds.length > 0
+    ? task.input.schemeIds.length
+    : 1;
   const request = BriefGenerationRequestSchema.parse({
     context: {
       projectId: initialPlan.job.projectId,
@@ -185,7 +188,7 @@ function createBriefMappedRequest(initialPlan: QueuePlan, task: QueueTask, model
     assets: [],
     guardrails: modeGuardrails(initialPlan.job.mode),
     languageTargets: ["en-US"],
-    schemeCount: 1,
+    schemeCount,
   });
 
   return ProviderMappedRequestSchema.parse({
@@ -195,6 +198,32 @@ function createBriefMappedRequest(initialPlan: QueuePlan, task: QueueTask, model
     promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
     request,
   });
+}
+
+function snapshotWithBriefTaskSchemeSelection(
+  snapshot: WorkspaceSnapshot,
+  mode: QueuePlan["job"]["mode"],
+  task: QueueTask,
+): WorkspaceSnapshot {
+  const schemeIds = Array.isArray(task.input.schemeIds)
+    ? task.input.schemeIds.map((id) => String(id)).filter(Boolean)
+    : [];
+  if (schemeIds.length === 0) return snapshot;
+
+  const next = cloneWorkspaceSnapshot(snapshot);
+  const modeIndex = next.modeStates.findIndex((item) => item.mode === mode);
+  if (modeIndex < 0) return next;
+
+  const modeState = next.modeStates[modeIndex]!;
+  next.modeStates[modeIndex] = {
+    ...modeState,
+    selectedSchemeIds: schemeIds,
+    outputSettings: {
+      ...modeState.outputSettings,
+      schemeCount: schemeIds.length,
+    },
+  };
+  return next;
 }
 
 function createImageMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
@@ -300,13 +329,14 @@ function createSnapshotMappedRequestForTask(
 ): ProviderMappedRequest | null {
   const providerId = providerIdForTask(initialPlan, task);
   if (task.kind === "briefGeneration") {
+    const queueSnapshot = snapshotWithBriefTaskSchemeSelection(snapshot, initialPlan.job.mode, task);
     const promptPackage = createBriefPromptPackage({
-      snapshot,
+      snapshot: queueSnapshot,
       mode: initialPlan.job.mode,
     });
     return mapPromptPackageToProviderRequest({
       promptPackage,
-      snapshot,
+      snapshot: queueSnapshot,
       providerId,
       kind: "briefGeneration",
       model,

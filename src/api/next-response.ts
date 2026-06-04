@@ -9,6 +9,7 @@ export function statusForEnvelope(envelope: { ok: true } | ApiFailureEnvelope): 
     validation_error: 400,
     not_found: 404,
     unsupported_provider: 422,
+    unsupported_capability: 422,
     unauthorized: 401,
     conflict: 409,
     internal: 500,

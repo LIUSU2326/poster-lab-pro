@@ -16,6 +16,7 @@ function read(filePath) {
 }
 
 const adapter = read("src/providers/google-live-adapter.ts");
+const providerProfiles = read("src/providers/provider-capability-profiles.ts");
 const sloganPolicy = read("src/prompts/slogan-policy.ts");
 const barrel = read("src/providers/index.ts");
 const manifests = read("src/providers/manifests.ts");
@@ -51,6 +52,9 @@ for (const token of [
   "posterHeroPerformanceScaleLock",
   "posterLogoSingleUseLock",
   "posterSubjectAccessoryStrictnessLock",
+  "providerCapabilityPromptNote",
+  "providerUsesInlineImageReferences",
+  "Provider Capability Adapter Contract",
   "Contact and occlusion audit",
   "Subject scale and weight requirement",
   "do not invent look-alike words",
@@ -86,7 +90,7 @@ for (const token of [
 	  "withholdLogoTextReferences",
 	  "referenceUrl=withheld for copy-safe blank wordmark mode",
 	]) {
-	  if (!adapter.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
+	  if (!adapter.includes(token) && !providerProfiles.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
 	}
 
 for (const token of ["id: \"google\"", "gemini-2.5-flash-image", "Google AI Studio"]) {
@@ -97,7 +101,7 @@ for (const token of ["DEFAULT_GOOGLE_BASE_URL", "x-goog-api-key", "models"]) {
   if (!diagnostics.includes(token)) issues.push(`connection-diagnostics.ts: missing Google diagnostic token ${token}`);
 }
 
-for (const token of ["GoogleLiveQueueRunResultSchema", "providerId: z.enum([\"openai\", \"google\"])"]) {
+for (const token of ["GoogleLiveQueueRunResultSchema", "providerId: z.enum([\"openai\", \"google\", \"agnes\"])"]) {
   if (!contracts.includes(token)) issues.push(`contracts.ts: missing Google manual live token ${token}`);
 }
 

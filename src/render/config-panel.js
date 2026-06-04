@@ -10,6 +10,11 @@ import { getBatchSchemeGenerationStatus } from '../data/generation-activity.js';
 import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
 import { getActiveGenerationFormValues } from '../generation-form-runtime.js';
 import { state } from '../state.js';
+import {
+  evaluateQueuePlanCapabilityGate,
+  evaluateProviderRouteCapabilityGate,
+  providerCapabilityGateUserMessage,
+} from '../provider-capabilities.js';
 
 const modeCopy = {
   poster: {
@@ -50,24 +55,24 @@ const modeCopy = {
     assets: ["角色", "LOGO", "面板", "背景"],
   },
   logo: {
-    label: "标识",
-    short: "标识",
-    description: "字标和 标识 方向探索，强制检查纯色背景和小尺寸可读性。",
-    cta: "生成标识方案",
-    styles: ["奇幻字标", "科幻字标", "休闲吉祥物", "古代战斗"],
-    directionTitle: "标识系统优先",
-    directionHelper: "检查轮廓、对比度、小尺寸识别和纯色背景导出。",
-    assets: ["字标", "情绪", "竞品", "使用场景"],
+    label: "Logo",
+    short: "Logo",
+    description: "品牌 Logo 与 3D 字标方向探索，强调字标/标识主体、纯色背景、可抠图和品牌可读性。",
+    cta: "生成 Logo 方案集",
+    styles: ["3D 潮流粘土", "史诗暗金 RPG", "赛博霓虹", "欧美扁平矢量", "国风水墨", "电竞猛兽图腾", "至尊钻金", "街头涂鸦"],
+    directionTitle: "画风参考",
+    directionHelper: "上传品牌、材质、字体或竞品风格参考；Logo 字标和背景色由模式配置控制。",
+    assets: ["旧 Logo/字标", "素材主体", "道具/装饰"],
   },
   icon: {
-    label: "图标",
-    short: "图标",
-    description: "应用图标与方形构图探索，默认无文字、主体满铺、直角输出。",
-    cta: "生成图标方案",
-    styles: ["英雄近景", "道具聚焦", "奖励图标", "生物图标"],
-    directionTitle: "方形识别优先",
-    directionHelper: "优先处理轮廓、视觉重心和小尺寸下的一眼识别。",
-    assets: ["主体", "风格", "构图", "光照"],
+    label: "Icon",
+    short: "Icon",
+    description: "App Icon 与方形构图探索，默认无文字、单一强主体、64px 可读、无白边；圆角或直角都可接受。",
+    cta: "生成 Icon 方案集",
+    styles: ["3D 潮流粘土", "二次元幻彩", "欧美扁平矢量", "复古街机像素", "卡牌华丽魔框", "Q 版爆炸", "道具互动", "高饱和休闲"],
+    directionTitle: "画风参考",
+    directionHelper: "上传图标质感、渲染、材质或色彩参考；侧重点在项目区用标签控制。",
+    assets: ["素材主体", "道具/奖励", "Logo 视觉参考", "构图参考", "画风参考"],
   },
 };
 
@@ -95,9 +100,15 @@ export function renderConfigPanel(activeMode) {
   const outputSizes = getOutputSizes(activeMode.id, activeMode.outputSizes);
   const briefDescription = projectBrief.gameDescription || project.description || copy.description;
   const liveGate = getLiveGateViewModel(activeMode);
+  const generationCapabilityGate = getGenerationCapabilityGate(activeMode.id);
+  const capabilityBlocked = !generationCapabilityGate.ok;
   const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
-  const generationDisabled = batchStatus.active || liveBlocked;
-  const generationTitle = liveBlocked ? "先开启并通过实机安全闸，再调用真实模型服务" : "";
+  const generationDisabled = batchStatus.active || liveBlocked || capabilityBlocked;
+  const generationTitle = capabilityBlocked
+    ? providerCapabilityGateUserMessage(generationCapabilityGate)
+    : liveBlocked
+      ? "先开启并通过实机安全闸，再调用真实模型服务"
+      : "";
 
   return `
     <aside class="config-panel" aria-label="生产配置">
@@ -229,6 +240,7 @@ export function renderConfigPanel(activeMode) {
         >
           ${batchStatus.active ? `<span class="button-spinner" aria-hidden="true"></span><span>方案生成中</span><strong>${batchStatus.completed}/${batchStatus.total}</strong>` : copy.cta}
         </button>
+        ${capabilityBlocked ? `<p class="config-action-note">${escapeHtml(providerCapabilityGateUserMessage(generationCapabilityGate))}</p>` : ""}
         ${liveBlocked ? `<p class="config-action-note">先在顶部开启并通过实机安全闸，再调用真实模型服务。</p>` : ""}
         ${batchStatus.active ? `
           <div class="batch-progress" role="status" aria-live="polite">
@@ -301,13 +313,45 @@ function renderModelRoutingSummary() {
     styleReference: "画风",
     compositionReference: "构图",
   };
+  const effectiveRoutes = Object.fromEntries(Object.keys(slotLabels).map((slot) => [slot, resolveEffectiveRouteProvider(slot)]));
+  const routeModels = Object.fromEntries(Object.keys(slotLabels).map((slot) => [
+    slot,
+    resolveEffectiveRouteModel(slot, effectiveRoutes[slot]),
+  ]));
+  const capabilityGate = evaluateProviderRouteCapabilityGate({
+    mode: state.activeMode || "poster",
+    routes: Object.fromEntries(Object.keys(slotLabels).map((slot) => [slot, {
+      providerId: effectiveRoutes[slot],
+      model: routeModels[slot],
+    }])),
+    requiredSlots: Object.keys(slotLabels),
+  });
   const routeItems = Object.entries(slotLabels).map(([slot, label]) => {
-    const providerId = resolveEffectiveRouteProvider(slot);
-    return `<span>${escapeHtml(label)} · ${escapeHtml(providerNameById[providerId] || providerId)}</span>`;
+    const providerId = effectiveRoutes[slot];
+    const issue = capabilityGate.errors.find((item) => item.slot === slot);
+    const warning = capabilityGate.warnings.find((item) => item.slot === slot);
+    const tone = issue ? "bad" : warning ? "warn" : "ok";
+    return `<span class="${tone}">${escapeHtml(label)} · ${escapeHtml(providerNameById[providerId] || providerId)}</span>`;
   }).join("");
+  const agnesConfigured = Boolean((state.workspaceSnapshot || {}).providerConfigs?.agnes?.hasApiKey);
+  const allAgnesCore = effectiveRoutes.concept === "agnes" && effectiveRoutes.image === "agnes";
+  const planTone = !capabilityGate.ok ? "blocked" : allAgnesCore ? "agnes" : agnesConfigured ? "mixed" : "standard";
+  const planNote = allAgnesCore
+    ? "核心生成已走 Agnes"
+    : agnesConfigured
+      ? "当前不是全 Agnes 路由"
+      : "按已配置供应商自动路由";
+  const agnesKvQualityRisk = allAgnesCore && ["poster", "collab"].includes(state.activeMode || "poster");
+  const capabilityNote = capabilityGate.ok
+    ? capabilityGate.warnings.length > 0
+      ? providerCapabilityGateUserMessage(capabilityGate)
+      : agnesKvQualityRisk
+        ? "核心能力可用；Agnes 多素材 KV/联名质量仍需人工验收"
+        : "当前模型能力满足核心流程"
+    : providerCapabilityGateUserMessage(capabilityGate);
 
   return `
-    <div class="engine-card engine-card-compact model-plan-card">
+    <div class="engine-card engine-card-compact model-plan-card ${escapeAttribute(planTone)}">
       <div>
         <strong>当前配置方案</strong>
         <small>${escapeHtml(currentPlan?.name || "标准方案")}</small>
@@ -316,6 +360,8 @@ function renderModelRoutingSummary() {
       <div class="model-plan-routes">
         ${routeItems}
       </div>
+      <small class="model-plan-note">${escapeHtml(planNote)}</small>
+      <small class="model-capability-note">${escapeHtml(capabilityNote)}</small>
     </div>
   `;
 }
@@ -324,8 +370,8 @@ function resolveEffectiveRouteProvider(slot) {
   const route = state.providerSlotRoutes?.[slot] || {};
   const snapshot = state.workspaceSnapshot || {};
   const candidateIds = {
-    concept: ["google", "deepseek", "openai", "aigocode", "claude", "qwen"],
-    image: ["openai", "aigocode", "google", "qwen"],
+    concept: ["google", "agnes", "deepseek", "openai", "aigocode", "claude", "qwen"],
+    image: ["agnes", "openai", "aigocode", "google", "qwen"],
     styleReference: ["openai", "aigocode", "google", "claude", "qwen"],
     compositionReference: ["openai", "aigocode", "google", "claude", "qwen"],
   }[slot] || [state.provider || "openai"];
@@ -335,11 +381,47 @@ function resolveEffectiveRouteProvider(slot) {
   };
   const savedProvider = candidateIds.includes(route.providerId) ? route.providerId : "";
   if (savedProvider && configured(savedProvider)) return savedProvider;
+  if (
+    ["styleReference", "compositionReference"].includes(slot)
+    && state.provider
+    && !candidateIds.includes(state.provider)
+    && configured(state.provider)
+    && !candidateIds.some((providerId) => configured(providerId))
+  ) {
+    return state.provider;
+  }
   return candidateIds.find((providerId) => configured(providerId))
     || (candidateIds.includes(state.provider) ? state.provider : "")
     || savedProvider
     || candidateIds[0]
     || "openai";
+}
+
+function resolveEffectiveRouteModel(slot, providerId) {
+  const route = state.providerSlotRoutes?.[slot] || {};
+  const providerConfig = (state.workspaceSnapshot || {}).providerConfigs?.[providerId] || {};
+  return route.model || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "";
+}
+
+function getGenerationCapabilityGate(modeId) {
+  const conceptProviderId = resolveEffectiveRouteProvider("concept");
+  const imageProviderId = resolveEffectiveRouteProvider("image");
+  return evaluateQueuePlanCapabilityGate({
+    mode: modeId || "poster",
+    providerId: conceptProviderId,
+    providerRoutes: {
+      concept: {
+        providerId: conceptProviderId,
+        model: resolveEffectiveRouteModel("concept", conceptProviderId),
+      },
+      image: {
+        providerId: imageProviderId,
+        model: resolveEffectiveRouteModel("image", imageProviderId),
+      },
+    },
+    regenerateSchemes: true,
+    includeImageGeneration: true,
+  });
 }
 
 function getOutputSizes(modeId, fallback = []) {
@@ -429,15 +511,22 @@ function renderModeBrief(activeMode, form) {
     return `
       <div class="mode-context">
         <div class="mode-context-head">
-          <strong>字标</strong>
-          <span>标识</span>
+          <strong>Logo 字标</strong>
+          <span>品牌</span>
         </div>
-        <input value="${escapeAttribute(modeForm.wordmark || "")}" aria-label="标识 字标" data-form-field="modeForm.wordmark" />
-        <div class="mode-field-grid">
-          <button class="active" type="button">奇幻</button>
-          <button type="button">科幻</button>
-          <button type="button">休闲</button>
-          <button type="button">战斗</button>
+        <input value="${escapeAttribute(modeForm.wordmark || "")}" aria-label="Logo 字标" data-form-field="modeForm.wordmark" />
+        <div class="mode-field-grid solid-bg-grid">
+          ${[
+            ["#ffffff", "白底"],
+            ["#111827", "黑底"],
+            ["#16a34a", "绿幕"],
+            ["#0f172a", "深蓝"],
+          ].map(([value, label]) => `<button class="${modeForm.backgroundColor === value ? "active" : ""}" type="button" data-form-choice="modeForm.backgroundColor" data-choice-value="${value}">${label}</button>`).join("")}
+        </div>
+        <div class="guardrail-chips">
+          <span>字标主体</span>
+          <span>纯色背景</span>
+          <span>可抠图</span>
         </div>
       </div>
     `;
@@ -454,7 +543,9 @@ function renderModeBrief(activeMode, form) {
         <div class="guardrail-chips">
           <span>锁定 1:1</span>
           <span>无文字</span>
-          <span>满铺</span>
+          <span>单一强主体</span>
+          <span>64px 可读</span>
+          <span>无白边</span>
         </div>
       </div>
     `;
@@ -612,14 +703,6 @@ function renderModeOutput(activeMode, form, outputSizes) {
     <div class="size-grid ${activeMode.id === "icon" ? "single-size" : ""}">
       ${outputSizes.map((item) => `<button class="${outputSettings.aspectRatios.includes(item) ? "active" : ""}" type="button" data-form-choice="outputSettings.aspectRatios" data-choice-value="${escapeAttribute(item)}" ${activeMode.id === "icon" ? "" : 'data-choice-multi="true"'}>${escapeHtml(item)}</button>`).join("")}
     </div>
-    ${activeMode.id === "logo" ? `
-      <div class="mode-field-grid solid-bg-grid">
-        <button class="active" type="button">白底</button>
-        <button type="button">黑底</button>
-        <button type="button">绿幕</button>
-        <button type="button">自定义</button>
-      </div>
-    ` : ""}
     ${suiteMode ? `<div class="segmented">
       <button class="active" type="button">${activeMode.id === "icon" ? "锁定方形" : "统一方案"}</button>
       <button type="button">${activeMode.id === "icon" ? "不改尺寸" : "独立方案"}</button>

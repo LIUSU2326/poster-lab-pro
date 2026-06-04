@@ -86,18 +86,15 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
   const openAIImageAdapter = createOpenAILiveImageAdapter({
     transport: createOpenAIImageFetchTransport(fetchImpl),
   });
+  const agnesImageAdapter = createOpenAILiveImageAdapter({
+    providerId: "agnes",
+    transport: createOpenAIImageFetchTransport(fetchImpl),
+  });
   const googleImageAdapter = createGoogleLiveImageAdapter({
     transport: createGoogleImageFetchTransport(fetchImpl),
   });
 
-  registry.openai = {
-    ...registry.openai,
-    manifest: openAIImageAdapter.manifest,
-    validateConfig: openAIImageAdapter.validateConfig,
-    healthCheck: openAIImageAdapter.healthCheck,
-    ...(openAIImageAdapter.generateImage ? { generateImage: openAIImageAdapter.generateImage.bind(openAIImageAdapter) } : {}),
-  };
-  for (const providerId of ["openai", "aigocode", "deepseek", "qwen"] as const) {
+  for (const providerId of ["openai", "aigocode", "deepseek", "qwen", "agnes"] as const) {
     const briefAdapter = createOpenAICompatibleBriefAdapter({
       providerId,
       transport: chatTransport,
@@ -110,6 +107,22 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
       ...(briefAdapter.generateBrief ? { generateBrief: briefAdapter.generateBrief.bind(briefAdapter) } : {}),
     };
   }
+  registry.openai = {
+    ...registry.openai,
+    manifest: openAIImageAdapter.manifest,
+    validateConfig: openAIImageAdapter.validateConfig,
+    healthCheck: openAIImageAdapter.healthCheck,
+    ...(registry.openai?.generateBrief ? { generateBrief: registry.openai.generateBrief.bind(registry.openai) } : {}),
+    ...(openAIImageAdapter.generateImage ? { generateImage: openAIImageAdapter.generateImage.bind(openAIImageAdapter) } : {}),
+  };
+  registry.agnes = {
+    ...registry.agnes,
+    manifest: agnesImageAdapter.manifest,
+    validateConfig: agnesImageAdapter.validateConfig,
+    healthCheck: agnesImageAdapter.healthCheck,
+    ...(registry.agnes?.generateBrief ? { generateBrief: registry.agnes.generateBrief.bind(registry.agnes) } : {}),
+    ...(agnesImageAdapter.generateImage ? { generateImage: agnesImageAdapter.generateImage.bind(agnesImageAdapter) } : {}),
+  };
   registry.google = {
     ...registry.google,
     manifest: googleImageAdapter.manifest,

@@ -292,7 +292,7 @@ Critical MVP guardrails:
 Beta or later quality checks:
 
 - Automated Logo background purity detection.
-- Automated Icon text/no-border/no-rounded-corner detection.
+- Automated Icon text, white-border, padding, and edge-mark detection. Rounded corners are acceptable when intentional.
 - Pixel-level output correction and asset preprocessing beyond static UI.
 
 ## 2026-05-19 MVP Scope Update: Theme, Provider, And Workspace Chrome
@@ -411,7 +411,7 @@ MVP 必须包含：
 - 模式专属资产槽位、Prompt 规则和检查器上下文。
 - 联名角色防变异与防融合安全机制。
 - Logo 纯色背景和字标主体约束。
-- Icon 1:1 锁定、无文字和满铺直角约束。
+- Icon 1:1 锁定、无文字、主体清晰和无白边/无误留 padding 约束；圆角不强制。
 
 ## Beta 范围
 
@@ -431,7 +431,7 @@ Beta 版本重点提高协作、管理和稳定性：
 - 项目级默认设置。
 - 更完整的发行后台视图，包括活动、平台交付状态和导出进度。
 - Logo 背景纯色度检测。
-- Icon 输出文字检测、边框检测和圆角检测。
+- Icon 输出文字检测、边框/白边检测、padding 检测和边缘杂点检测；圆角只作为风格，不作为硬失败项。
 - 更完整的多角色关系控制与质量评分。
 
 ## 后续增强

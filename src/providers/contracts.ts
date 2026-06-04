@@ -31,6 +31,50 @@ export const ProviderModelSlotSchema = z.enum([
   "backgroundRemoval",
 ]);
 
+export const ProviderImageReferenceInputSchema = z.enum([
+  "none",
+  "promptOnly",
+  "inlineParts",
+  "extraBodyImage",
+]);
+
+export const ProviderLocalReferenceHandlingSchema = z.enum([
+  "none",
+  "fetchInline",
+  "dataUrlExtraBody",
+]);
+
+export const ProviderPromptProfileSchema = z.enum([
+  "standard",
+  "dense",
+  "compressed",
+]);
+
+export const ProviderTextRenderingReliabilitySchema = z.enum([
+  "high",
+  "medium",
+  "low",
+]);
+
+export const ProviderResultDeliverySchema = z.enum([
+  "dataUrl",
+  "url",
+  "urlOrDataUrl",
+]);
+
+export const ProviderImageCapabilityProfileSchema = z.object({
+  referenceInput: ProviderImageReferenceInputSchema.default("promptOnly"),
+  localReferenceHandling: ProviderLocalReferenceHandlingSchema.default("none"),
+  promptProfile: ProviderPromptProfileSchema.default("standard"),
+  promptMaxChars: z.number().int().min(4000).max(24000).default(12000),
+  textRendering: ProviderTextRenderingReliabilitySchema.default("medium"),
+  resultDelivery: ProviderResultDeliverySchema.default("urlOrDataUrl"),
+  supportsImageEdit: z.boolean().default(false),
+  notes: z.array(z.string().min(1)).default([]),
+});
+
+const DEFAULT_PROVIDER_IMAGE_CAPABILITY_PROFILE = ProviderImageCapabilityProfileSchema.parse({});
+
 export const ProviderErrorCodeSchema = z.enum([
   "missing_config",
   "unsupported_capability",
@@ -64,6 +108,7 @@ export const ProviderManifestSchema = z.object({
   apiKeyRequired: z.boolean().default(true),
   capabilities: z.array(ProviderCapabilitySchema).min(1),
   modelSlots: z.partialRecord(ProviderModelSlotSchema, z.array(z.string().min(1)).min(1)),
+  imageGeneration: ProviderImageCapabilityProfileSchema.default(DEFAULT_PROVIDER_IMAGE_CAPABILITY_PROFILE),
   supportedModes: z.array(ProductionModeSchema).min(1),
   notes: z.array(z.string().min(1)).default([]),
 });
@@ -178,7 +223,13 @@ export const ProviderErrorSchema = z.object({
 });
 
 export type ProviderCapability = z.infer<typeof ProviderCapabilitySchema>;
+export type ProviderImageCapabilityProfile = z.infer<typeof ProviderImageCapabilityProfileSchema>;
+export type ProviderImageReferenceInput = z.infer<typeof ProviderImageReferenceInputSchema>;
+export type ProviderLocalReferenceHandling = z.infer<typeof ProviderLocalReferenceHandlingSchema>;
 export type ProviderModelSlot = z.infer<typeof ProviderModelSlotSchema>;
+export type ProviderPromptProfile = z.infer<typeof ProviderPromptProfileSchema>;
+export type ProviderResultDelivery = z.infer<typeof ProviderResultDeliverySchema>;
+export type ProviderTextRenderingReliability = z.infer<typeof ProviderTextRenderingReliabilitySchema>;
 export type ProviderErrorCode = z.infer<typeof ProviderErrorCodeSchema>;
 export type ProviderAssetReference = z.infer<typeof ProviderAssetReferenceSchema>;
 export type ProviderManifest = z.infer<typeof ProviderManifestSchema>;
@@ -250,7 +301,7 @@ export function modeGuardrails(mode: ProductionMode): z.infer<typeof ProviderMod
       "Use a pure solid-color background.",
       "Use Logo Text Strategy: exact short wordmark only when reliable; otherwise reserve a polished blank wordmark plate for later vector/text refinement.",
     ],
-    icon: ["Aspect ratio is locked to 1:1.", "No text.", "Full-bleed square composition with sharp corners."],
+    icon: ["Aspect ratio is locked to 1:1.", "No text.", "Clean full-bleed square icon composition; rounded corners are acceptable when intentional."],
   };
 
   return ProviderModeGuardrailSchema.parse({

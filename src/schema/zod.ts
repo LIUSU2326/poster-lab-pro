@@ -3,7 +3,7 @@ import { z } from "zod";
 export const ProductionModeSchema = z.enum(["poster", "collab", "announcement", "logo", "icon"]);
 export const ThemeSchema = z.enum(["light", "dark"]);
 export const WorkbenchViewSchema = z.enum(["schemes", "text", "archive", "results", "compare", "export"]);
-export const ProviderIdSchema = z.enum(["openai", "aigocode", "google", "deepseek", "claude", "qwen"]);
+export const ProviderIdSchema = z.enum(["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"]);
 export const ProviderStatusSchema = z.enum(["idle", "testing", "success", "warning", "error"]);
 export const AssetRoleSchema = z.enum([
   "gameCharacter",
@@ -199,6 +199,7 @@ export const AnnouncementModeFormSchema = z.object({
 
 export const LogoModeFormSchema = z.object({
   mode: z.literal("logo"),
+  styleTags: z.array(z.string().min(1)).default([]),
   wordmark: z.string().min(1).max(80),
   solidBackground: z.literal(true),
   backgroundColor: z.string().min(1).max(40).default("#ffffff"),
@@ -207,6 +208,7 @@ export const LogoModeFormSchema = z.object({
 
 export const IconModeFormSchema = z.object({
   mode: z.literal("icon"),
+  styleTags: z.array(z.string().min(1)).default([]),
   aspectRatio: z.literal("1:1"),
   noText: z.literal(true),
   fullBleedSquare: z.literal(true),

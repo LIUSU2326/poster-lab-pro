@@ -4,7 +4,7 @@ Poster Lab Pro is a local creative workbench for game marketing assets. The curr
 
 ## Current Release Candidate
 
-- Visible version: `1.1.0-rc.4`
+- Visible version: `1.1.0-rc.6`
 - Main branch: `main`
 - Desktop bundle hint: `release/mac/Poster Lab Pro.app`
 - Local desktop test bundle can also be placed at `/Users/liusu/Desktop/Poster Lab Pro.app`.

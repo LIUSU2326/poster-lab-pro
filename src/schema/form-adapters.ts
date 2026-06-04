@@ -157,7 +157,7 @@ export function createProviderSettingsAdapter(providerId = "openai"): FormAdapte
         id: "provider",
         label: "Provider",
         fields: [
-          { name: "providerId", label: "Provider", control: "segmented", options: ["openai", "aigocode", "google", "deepseek", "claude", "qwen"] },
+          { name: "providerId", label: "Provider", control: "segmented", options: ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"] },
           { name: "enabled", label: "Enabled", control: "switch" },
           { name: "apiKey", label: "API Key", control: "secret", helper: "Masked by default. Static prototype does not persist credentials." },
           { name: "baseUrl", label: "Base URL", control: "text" },
@@ -229,6 +229,7 @@ const modeGroups = {
       id: "logo-wordmark",
       label: "Logo",
       fields: [
+        { name: "styleTags", label: "Logo style", control: "chipGroup", required: false },
         { name: "wordmark", label: "Wordmark", control: "text", required: true },
         { name: "solidBackground", label: "Solid background required", control: "readonlyNotice", readonly: true },
         { name: "backgroundColor", label: "Background color", control: "color" },
@@ -241,6 +242,7 @@ const modeGroups = {
       id: "icon-constraints",
       label: "Icon",
       fields: [
+        { name: "styleTags", label: "Icon style", control: "chipGroup", required: false },
         { name: "aspectRatio", label: "Aspect ratio", control: "readonlyNotice", readonly: true, helper: "Icon mode is locked to 1:1." },
         { name: "noText", label: "No text", control: "readonlyNotice", readonly: true },
         { name: "fullBleedSquare", label: "Full-bleed square", control: "readonlyNotice", readonly: true },

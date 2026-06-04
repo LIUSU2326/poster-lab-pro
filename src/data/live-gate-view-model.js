@@ -1,6 +1,10 @@
 ﻿import { createQueueViewModel } from './queue-view-model.js';
 import { getProviderRows } from './workspace-adapters.js';
 import { state } from '../state.js';
+import {
+  evaluateQueuePlanCapabilityGate,
+  providerCapabilityGateUserMessage,
+} from '../provider-capabilities.js';
 
 const blockerCopy = {
   not_enabled: {
@@ -135,6 +139,65 @@ function getProviderName() {
   return getProviderRows().find((provider) => provider.id === state.provider)?.name || state.provider || "模型服务";
 }
 
+function routeProviderForSlot(slot) {
+  return state.providerSlotRoutes?.[slot]?.providerId || state.provider || "openai";
+}
+
+function getGenerationQualityWarnings(activeMode) {
+  const modeId = activeMode?.id || state.activeMode || "poster";
+  const conceptProviderId = routeProviderForSlot("concept");
+  const imageProviderId = routeProviderForSlot("image");
+  if (!["poster", "collab"].includes(modeId) || conceptProviderId !== "agnes" || imageProviderId !== "agnes") {
+    return [];
+  }
+  const modeLabel = modeId === "collab" ? "联名" : "海报";
+  return [{
+    code: "agnes_multireference_quality_review",
+    label: "Agnes 质量复核",
+    message: `Agnes 可用于 ${modeLabel} 免费链路测试，但多素材 KV/联名真实视觉验收未通过；正式交付前需要人工复核或切换更强多参考图像模型。`,
+    shortLabel: "质量需复核",
+    shortMessage: "Agnes KV/联名未作稳定质量验收。",
+  }];
+}
+
+function routeModelForSlot(slot, providerId) {
+  const route = state.providerSlotRoutes?.[slot] || {};
+  const config = state.workspaceSnapshot?.providerConfigs?.[providerId] || {};
+  return route.model || config.modelSlots?.[slot] || config.defaultModel || "";
+}
+
+function manualLiveProviderId() {
+  return routeProviderForSlot("concept");
+}
+
+function manualLiveCapabilityBlockers(activeMode) {
+  const conceptProviderId = routeProviderForSlot("concept");
+  const imageProviderId = routeProviderForSlot("image");
+  const gate = evaluateQueuePlanCapabilityGate({
+    mode: activeMode?.id || state.activeMode || "poster",
+    providerId: conceptProviderId,
+    providerRoutes: {
+      concept: {
+        providerId: conceptProviderId,
+        model: routeModelForSlot("concept", conceptProviderId),
+      },
+      image: {
+        providerId: imageProviderId,
+        model: routeModelForSlot("image", imageProviderId),
+      },
+    },
+    regenerateSchemes: true,
+    includeImageGeneration: true,
+  });
+  const blockers = [];
+  const qualityWarnings = getGenerationQualityWarnings(activeMode);
+  if (!gate.ok) blockers.push(providerCapabilityGateUserMessage(gate));
+  if (conceptProviderId !== imageProviderId) {
+    blockers.push("手动实机测试当前要求方案生成和图像生成使用同一个 Provider；请切到全 Agnes、全 OpenAI 或全 Google 后再测。");
+  }
+  return blockers;
+}
+
 function latestWorkspaceQueueJobId() {
   const queuePlans = state.workspaceSnapshot?.queuePlans;
   if (!Array.isArray(queuePlans) || queuePlans.length === 0) return "";
@@ -195,6 +258,7 @@ export function getLiveGateViewModel(activeMode) {
     : 0;
 
   const blockers = [];
+  const qualityWarnings = getGenerationQualityWarnings(activeMode);
 
   if (!liveGate.enabled) {
     blockers.push(createBlocker("not_enabled", "enabled"));
@@ -231,6 +295,11 @@ export function getLiveGateViewModel(activeMode) {
     costSummaryLabel: `${costKnown ? formatCurrency(estimatedCost) : `预估 ${formatCurrency(estimatedCost)}`} / 上限 ${formatCurrency(maxAcceptedCost)}`,
     blockerCount: blockers.length,
     blockers,
+    qualityRisk: qualityWarnings.length > 0,
+    qualityWarningCount: qualityWarnings.length,
+    qualityWarnings,
+    qualityRiskLabel: qualityWarnings[0]?.shortLabel || "",
+    qualityRiskDetail: qualityWarnings[0]?.shortMessage || "",
     confirmations: confirmationRows.map((row) => ({
       key: row.key,
       label: row.label,
@@ -242,10 +311,14 @@ export function getLiveGateViewModel(activeMode) {
       checked: Boolean(getNestedValue(row.key)),
     })),
     helper: status === "allowed"
-      ? "安全闸已满足，可以手动执行一次实机测试；主生成按钮仍保持安全流程。"
+      ? qualityWarnings.length > 0
+        ? "安全闸已满足；当前路线适合继续测试，但质量风险需人工复核。"
+        : "安全闸已满足，可以手动执行一次实机测试；主生成按钮仍保持安全流程。"
       : status === "blocked"
         ? `还有 ${blockers.length} 项要求未满足，暂不能执行实机测试。`
-        : "真实模型调用默认关闭，只在明确测试时开启。",
+        : qualityWarnings.length > 0
+          ? "真实模型调用默认关闭；当前 Agnes 路线可测试但不代表稳定交付质量。"
+          : "真实模型调用默认关闭，只在明确测试时开启。",
     allowed: status === "allowed",
   };
 }
@@ -253,23 +326,28 @@ export function getLiveGateViewModel(activeMode) {
 export function getManualLiveTestViewModel(activeMode) {
   const gate = getLiveGateViewModel(activeMode);
   const jobId = getPreparedLiveQueueJobId();
+  const providerId = manualLiveProviderId();
   const connectionReady = Boolean(
-    state.providerConnection?.providerId === state.provider &&
+    state.providerConnection?.providerId === providerId &&
     state.providerConnection?.ok,
   );
-  const credentialReady = Boolean(state.liveGate?.runtimeCredentialReady);
+  const credentialReady = Boolean(
+    state.liveGate?.runtimeCredentialReady &&
+    state.providerCredential?.providerId === providerId,
+  );
   const httpReady = state.apiMode === "http";
-  const providerReady = state.provider === "openai" || state.provider === "google";
+  const providerReady = providerId === "openai" || providerId === "google" || providerId === "agnes";
   const queueCanBePrepared = httpReady && providerReady;
   const idle = state.manualLiveTest?.phase !== "running";
   const blockers = [];
 
   if (!httpReady) blockers.push("请在 HTTP 工作台模式下运行桌面端。");
-  if (!providerReady) blockers.push("Manual live test currently supports OpenAI-compatible and Google providers only.");
+  if (!providerReady) blockers.push("Manual live test currently supports OpenAI-compatible, Google, and Agnes providers only.");
   if (!jobId && !queueCanBePrepared) blockers.push(missingQueueJobMessage);
   if (!credentialReady) blockers.push("请先保存 模型服务 API Key。");
   if (!connectionReady) blockers.push("请先完成一次成功的连接测试。");
   if (!gate.allowed) blockers.push("请先通过实机安全闸。");
+  blockers.push(...manualLiveCapabilityBlockers(activeMode));
   if (!idle) blockers.push("手动实机测试正在运行。");
 
   const ready = blockers.length === 0;

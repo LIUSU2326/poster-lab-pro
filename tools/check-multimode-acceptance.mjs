@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.4";
+const currentVersion = "1.1.0-rc.6";
 
 function read(filePath) {
   try {
@@ -134,6 +134,7 @@ requireIncludes(resultAuditGate, "tools/check-result-quality-audit.mjs", [
   "collab-missing-partner-brand-logo",
   "collab-blank-partner-brand-plate",
   "icon-rounded-mask-risk",
+  "icon-edge-text-mark-risk",
   "announcement-copy-safe-panel-fallback",
   "logo-text-accuracy-review",
 ]);

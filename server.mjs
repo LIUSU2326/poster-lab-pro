@@ -37,6 +37,12 @@ const providerConfigs = {
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     type: "openai",
   },
+  agnes: {
+    keyEnv: "AGNES_API_KEY",
+    baseEnv: "AGNES_BASE_URL",
+    baseUrl: "https://apihub.agnes-ai.com/v1",
+    type: "openai",
+  },
   doubao: {
     keyEnv: "ARK_API_KEY",
     baseEnv: "ARK_BASE_URL",

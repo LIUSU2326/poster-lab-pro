@@ -62,6 +62,10 @@ for (const token of [
   "deleteResultForWorkbench",
   'action === "delete-result"',
   "resultDeleteConfirmId",
+  'action === "apply-agnes-core-route"',
+  "applyAgnesCoreRoute",
+  "agnes-image-2.1-flash",
+  "agnes-2.0-flash",
 ]) {
   if (!events.includes(token)) issues.push(`events.js: missing result recovery token ${token}`);
 }
@@ -112,6 +116,8 @@ for (const token of [
   "归档导出",
   "liveGate.estimatedCostLabel",
   "liveGate.costSummaryLabel",
+  "liveGate.qualityRisk",
+  "qualityRiskDetail",
 ]) {
   if (!topbar.includes(token)) issues.push(`topbar.js: missing current-result workflow token ${token}`);
 }
@@ -134,9 +140,19 @@ for (const token of [
   "确认删除",
   'data-action="delete-result"',
   "is-live-blocked",
+  "is-unsupported-route",
+  "resolveResultOperationRoute",
   "请先开启并通过实机安全闸",
 ]) {
   if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
+}
+
+if (centerBoard.includes("uses-fallback-route")) {
+  issues.push("center-board.js: result operations should not advertise silent fallback routes");
+}
+
+if (resultOperationClient.includes(" fallback")) {
+  issues.push("result-operation-client.js: result operations should not silently fallback to another provider");
 }
 
 for (const token of ['data-result-view="results"', 'data-action="open-result-viewer"']) {
@@ -145,6 +161,9 @@ for (const token of ['data-result-view="results"', 'data-action="open-result-vie
 
 for (const token of ["config-action-note", "先在顶部开启并通过实机安全闸"]) {
   if (!configPanel.includes(token)) issues.push(`config-panel.js: missing gated generation helper token ${token}`);
+}
+if (!configPanel.includes("Agnes 多素材 KV/联名质量仍需人工验收")) {
+  issues.push("config-panel.js: missing Agnes quality-risk capability note");
 }
 
 if (!events.includes('nextView === "results"')) {
@@ -155,6 +174,9 @@ if (!stateSource.includes('view === "results"') || !stateSource.includes('state.
 }
 if (!stateSource.includes("resultDeleteConfirmId")) {
   issues.push("state.js: missing result delete confirmation state");
+}
+if (!stateSource.includes("agnes-core") || !stateSource.includes("Agnes 核心测试")) {
+  issues.push("state.js: missing built-in Agnes core testing route plan");
 }
 const queueResultOperationSource = stateSource.match(/export function queueResultOperation[\s\S]*?export function updateResultOperation/)?.[0] || "";
 if (queueResultOperationSource.includes('state.view = "schemes"')) {
@@ -169,6 +191,7 @@ for (const token of [
   ".result-status.failed",
   ".top-actions .run-mode-chip",
   ".top-actions .run-mode-chip.live",
+  ".top-actions .run-mode-chip.warning",
   ".top-actions .run-mode-chip.local",
   ".top-actions .run-mode-chip.test",
   ".scheme-plan-empty",
@@ -185,7 +208,7 @@ for (const token of [
   if (!styles.includes(token)) issues.push(`styles.css: missing result/current render UI token ${token}`);
 }
 
-for (const token of ["renderResultOperationContext", "formatOperationStatus", "结果操作"]) {
+for (const token of ["renderResultOperationContext", "formatOperationStatus", "结果操作", "qualityRiskDetail"]) {
   if (!taskChrome.includes(token)) issues.push(`task-chrome.js: missing result operation status token ${token}`);
 }
 

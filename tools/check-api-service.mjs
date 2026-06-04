@@ -44,6 +44,8 @@ for (const token of [
   "readStoredFile",
   "posterHasIntegratedReference",
   "iconLightCornerDarkEdgeContainerRisk",
+  "iconOuterEdgeColorMarkRatio",
+  "iconEdgeTextMarkRisk",
 ]) {
   if (!service.includes(token)) issues.push(`service.ts: missing ${token}`);
 }

@@ -1,12 +1,12 @@
 # MULTIMODE_ACCEPTANCE.md
 
-## Poster Lab Pro 1.1.0-rc.4 Multimode Acceptance Matrix
+## Poster Lab Pro 1.1.0-rc.6 Multimode Acceptance Matrix
 
 This matrix defines the 1.1 release-candidate acceptance pass for Poster, Icon, Logo, Announcement, and Collab. It is meant to keep real generation bounded while preserving each mode's distinct visual goal.
 
 ## Test App
 
-- Version: `1.1.0-rc.4`
+- Version: `1.1.0-rc.6`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Release bundle: `release/mac/Poster Lab Pro.app`
 - Local desktop app: `/Users/liusu/Desktop/Poster Lab Pro.app`
@@ -41,8 +41,8 @@ Poster:
 Icon:
 
 - Required test assets: one subject reference or one character/prop/logo used as the single icon subject.
-- Pass: 1:1 square, no text, one dominant full-bleed subject, readable at 64px, strong silhouette, minimal background, no rounded OS mask.
-- Fail: poster scene, multiple subjects, copied static pose, text, logo lettering, white border, dark rounded app container, or too much background detail.
+- Pass: 1:1 square, no text, one dominant full-bleed subject, readable at 64px, strong silhouette, minimal background. Rounded corners or badge-like app-icon styling are acceptable when intentional and polished.
+- Fail: poster scene, multiple subjects, copied static pose, text, logo lettering, white border, accidental padding, subject trapped in a low-quality container, or too much background detail.
 
 Logo:
 

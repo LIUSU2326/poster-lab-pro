@@ -127,6 +127,7 @@ export function validateModeForm(mode, data) {
   }
 
   if (mode === "logo") {
+    assertStringArray(data?.styleTags, "styleTags", issues);
     assertNonEmptyString(data?.wordmark, "wordmark", issues);
     if (data?.solidBackground !== true) {
       issues.push(issue("solidBackground", "Logo mode requires a solid background."));
@@ -137,6 +138,7 @@ export function validateModeForm(mode, data) {
   }
 
   if (mode === "icon") {
+    assertStringArray(data?.styleTags, "styleTags", issues);
     if (data?.aspectRatio !== "1:1") {
       issues.push(issue("aspectRatio", "Icon mode is locked to 1:1."));
     }

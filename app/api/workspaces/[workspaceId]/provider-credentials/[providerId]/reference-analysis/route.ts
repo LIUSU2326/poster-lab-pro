@@ -18,6 +18,7 @@ const DEFAULT_BASE_URLS: Record<z.infer<typeof ProviderIdSchema>, string> = {
   deepseek: "https://api.deepseek.com",
   claude: "https://api.anthropic.com/v1",
   qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  agnes: "https://apihub.agnes-ai.com/v1",
 };
 
 function json(data: unknown, init?: ResponseInit) {

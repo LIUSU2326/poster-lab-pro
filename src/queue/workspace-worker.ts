@@ -393,12 +393,16 @@ async function resultFromTaskWithProject(input: {
     overlayApplied: Boolean(overlayed?.processing?.applied.length),
     textTargets: resultQualityTextTargets(input.snapshot, input.task),
   });
-  const iconRepair = input.task.mode === "icon" && initialQualityAudit.findings.some((finding) =>
-    finding.code === "icon-rounded-mask-risk")
+  const iconRepairFinding = input.task.mode === "icon"
+    ? initialQualityAudit.findings.find((finding) =>
+        finding.code === "icon-rounded-mask-risk" || finding.code === "icon-edge-text-mark-risk")
+    : null;
+  const iconRepair = iconRepairFinding
     ? await repairIconCanvasEdges({
         dataUrl: initialDataUrl,
         width: prepared.width,
         height: prepared.height,
+        reason: iconRepairFinding.code === "icon-edge-text-mark-risk" ? "edgeTextMarkRisk" : "roundedMaskRisk",
       })
     : null;
   const finalDataUrl = iconRepair?.dataUrl || initialDataUrl;

@@ -45,14 +45,26 @@ for (const token of [
   "poster-low-thumbnail-contrast-risk",
   "poster-logo-safe-treatment-review",
   "poster-slogan-copy-area-review",
-	  "poster-reference-integration-review",
-	  "posterCanvasMetrics",
-	  "iconLightCornerDarkEdgeContainerRisk",
-	]) {
-	  if (!audit.includes(token)) issues.push(`quality-audit.ts: missing ${token}`);
-	}
+  "poster-reference-integration-review",
+  "posterCanvasMetrics",
+  "iconLightCornerDarkEdgeContainerRisk",
+  "iconVerticalEdgeDarkMarkRatio",
+  "iconOuterEdgeColorMarkRatio",
+  "iconOuterEdgeLightBackgroundRatio",
+  "iconTopEdgeColorMarkRatio",
+  "iconLeftEdgeColorMarkRatio",
+  "iconEdgeTextMarkRisk",
+  "icon-edge-text-mark-risk",
+]) {
+  if (!audit.includes(token)) issues.push(`quality-audit.ts: missing ${token}`);
+}
 
-for (const token of ["repairIconCanvasEdges", "iconCanvasEdgeRepair", "IconCanvasEdgeRepairProcessing"]) {
+for (const token of [
+  "repairIconCanvasEdges",
+  "iconCanvasEdgeRepair",
+  "IconCanvasEdgeRepairProcessing",
+  "edgeTextMarkRisk",
+]) {
   if (!imagePostProcessing.includes(token)) issues.push(`image-post-processing.ts: missing ${token}`);
 }
 
@@ -181,8 +193,11 @@ async function runRuntimeCheck() {
       targetHeight: 64,
       assetRoles: ["subjectReference"],
     });
-    if (!iconAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
-      issues.push("icon quality audit should flag transparent/dark rounded mask risk");
+    if (iconAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
+      issues.push("icon quality audit should allow an intentional transparent rounded icon without white border/container risk");
+    }
+    if (iconAudit.metrics.iconTransparentCornerRisk !== true || iconAudit.metrics.iconDarkCornerContainerRisk !== true) {
+      issues.push("icon quality audit should keep transparent/dark corner metrics as review data");
     }
     const repairedIcon = await results.repairIconCanvasEdges({
       dataUrl: `data:image/png;base64,${iconBytes.toString("base64")}`,
@@ -201,54 +216,113 @@ async function runRuntimeCheck() {
       targetHeight: 64,
       assetRoles: ["subjectReference"],
     });
-	    if (repairedAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
-	      issues.push("icon edge repair should reduce rounded mask audit risk");
-	    }
+    if (repairedAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
+      issues.push("icon edge repair should not introduce high-contrast container audit risk");
+    }
 
-	    const whiteCornerBlackFrameIconSvg = Buffer.from(`
-	      <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
-	        <rect width="128" height="128" fill="#ffffff"/>
-	        <rect x="0" y="0" width="128" height="128" rx="24" fill="#050505"/>
-	        <rect x="10" y="10" width="108" height="108" rx="18" fill="#365f9d"/>
-	        <circle cx="64" cy="66" r="30" fill="#ffbf45"/>
-	        <path d="M40 70 C54 40 82 40 92 70 C80 88 54 90 40 70Z" fill="#f97316"/>
-	      </svg>
-	    `);
-	    const framedIconBytes = await sharp(whiteCornerBlackFrameIconSvg).png().toBuffer();
-	    const framedIconAudit = await results.auditResultQuality({
-	      mode: "icon",
-	      dataUrl: `data:image/png;base64,${framedIconBytes.toString("base64")}`,
-	      width: 128,
-	      height: 128,
-	      targetWidth: 128,
-	      targetHeight: 128,
-	      assetRoles: ["subjectReference"],
-	    });
-	    if (!framedIconAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
-	      issues.push("icon quality audit should flag white-corner dark-edge rounded app container risk");
-	    }
-	    if (framedIconAudit.metrics.iconLightCornerDarkEdgeContainerRisk !== true) {
-	      issues.push("icon quality audit should store light-corner dark-edge container metric");
-	    }
-	    const repairedFramedIcon = await results.repairIconCanvasEdges({
-	      dataUrl: `data:image/png;base64,${framedIconBytes.toString("base64")}`,
-	      width: 128,
-	      height: 128,
-	    });
-	    const repairedFramedAudit = await results.auditResultQuality({
-	      mode: "icon",
-	      dataUrl: repairedFramedIcon.dataUrl,
-	      width: repairedFramedIcon.width,
-	      height: repairedFramedIcon.height,
-	      targetWidth: 128,
-	      targetHeight: 128,
-	      assetRoles: ["subjectReference"],
-	    });
-	    if (repairedFramedAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
-	      issues.push("icon edge repair should reduce white-corner dark-edge container risk");
-	    }
+    const edgeMarkIconSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+        <rect width="128" height="128" fill="#f8f2d8"/>
+        <circle cx="64" cy="64" r="37" fill="#ffbf45"/>
+        <path d="M39 72 C48 44 80 43 90 72 C80 91 49 91 39 72Z" fill="#f97316"/>
+        <rect x="28" y="0" width="12" height="9" fill="#ef4444"/>
+        <rect x="49" y="0" width="12" height="9" fill="#f97316"/>
+        <rect x="70" y="0" width="12" height="9" fill="#facc15"/>
+        <rect x="0" y="36" width="9" height="7" fill="#050505"/>
+        <rect x="0" y="49" width="9" height="7" fill="#050505"/>
+        <rect x="0" y="62" width="9" height="7" fill="#050505"/>
+        <rect x="0" y="76" width="9" height="7" fill="#ef4444"/>
+        <rect x="119" y="41" width="9" height="7" fill="#050505"/>
+        <rect x="119" y="54" width="9" height="7" fill="#050505"/>
+        <rect x="119" y="67" width="9" height="7" fill="#050505"/>
+        <rect x="119" y="81" width="9" height="7" fill="#f97316"/>
+      </svg>
+    `);
+    const edgeMarkIconBytes = await sharp(edgeMarkIconSvg).png().toBuffer();
+    const edgeMarkIconAudit = await results.auditResultQuality({
+      mode: "icon",
+      dataUrl: `data:image/png;base64,${edgeMarkIconBytes.toString("base64")}`,
+      width: 128,
+      height: 128,
+      targetWidth: 128,
+      targetHeight: 128,
+      assetRoles: ["subjectReference"],
+    });
+    if (!edgeMarkIconAudit.findings.some((item) => item.code === "icon-edge-text-mark-risk")) {
+      issues.push("icon quality audit should flag edge pseudo-text, digit, crop-mark, or side-label risk");
+    }
+    if (edgeMarkIconAudit.metrics.iconEdgeTextMarkRisk !== true) {
+      issues.push("icon quality audit should store iconEdgeTextMarkRisk metric");
+    }
+    if (Number(edgeMarkIconAudit.metrics.iconOuterEdgeColorMarkRatio || 0) <= 0) {
+      issues.push("icon quality audit should store outer colored edge mark ratio");
+    }
+    const repairedEdgeMarkIcon = await results.repairIconCanvasEdges({
+      dataUrl: `data:image/png;base64,${edgeMarkIconBytes.toString("base64")}`,
+      width: 128,
+      height: 128,
+      reason: "edgeTextMarkRisk",
+    });
+    if (repairedEdgeMarkIcon.processing?.reason !== "edgeTextMarkRisk") {
+      issues.push("icon edge repair should record edgeTextMarkRisk reason");
+    }
+    const repairedEdgeMarkAudit = await results.auditResultQuality({
+      mode: "icon",
+      dataUrl: repairedEdgeMarkIcon.dataUrl,
+      width: repairedEdgeMarkIcon.width,
+      height: repairedEdgeMarkIcon.height,
+      targetWidth: 128,
+      targetHeight: 128,
+      assetRoles: ["subjectReference"],
+    });
+    if (repairedEdgeMarkAudit.findings.some((item) => item.code === "icon-edge-text-mark-risk")) {
+      issues.push("icon edge repair should reduce edge pseudo-text audit risk");
+    }
 
-	    const flatPosterSvg = Buffer.from(`
+    const whiteCornerBlackFrameIconSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+        <rect width="128" height="128" fill="#ffffff"/>
+        <rect x="0" y="0" width="128" height="128" rx="24" fill="#050505"/>
+        <rect x="10" y="10" width="108" height="108" rx="18" fill="#365f9d"/>
+        <circle cx="64" cy="66" r="30" fill="#ffbf45"/>
+        <path d="M40 70 C54 40 82 40 92 70 C80 88 54 90 40 70Z" fill="#f97316"/>
+      </svg>
+    `);
+    const framedIconBytes = await sharp(whiteCornerBlackFrameIconSvg).png().toBuffer();
+    const framedIconAudit = await results.auditResultQuality({
+      mode: "icon",
+      dataUrl: `data:image/png;base64,${framedIconBytes.toString("base64")}`,
+      width: 128,
+      height: 128,
+      targetWidth: 128,
+      targetHeight: 128,
+      assetRoles: ["subjectReference"],
+    });
+    if (!framedIconAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
+      issues.push("icon quality audit should flag white-corner dark-edge padded container risk");
+    }
+    if (framedIconAudit.metrics.iconLightCornerDarkEdgeContainerRisk !== true) {
+      issues.push("icon quality audit should store light-corner dark-edge container metric");
+    }
+    const repairedFramedIcon = await results.repairIconCanvasEdges({
+      dataUrl: `data:image/png;base64,${framedIconBytes.toString("base64")}`,
+      width: 128,
+      height: 128,
+    });
+    const repairedFramedAudit = await results.auditResultQuality({
+      mode: "icon",
+      dataUrl: repairedFramedIcon.dataUrl,
+      width: repairedFramedIcon.width,
+      height: repairedFramedIcon.height,
+      targetWidth: 128,
+      targetHeight: 128,
+      assetRoles: ["subjectReference"],
+    });
+    if (repairedFramedAudit.findings.some((item) => item.code === "icon-rounded-mask-risk")) {
+      issues.push("icon edge repair should reduce white-corner dark-edge container risk");
+    }
+
+    const flatPosterSvg = Buffer.from(`
       <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">
         <rect width="1920" height="1080" fill="#888888"/>
         <rect x="780" y="420" width="360" height="240" fill="#8a8a8a"/>

@@ -64,73 +64,148 @@ async function iconCanvasMetrics(dataUrl: string | null | undefined): Promise<Re
       const alpha = data[offset + 3] ?? 255;
       return {
         luminance: (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255,
+        saturation: Math.max(r, g, b) === 0 ? 0 : (Math.max(r, g, b) - Math.min(r, g, b)) / Math.max(r, g, b),
         alpha: alpha / 255,
       };
     };
 
-	    const samples: { luminance: number; alpha: number }[] = [];
-	    const sampleBox = (left: number, top: number, size: number) => {
-	      for (let y = top; y < top + size; y += 1) {
-	        for (let x = left; x < left + size; x += 1) samples.push(pixel(x, y));
-	      }
-	    };
-	    sampleBox(0, 0, 6);
-	    sampleBox(26, 0, 6);
-	    sampleBox(0, 26, 6);
-	    sampleBox(26, 26, 6);
-	    const outerCornerSamples: { luminance: number; alpha: number }[] = [];
-	    const sampleOuterCornerBox = (left: number, top: number, size: number) => {
-	      for (let y = top; y < top + size; y += 1) {
-	        for (let x = left; x < left + size; x += 1) outerCornerSamples.push(pixel(x, y));
-	      }
-	    };
-	    sampleOuterCornerBox(0, 0, 3);
-	    sampleOuterCornerBox(29, 0, 3);
-	    sampleOuterCornerBox(0, 29, 3);
-	    sampleOuterCornerBox(29, 29, 3);
+    const samples: { luminance: number; saturation: number; alpha: number }[] = [];
+    const sampleBox = (left: number, top: number, size: number) => {
+      for (let y = top; y < top + size; y += 1) {
+        for (let x = left; x < left + size; x += 1) samples.push(pixel(x, y));
+      }
+    };
+    sampleBox(0, 0, 6);
+    sampleBox(26, 0, 6);
+    sampleBox(0, 26, 6);
+    sampleBox(26, 26, 6);
+    const outerCornerSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    const sampleOuterCornerBox = (left: number, top: number, size: number) => {
+      for (let y = top; y < top + size; y += 1) {
+        for (let x = left; x < left + size; x += 1) outerCornerSamples.push(pixel(x, y));
+      }
+    };
+    sampleOuterCornerBox(0, 0, 3);
+    sampleOuterCornerBox(29, 0, 3);
+    sampleOuterCornerBox(0, 29, 3);
+    sampleOuterCornerBox(29, 29, 3);
 
-	    const centerSamples: { luminance: number; alpha: number }[] = [];
-	    for (let y = 12; y < 20; y += 1) {
-	      for (let x = 12; x < 20; x += 1) centerSamples.push(pixel(x, y));
-	    }
-	    const edgeSamples: { luminance: number; alpha: number }[] = [];
-	    for (let x = 9; x < 23; x += 1) {
-	      for (const y of [0, 1, 2, 3]) edgeSamples.push(pixel(x, y), pixel(x, 31 - y));
-	    }
-	    for (let y = 9; y < 23; y += 1) {
-	      for (const x of [0, 1, 2, 3]) edgeSamples.push(pixel(x, y), pixel(31 - x, y));
-	    }
+    const centerSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    for (let y = 12; y < 20; y += 1) {
+      for (let x = 12; x < 20; x += 1) centerSamples.push(pixel(x, y));
+    }
+    const edgeSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    for (let x = 9; x < 23; x += 1) {
+      for (const y of [0, 1, 2, 3]) edgeSamples.push(pixel(x, y), pixel(x, 31 - y));
+    }
+    for (let y = 9; y < 23; y += 1) {
+      for (const x of [0, 1, 2, 3]) edgeSamples.push(pixel(x, y), pixel(31 - x, y));
+    }
+    const verticalEdgeMarkSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    for (let y = 7; y < 25; y += 1) {
+      for (const x of [0, 1, 2, 3, 4, 27, 28, 29, 30, 31]) {
+        verticalEdgeMarkSamples.push(pixel(x, y));
+      }
+    }
 
-	    const average = (items: { luminance: number; alpha: number }[], key: "luminance" | "alpha") =>
-	      items.reduce((sum, item) => sum + item[key], 0) / Math.max(1, items.length);
-	    const cornerAlpha = average(samples, "alpha");
-	    const centerAlpha = average(centerSamples, "alpha");
-	    const cornerLuminance = average(samples, "luminance");
-	    const outerCornerLuminance = average(outerCornerSamples, "luminance");
-	    const outerCornerAlpha = average(outerCornerSamples, "alpha");
-	    const centerLuminance = average(centerSamples, "luminance");
-	    const edgeLuminance = average(edgeSamples, "luminance");
-	    const edgeAlpha = average(edgeSamples, "alpha");
-	    const lightCornerDarkEdgeRisk = outerCornerLuminance > 0.62 &&
-	      edgeLuminance < 0.32 &&
-	      outerCornerLuminance - edgeLuminance > 0.33 &&
-	      centerAlpha > 0.94 &&
-	      edgeAlpha > 0.94 &&
-	      outerCornerAlpha > 0.94;
+    const outerEdgeMarkSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    const topEdgeMarkSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    const bottomEdgeMarkSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    const leftEdgeMarkSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    const rightEdgeMarkSamples: { luminance: number; saturation: number; alpha: number }[] = [];
+    for (let y = 0; y < 32; y += 1) {
+      for (let x = 0; x < 32; x += 1) {
+        const sample = pixel(x, y);
+        if (x < 6 || x >= 26 || y < 6 || y >= 26) outerEdgeMarkSamples.push(sample);
+        if (y < 6) topEdgeMarkSamples.push(sample);
+        if (y >= 26) bottomEdgeMarkSamples.push(sample);
+        if (x < 6) leftEdgeMarkSamples.push(sample);
+        if (x >= 26) rightEdgeMarkSamples.push(sample);
+      }
+    }
 
-	    return {
-	      iconCornerAlpha: Number(cornerAlpha.toFixed(4)),
-	      iconOuterCornerAlpha: Number(outerCornerAlpha.toFixed(4)),
-	      iconCenterAlpha: Number(centerAlpha.toFixed(4)),
-	      iconCornerLuminance: Number(cornerLuminance.toFixed(4)),
-	      iconOuterCornerLuminance: Number(outerCornerLuminance.toFixed(4)),
-	      iconCenterLuminance: Number(centerLuminance.toFixed(4)),
-	      iconEdgeLuminance: Number(edgeLuminance.toFixed(4)),
-	      iconEdgeAlpha: Number(edgeAlpha.toFixed(4)),
-	      iconTransparentCornerRisk: cornerAlpha < 0.86 && centerAlpha > 0.94,
-	      iconDarkCornerContainerRisk: cornerLuminance < 0.1 && centerLuminance - cornerLuminance > 0.22,
-	      iconLightCornerDarkEdgeContainerRisk: lightCornerDarkEdgeRisk,
-	    };
+    const average = (
+      items: { luminance: number; saturation: number; alpha: number }[],
+      key: "luminance" | "saturation" | "alpha",
+    ) =>
+      items.reduce((sum, item) => sum + item[key], 0) / Math.max(1, items.length);
+    const ratio = (
+      items: { luminance: number; saturation: number; alpha: number }[],
+      predicate: (item: { luminance: number; saturation: number; alpha: number }) => boolean,
+    ) => items.filter(predicate).length / Math.max(1, items.length);
+    const cornerAlpha = average(samples, "alpha");
+    const centerAlpha = average(centerSamples, "alpha");
+    const cornerLuminance = average(samples, "luminance");
+    const outerCornerLuminance = average(outerCornerSamples, "luminance");
+    const outerCornerAlpha = average(outerCornerSamples, "alpha");
+    const centerLuminance = average(centerSamples, "luminance");
+    const edgeLuminance = average(edgeSamples, "luminance");
+    const edgeAlpha = average(edgeSamples, "alpha");
+    const lightCornerDarkEdgeRisk = outerCornerLuminance > 0.62 &&
+      edgeLuminance < 0.32 &&
+      outerCornerLuminance - edgeLuminance > 0.33 &&
+      centerAlpha > 0.94 &&
+      edgeAlpha > 0.94 &&
+      outerCornerAlpha > 0.94;
+    const verticalEdgeDarkMarkRatio = ratio(verticalEdgeMarkSamples, (item) =>
+      item.alpha > 0.86 && item.luminance < 0.2);
+    const outerEdgeDarkMarkRatio = ratio(outerEdgeMarkSamples, (item) =>
+      item.alpha > 0.86 && item.luminance < 0.24);
+    const outerEdgeColorMarkRatio = ratio(outerEdgeMarkSamples, (item) =>
+      item.alpha > 0.86 && item.saturation > 0.46 && item.luminance < 0.88);
+    const outerEdgeLightBackgroundRatio = ratio(outerEdgeMarkSamples, (item) =>
+      item.alpha > 0.86 && item.luminance > 0.72 && item.saturation < 0.28);
+    const colorMark = (item: { luminance: number; saturation: number; alpha: number }) =>
+      item.alpha > 0.86 && item.saturation > 0.46 && item.luminance < 0.88;
+    const darkMark = (item: { luminance: number; saturation: number; alpha: number }) =>
+      item.alpha > 0.86 && item.luminance < 0.24;
+    const lightBackground = (item: { luminance: number; saturation: number; alpha: number }) =>
+      item.alpha > 0.86 && item.luminance > 0.72 && item.saturation < 0.28;
+    const topEdgeColorMarkRatio = ratio(topEdgeMarkSamples, colorMark);
+    const bottomEdgeColorMarkRatio = ratio(bottomEdgeMarkSamples, colorMark);
+    const leftEdgeColorMarkRatio = ratio(leftEdgeMarkSamples, colorMark);
+    const rightEdgeColorMarkRatio = ratio(rightEdgeMarkSamples, colorMark);
+    const leftEdgeDarkMarkRatio = ratio(leftEdgeMarkSamples, darkMark);
+    const rightEdgeDarkMarkRatio = ratio(rightEdgeMarkSamples, darkMark);
+    const topEdgeLightBackgroundRatio = ratio(topEdgeMarkSamples, lightBackground);
+    const leftEdgeLightBackgroundRatio = ratio(leftEdgeMarkSamples, lightBackground);
+    const rightEdgeLightBackgroundRatio = ratio(rightEdgeMarkSamples, lightBackground);
+    const coloredEdgeLabelRisk = (
+      topEdgeColorMarkRatio > 0.045 && topEdgeLightBackgroundRatio > 0.45
+    ) || (
+      leftEdgeColorMarkRatio > 0.045 && leftEdgeLightBackgroundRatio > 0.55
+    ) || (
+      rightEdgeColorMarkRatio > 0.045 && rightEdgeLightBackgroundRatio > 0.55
+    );
+    const darkEdgeLabelRisk = (
+      verticalEdgeDarkMarkRatio > 0.04 ||
+      (leftEdgeDarkMarkRatio > 0.05 && leftEdgeLightBackgroundRatio > 0.45) ||
+      (rightEdgeDarkMarkRatio > 0.05 && rightEdgeLightBackgroundRatio > 0.45)
+    );
+    const edgeTextMarkRisk = (coloredEdgeLabelRisk || darkEdgeLabelRisk) && centerAlpha > 0.94 && centerLuminance > 0.2;
+
+    return {
+      iconCornerAlpha: Number(cornerAlpha.toFixed(4)),
+      iconOuterCornerAlpha: Number(outerCornerAlpha.toFixed(4)),
+      iconCenterAlpha: Number(centerAlpha.toFixed(4)),
+      iconCornerLuminance: Number(cornerLuminance.toFixed(4)),
+      iconOuterCornerLuminance: Number(outerCornerLuminance.toFixed(4)),
+      iconCenterLuminance: Number(centerLuminance.toFixed(4)),
+      iconEdgeLuminance: Number(edgeLuminance.toFixed(4)),
+      iconEdgeAlpha: Number(edgeAlpha.toFixed(4)),
+      iconVerticalEdgeDarkMarkRatio: Number(verticalEdgeDarkMarkRatio.toFixed(4)),
+      iconOuterEdgeDarkMarkRatio: Number(outerEdgeDarkMarkRatio.toFixed(4)),
+      iconOuterEdgeColorMarkRatio: Number(outerEdgeColorMarkRatio.toFixed(4)),
+      iconOuterEdgeLightBackgroundRatio: Number(outerEdgeLightBackgroundRatio.toFixed(4)),
+      iconTopEdgeColorMarkRatio: Number(topEdgeColorMarkRatio.toFixed(4)),
+      iconBottomEdgeColorMarkRatio: Number(bottomEdgeColorMarkRatio.toFixed(4)),
+      iconLeftEdgeColorMarkRatio: Number(leftEdgeColorMarkRatio.toFixed(4)),
+      iconRightEdgeColorMarkRatio: Number(rightEdgeColorMarkRatio.toFixed(4)),
+      iconTransparentCornerRisk: cornerAlpha < 0.86 && centerAlpha > 0.94,
+      iconDarkCornerContainerRisk: cornerLuminance < 0.1 && centerLuminance - cornerLuminance > 0.22,
+      iconLightCornerDarkEdgeContainerRisk: lightCornerDarkEdgeRisk,
+      iconEdgeTextMarkRisk: edgeTextMarkRisk,
+    };
   } catch {
     return { iconCanvasAudit: "failed" };
   }
@@ -226,16 +301,20 @@ export async function auditResultQuality(input: {
 
   if (input.mode === "icon") {
     Object.assign(metrics, await iconCanvasMetrics(input.dataUrl));
-	    if (
-	      metrics.iconTransparentCornerRisk ||
-	      metrics.iconDarkCornerContainerRisk ||
-	      metrics.iconLightCornerDarkEdgeContainerRisk
-	    ) {
+    if (metrics.iconLightCornerDarkEdgeContainerRisk) {
       findings.push(finding({
         code: "icon-rounded-mask-risk",
         severity: "review",
-        message: "Icon corners look like a rounded app-icon mask or dark container.",
-        recommendation: "Prefer full-canvas square artwork with subject/background extending naturally to all four corners.",
+        message: "Icon appears inside a separate high-contrast container or padded frame.",
+        recommendation: "Rounded corners are acceptable when intentional, but remove white borders, accidental padding, or dark container framing that shrinks the subject.",
+      }));
+    }
+    if (metrics.iconEdgeTextMarkRisk) {
+      findings.push(finding({
+        code: "icon-edge-text-mark-risk",
+        severity: "review",
+        message: "Icon edges may contain small dark pseudo-text, digits, crop marks, or side labels.",
+        recommendation: "Rerun with a strict text-free icon prompt: no letters, numbers, side markings, reference-sheet labels, border frame, or edge glyphs.",
       }));
     }
   }

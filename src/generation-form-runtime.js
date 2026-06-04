@@ -142,7 +142,7 @@ function normalizeRuntimeOutputSettings(modeId, outputSettings) {
 }
 
 function normalizeRuntimeModeForm(modeForm) {
-  if (modeForm?.mode !== "poster") return modeForm;
+  if (!["poster", "logo", "icon"].includes(modeForm?.mode)) return modeForm;
   const styleTags = Array.isArray(modeForm.styleTags)
     ? Array.from(new Set(modeForm.styleTags.map((item) => String(item).trim()).filter(Boolean))).slice(0, 1)
     : [];

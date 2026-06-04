@@ -69,8 +69,8 @@ export function collabBrandSafetyBlock(input: {
     `Strategy: ${policy.strategy}.`,
     `Reason: ${policy.reason}.`,
     policy.strategy === "uploadedPartnerBrandLockup"
-      ? "Use the uploaded partner brandLogo as the only readable partner brand reference; keep it separate from the game logo and integrate both through shared scene lighting/materials."
-      : "Reserve a polished blank partner brand plate, neutral emblem, or copy-safe lockup area; do not generate readable partner names, fake sponsor logos, fake wordmarks, or hybrid brand text.",
+      ? "Use the uploaded partner brandLogo as the only readable partner brand reference; keep it separate from the game logo and integrate both through shared scene lighting/materials. If either logo spelling cannot stay exact, switch that side to a polished blank non-letter plate instead of pseudo-text."
+      : "Reserve polished blank partner/game brand plates, neutral emblems, or copy-safe lockup areas; do not generate readable partner names, fake sponsor logos, fake wordmarks, distorted uploaded-logo words, pseudo-letters, or hybrid brand text.",
     "Both sides must stay separate but unified: game identity, partner identity, logos/brand plates, and characters should relate through interaction, shared light, and scene story, not through merged traits.",
   ].join("\n");
 }

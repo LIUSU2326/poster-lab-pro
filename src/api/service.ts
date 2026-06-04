@@ -5,6 +5,10 @@ import {
   type EncryptedProviderCredentialVault,
   type ProviderCredentialVaultStatus,
 } from "../providers/encrypted-credential-vault";
+import {
+  evaluateQueuePlanCapabilityGate,
+  providerCapabilityGateUserMessage,
+} from "../providers/capability-gate";
 import { mapPromptPackageToProviderRequest } from "../providers/request-mapper";
 import type { ProviderAdapterRegistry } from "../providers/executor";
 import { createBatchQueuePlan } from "../queue/planner";
@@ -204,7 +208,13 @@ function resultFileMetadataFromUnknown(value: unknown): ResultStoredFileMetadata
 
 const QUALITY_AUDIT_REQUIRED_METRICS: Record<ProductionMode, string[]> = {
   poster: ["posterHasIntegratedReference", "posterHasLogoReference", "posterHasCopyTarget"],
-  icon: ["iconCornerAlpha", "iconCenterAlpha", "iconLightCornerDarkEdgeContainerRisk"],
+  icon: [
+    "iconCornerAlpha",
+    "iconCenterAlpha",
+    "iconLightCornerDarkEdgeContainerRisk",
+    "iconOuterEdgeColorMarkRatio",
+    "iconEdgeTextMarkRisk",
+  ],
   logo: ["logoTextStrategy"],
   announcement: ["announcementCopyStrategy"],
   collab: ["collabPartnerBrandStrategy"],
@@ -670,6 +680,24 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
     async createQueuePlan(request) {
       try {
         const parsed = QueuePlanCreateApiRequestSchema.parse(request);
+        const capabilityGate = evaluateQueuePlanCapabilityGate({
+          mode: parsed.mode,
+          providerId: parsed.providerId,
+          ...(parsed.providerRoutes ? { providerRoutes: parsed.providerRoutes } : {}),
+          regenerateSchemes: parsed.regenerateSchemes,
+          includeImageGeneration: parsed.includeImageGeneration,
+          includeImageEdit: parsed.includeImageEdit,
+          includeUpscale: parsed.includeUpscale,
+          includeBackgroundRemoval: parsed.includeBackgroundRemoval,
+        });
+        if (!capabilityGate.ok) {
+          return QueuePlanCreateApiResponseSchema.parse(createFailure({
+            code: "unsupported_capability",
+            ...(parsed.workspaceId ? { workspaceId: parsed.workspaceId } : {}),
+            message: providerCapabilityGateUserMessage(capabilityGate),
+            details: { capabilityGate },
+          }));
+        }
         const queuePlan = createBatchQueuePlan({
           projectId: parsed.projectId,
           mode: parsed.mode,

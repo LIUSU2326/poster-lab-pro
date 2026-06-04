@@ -428,15 +428,6 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
         </div>
       ) : null}
 
-      {mode === "logo" ? (
-        <div className="mode-field-grid solid-bg-grid" aria-label="标识背景">
-          <button className="active" type="button">白底</button>
-          <button type="button">黑底</button>
-          <button type="button">绿幕</button>
-          <button type="button">自定义</button>
-        </div>
-      ) : null}
-
       <div className="number-row">
         <span>每个方案出图</span>
         <div>

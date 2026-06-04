@@ -16,6 +16,7 @@ function read(filePath) {
 }
 
 const adapter = read("src/providers/openai-live-adapter.ts");
+const providerProfiles = read("src/providers/provider-capability-profiles.ts");
 const barrel = read("src/providers/index.ts");
 const liveStubs = read("src/providers/live-adapter-stubs.ts");
 const decisions = read("DECISIONS.md");
@@ -58,8 +59,19 @@ for (const token of [
   "polished blank partner brand plate",
   "Icon logo rule",
   "Collab logo rule",
+  "providerCapabilityPromptNote",
+  "providerUsesExtraBodyImageReferences",
+  "Provider Capability Adapter Contract",
+  "compressedProviderPriorityInstruction",
+  "COMPRESSED MODEL PRIORITY CONTRACT",
+  "Poster required anchors",
+  "LOW TEXT RELIABILITY LOCK",
+  "EXACT HERO ROSTER LOCK",
+  "EXACT BOSS ROSTER LOCK",
+  "STYLE CONSISTENCY LOCK",
+  "Collab partner anchor",
 ]) {
-  if (!adapter.includes(token)) issues.push(`openai-live-adapter.ts: missing ${token}`);
+  if (!adapter.includes(token) && !providerProfiles.includes(token)) issues.push(`openai-live-adapter.ts: missing ${token}`);
 }
 
 for (const token of ["createOpenAILiveImageAdapter", "OpenAIImageGenerationResponseSchema", "createOpenAIHttpTransport"]) {
@@ -238,6 +250,182 @@ async function runRuntimeCheck() {
     }
     if (!String(capturedRequest?.body?.prompt || "").includes("Avoid: low quality typography")) {
       issues.push("OpenAI adapter should append negative prompt guidance to text prompt");
+    }
+
+    const imageUrlBytes = Buffer.from("fake-provider-url-image-bytes");
+    const httpTransport = providers.createOpenAIHttpTransport(async (url, init) => {
+      if (String(url).includes("/images/generations")) {
+        const posted = JSON.parse(String(init?.body || "{}"));
+        if (posted.prompt !== "provider url download check") {
+          issues.push("OpenAI HTTP transport should forward the original generation body");
+        }
+        return new Response(JSON.stringify({
+          data: [
+            {
+              url: "https://cdn.example.com/provider-url-result.png",
+              b64_json: null,
+              revised_prompt: null,
+            },
+          ],
+        }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (String(url) === "https://cdn.example.com/provider-url-result.png") {
+        return new Response(imageUrlBytes, {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    const httpTransportResult = await httpTransport({
+      url: "https://api.example.com/v1/images/generations",
+      method: "POST",
+      headers: { Authorization: "Bearer test" },
+      body: {
+        model: "agnes-image-2.1-flash",
+        prompt: "provider url download check",
+        size: "1024x1024",
+        n: 1,
+      },
+    });
+    const downloadedAsset = httpTransportResult.body?.data?.[0];
+    if (
+      !httpTransportResult.ok
+      || downloadedAsset?.url !== "https://cdn.example.com/provider-url-result.png"
+      || downloadedAsset?.b64_json !== imageUrlBytes.toString("base64")
+    ) {
+      issues.push("OpenAI HTTP transport should preserve provider URL results and attach base64 bytes for local result storage");
+    }
+
+    let capturedAgnesRequest;
+    const nullableFieldAdapter = providers.createOpenAILiveImageAdapter({
+      providerId: "agnes",
+      transport: async (request) => {
+        capturedAgnesRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            data: [
+              {
+                url: "https://cdn.example.com/agnes-generated-poster.png",
+                b64_json: null,
+                revised_prompt: null,
+              },
+            ],
+          },
+        };
+      },
+    });
+    const nullableFieldResult = await nullableFieldAdapter.generateImage(
+      providers.ImageGenerationRequestSchema.parse({
+        ...imageRequest,
+        context: {
+          ...imageRequest.context,
+          providerId: "agnes",
+        },
+        model: "agnes-image-2.1-flash",
+        prompt: "Create a poster with uploaded hero, BOSS, logo treatment, and slogan/copy-safe area.",
+        assets: [
+          {
+            id: "asset-uploaded-hero",
+            role: "gameCharacter",
+            description: "semanticRole=protagonist; fusion=hero identity reference",
+            url: "https://cdn.example.com/hero.png",
+          },
+          {
+            id: "asset-uploaded-boss",
+            role: "prop",
+            description: "semanticRole=antagonist; label=BOSS; fusion=boss threat reference",
+            url: "https://cdn.example.com/boss.png",
+          },
+          {
+            id: "asset-uploaded-logo",
+            role: "gameLogo",
+            description: "semanticRole=brandLogo; fusion=brand reference",
+            url: "https://cdn.example.com/logo.png",
+          },
+        ],
+      }),
+      {
+        ...baseConfig,
+        providerId: "agnes",
+        defaultModel: "agnes-image-2.1-flash",
+      },
+    );
+    if (!nullableFieldResult.ok || nullableFieldResult.value.assets[0]?.url !== "https://cdn.example.com/agnes-generated-poster.png") {
+      issues.push("OpenAI-compatible adapter should accept provider success responses with nullable b64_json/revised_prompt fields");
+    }
+    const agnesPrompt = String(capturedAgnesRequest?.body?.prompt || "");
+    if (
+      !agnesPrompt.includes("COMPRESSED MODEL PRIORITY CONTRACT")
+      || !agnesPrompt.includes("Poster required anchors")
+      || !agnesPrompt.includes("LOW TEXT RELIABILITY LOCK")
+      || !agnesPrompt.includes("EXACT HERO ROSTER LOCK")
+      || !agnesPrompt.includes("EXACT BOSS ROSTER LOCK")
+      || !agnesPrompt.includes("STYLE CONSISTENCY LOCK")
+    ) {
+      issues.push("Agnes image prompt should front-load compressed-provider Poster priority anchors");
+    }
+    const agnesImages = capturedAgnesRequest?.body?.extra_body?.image || [];
+    if (!Array.isArray(agnesImages) || agnesImages.length !== 3) {
+      issues.push("Agnes image request should send visual references through extra_body.image");
+    }
+
+    let capturedAgnesCollabRequest;
+    const agnesCollabAdapter = providers.createOpenAILiveImageAdapter({
+      providerId: "agnes",
+      transport: async (request) => {
+        capturedAgnesCollabRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: { data: [{ b64_json: "ZmFrZS1jb2xsYWItYnl0ZXM=" }] },
+        };
+      },
+    });
+    const agnesCollabResult = await agnesCollabAdapter.generateImage(
+      providers.ImageGenerationRequestSchema.parse({
+        ...imageRequest,
+        context: {
+          ...imageRequest.context,
+          mode: "collab",
+          providerId: "agnes",
+        },
+        schemeId: "scheme-collab-01",
+        model: "agnes-image-2.1-flash",
+        prompt: "Create a collaboration visual with [Collab Partner] and [Game Character] as separate identities.",
+        assets: [
+          {
+            id: "asset-collab-partner",
+            role: "collabCharacter",
+            description: "semanticRole=protagonist; fusion=partner identity reference",
+            url: "https://cdn.example.com/partner.png",
+          },
+          {
+            id: "asset-game-character",
+            role: "gameCharacter",
+            description: "semanticRole=protagonist; fusion=game identity reference",
+            url: "https://cdn.example.com/game-character.png",
+          },
+        ],
+      }),
+      {
+        ...baseConfig,
+        providerId: "agnes",
+        defaultModel: "agnes-image-2.1-flash",
+      },
+    );
+    const agnesCollabPrompt = String(capturedAgnesCollabRequest?.body?.prompt || "");
+    if (
+      !agnesCollabResult.ok
+      || !agnesCollabPrompt.includes("Collab partner anchor")
+      || !agnesCollabPrompt.includes("Both co-stars need comparable visual weight")
+    ) {
+      issues.push("Agnes collab prompt should front-load dual-subject co-star priority anchors");
     }
 
     let capturedLogoRequest;

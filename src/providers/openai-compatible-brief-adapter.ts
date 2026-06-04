@@ -40,6 +40,7 @@ const defaultBaseUrls: Partial<Record<ProviderId, string>> = {
   aigocode: "https://api.aigocode.com/v1",
   deepseek: "https://api.deepseek.com",
   qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  agnes: "https://apihub.agnes-ai.com/v1",
 };
 
 export const OpenAICompatibleChatTransportRequestSchema = z.object({
@@ -94,6 +95,7 @@ const BriefCompletionSchema = z.object({
 });
 
 const SUPPORTED_SLOGAN_LANGUAGES = ["zh-CN", "en-US", "ja-JP", "ko-KR"] as const;
+type BriefScheme = z.infer<typeof BriefCompletionSchema>["schemes"][number];
 
 export type OpenAICompatibleChatTransportRequest = z.infer<typeof OpenAICompatibleChatTransportRequestSchema>;
 export type OpenAICompatibleChatTransportResponse = z.infer<typeof OpenAICompatibleChatTransportResponseSchema>;
@@ -107,20 +109,30 @@ export type OpenAICompatibleBriefAdapterOptions = {
   now?: () => number;
 };
 
+const OPENAI_COMPATIBLE_CHAT_TIMEOUT_MS = 60000;
+
 export function createOpenAICompatibleChatFetchTransport(fetchImpl: typeof fetch): OpenAICompatibleChatTransport {
   return async (request) => {
-    const response = await fetchImpl(request.url, {
-      method: request.method,
-      headers: request.headers,
-      body: JSON.stringify(request.body),
-    });
-    const contentType = response.headers.get("content-type") || "";
-    const body = contentType.includes("application/json") ? await response.json() : await response.text();
-    return OpenAICompatibleChatTransportResponseSchema.parse({
-      ok: response.ok,
-      status: response.status,
-      body,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), OPENAI_COMPATIBLE_CHAT_TIMEOUT_MS);
+
+    try {
+      const response = await fetchImpl(request.url, {
+        method: request.method,
+        headers: request.headers,
+        body: JSON.stringify(request.body),
+        signal: controller.signal,
+      });
+      const contentType = response.headers.get("content-type") || "";
+      const body = contentType.includes("application/json") ? await response.json() : await response.text();
+      return OpenAICompatibleChatTransportResponseSchema.parse({
+        ok: response.ok,
+        status: response.status,
+        body,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
   };
 }
 
@@ -134,7 +146,13 @@ function validateConfig(providerId: ProviderId, config: ProviderConfigForm): Pro
   }
   if (!parsed.enabled) missing.push("enabled");
   if (!parsed.apiKey?.trim()) missing.push("apiKey");
-  if (!parsed.defaultModel?.trim() && !parsed.modelSlots.concept?.trim()) missing.push("defaultModel");
+  if (
+    !parsed.defaultModel?.trim()
+    && !parsed.modelSlots.concept?.trim()
+    && !getProviderManifest(providerId).modelSlots.concept?.[0]?.trim()
+  ) {
+    missing.push("defaultModel");
+  }
 
   return {
     ok: missing.length === 0,
@@ -148,7 +166,7 @@ function normalizeBaseUrl(providerId: ProviderId, config: ProviderConfigForm): s
 }
 
 function conceptModel(config: ProviderConfigForm): string {
-  return config.modelSlots.concept || config.defaultModel || "gpt-5.5";
+  return config.modelSlots.concept || getProviderManifest(config.providerId).modelSlots.concept?.[0] || config.defaultModel || "gpt-5.5";
 }
 
 function configError<T>(providerId: ProviderId, config: ProviderConfigForm): ProviderResult<T> {
@@ -367,8 +385,8 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
   if (mode === "icon") {
     return [
       ...shared,
-      "Icon mode hard lock: 1:1 square, one single dominant subject, no text, no logo lettering, no captions, no poster scene, no multi-character battle, no OS app icon rounded mask, no black rounded container, no empty corner padding.",
-      "Icon prompt must prioritize bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square corners, crisp focal detail, and 64px readability.",
+      "Icon mode hard lock: 1:1 square, one single dominant subject, no text, no logo lettering, no captions, no poster scene, no multi-character battle, no empty corner padding, no white border, and no separate container that shrinks the subject. Rounded corners are acceptable when intentional and polished.",
+      "Icon prompt must prioritize bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square composition, crisp focal detail, and 64px readability.",
       "If several uploaded assets exist, choose one best subject or brand motif for each scheme instead of crowding them together.",
       "slogans must be an empty object for icon mode.",
     ];
@@ -594,11 +612,138 @@ function parseBriefContent(content: string) {
   return BriefCompletionSchema.parse(coerceBriefCompletion(JSON.parse(fenced || trimmed)));
 }
 
+const posterFallbackBeats = [
+  {
+    title: "烤炉传送门破门战",
+    action: "主角从厨房烤炉爆发出的传送门前冲刺，Boss 从荒野门洞破入餐厅，二者在飞散的披萨和火花中发生正面碰撞。",
+    camera: "低角度 24mm 广角，前景披萨刀和台面形成冲击线，中景是主角格挡，后景是巨大传送门和 Boss 阴影。",
+    slogan: "SLICE THE BREACH",
+  },
+  {
+    title: "VIP 订单倒计时防线",
+    action: "VIP 订单倒计时变成场景危机，主角一手护住发光披萨，一手挡下 Boss 的攻击，厨师队友在两侧忙乱防守。",
+    camera: "俯冲式斜角镜头，前景订单牌/计时器作构图框，中景主角和披萨能量，后景厨房烟雾与荒野冷光交叠。",
+    slogan: "SERVE UNDER FIRE",
+  },
+  {
+    title: "荒野食材追逐",
+    action: "Boss 抢走关键食材逃向荒野，主角和厨师小队从餐厅门口追出，披萨酱、面粉和金币在运动轨迹中飞散。",
+    camera: "横向追逐镜头，前景飞散食材制造速度，中景主角跃过台面，后景荒野道路和巨大 Boss 形成压迫。",
+    slogan: "CHASE THE FLAVOR",
+  },
+  {
+    title: "巨物压迫披萨台",
+    action: "餐厅台面像战场一样倾斜，巨型 Boss 的爪子/身体压向前景披萨，主角在台面边缘用厨具武器顶住压力。",
+    camera: "极端近大远小透视，前景巨型披萨和 Boss 肢体，中景小主角剪影，后景厨房灯光和尘埃粒子形成深度。",
+    slogan: "HOLD THE LINE",
+  },
+  {
+    title: "胜利战利品加冕",
+    action: "Boss 被击退后化作稀有食材，主角把胜利披萨高高举起，餐厅与荒野的两种光从左右合并。",
+    camera: "英雄式中心构图，前景散落食材和武器，中景主角举起披萨，后景队友欢呼与 Boss 轮廓倒下。",
+    slogan: "FEAST ON VICTORY",
+  },
+  {
+    title: "餐厅围城防守",
+    action: "厨房窗口、门口和传送门同时被怪物围攻，主角站在服务台前组织厨师队防线，Logo 化作墙上发光招牌。",
+    camera: "宽幅围城构图，前景锅铲/披萨铲形成框景，中景队伍防守，后景多个入侵点和体积烟雾制造规模。",
+    slogan: "DEFEND THE OVEN",
+  },
+  {
+    title: "前景刀光分割双世界",
+    action: "一把巨大的披萨刀/厨刀从前景斜切画面，把暖厨房和冷荒野分成两个世界，主角沿刀光冲向 Boss。",
+    camera: "强斜线构图，前景刀刃高光作视觉路径，中景主角冲刺，后景 Boss 在冷色荒野中回击。",
+    slogan: "CUT THROUGH CHAOS",
+  },
+  {
+    title: "魔法招牌订单爆发",
+    action: "餐厅招牌和宣传词被烤炉火焰点亮，文字区成为场景里的发光牌面，主角在牌面下方释放披萨能量震退 Boss。",
+    camera: "海报式上方招牌 + 下方动作场面，前景蒸汽和火花，中景主角施放能量，后景 Boss 被轮廓光包围。",
+    slogan: "FIRE UP THE QUEST",
+  },
+];
+
+function createPosterFallbackScheme(request: BriefGenerationRequest, index: number): BriefScheme {
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const beat = posterFallbackBeats[index % posterFallbackBeats.length]!;
+  const creativeDirection = request.creativeDirection || "";
+  const styleLock = creativeDirection.includes("画风参考")
+    ? "参考上传画风：高可读像素风/游戏插画感、暖厨房与冷荒野对比、金色披萨能量环、深色描边和清晰剪影。"
+    : "保持上传素材的整体游戏美术风格，避免写实摄影感。";
+  const promptZh = [
+    "电影级游戏宣发 KV，统一重绘上传素材，不做贴纸拼贴。",
+    beat.camera,
+    beat.action,
+    "主角保持身份但允许动作、表情、视角变化；Boss 保持关键轮廓但必须有体量、威胁和物理互动。",
+    "Logo 只出现一次，做成场景内招牌、墙面发光标识、木牌或金属浮雕。",
+    "宣传词融入场景牌面、蒸汽、火焰、横幅或招牌；如果不能准确拼写，保留自然空白牌面。",
+    "必须有前中后景、主光/轮廓光、体积烟雾、火花、食材飞溅、接触阴影和运动轨迹。",
+    styleLock,
+  ].join(" ");
+  const promptEn = [
+    "Cinematic game campaign key visual, redraw uploaded assets as one integrated illustration, no sticker collage.",
+    beat.camera,
+    beat.action,
+    "Keep protagonist identity while changing pose, expression, camera angle, and lighting; keep Boss key silhouette while making it large, threatening, and physically interacting with the scene.",
+    "Use the game logo once as an in-world sign, glowing wall mark, wooden plate, or metal relief.",
+    "Integrate the slogan into an in-world sign, steam, fire, banner, or title plate; if exact spelling is unsafe, leave a natural blank copy-safe plate.",
+    "Foreground-midground-background depth, key/rim light, volumetric haze, sparks, flying ingredients, contact shadows, and motion trails.",
+    styleLock,
+  ].join(" ");
+  return {
+    title: beat.title,
+    brief: `${beat.title}：${beat.action} ${beat.camera} Logo/宣传词必须场景化处理，避免角落贴字。`,
+    prompt: promptEn,
+    promptZh,
+    promptEn,
+    slogans: targetLanguage === "zh-CN" ? { [targetLanguage]: beat.title.slice(0, 12) } : { [targetLanguage]: beat.slogan },
+  };
+}
+
+function createModeFallbackScheme(request: BriefGenerationRequest, index: number): BriefScheme {
+  const mode = request.context.mode;
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const title = mode === "icon"
+    ? `单主体图标方案 ${index + 1}`
+    : mode === "logo"
+      ? `品牌标识方案 ${index + 1}`
+      : mode === "announcement"
+        ? `公告版式方案 ${index + 1}`
+        : `联名互动方案 ${index + 1}`;
+  const prompt = [
+    `${mode} mode fallback scheme ${index + 1}.`,
+    modeBriefIdentityRule(mode),
+    "Use uploaded assets as references only, redraw naturally for the mode, and keep this scheme visually distinct from the others.",
+  ].join(" ");
+  return {
+    title,
+    brief: `${title}：当供应商返回方案不足时自动补齐，保持当前模式目标和素材职责。`,
+    prompt,
+    promptZh: prompt,
+    promptEn: prompt,
+    slogans: mode === "icon" || mode === "logo" ? {} : { [targetLanguage]: title },
+  };
+}
+
+function ensureBriefSchemeCount(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest): z.infer<typeof BriefCompletionSchema> {
+  const schemes = parsed.schemes.slice(0, request.schemeCount);
+  for (let index = schemes.length; index < request.schemeCount; index += 1) {
+    schemes.push(request.context.mode === "poster"
+      ? createPosterFallbackScheme(request, index)
+      : createModeFallbackScheme(request, index));
+  }
+  return {
+    ...parsed,
+    schemes,
+  };
+}
+
 function normalizePosterSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
+  const completed = ensureBriefSchemeCount(parsed, request);
   const targetLanguage = request.languageTargets[0] || "en-US";
   const seed = request.context.traceId || request.context.jobId || `${Date.now()}`;
   const assetCounts = posterKvAssetCountsFromAssets(request.assets);
-  return parsed.schemes.slice(0, request.schemeCount).map((scheme, index) => {
+  return completed.schemes.slice(0, request.schemeCount).map((scheme, index) => {
     const title = sanitizePosterSchemeText(scheme.title) || scheme.title;
     const brief = sanitizePosterSchemeText(scheme.brief) || scheme.brief;
     const prompt = sanitizePosterSchemeText(scheme.prompt) || scheme.prompt;
@@ -647,8 +792,8 @@ function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { bri
   switch (mode) {
     case "icon":
       return {
-        brief: "Icon 模式锁定：1:1 方形、单一主主体、无文字、无海报/KV 场景、低背景复杂度、全画布方角、64px 仍可读。",
-        prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject, absolutely no text or logo lettering, no poster scene, no multi-character battle, no rounded app-mask/container, full-bleed sharp square corners, minimal background, high contrast, readable at 64px.",
+        brief: "Icon 模式锁定：1:1 方形、单一主主体、无文字、无海报/KV 场景、低背景复杂度、64px 仍可读；圆角可接受但不能有白边或劣质容器框。",
+        prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject, absolutely no text or logo lettering, no poster scene, no multi-character battle, full-bleed square composition, no white border or accidental padding, minimal background, high contrast, readable at 64px. Rounded corners are acceptable when intentional and polished.",
       };
 	    case "logo":
 	      return {
@@ -694,10 +839,11 @@ function sanitizeNonPosterModeText(text: string, mode: BriefGenerationRequest["c
 }
 
 function normalizeModeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
+  const completed = ensureBriefSchemeCount(parsed, request);
   const targetLanguage = request.languageTargets[0] || "en-US";
   const mode = request.context.mode;
   const qualityLock = modeQualityLock(mode);
-  return parsed.schemes.slice(0, request.schemeCount).map((scheme) => {
+  return completed.schemes.slice(0, request.schemeCount).map((scheme) => {
     const title = sanitizeNonPosterModeText(scheme.title, mode) || scheme.title;
     const brief = sanitizeNonPosterModeText(scheme.brief, mode) || scheme.brief;
     const prompt = sanitizeNonPosterModeText(scheme.prompt, mode) || scheme.prompt;

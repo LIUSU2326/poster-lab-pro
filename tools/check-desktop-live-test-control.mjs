@@ -35,8 +35,9 @@ for (const token of [
 for (const token of [
   "getManualLiveTestViewModel",
   "getPreparedLiveQueueJobId",
-  "Manual live test currently supports OpenAI-compatible and Google providers only.",
+  "Manual live test currently supports OpenAI-compatible, Google, and Agnes providers only.",
   "Create a queue job with the normal batch action first.",
+  "手动实机测试当前要求方案生成和图像生成使用同一个 Provider",
 ]) {
   if (!viewModelSource.includes(token)) issues.push(`live-gate-view-model.js: missing ${token}`);
 }
@@ -108,6 +109,12 @@ async function runRuntimeCheck() {
 
   state.apiMode = "http";
   state.provider = "openai";
+  state.providerSlotRoutes = {
+    concept: { providerId: "openai", model: "gpt-5.5" },
+    image: { providerId: "openai", model: "gpt-image-2" },
+    styleReference: { providerId: "openai", model: "gpt-5.5" },
+    compositionReference: { providerId: "openai", model: "gpt-5.5" },
+  };
   state.activeMode = modeSpecs.poster.id;
   state.liveGate.enabled = true;
   state.liveGate.maxAcceptedCost = 99;
@@ -118,6 +125,8 @@ async function runRuntimeCheck() {
   state.liveGate.runtimeCredentialReady = true;
   state.liveGate.transportReady = true;
   state.liveGate.resultStorageReady = true;
+  state.providerCredential.providerId = "openai";
+  state.providerCredential.configured = true;
   state.providerConnection.providerId = "openai";
   state.providerConnection.ok = true;
   state.providerConnection.status = "ok";

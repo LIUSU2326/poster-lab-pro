@@ -313,9 +313,16 @@ function requiredSlotLabel(mode: ProductionMode, slot: ReturnType<typeof getRequ
   return `${slot.label} (${slot.role})`;
 }
 
+function findSchemeForPromptMode(snapshot: WorkspaceSnapshot, mode: ProductionMode, schemeId: string | null) {
+  if (schemeId) {
+    return snapshot.schemes.find((item) => item.id === schemeId && item.mode === mode);
+  }
+  return snapshot.schemes.find((item) => item.mode === mode);
+}
+
 function createSlogans(snapshot: WorkspaceSnapshot, modeState: WorkspaceModeState, schemeId: string | null) {
   if (modeState.mode === "icon" || modeState.mode === "logo") return {};
-  const scheme = schemeId ? snapshot.schemes.find((item) => item.id === schemeId) : undefined;
+  const scheme = findSchemeForPromptMode(snapshot, modeState.mode, schemeId);
   const targetLanguage = modeState.sloganSettings.languages[0] || "en-US";
   if (modeState.sloganSettings.mode === "off") {
     return {};
@@ -466,12 +473,17 @@ function formatModeForm(modeState: WorkspaceModeState): string {
 	    const wordmarkText = policy.strategy === "exactShortWordmark"
 	      ? form.wordmark
 	      : "redacted for copy-safe blank wordmark plate";
-	    return `Wordmark: ${wordmarkText}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}. Logo text strategy: ${policy.strategy}.`;
+	    return `Wordmark: ${wordmarkText}. Selected logo style: ${styleTagsText(form.styleTags)}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}. Logo text strategy: ${policy.strategy}.`;
 	  }
   if (form.mode === "icon") {
-    return `Aspect ratio: ${form.aspectRatio}. No text: ${form.noText}. Full-bleed square: ${form.fullBleedSquare}. Composition reference rotation: ${form.compositionReferenceRotation}.`;
+    return `Selected icon style: ${styleTagsText(form.styleTags)}. Aspect ratio: ${form.aspectRatio}. No text: ${form.noText}. Full-bleed square: ${form.fullBleedSquare}. Composition reference rotation: ${form.compositionReferenceRotation}.`;
   }
   return `Style tags: ${form.styleTags.join(", ")}. Composition reference strength: ${form.compositionReferenceStrength}.`;
+}
+
+function styleTagsText(styleTags: string[]): string {
+  const text = styleTags.map((item) => item.trim()).filter(Boolean).slice(0, 1).join(", ");
+  return text || "not selected";
 }
 
 function formatFocusGuidancePolicy(modeState: WorkspaceModeState): string {
@@ -549,8 +561,10 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
       sharedRules,
       "Icon quality target: premium game/app icon, perfect 1:1 square, one single dominant subject, bold readable silhouette, high contrast, minimal background, crisp focal detail, and readable at 64px.",
       "Icon asset handling: uploaded character, prop, BOSS-like subject, or logo reference can become the main icon subject, but it must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
-      "Icon canvas lock: generate square artwork that fills the full canvas to all four corners. Do not render an OS app-icon mask, rounded black square, rounded container, white border, badge frame, or empty corner padding.",
-      "Icon exclusions: ABSOLUTELY NO TEXT, no logo lettering, no captions, no UI copy, no poster scene complexity, no multi-character battle scene, no invented shield/weapon/tool/accessory, no white border, no rounded container, and no copied static asset pose.",
+      "Icon canvas lock: generate clean full-bleed 1:1 square artwork with one dominant subject. Rounded corners, badge-like framing, or app-icon styling are acceptable only when intentional and polished; do not add a white border, empty corner padding, crop marks, or a separate dark container that shrinks the subject.",
+      "Icon edge cleanliness lock: no border frame, no white margin, no crop marks, no reference-sheet side markings, no barcode-like strokes, no numerals, no digits, no decorative glyphs, no colored edge labels, no top-edge sample-sheet marks, and no tiny black side labels near the canvas edges.",
+      "Icon reference isolation: if any uploaded reference contains logo text, UI, poster copy, or edge markings, ignore those text/edge marks completely and render only the single clean subject or non-letter motif.",
+      "Icon exclusions: ABSOLUTELY NO TEXT, no letters, no numbers, no logo lettering, no captions, no UI copy, no pseudo-text marks, no pseudo-text edge marks, no poster scene complexity, no multi-character battle scene, no invented shield/weapon/tool/accessory, no white border, no accidental padding, and no copied static asset pose.",
     ].join("\n");
   }
 
@@ -577,9 +591,12 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
     return [
       sharedRules,
       "Collab quality target: premium collaboration campaign visual where both identities stay separate but feel unified through one scene, shared lighting, matching materials, clear interaction story, and balanced brand presence.",
+      "Collab placeholder alias lock: if any scheme text says [Collab Character] or [Partner Character], treat it as [Collab Partner] and bind it to the uploaded collabCharacter visual reference.",
       "Collab asset handling: [Game Character] and [Collab Partner] must remain separate visible entities. Keep each uploaded character/logo identity independent; show relationship through exchanged props, mirrored actions, shared set piece, or in-world event staging.",
-      "Collab exclusions: do not merge characters, average traits, swap identities, create a hybrid mascot, fuse two logos into one fake mark, invent partner brand names, invent fake sponsor logos, render fake partner slogans, paste logos side-by-side without a story, or let one brand erase the other.",
-      "Collab missing-brandLogo rule: if no uploaded brandLogo exists for a partner, reserve a polished blank partner brand plate, neutral emblem, or copy-safe lockup area instead of generating readable fake partner wordmarks.",
+      "Collab scale balance lock: [Game Character] and [Collab Partner] must both be large enough to read at thumbnail size; neither side may shrink into a background mascot or tiny corner decoration. Use balanced foreground/midground staging with a visible interaction touchpoint.",
+      "Collab brand-copy lock: do not render readable letters, logo text, partner names, fake sponsor words, pseudo-letters, or warped uploaded-logo lettering unless an uploaded logo can be reproduced perfectly; if spelling is uncertain, use blank non-letter brand plates or neutral emblems.",
+      "Collab exclusions: do not merge characters, average traits, swap identities, create a hybrid mascot, fuse two logos into one fake mark, invent partner brand names, invent fake sponsor logos, render fake partner slogans, paste logos side-by-side without a story, output visible pseudo-text, or let one brand erase the other.",
+      "Collab missing-brandLogo rule: if no uploaded brandLogo exists for a partner, reserve a polished blank partner brand plate plus polished blank game/partner brand plates, neutral emblems, or copy-safe lockup areas instead of generating readable fake partner wordmarks or distorted game-logo text.",
     ].join("\n");
   }
 
@@ -611,7 +628,7 @@ function formatModeTypographyDirection(
 ): string {
   if (mode === "poster") return formatPosterTypographyDirection(slogans);
   if (mode === "icon") {
-    return "Icon mode ignores campaign copy and slogan text. The generated image must contain absolutely no text, no letters, no captions, no logo lettering, and no UI copy.";
+    return "Icon mode ignores campaign copy and slogan text. The generated image must contain absolutely no text, no letters, no numbers, no numerals, no pseudo-text edge marks, no captions, no logo lettering, and no UI copy.";
   }
   if (mode === "logo") {
     return "Logo mode uses only the configured wordmark/mark system. Do not add campaign slogans, subtitles, decorative fake words, or poster copy; preserve exact spelling only when reliable, otherwise use a clean copy-safe mark treatment.";
@@ -630,7 +647,7 @@ function formatModeTypographyDirection(
     Object.entries(slogans).map(([language, slogan]) => `${language}: ${slogan}`).join("\n"),
     "Use only short readable campaign copy when clean spelling is likely; otherwise reserve a polished blank copy-safe lockup.",
     "Keep both brand/logo identities separate and avoid fake hybrid logo text.",
-    "Do not invent partner brand names, fake sponsor logos, or readable partner wordmarks when no uploaded brandLogo is present; use a polished blank partner brand plate or neutral emblem instead.",
+    "Do not invent partner brand names, fake sponsor logos, readable partner wordmarks, pseudo-letters, or distorted uploaded-logo words when no uploaded brandLogo is present; use polished blank partner/game brand plates or neutral emblems instead.",
   ].filter(Boolean).join("\n");
 }
 
@@ -665,24 +682,41 @@ function formatModeSafetyDirection(modeState: WorkspaceModeState, assets: Prompt
 }
 
 function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
-  if (modeState.mode !== "poster" || modeState.modeForm.mode !== "poster") return "";
+  const form = modeState.modeForm;
+  if (modeState.mode === "poster" && form.mode !== "poster") return "";
+  if (modeState.mode === "logo" && form.mode !== "logo") return "";
+  if (modeState.mode === "icon" && form.mode !== "icon") return "";
+  if (!["poster", "logo", "icon"].includes(modeState.mode)) return "";
 
   const styleAssets = assets.filter((asset) => assetSemanticRole(asset) === "styleReference");
   const characterAssets = assets.filter((asset) => assetSemanticRole(asset) === "protagonist");
-  const selectedStyle = modeState.modeForm.styleTags[0]?.trim() || "";
-  const priorityRule = [
-    "Style priority order:",
-    "1. Uploaded styleReference image, when present.",
-    "2. Manually selected style tag, when no styleReference image is present.",
-    "3. Uploaded gameCharacter asset art style, when neither of the above is present.",
-  ].join(" ");
+  const subjectAssets = assets.filter((asset) => ["subjectReference", "prop", "gameLogo"].includes(asset.role));
+  const selectedStyle = form.mode === "poster" || form.mode === "logo" || form.mode === "icon"
+    ? form.styleTags[0]?.trim() || ""
+    : "";
+  const modeLabel = modeState.mode === "icon" ? "icon" : modeState.mode === "logo" ? "logo" : "poster";
+  const priorityRule = modeState.mode === "poster"
+    ? [
+      "Style priority order:",
+      "1. Uploaded styleReference image, when present.",
+      "2. Manually selected style tag, when no styleReference image is present.",
+      "3. Uploaded gameCharacter asset art style, when neither of the above is present.",
+    ].join(" ")
+    : [
+      `${modeLabel} style priority order:`,
+      "1. Uploaded styleReference image, when present.",
+      "2. Manually selected style tag, when no styleReference image is present.",
+      "3. Uploaded primary subject/logo reference art finish, when neither of the above is present.",
+    ].join(" ");
 
   if (styleAssets.length > 0) {
     return [
       priorityRule,
       `Active style source: uploaded style reference image(s): ${styleAssets.map((asset) => `${asset.label} (${asset.assetId})`).join(", ")}.`,
       selectedStyle ? `Selected style tag "${selectedStyle}" is secondary because the uploaded style reference has priority.` : "",
-      "Apply the style reference to the whole poster's rendering, palette, lighting, material finish, and atmosphere while preserving character, BOSS, and logo identity from their own uploaded assets.",
+      modeState.mode === "poster"
+        ? "Apply the style reference to the whole poster's rendering, palette, lighting, material finish, and atmosphere while preserving character, BOSS, and logo identity from their own uploaded assets."
+        : `Apply the style reference to the whole ${modeLabel}'s rendering, palette, material finish, outline language, and polish while preserving the mode constraints.`,
     ].filter(Boolean).join("\n");
   }
 
@@ -690,22 +724,29 @@ function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetB
     return [
       priorityRule,
       `Active style source: selected style tag "${selectedStyle}".`,
-      "Use this selected style as the dominant art direction for the whole poster, while preserving uploaded character identity, BOSS shape, and logo readability.",
+      modeState.mode === "poster"
+        ? "Use this selected style as the dominant art direction for the whole poster, while preserving uploaded character identity, BOSS shape, and logo readability."
+        : `Use this selected style as the dominant art direction for the ${modeLabel}, while preserving uploaded visual identity and the mode's readability rules.`,
     ].join("\n");
   }
 
-  if (characterAssets.length > 0) {
+  const fallbackStyleAssets = modeState.mode === "poster" ? characterAssets : subjectAssets;
+  if (fallbackStyleAssets.length > 0) {
     return [
       priorityRule,
-      `Active style source: uploaded character asset art style from ${characterAssets.map((asset) => `${asset.label} (${asset.assetId})`).join(", ")}.`,
-      "Infer and extend the character reference art style to the whole poster: line quality, proportions, rendering method, color palette, shading, material finish, and cute/action tone.",
-      "Do not restyle the poster into a generic cinematic 3D, realistic, anime, or painterly look unless that style is already visible in the uploaded character assets.",
+      `Active style source: uploaded ${modeState.mode === "poster" ? "character" : "primary subject/logo"} asset art style from ${fallbackStyleAssets.map((asset) => `${asset.label} (${asset.assetId})`).join(", ")}.`,
+      modeState.mode === "poster"
+        ? "Infer and extend the character reference art style to the whole poster: line quality, proportions, rendering method, color palette, shading, material finish, and cute/action tone."
+        : `Infer and simplify the uploaded reference art finish into a clean ${modeLabel} style: silhouette, color rhythm, material finish, edge contrast, and small-size readability.`,
+      modeState.mode === "poster"
+        ? "Do not restyle the poster into a generic cinematic 3D, realistic, anime, or painterly look unless that style is already visible in the uploaded character assets."
+        : `Do not turn the ${modeLabel} into a poster scene or generic unrelated style unless that style is explicitly selected or visible in the uploaded reference.`,
     ].join("\n");
   }
 
   return [
     priorityRule,
-    "Active style source: project context only because no style reference, selected style tag, or character asset is available.",
+    `Active style source: project context only because no style reference, selected style tag, or ${modeState.mode === "poster" ? "character" : "primary subject/logo"} asset is available.`,
   ].join("\n");
 }
 
@@ -742,7 +783,7 @@ function buildSections(input: {
   slogans: Partial<Record<SloganLanguage, string>>;
   assets: PromptAssetBinding[];
 }): PromptSection[] {
-  const scheme = input.schemeId ? input.snapshot.schemes.find((item) => item.id === input.schemeId) : undefined;
+  const scheme = findSchemeForPromptMode(input.snapshot, input.mode, input.schemeId);
   const sections = [
     section({
       id: "project",
@@ -1002,9 +1043,15 @@ export function createPromptPackage(input: PromptBuilderInput): PromptPackage {
   const parsed = PromptBuilderInputSchema.parse(input);
   const mode = parsed.mode || parsed.snapshot.activeMode;
   const modeState = findModeState(parsed.snapshot, mode);
+  const selectedScheme = parsed.target === "brief"
+    ? null
+    : findSchemeForPromptMode(parsed.snapshot, mode, parsed.schemeId || null);
+  if (parsed.target === "image" && !selectedScheme) {
+    throw new Error(`Image prompt packages require a ${mode} scheme.`);
+  }
   const schemeId = parsed.target === "brief"
     ? parsed.schemeId || null
-    : parsed.schemeId || parsed.snapshot.schemes.find((item) => item.mode === mode)?.id || null;
+    : selectedScheme?.id || null;
   const platform = createPlatformConstraint({
     modeState,
     ...(parsed.platformPreset ? { platformPreset: parsed.platformPreset } : {}),

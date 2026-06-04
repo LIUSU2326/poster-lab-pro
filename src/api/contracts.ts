@@ -52,6 +52,7 @@ export const ApiErrorCodeSchema = z.enum([
   "validation_error",
   "not_found",
   "unsupported_provider",
+  "unsupported_capability",
   "unauthorized",
   "conflict",
   "internal",
@@ -251,7 +252,7 @@ export const QueuePlanRunApiResponseSchema = z.union([
 export const QueuePlanManualLiveTestApiRequestSchema = z.object({
   workspaceId: z.string().min(1),
   jobId: z.string().min(1),
-  providerId: z.enum(["openai", "google"]).default("openai"),
+  providerId: z.enum(["openai", "google", "agnes"]).default("openai"),
   enabled: z.boolean().default(false),
   safety: LiveExecutionSafetyInputSchema.default({
     estimatedCost: 0,

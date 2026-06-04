@@ -12,6 +12,10 @@ import { runStaticGenerationServiceFlow } from './static-local-api-service.js';
 import { runHttpGenerationServiceFlow } from './http-generation-service.js';
 import { applyGenerationFormValuesToSnapshot, getActiveGenerationFormValues } from './generation-form-runtime.js';
 import { getLiveGateViewModel } from './data/live-gate-view-model.js';
+import {
+  evaluateQueuePlanCapabilityGate,
+  providerCapabilityGateUserMessage,
+} from './provider-capabilities.js';
 
 const generatedBatchSchemePrefix = "generated-poster";
 
@@ -205,6 +209,7 @@ function createModeFormDraft(activeMode) {
   if (activeMode.id === "logo") {
     return {
       mode: "logo",
+      styleTags: [],
       wordmark: workspaceSnapshot.project.name,
       solidBackground: true,
       backgroundColor: "#ffffff",
@@ -214,6 +219,7 @@ function createModeFormDraft(activeMode) {
   if (activeMode.id === "icon") {
     return {
       mode: "icon",
+      styleTags: [],
       aspectRatio: "1:1",
       noText: true,
       fullBleedSquare: true,
@@ -511,12 +517,26 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
   };
 }
 
+export function validateQueuePlanCapabilityReadiness(queuePlanPayload) {
+  const gate = evaluateQueuePlanCapabilityGate(queuePlanPayload);
+  return {
+    name: "providerCapabilities",
+    ok: gate.ok,
+    issues: [
+      ...gate.errors.map((item) => issue(`providerRoutes.${item.slot}`, item.message)),
+      ...gate.warnings.map((item) => issue(`providerRoutes.${item.slot}`, item.message)),
+    ],
+    gate,
+    message: providerCapabilityGateUserMessage(gate),
+  };
+}
+
 function providerRouteForSlot(slot) {
   const route = state.providerSlotRoutes?.[slot] || {};
   const snapshot = getRuntimeWorkspaceSnapshot();
   const candidateIds = {
-    concept: ["google", "deepseek", "openai", "aigocode", "claude", "qwen"],
-    image: ["openai", "aigocode", "google", "qwen"],
+    concept: ["google", "agnes", "deepseek", "openai", "aigocode", "claude", "qwen"],
+    image: ["agnes", "openai", "aigocode", "google", "qwen"],
     styleReference: ["openai", "aigocode", "google", "claude", "qwen"],
     compositionReference: ["openai", "aigocode", "google", "claude", "qwen"],
   }[slot] || [state.provider];
@@ -528,13 +548,19 @@ function providerRouteForSlot(slot) {
     return configured(providerId);
   });
   const supportedCurrentProvider = candidateIds.includes(state.provider) ? state.provider : "";
+  const unsupportedConfiguredCurrentProvider =
+    ["styleReference", "compositionReference"].includes(slot) && state.provider && !candidateIds.includes(state.provider) && configured(state.provider)
+      ? state.provider
+      : "";
   const savedProvider = candidateIds.includes(route.providerId) ? route.providerId : "";
   const providerId = savedProvider && configured(savedProvider)
     ? savedProvider
-    : configuredProvider || supportedCurrentProvider || savedProvider || candidateIds[0] || state.provider;
+    : configuredProvider || supportedCurrentProvider || unsupportedConfiguredCurrentProvider || savedProvider || candidateIds[0] || state.provider;
   const providerConfig = snapshot.providerConfigs?.[providerId] || {};
   const routeModel = providerId === savedProvider ? route.model : "";
-  const model = normalizeRouteModel(providerId, routeModel || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "");
+  const model = candidateIds.includes(providerId)
+    ? normalizeRouteModel(providerId, routeModel || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "")
+    : "";
   return {
     providerId,
     ...(model ? { model } : {}),
@@ -573,6 +599,12 @@ export async function submitGenerationDraft(options = {}) {
   const validation = validateBoundFrontendForms(snapshot);
   const promptPackageCreate = buildPromptPackageCreateSubmission(snapshot, normalizedOptions);
   const queuePlanCreate = buildQueuePlanCreateSubmission(snapshot, normalizedOptions);
+  const capabilityValidation = validateQueuePlanCapabilityReadiness(queuePlanCreate.payload);
+  const combinedValidation = {
+    ...validation,
+    ok: validation.ok && capabilityValidation.ok,
+    results: [...validation.results, capabilityValidation],
+  };
   const selectedId = queuePlanCreate.payload.schemeIds[0];
   const selected = snapshot.schemes.find((scheme) => scheme.id === selectedId) || getSelectedScheme();
   const activeMode = getActiveMode();
@@ -581,7 +613,7 @@ export async function submitGenerationDraft(options = {}) {
   if (activeMode.id === "poster" && selectedSchemeId) state.selectedScheme = selectedSchemeId;
 
   const submission = {
-    status: validation.ok ? "submitting" : "invalid",
+    status: combinedValidation.ok ? "submitting" : "invalid",
     traceId: createTraceId(),
     createdAt: nowIso(),
     mode: activeMode.id,
@@ -590,7 +622,7 @@ export async function submitGenerationDraft(options = {}) {
     providerId: providerRouteForSlot("image").providerId,
     providerRoutes: getProviderRoutesForSubmission(),
     transport: shouldUseHttpServiceFlow() ? "http" : "static",
-    validation,
+    validation: combinedValidation,
     promptPackageCreate,
     queuePlanCreate,
     serviceFlow: null,
@@ -598,7 +630,7 @@ export async function submitGenerationDraft(options = {}) {
 
   state.submission = submission;
 
-  if (validation.ok) {
+  if (combinedValidation.ok) {
     if (shouldUseHttpServiceFlow() && !liveExecutionPayload.gate.allowed) {
       const serviceFlow = createLiveGateBlockedServiceFlow(liveExecutionPayload.gate);
       state.submission = {

@@ -4,7 +4,7 @@ export const enums = {
   productionMode: ["poster", "collab", "announcement", "logo", "icon"],
   theme: ["light", "dark"],
   workbenchView: ["schemes", "text", "archive", "results", "compare", "export"],
-  providerId: ["openai", "aigocode", "google", "deepseek", "claude", "qwen"],
+  providerId: ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"],
   providerStatus: ["idle", "testing", "success", "warning", "error"],
   assetRole: [
     "gameCharacter",
@@ -185,6 +185,7 @@ export const formSchemas = {
     },
     logo: {
       mode: { const: "logo" },
+      styleTags: { type: "string[]", default: [] },
       wordmark: { type: "string", required: true, max: 80 },
       solidBackground: { type: "boolean", const: true },
       backgroundColor: { type: "string", default: "#ffffff" },
@@ -192,6 +193,7 @@ export const formSchemas = {
     },
     icon: {
       mode: { const: "icon" },
+      styleTags: { type: "string[]", default: [] },
       aspectRatio: { const: "1:1" },
       noText: { type: "boolean", const: true },
       fullBleedSquare: { type: "boolean", const: true },

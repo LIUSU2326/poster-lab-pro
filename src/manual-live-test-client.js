@@ -10,6 +10,10 @@ import {
   testProviderConnectionForWorkbench,
 } from './provider-credential-client.js';
 import { loadWorkspaceSnapshotForWorkbench } from './workspace-data-service.js';
+import {
+  evaluateQueuePlanCapabilityGate,
+  providerCapabilityGateUserMessage,
+} from './provider-capabilities.js';
 
 function encodeSegment(value) {
   return encodeURIComponent(String(value));
@@ -21,6 +25,47 @@ function nowIso() {
 
 function createTraceId() {
   return `trace-manual-live-ui-${Date.now().toString(36)}`;
+}
+
+function routeProviderForSlot(slot) {
+  return state.providerSlotRoutes?.[slot]?.providerId || state.provider || "openai";
+}
+
+function routeModelForSlot(slot, providerId) {
+  const route = state.providerSlotRoutes?.[slot] || {};
+  const config = state.workspaceSnapshot?.providerConfigs?.[providerId] || {};
+  return route.model || config.modelSlots?.[slot] || config.defaultModel || "";
+}
+
+function getManualLiveProviderId() {
+  return routeProviderForSlot("concept");
+}
+
+function getManualLiveCapabilityBlockers(activeMode) {
+  const conceptProviderId = routeProviderForSlot("concept");
+  const imageProviderId = routeProviderForSlot("image");
+  const gate = evaluateQueuePlanCapabilityGate({
+    mode: activeMode?.id || state.activeMode || "poster",
+    providerId: conceptProviderId,
+    providerRoutes: {
+      concept: {
+        providerId: conceptProviderId,
+        model: routeModelForSlot("concept", conceptProviderId),
+      },
+      image: {
+        providerId: imageProviderId,
+        model: routeModelForSlot("image", imageProviderId),
+      },
+    },
+    regenerateSchemes: true,
+    includeImageGeneration: true,
+  });
+  const blockers = [];
+  if (!gate.ok) blockers.push(providerCapabilityGateUserMessage(gate));
+  if (conceptProviderId !== imageProviderId) {
+    blockers.push("手动实机测试当前要求方案生成和图像生成使用同一个 Provider；请切到全 Agnes、全 OpenAI 或全 Google 后再测。");
+  }
+  return blockers;
 }
 
 async function readEnvelope(response) {
@@ -96,12 +141,14 @@ function getHardBlockers(activeMode) {
   const gate = getLiveGateViewModel(activeMode);
   const autoClearableGateBlockers = new Set(["missing_runtime_credential", "missing_transport"]);
   const blockers = [];
+  const manualProviderId = getManualLiveProviderId();
 
   if (state.apiMode !== "http") blockers.push("Open the Next workbench in HTTP mode.");
-  if (state.provider !== "openai" && state.provider !== "google") {
-    blockers.push("Manual live test currently supports OpenAI-compatible and Google providers only.");
+  if (manualProviderId !== "openai" && manualProviderId !== "google" && manualProviderId !== "agnes") {
+    blockers.push("Manual live test currently supports OpenAI-compatible, Google, and Agnes providers only.");
   }
   if (state.manualLiveTest?.phase === "running") blockers.push("Manual live test is already running.");
+  blockers.push(...getManualLiveCapabilityBlockers(activeMode));
 
   for (const blocker of gate.blockers || []) {
     if (!autoClearableGateBlockers.has(blocker.code)) blockers.push(blocker.message);
@@ -123,23 +170,24 @@ async function ensurePreparedQueue(options = {}) {
 }
 
 async function ensureProviderPreflight(options = {}) {
-  const credentialStatusStale = state.providerCredential?.providerId !== state.provider;
+  const providerId = getManualLiveProviderId();
+  const credentialStatusStale = state.providerCredential?.providerId !== providerId;
 
   if (!state.liveGate.runtimeCredentialReady || credentialStatusStale) {
     preparingState("Refreshing provider API Key status.");
-    await loadProviderCredentialStatusForWorkbench({ ...options, providerId: state.provider });
+    await loadProviderCredentialStatusForWorkbench({ ...options, providerId });
   }
 
   if (!state.liveGate.runtimeCredentialReady) return;
 
   const connectionReady = Boolean(
-    state.providerConnection?.providerId === state.provider &&
+    state.providerConnection?.providerId === providerId &&
     state.providerConnection?.ok,
   );
 
   if (!connectionReady || !state.liveGate.transportReady) {
     preparingState("Testing provider connection before the live sample.");
-    await testProviderConnectionForWorkbench({ providerId: state.provider }, options);
+    await testProviderConnectionForWorkbench({ providerId }, options);
   }
 }
 
@@ -178,7 +226,7 @@ export function createManualLiveTestPayload() {
 
   return {
     enabled: true,
-    providerId: state.provider,
+    providerId: getManualLiveProviderId(),
     safety: {
       estimatedCost: gate.estimatedCost,
       maxAcceptedCost: gate.maxAcceptedCost,

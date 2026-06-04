@@ -89,7 +89,7 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
     updateResultOperation(operation.id, {
       status: "running",
       progress: 36,
-      message: `Creating ${route.taskKind} queue task via ${route.providerLabel}${route.native ? "" : " fallback"}.`,
+      message: `Creating ${route.taskKind} queue task via current provider: ${route.providerLabel}.`,
       providerId: route.providerId,
       routedFromProviderId: state.provider,
       nativeProviderRoute: route.native,

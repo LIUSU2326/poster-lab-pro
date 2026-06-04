@@ -9,7 +9,7 @@ Raise generation quality after the 1.0 beta/RC gate without making every issue a
 Status: done.
 
 - Store `metadata.qualityAudit` on generated results.
-- Flag icon rounded-mask risk from local corner analysis.
+- Flag harmful Icon white-border/container risk from local edge analysis while allowing intentional rounded corners.
 - Flag Logo text accuracy review.
 - Flag Announcement copy-safe review.
 - Flag Collab missing partner `brandLogo`.
@@ -22,11 +22,11 @@ Status: done.
 
 Implemented:
 
-- Reduce dark rounded app-icon masks.
+- Reduce white-border or dark-container framing that shrinks the icon subject.
 - Keep full-canvas square artwork.
 - Preserve one strong subject silhouette.
 - Keep 64px readability.
-- Add icon-specific post-processing only when audit flags mask risk.
+- Add icon-specific post-processing only when audit flags harmful container/padding or edge-mark risk.
 - Add background expansion/corner repair using local image processing.
 - Re-run the result audit after repair so stored metadata matches the final image.
 - Keep no-text and no-sticker prompt checks.

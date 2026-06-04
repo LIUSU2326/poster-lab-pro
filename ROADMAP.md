@@ -1,14 +1,63 @@
 # ROADMAP.md
 
-## 2026-06-03 1.1.0-rc.4 Controlled Real Acceptance Release Update
+## 2026-06-04 1.1.0-rc.6 Icon/Logo UI Reference Alignment
 
 ### Completed In This Pass
 
-- Promoted the build to `1.1.0-rc.4`.
+- Promoted the visible desktop build to `1.1.0-rc.6` after the Icon/Logo interface alignment pass.
+- Reviewed `/Users/liusu/Downloads/gameicon_pro.tsx` and the supplied GameIcon Pro screenshots for the App Icon / Brand Logo sidebar model.
+- Updated Icon and Logo mode labels, asset slots, mode copy, style presets, output copy, and CTA language so they behave like distinct production modes instead of thin Poster variants.
+- Added formal `styleTags` support to Icon and Logo mode forms, defaults, validation, adapters, runtime normalization, and prompt builder output.
+- Added a real React Logo configuration card for wordmark and solid background color. The old static Logo background buttons were removed from Output because they did not write to state.
+- Added Icon/Logo compact style pickers that save the selected style and feed it into the prompt style strategy.
+- Kept rounded Icon corners allowed: this pass does not reintroduce the old hard "no rounded corners" rule.
+- Repacked and replaced `/Users/liusu/Desktop/Poster Lab Pro.app`, then verified the local app at `http://127.0.0.1:3000`.
+- Ran `npm run check`.
+
+### Release Intent
+
+- rc.6 is a UI/state alignment release for Icon and Logo, not a claim that Icon/Logo final image quality is finished.
+- Poster, Collab, and Announcement remain the next quality priority.
+- Icon and Logo deep generation logic should wait for the Gemini reference implementation and functional description, then be merged as a dedicated 1.2 pass.
+
+### Next Version Plan
+
+- `1.1.0-rc.7`: Poster, Collab, and Announcement quality sprint using Agnes where appropriate, with bounded real-generation checks and no unlimited prompt churn.
+- `1.1.0 Stable`: freeze once Poster/Collab/Announcement have acceptable flow and the known Icon/Logo UI caveat is documented.
+- `1.2.0`: Icon/Logo dedicated engine pass, integrating the supplied Gemini reference logic, mode-specific refinement tools, and real visual acceptance.
+- `1.3.0`: broader UX/result-management polish after all five modes have mode-specific quality gates.
+
+## 2026-06-04 1.1.0-rc.5 Capability Gate And Agnes Acceptance Follow-Up
+
+### Completed In This Pass
+
+- Confirmed the latest desktop App is `/Users/liusu/Desktop/Poster Lab Pro.app`, served at `http://127.0.0.1:3000`, showing `v1.1.0-rc.5`.
+- Ran the full local gate chain with `npm run check`.
+- Repacked the macOS desktop bundle and replaced the desktop App copy.
+- Added result-operation provider capability checks: unsupported current-provider actions are disabled with explicit messages instead of silently rerouting to another provider.
+- Verified Agnes all-core evidence across modes from the local workspace:
+  - Poster: capability/storage pass, visual quality fail for KV integration.
+  - Icon: pass with quality note.
+  - Logo: pass as copy-safe blank emblem/wordmark plate.
+  - Announcement: pass as a large copy-safe editable panel.
+  - Collab: capability/storage pass, visual quality fail for unified collaboration scene.
+- Kept all-Agnes Poster/Collab visible as quality-risk modes rather than hard-blocking generation.
+
+### Release Intent
+
+- The tool is moving from “can the API path run?” to “does each selected provider clearly expose supported/unsupported functions and known quality risks?”.
+- Before stable, continue improving Poster/Collab quality or document them as known risks for Agnes while recommending stronger multi-reference providers for KV-grade acceptance.
+- Next UX pass should focus on result viewer operability, post-processing disabled states, and making quality-risk review easier for end users.
+
+## 2026-06-03 1.1.0-rc.5 Controlled Real Acceptance Release Update
+
+### Completed In This Pass
+
+- Promoted the build to `1.1.0-rc.5`.
 - Added `REAL_GENERATION_ACCEPTANCE.md` as the controlled real-generation acceptance log for the 1.1 stable decision.
 - Added `npm run real-acceptance:check` and included it in the full `npm run check` chain.
 - Recorded current workspace readiness: Google provider configured, masked credential present, five core asset roles present, synthetic Collab partner fixture available, and stored baseline results exist for Poster, Icon, Logo, Announcement, and Collab.
-- Kept fresh rc.4 real generation marked as pending live safety gate instead of triggering paid provider calls through a direct API/script path.
+- Kept fresh rc.5 real generation marked as pending live safety gate instead of triggering paid provider calls through a direct API/script path.
 - Preserved `MULTIMODE_ACCEPTANCE.md` as the visual pass/fail source for each mode.
 
 ### Release Intent
@@ -1479,7 +1528,7 @@
 ### Beta Follow-Up
 
 - Automated Logo background purity validation.
-- Automated Icon text, padding, border, and rounded-corner validation.
+- Automated Icon text, padding, border, and edge-mark validation; rounded corners are acceptable when intentional.
 - Real asset preprocessing and pixel-level output correction.
 - Persistent prompt templates for each production mode.
 

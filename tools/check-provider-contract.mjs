@@ -1,11 +1,14 @@
 import { readFileSync } from "node:fs";
 
-const requiredProviderIds = ["openai", "aigocode", "google", "deepseek", "claude", "qwen"];
+const requiredProviderIds = ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"];
 const requiredContractFiles = [
   "src/providers/contracts.ts",
   "src/providers/manifests.ts",
+  "src/provider-capabilities.js",
+  "src/data/providers.js",
   "src/providers/mock-adapter.ts",
   "src/providers/live-adapter-stubs.ts",
+  "src/providers/provider-capability-profiles.ts",
   "src/providers/index.ts",
 ];
 
@@ -22,8 +25,11 @@ function read(path) {
 
 const contracts = read("src/providers/contracts.ts");
 const manifests = read("src/providers/manifests.ts");
+const legacyCapabilities = read("src/provider-capabilities.js");
+const dataProviders = read("src/data/providers.js");
 const mockAdapter = read("src/providers/mock-adapter.ts");
 const liveAdapterStubs = read("src/providers/live-adapter-stubs.ts");
+const providerProfiles = read("src/providers/provider-capability-profiles.ts");
 const barrel = read("src/providers/index.ts");
 
 for (const file of requiredContractFiles) {
@@ -40,7 +46,10 @@ for (const providerId of requiredProviderIds) {
 
 for (const token of [
   "ProviderCapabilitySchema",
+  "ProviderImageCapabilityProfileSchema",
+  "ProviderImageReferenceInputSchema",
   "ProviderModelSlotSchema",
+  "ProviderPromptProfileSchema",
   "ProviderManifestSchema",
   "BriefGenerationRequestSchema",
   "ImageGenerationRequestSchema",
@@ -56,6 +65,54 @@ for (const capability of ["imageGeneration", "healthCheck"]) {
   if (!manifests.includes(capability)) {
     issues.push(`manifests.ts: expected at least one ${capability} capability`);
   }
+}
+
+for (const token of [
+  "referenceInput",
+  "extraBodyImage",
+  "inlineParts",
+  "promptProfile",
+  "textRendering",
+  "resultDelivery",
+]) {
+  if (!manifests.includes(token)) issues.push(`manifests.ts: missing provider image capability token ${token}`);
+}
+
+for (const providerId of ["openai", "aigocode", "google", "claude", "qwen"]) {
+  const row = legacyCapabilities.match(new RegExp(`${providerId}: \\[[^\\]]+\\]`))?.[0] || "";
+  if (!row.includes("styleReferenceAnalysis") || !row.includes("compositionReferenceAnalysis")) {
+    issues.push(`provider-capabilities.js: ${providerId} must expose both reference analysis capabilities`);
+  }
+}
+
+for (const providerId of ["deepseek", "agnes"]) {
+  const row = legacyCapabilities.match(new RegExp(`${providerId}: \\[[^\\]]+\\]`))?.[0] || "";
+  if (row.includes("styleReferenceAnalysis") || row.includes("compositionReferenceAnalysis")) {
+    issues.push(`provider-capabilities.js: ${providerId} must not expose unsupported reference analysis capabilities`);
+  }
+}
+
+for (const slotId of ["styleReference", "compositionReference"]) {
+  const slotBlock = dataProviders.match(new RegExp(`id: "${slotId}"[\\s\\S]*?\\n  },`))?.[0] || "";
+  if (!slotBlock.includes("gemini-2.5-flash") || !slotBlock.includes("gemini-2.5-pro")) {
+    issues.push(`data/providers.js: ${slotId} options must include current Gemini reference-analysis models`);
+  }
+  for (const forbidden of ["agnes-2.0-flash", "gemini-3.1-pro-preview", "gemini-3.5-flash"]) {
+    if (slotBlock.includes(forbidden)) {
+      issues.push(`data/providers.js: ${slotId} options must not include unsupported/stale model ${forbidden}`);
+    }
+  }
+}
+
+for (const token of [
+  "getProviderImageCapabilityProfile",
+  "providerCapabilityPromptNote",
+  "providerImagePromptMaxChars",
+  "providerUsesExtraBodyImageReferences",
+  "providerUsesInlineImageReferences",
+]) {
+  if (!providerProfiles.includes(token)) issues.push(`provider-capability-profiles.ts: missing ${token}`);
+  if (!barrel.includes(token)) issues.push(`providers/index.ts: missing provider capability export ${token}`);
 }
 
 for (const forbidden of ["fetch(", "XMLHttpRequest", "axios", "api.openai.com"]) {

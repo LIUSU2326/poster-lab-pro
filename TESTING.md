@@ -1,14 +1,33 @@
 # TESTING.md
 
-## 2026-06-03 1.1.0-rc.4 Controlled Real Acceptance Release Update
+## 2026-06-04 1.1.0-rc.6 Icon/Logo UI Alignment Release Update
 
 Desktop Test Path checks:
 
-- Verify the visible app version is `1.1.0-rc.4`.
+- Verify the visible app version is `1.1.0-rc.6`.
+- Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
+- Verify Logo mode exposes Logo 字标, pure background color choices, Logo 风格库, and the no-slogan text strategy.
+- Verify Icon mode exposes 画风预置, no-text/single-subject/64px-readable guardrails, and composition reference rotation.
+- Verify rounded Icon corners are not treated as a hard failure in current prompts or audit policy.
+- Verify the real-generation acceptance log remains bounded by the rc.5/rc.6 App live safety gate instead of direct API/script calls.
+
+Automated checks:
+
+- Run `npm run check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run user-test-readiness:check`.
+- Run `npm run multimode-acceptance:check`.
+- Run `npm run real-acceptance:check`.
+
+## 2026-06-03 1.1.0-rc.5 Controlled Real Acceptance Release Update
+
+Desktop Test Path checks:
+
+- Verify the visible app version is `1.1.0-rc.6`.
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify `REAL_GENERATION_ACCEPTANCE.md` exists and records controlled real-generation acceptance status.
 - Verify the local workspace has baseline results for Poster, Icon, Logo, Announcement, and Collab.
-- Verify fresh rc.4 real generation remains pending behind the App live safety gate unless the tester manually enables it.
+- Verify fresh rc.5 real generation remains pending behind the App live safety gate unless the tester manually enables it.
 - Verify the log forbids direct API/script execution that bypasses visible live safety confirmations.
 - Verify `REAL_GENERATION_ACCEPTANCE.md` links back to `MULTIMODE_ACCEPTANCE.md` for pass/fail criteria.
 
@@ -174,7 +193,7 @@ Desktop Test Path checks:
 - Verify the desktop bundle path is `release/mac/Poster Lab Pro.app`.
 - Verify Icon Result Quality Audit flags white outside corners plus dark rounded-edge app containers.
 - Verify `iconLightCornerDarkEdgeContainerRisk` is stored in metrics for that failure shape.
-- Verify Icon local edge repair can reduce the rounded-container risk without provider calls.
+- Verify Icon local edge repair can reduce harmful white-border/container risk without provider calls.
 - Do one low-cost Icon real-generation rerun after packaging if needed; stop after one image and judge only the key failure.
 
 Automated checks:
@@ -327,7 +346,7 @@ Result Quality Audit checks:
 
 - Verify `npm run result-quality-audit:check` passes.
 - Verify generated results can store `metadata.qualityAudit` without changing image pixels.
-- Verify Icon audit can flag transparent or dark rounded-corner mask risk.
+- Verify Icon audit allows intentional rounded corners but flags white-corner/dark-edge padded container risk.
 - Verify Logo audit adds a text accuracy review finding.
 - Verify Announcement audit adds a copy-safe review finding.
 - Verify Collab audit flags missing partner `brandLogo` so the UI can later ask for a blank partner plate or partner logo upload.
@@ -365,7 +384,7 @@ Regression checks:
 
 Known beta watch items:
 
-- Icon mode can still inherit an app-icon mask or dark rounded-container prior; keep this for 1.1 icon-specific post-processing.
+- Icon mode can still inherit white-border or dark-container framing that shrinks the subject; keep this for icon-specific post-processing.
 - Logo spelling remains model-dependent; keep dedicated logo/text refinement for 1.1.
 - Announcement should prefer editable blank copy-safe areas when exact operational copy matters.
 - Collab should reserve blank partner brand areas unless the user uploads an explicit partner logo.
@@ -407,7 +426,7 @@ Manual multi-mode live checks:
 
 Known beta watch items:
 
-- Image models may still prefer rounded app-icon masks in Icon mode; keep this as a manual review item until an icon-specific crop/background post-process is added.
+- Image models may still add white-border or dark-container framing in Icon mode; keep this as a manual review item until an icon-specific crop/background post-process is added.
 - Complex generated text can still drift; prefer copy-safe regions or post-production text refinement over forcing unreadable AI text.
 - If local network routing requires a proxy, run the dev server with the same proxy environment as the desktop shell.
 
@@ -1033,7 +1052,7 @@ Prompt builder checks:
 - Verify prompt packages include project, brand, character, asset, slogan, platform, mode, and scheme context.
 - Verify Collab prompt packages use `[Game Character]` and `[Collab Partner]` placeholders and do not invent appearance details.
 - Verify Logo prompt packages require pure solid background and wordmark-first output.
-- Verify Icon prompt packages require `1:1`, no text, full-bleed square, sharp corners, and uploaded subject fidelity.
+- Verify Icon prompt packages require `1:1`, no text, full-bleed square composition, clean edges, and uploaded subject fidelity.
 - Verify Announcement prompt packages include typography layout mode and group-shot guidance when relevant.
 - Verify prompt contracts do not call provider adapters, network APIs, storage writes, or DOM APIs.
 

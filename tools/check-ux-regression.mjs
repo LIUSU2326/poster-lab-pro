@@ -1,5 +1,6 @@
 import { pathToFileURL } from "node:url";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 
 const issues = [];
 const root = process.cwd();
@@ -14,6 +15,16 @@ function includes(html, token, label) {
 
 function excludes(html, token, label) {
   assert(!html.includes(token), `${label}: should not include "${token}"`);
+}
+
+function findButtonTag(html, marker, label) {
+  const markerIndex = html.indexOf(marker);
+  assert(markerIndex >= 0, `${label}: missing button marker "${marker}"`);
+  if (markerIndex < 0) return "";
+  const start = html.lastIndexOf("<button", markerIndex);
+  const end = html.indexOf(">", markerIndex);
+  assert(start >= 0 && end >= 0, `${label}: could not isolate button for "${marker}"`);
+  return start >= 0 && end >= 0 ? html.slice(start, end + 1) : "";
 }
 
 function clone(value) {
@@ -186,6 +197,7 @@ async function run() {
     state,
     setRuntimeWorkspaceSnapshot,
     getActiveMode,
+    getModeSchemes,
   } = await import(modulePath("src/state.js"));
   const { renderShell } = await import(modulePath("src/render/shell.js"));
   const { renderCenterBoard } = await import(modulePath("src/render/center-board.js"));
@@ -200,10 +212,12 @@ async function run() {
     includes(shell, "data-view=\"results\"", label);
     includes(shell, "data-view=\"archive\"", label);
     includes(shell, "data-action=\"open-settings\"", label);
+    includes(shell, "data-action=\"toggle-task-panel\"", label);
+    includes(shell, "aria-expanded=\"false\"", label);
     includes(shell, "live-gate-chip", label);
     includes(shell, "run-mode-chip", label);
     includes(shell, "data-action=\"toggle-theme\"", label);
-    includes(shell, "v1.1.0-rc.4", label);
+    includes(shell, "v1.1.0-rc.6", label);
     includes(shell, "release/mac/Poster Lab Pro.app", label);
     includes(shell, "data-action=\"generate-schemes\"", label);
     includes(shell, "data-action=\"simulate-asset-upload\"", label);
@@ -225,6 +239,22 @@ async function run() {
   includes(blockedShell, "data-action=\"open-settings\"", "blocked live shell");
   assert(/data-action="generate-schemes"[\s\S]*?disabled/.test(blockedShell), "blocked live shell: generate schemes should be disabled");
   assert(/data-action="submit-generation"[\s\S]*?disabled/.test(blockedShell), "blocked live shell: submit generation should be disabled");
+
+  const blockedSchemeSnapshot = makeSnapshot(workspaceSnapshot, "poster");
+  resetState({
+    state,
+    setRuntimeWorkspaceSnapshot,
+    workspaceSnapshot,
+    mode: "poster",
+    apiMode: "http",
+    source: "http",
+    snapshot: blockedSchemeSnapshot,
+  });
+  const blockedSchemeBoard = renderCenterBoard(modeSpecs.poster, null);
+  includes(blockedSchemeBoard, "scheme-card", "blocked live scheme board");
+  assert(/data-action="refresh-scheme"[\s\S]*?disabled/.test(blockedSchemeBoard), "blocked live scheme board: scheme refresh should be disabled");
+  assert(/class="render-button[^"]*is-live-blocked"[\s\S]*?data-action="submit-generation"[\s\S]*?disabled/.test(blockedSchemeBoard), "blocked live scheme board: card image render should be disabled");
+  includes(blockedSchemeBoard, "真实模型服务", "blocked live scheme board");
 
   const resultSnapshot = makeSnapshot(workspaceSnapshot, "poster");
   resetState({
@@ -263,13 +293,36 @@ async function run() {
   state.resultViewerOpen = true;
   state.view = "results";
   state.selectedResult = resultSnapshot.results[0].id;
+  state.provider = "google";
   const viewerBoard = renderCenterBoard(modeSpecs.poster, null);
   includes(viewerBoard, "role=\"dialog\"", "result viewer");
   includes(viewerBoard, "高清放大", "result viewer");
   includes(viewerBoard, "移除背景", "result viewer");
   includes(viewerBoard, "下载结果", "result viewer");
   includes(viewerBoard, "结果质检提示", "result viewer");
+  includes(viewerBoard, "Google AI Studio 不支持变体", "result viewer provider capability");
+  includes(viewerBoard, "is-unsupported-route", "result viewer provider capability");
+  const googleVariantButton = findButtonTag(viewerBoard, 'data-result-action="variant"', "google variant result action");
+  assert(googleVariantButton.includes("disabled"), "Google variant result action should be disabled instead of silently falling back");
 
+  state.provider = "agnes";
+  const agnesViewerBoard = renderCenterBoard(modeSpecs.poster, null);
+  const agnesVariantButton = findButtonTag(agnesViewerBoard, 'data-result-action="variant"', "agnes variant result action");
+  const agnesUpscaleButton = findButtonTag(agnesViewerBoard, 'data-result-action="upscale"', "agnes upscale result action");
+  assert(!agnesVariantButton.includes("disabled"), "Agnes variant result action should be enabled because Agnes supports imageEdit");
+  assert(agnesVariantButton.includes("is-native-route"), "Agnes variant result action should stay on the current provider");
+  assert(agnesUpscaleButton.includes("disabled"), "Agnes upscale result action should be disabled when no supported upscale provider is selected");
+
+  state.activeMode = "poster";
+  state.provider = "agnes";
+  state.providerRoutePlan = "agnes-core";
+  state.providerSlotRoutes = {
+    ...state.providerSlotRoutes,
+    concept: { providerId: "agnes", model: "agnes-2.0-flash" },
+    image: { providerId: "agnes", model: "agnes-image-2.1-flash" },
+    styleReference: { providerId: "google", model: "gemini-2.5-flash" },
+    compositionReference: { providerId: "google", model: "gemini-2.5-flash" },
+  };
   state.settingsOpen = true;
   const settings = renderSettingsSheet();
   includes(settings, "settings-layer", "settings sheet");
@@ -280,7 +333,16 @@ async function run() {
   includes(settings, "data-action=\"test-provider-connection\"", "settings sheet");
   includes(settings, "data-live-cost-cap", "settings sheet");
   includes(settings, "live-gate-checks", "settings sheet");
+  includes(settings, "data-live-toggle=\"enabled\" aria-label=\"开启实机安全闸\"", "settings sheet");
+  assert(/data-live-toggle="confirmations\.liveRun"[\s\S]*?aria-label=/.test(settings), "settings sheet: live confirmation checkboxes should have aria labels");
   includes(settings, "data-action=\"test-provider-route-plan\"", "settings sheet");
+  includes(settings, "Agnes 核心测试", "settings sheet");
+  includes(settings, "Agnes 免费实测路线", "settings sheet");
+  includes(settings, "data-action=\"apply-agnes-core-route\"", "settings sheet");
+  includes(settings, "画风/构图参考分析仍按模型能力闸门处理", "settings sheet");
+  includes(settings, "live-gate-quality-warnings", "settings sheet");
+  includes(settings, "Agnes 质量复核", "settings sheet");
+  includes(settings, "正式交付前需要人工复核", "settings sheet");
 
   state.generationChoiceOpen = true;
   state.settingsOpen = false;
@@ -328,12 +390,48 @@ async function run() {
     source: "http",
     snapshot: failedQueueSnapshot,
   });
+  state.taskOpen = true;
   const failedShell = renderShell(getActiveMode(), null);
+  includes(failedShell, "aria-expanded=\"true\"", "failed queue shell");
   includes(failedShell, "重试失败", "failed queue shell");
   includes(failedShell, "失败原因", "failed queue shell");
   includes(failedShell, "data-action=\"retry-failed-images\"", "failed queue shell");
 
   excludes(failedShell, "undefined", "failed queue shell");
+
+  for (const mode of ["announcement", "logo", "icon"]) {
+    const polluted = makeRuntimeScheme(mode, `polluted-${mode}-scheme`);
+    polluted.title = `${mode} stale poster KV scheme`;
+    polluted.brief = "KV构图母版：Boss 破门压迫海报。电影级游戏海报，Logo/文案安全区，Slogan处理。";
+    polluted.promptBlocks = [
+      { title: "视觉方向", text: "Mandatory KV Composition Architecture for a cinematic game poster." },
+      { title: "English Prompt", text: "Cinematic Game KV, BOSS pressure, slogan treatment." },
+    ];
+    const clean = makeRuntimeScheme(mode, `clean-${mode}-scheme`);
+    clean.title = `${mode} clean generated scheme`;
+    clean.brief = `${mode} mode-specific generated scheme without poster KV contamination.`;
+    clean.promptBlocks = [
+      { title: "English Prompt", text: `${mode} mode only prompt for current-mode rendering.` },
+    ];
+    const contaminatedSnapshot = makeSnapshot(workspaceSnapshot, mode, { scheme: polluted, result: false });
+    contaminatedSnapshot.schemes.push(clean);
+    resetState({
+      state,
+      setRuntimeWorkspaceSnapshot,
+      workspaceSnapshot,
+      mode,
+      apiMode: "http",
+      source: "http",
+      snapshot: contaminatedSnapshot,
+    });
+    const visibleSchemes = getModeSchemes();
+    assert(visibleSchemes.some((scheme) => scheme.id === clean.id), `${mode} contamination filter: clean scheme should remain visible`);
+    assert(!visibleSchemes.some((scheme) => scheme.id === polluted.id), `${mode} contamination filter: stale poster KV scheme should be hidden`);
+  }
+
+  const directionSection = readFileSync(path.join(root, "src/react/DirectionSection.tsx"), "utf8");
+  includes(directionSection, "画风参考已上传，点击更换图片", "style reference accessibility");
+  includes(directionSection, "点击更换画风参考", "style reference accessibility");
 }
 
 await run();

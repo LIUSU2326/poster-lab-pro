@@ -21,6 +21,20 @@ type DirectionSectionProps = {
 const acceptedImageTypes = ["image/png", "image/jpeg", "image/webp"];
 
 const posterStyleLibrary = [
+  "3D 潮流粘土",
+  "二次元幻彩",
+  "史诗暗金 RPG",
+  "赛博霓虹",
+  "欧美扁平矢量",
+  "国风水墨",
+  "复古街机像素",
+  "仙侠流光云海",
+  "吉卜力手绘",
+  "现代商务极简",
+  "电竞猛兽图腾",
+  "至尊钻金",
+  "街头涂鸦",
+  "蒸汽机械",
   "精致休闲奇幻",
   "电影感奖励揭示",
   "角色反应组合",
@@ -58,15 +72,23 @@ const posterStyleLibrary = [
   "轻奢产品",
   "手绘绘本",
 ];
+const logoBackgroundOptions = [
+  { label: "白底", value: "#ffffff" },
+  { label: "黑底", value: "#111827" },
+  { label: "绿幕", value: "#16a34a" },
+  { label: "深蓝", value: "#0f172a" },
+  { label: "暖橙", value: "#fb923c" },
+  { label: "透明后期", value: "#f8fafc" },
+];
 const styleAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen"]);
 
 function normalizeInitialValues(values: ModeForm): ModeForm {
   const parsed = ModeFormSchema.parse(values);
-  if (parsed.mode !== "poster") return parsed;
+  if (!supportsStyleTags(parsed)) return parsed;
   return {
     ...parsed,
     styleTags: uniqueStrings(parsed.styleTags).slice(0, 1),
-  };
+  } as ModeForm;
 }
 
 function rotateStrings(items: string[], offset: number): string[] {
@@ -76,6 +98,10 @@ function rotateStrings(items: string[], offset: number): string[] {
 
 function uniqueStrings(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
+}
+
+function supportsStyleTags(values: ModeForm): values is Extract<ModeForm, { mode: "poster" | "logo" | "icon" }> {
+  return values.mode === "poster" || values.mode === "logo" || values.mode === "icon";
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -88,7 +114,28 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 function routeProviderForSlot(slot: string): string {
-  return state.providerSlotRoutes?.[slot]?.providerId || state.provider;
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const routedProvider = state.providerSlotRoutes?.[slot]?.providerId || "";
+  const currentProvider = state.provider || "";
+  const configured = (providerId: string): boolean => {
+    const provider = snapshot.providerConfigs?.[providerId];
+    return Boolean(
+      (state.providerCredential?.providerId === providerId && state.providerCredential?.configured) ||
+      (state.providerConnection?.providerId === providerId && state.providerConnection?.ok) ||
+      provider?.hasApiKey ||
+      provider?.status === "success",
+    );
+  };
+  if (
+    slot === "styleReference"
+    && currentProvider
+    && !styleAnalysisProviderIds.has(currentProvider)
+    && configured(currentProvider)
+    && (!routedProvider || !configured(routedProvider))
+  ) {
+    return currentProvider;
+  }
+  return routedProvider || currentProvider;
 }
 
 function analysisApiReady(providerId: string): boolean {
@@ -187,7 +234,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   );
   const recommendedStyles = rotateStrings(styleLibrary, state.directionLibraryOffset?.[mode] || 0).slice(0, 6);
   const filteredStyles = styleLibrary.filter((style) => style.toLowerCase().includes(search.trim().toLowerCase()));
-  const activeTags = currentValues.mode === "poster" ? uniqueStrings(currentValues.styleTags).slice(0, 1) : [];
+  const activeTags = supportsStyleTags(currentValues) ? uniqueStrings(currentValues.styleTags).slice(0, 1) : [];
   const styleProviderId = routeProviderForSlot("styleReference");
   const displayStylePreview = stylePreview && !stylePreviewBroken ? stylePreview : "";
   const canExtractStyle = Boolean(displayStylePreview) && analysisApiReady(styleProviderId) && styleAnalysisProviderReady(styleProviderId);
@@ -200,18 +247,18 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
     : "";
   const styleNote = styleAnalysisMessage || styleDisabledReason;
 
-  const commitPosterTags = async (nextTags: string[]) => {
-    if (currentValues.mode !== "poster") return;
+  const commitStyleTags = async (nextTags: string[]) => {
+    if (!supportsStyleTags(currentValues)) return;
     const safeTags = uniqueStrings(nextTags).slice(0, 1);
     const nextValues = { ...currentValues, styleTags: safeTags } as ModeForm;
-    form.setValue("styleTags", safeTags, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+    form.setValue("styleTags" as never, safeTags as never, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
     await commit(nextValues);
   };
 
   const toggleStyle = async (chip: string) => {
-    if (currentValues.mode !== "poster") return;
+    if (!supportsStyleTags(currentValues)) return;
     const nextTags = activeTags.includes(chip) ? [] : [chip];
-    await commitPosterTags(nextTags);
+    await commitStyleTags(nextTags);
   };
 
   const handleStyleReferenceFile = async (file?: File) => {
@@ -376,6 +423,48 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       document.body,
     )
     : null;
+  const stylePicker = (title: string, recommendationLabel = "随机推荐") => (
+    <>
+      <button className="library-head library-toggle" type="button" onClick={() => setShowLibrary(!showLibrary)}>
+        <strong>{title}</strong>
+        <small>{showLibrary ? "收起" : `${styleLibrary.length} 款可选`}</small>
+      </button>
+
+      <div className="style-recommendation-head">
+        <strong>{recommendationLabel}</strong>
+        <small>6 个画风</small>
+      </div>
+      <div className="chip-grid style-recommendation-grid">
+        {recommendedStyles.map((chip) => (
+          <button
+            className={activeTags.includes(chip) ? "active" : ""}
+            type="button"
+            key={chip}
+            onClick={() => void toggleStyle(chip)}
+          >
+            {chip}
+          </button>
+        ))}
+      </div>
+
+      <div className="selected-style-strip" aria-live="polite">
+        <strong>已选画风</strong>
+        {activeTags.length > 0 ? (
+          <span>
+            {activeTags.map((chip) => (
+              <button type="button" key={chip} onClick={() => void toggleStyle(chip)}>
+                {chip}
+              </button>
+            ))}
+          </span>
+        ) : (
+          <small>未选择</small>
+        )}
+      </div>
+
+      {styleLibraryDialog}
+    </>
+  );
 
   if (mode === "announcement" && currentValues.mode === "announcement") {
     const presets = ["维护公告", "版本更新", "限时礼包"];
@@ -462,10 +551,13 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   if (mode === "icon" && currentValues.mode === "icon") {
     return (
       <div className="direction-section-rhf" data-rhf-direction-section>
+        {stylePicker("画风预置", "推荐图标风格")}
         <div className="guardrail-chips">
           <span>锁定 1:1</span>
           <span>无文字</span>
-          <span>满铺直角</span>
+          <span>单一强主体</span>
+          <span>64px 可读</span>
+          <span>无白边</span>
         </div>
         <label className="direction-toggle">
           <input
@@ -484,48 +576,63 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
     );
   }
 
+  if (mode === "logo" && currentValues.mode === "logo") {
+    const updateWordmark = (wordmark: string) => {
+      const nextValues = { ...currentValues, wordmark };
+      form.setValue("wordmark", wordmark, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      void commit(nextValues);
+    };
+    const updateBackgroundColor = (backgroundColor: string) => {
+      const nextValues = { ...currentValues, backgroundColor };
+      form.setValue("backgroundColor", backgroundColor, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      void commit(nextValues);
+    };
+
+    return (
+      <div className="direction-section-rhf" data-rhf-direction-section>
+        <div className="mode-design-card logo-design-card">
+          <label className="mode-text-field">
+            <span>Logo 字标</span>
+            <input
+              aria-label="Logo 字标"
+              value={currentValues.wordmark}
+              placeholder="例如 Pizza Kitchen Adventures"
+              onChange={(event) => updateWordmark(event.currentTarget.value)}
+            />
+          </label>
+          <div className="logo-background-picker" aria-label="Logo 纯色背景">
+            <strong>纯色背景</strong>
+            <div className="logo-background-grid">
+              {logoBackgroundOptions.map((option) => (
+                <button
+                  className={currentValues.backgroundColor === option.value ? "active" : ""}
+                  type="button"
+                  key={option.value}
+                  onClick={() => updateBackgroundColor(option.value)}
+                >
+                  <i style={{ background: option.value }} aria-hidden="true" />
+                  <span>{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="guardrail-chips">
+            <span>字标/标识主体</span>
+            <span>纯色背景</span>
+            <span>可抠图</span>
+            <span>不做海报场景</span>
+          </div>
+        </div>
+        {stylePicker("Logo 风格库", "推荐品牌风格")}
+        {upload}
+      </div>
+    );
+  }
+
   if (mode === "poster" && currentValues.mode === "poster") {
     return (
       <div className="direction-section-rhf" data-rhf-direction-section>
-        <button className="library-head library-toggle" type="button" onClick={() => setShowLibrary(!showLibrary)}>
-          <strong>画风库</strong>
-          <small>{showLibrary ? "收起" : `${styleLibrary.length} 款可选`}</small>
-        </button>
-
-        <div className="style-recommendation-head">
-          <strong>随机推荐</strong>
-          <small>6 个画风</small>
-        </div>
-        <div className="chip-grid style-recommendation-grid">
-          {recommendedStyles.map((chip) => (
-            <button
-              className={activeTags.includes(chip) ? "active" : ""}
-              type="button"
-              key={chip}
-              onClick={() => void toggleStyle(chip)}
-            >
-              {chip}
-            </button>
-          ))}
-        </div>
-
-        <div className="selected-style-strip" aria-live="polite">
-          <strong>已选画风</strong>
-          {activeTags.length > 0 ? (
-            <span>
-              {activeTags.map((chip) => (
-                <button type="button" key={chip} onClick={() => void toggleStyle(chip)}>
-                  {chip}
-                </button>
-              ))}
-            </span>
-          ) : (
-            <small>未选择</small>
-          )}
-        </div>
-
-        {styleLibraryDialog}
-
+        {stylePicker("画风库")}
         {upload}
       </div>
     );
@@ -572,6 +679,8 @@ function StyleReferenceUpload({
       <button
         className="style-reference-main"
         type="button"
+        aria-label={previewUrl ? "画风参考已上传，点击更换图片" : title || "上传画风参考"}
+        title={previewUrl ? "点击更换画风参考" : title || "上传画风参考"}
         onClick={() => inputRef.current?.click()}
         onDragOver={onDragOver}
         onDrop={onDrop}

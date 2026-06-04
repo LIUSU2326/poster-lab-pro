@@ -106,6 +106,14 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
       compositionReference: "qwen3.6-plus",
     },
   },
+  agnes: {
+    baseUrl: "https://apihub.agnes-ai.com/v1",
+    defaultModel: "agnes-image-2.1-flash",
+    modelSlots: {
+      concept: "agnes-2.0-flash",
+      image: "agnes-image-2.1-flash",
+    },
+  },
 };
 
 export function createProjectBriefDefaults(mode: ProductionMode = "poster"): ProjectBriefForm {
@@ -135,13 +143,16 @@ export function createSloganSettingsDefaults(): SloganSettingsForm {
 
 export function createProviderConfigDefaults(providerId: ProviderId = "openai"): ProviderConfigForm {
   const defaults = providerDefaults[providerId] || providerDefaults.openai;
+  const modelSlots = providerId === "openai"
+    ? { ...defaultProviderModelSlots, ...defaults.modelSlots }
+    : { ...defaults.modelSlots };
   return {
     providerId,
     enabled: providerId === "openai",
     apiKey: "",
     baseUrl: defaults.baseUrl,
     defaultModel: defaults.defaultModel,
-    modelSlots: { ...defaultProviderModelSlots, ...defaults.modelSlots },
+    modelSlots,
   };
 }
 
@@ -168,6 +179,7 @@ export function createModeFormDefaults(mode: ProductionMode = "poster"): ModeFor
     },
     logo: {
       mode: "logo",
+      styleTags: [],
       wordmark: defaultProjectName,
       solidBackground: true,
       backgroundColor: "#ffffff",
@@ -175,6 +187,7 @@ export function createModeFormDefaults(mode: ProductionMode = "poster"): ModeFor
     },
     icon: {
       mode: "icon",
+      styleTags: [],
       aspectRatio: "1:1",
       noText: true,
       fullBleedSquare: true,

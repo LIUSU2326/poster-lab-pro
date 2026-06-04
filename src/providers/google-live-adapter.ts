@@ -30,6 +30,10 @@ import {
 } from "./contracts";
 import { getProviderManifest } from "./manifests";
 import {
+  providerCapabilityPromptNote,
+  providerUsesInlineImageReferences,
+} from "./provider-capability-profiles";
+import {
   posterCinematicKvQualityDirective,
   posterHeroPerformanceScaleLock,
   posterIdentitySafeMotionRule,
@@ -214,7 +218,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
     if (request.context.mode === "icon") {
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
-        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, no poster scene complexity, no invented shield/weapon/tool/accessory.",
+        "Composition bar: premium 1:1 square icon artwork with full-bleed clarity, one dominant subject, intentional polished edge treatment, no white border, no accidental corner padding, no separate dark container that shrinks the subject, no text, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory. Rounded corners or badge-like app-icon styling are acceptable when intentional and high quality.",
       ].join(" ");
     }
     if (request.context.mode === "logo") {
@@ -714,13 +718,20 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
   const isPosterWithReferences = request.context.mode === "poster" && request.assets.some((asset) =>
     isPosterIntegratedReferenceAsset(asset),
   );
+  const usesInlineReferences = providerUsesInlineImageReferences(GOOGLE_PROVIDER_ID);
   const scenePlateOnly = request.context.mode === "poster" && /Identity-Safe Game Campaign KV Plate|SCENE PLATE only/i.test(request.prompt);
   const withholdLogoTextReferences = request.context.mode === "logo" && isLogoCopySafeBlankWordmarkPrompt(request.prompt);
   const referenceParts = await referencePartsForAssets(request.assets, {
     mode: request.context.mode,
     scenePlateOnly,
-    requireInlineIntegratedReferences: isPosterWithReferences && !scenePlateOnly,
+    requireInlineIntegratedReferences: usesInlineReferences && isPosterWithReferences && !scenePlateOnly,
     withholdLogoTextReferences,
+  });
+  const providerNote = providerCapabilityPromptNote({
+    providerId: GOOGLE_PROVIDER_ID,
+    mode: request.context.mode,
+    hasReferenceAssets: request.assets.length > 0,
+    hasTextTargets: /slogan|wordmark|announcement|copy|logo text|typography/i.test(request.prompt),
   });
   const finalPlateRule = isPosterWithReferences && scenePlateOnly
     ? [
@@ -769,7 +780,7 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
       modeAssetFusionDirective(request.context.mode, request.assets),
       "The inline visual references above override loose text guesses. Preserve each reference according to its semantic duty while adapting it to the current mode's visual goal.",
       request.context.mode === "icon"
-        ? "Icon mode requires clean full-canvas 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no OS app-icon mask or rounded black container, no invented shield/weapon/tool/accessory, minimal background detail, high contrast, and 64px readability."
+        ? "Icon mode requires clean full-bleed 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no white border, no accidental padding, no separate dark container that shrinks the subject, no invented shield/weapon/tool/accessory, minimal background detail, high contrast, and 64px readability. Rounded corners are acceptable when intentional and polished."
         : "",
       request.context.mode === "logo"
         ? "Logo mode requires wordmark/mark system clarity. Follow Logo Text Strategy exactly. If the strategy is copy-safe blank, render no readable letters or project-title fragments; use a polished blank wordmark plate, emblem, badge, or mark system. Do not turn the result into a cinematic scene and do not invent fake replacement lettering or pseudo-letters for uploaded logo references."
@@ -781,6 +792,7 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
   return [
     ...referenceParts,
     { text: imagePrompt(request) },
+    { text: providerNote },
     ...(finalPlateRule ? [{ text: finalPlateRule }] : []),
     ...(finalIdentityRule ? [{ text: finalIdentityRule }] : []),
     ...(finalGenericFusionRule ? [{ text: finalGenericFusionRule }] : []),
@@ -843,8 +855,8 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
   if (mode === "icon") {
     return [
       ...shared,
-      "Icon mode hard lock: 1:1 square, one single dominant subject, no text, no logo lettering, no captions, no poster scene, no multi-character battle, no OS app icon rounded mask, no black rounded container, no empty corner padding.",
-      "Icon prompt must prioritize bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square corners, crisp focal detail, and 64px readability.",
+      "Icon mode hard lock: 1:1 square, one single dominant subject, no text, no logo lettering, no captions, no poster scene, no multi-character battle, no empty corner padding, no white border, and no separate container that shrinks the subject. Rounded corners are acceptable when intentional and polished.",
+      "Icon prompt must prioritize bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square composition, crisp focal detail, and 64px readability.",
       "If several uploaded assets exist, choose one best subject or brand motif for each scheme instead of crowding them together.",
       "slogans must be an empty object for icon mode.",
     ];
@@ -1441,8 +1453,8 @@ function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { bri
   switch (mode) {
     case "icon":
       return {
-        brief: "Icon 模式锁定：1:1 方形、单一主主体、无文字、无海报/KV 场景、低背景复杂度、全画布方角、64px 仍可读。",
-        prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject, absolutely no text or logo lettering, no poster scene, no multi-character battle, no rounded app-mask/container, full-bleed sharp square corners, minimal background, high contrast, readable at 64px.",
+        brief: "Icon 模式锁定：1:1 方形、单一主主体、无文字、无海报/KV 场景、低背景复杂度、64px 仍可读；圆角可接受但不能有白边或劣质容器框。",
+        prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject, absolutely no text or logo lettering, no poster scene, no multi-character battle, full-bleed square composition, no white border or accidental padding, minimal background, high contrast, readable at 64px. Rounded corners are acceptable when intentional and polished.",
       };
     case "logo":
       return {

@@ -17,6 +17,7 @@ const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1bet
 const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 const DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com/v1";
 const DEFAULT_QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 
 export const ProviderConnectionTransportRequestSchema = z.object({
   url: z.string().url(),
@@ -133,6 +134,7 @@ function probeUrl(config: StoredProviderConfig): string {
   if (config.providerId === "deepseek") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_DEEPSEEK_BASE_URL)}/models`;
   if (config.providerId === "claude") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_CLAUDE_BASE_URL)}/models`;
   if (config.providerId === "qwen") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_QWEN_BASE_URL)}/models`;
+  if (config.providerId === "agnes") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_AGNES_BASE_URL)}/models`;
   return normalizeBaseUrl(config.baseUrl, "");
 }
 
@@ -189,6 +191,9 @@ function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids:
   if (strictModel) return false;
   if ((providerId === "openai" || providerId === "aigocode") && defaultModel.startsWith("gpt-image-")) {
     return ids.some((id) => id.startsWith("gpt-image-"));
+  }
+  if (providerId === "agnes" && defaultModel.startsWith("agnes-image-")) {
+    return ids.some((id) => id.startsWith("agnes-image-"));
   }
   if (providerId === "google" && defaultModel.startsWith("gemini-")) {
     return ids.some((id) => id.startsWith("gemini-"));

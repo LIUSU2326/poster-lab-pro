@@ -83,12 +83,19 @@ for (const token of [
   "assetSemanticRole",
   "assetFusionStrategy",
 	  "modeAssetFusionDirective",
-	  "redactLogoCopySafeWordmarkPrompt",
+  "redactLogoCopySafeWordmarkPrompt",
 	  "COPY-SAFE BLANK WORDMARK ENFORCEMENT",
 	  "LOGO_COPY_SAFE_VISUAL_TOKEN_REPLACEMENTS",
 	  "word fragments are intentionally redacted",
 	  "shouldUsePosterScenePlateFallback",
+  "providerImagePromptMaxChars",
+  "providerImageAssetsForRequest",
   "AI integrated redraw",
+  "Non-Negotiable Poster Visual Contract",
+  "Non-Negotiable Collab Dual-Subject Contract",
+  "Pre-render checklist",
+  "BOSS anchor requirement",
+  "Slogan anchor requirement",
   "isExampleAssetUrl",
   "demo placeholder URLs",
   "re-uploaded",
@@ -208,8 +215,31 @@ async function runRuntimeCheck() {
     if (!mapped.request.prompt.includes("Default pipeline: AI integrated redraw")) {
       issues.push("poster image request should default to AI integrated redraw");
     }
+    if (mapped.request.prompt.length > 12000) {
+      issues.push("openai poster image request should stay inside the provider-neutral prompt budget");
+    }
     if (!mapped.request.prompt.includes("Uploaded Asset Role Semantics and Fusion Strategies")) {
       issues.push("poster image request should include semantic asset fusion strategies");
+    }
+    const agnesMapped = mapperModule.mapPromptPackageToProviderRequest({
+      promptPackage: imagePrompt,
+      snapshot,
+      providerId: "agnes",
+      kind: "imageGeneration",
+      traceId: "trace-provider-request-agnes-profile-check",
+    });
+    if (agnesMapped.request.prompt.length > 10000) {
+      issues.push("agnes poster image request should use the provider image capability promptMaxChars profile");
+    }
+    if (!agnesMapped.request.prompt.includes("Default pipeline: AI integrated redraw")) {
+      issues.push("agnes provider profile must not replace the shared integrated redraw Poster logic");
+    }
+    if (agnesMapped.request.assets.some((asset) =>
+      /semanticRole=(brandLogo|compositionReference)/.test(asset.description || ""))) {
+      issues.push("agnes poster image request should withhold raw logo/composition references and keep raw image intake to identity, threat, and style anchors");
+    }
+    if (!agnesMapped.request.assets.some((asset) => /semanticRole=protagonist/.test(asset.description || ""))) {
+      issues.push("agnes poster image request should keep uploaded protagonist raw reference");
     }
     for (const priorityToken of [
       "The uploaded subjects and brand elements must look repainted into the same scene",
@@ -218,6 +248,7 @@ async function runRuntimeCheck() {
       "Subject scale and weight requirement",
       "Placeholder annotation rule",
       "Scheme text sanitation rule",
+      "Selected Scheme",
       "Reference pose release",
       "BOSS performance lock",
       "Static scheme action rewrite",
@@ -227,6 +258,9 @@ async function runRuntimeCheck() {
       "Allocate one readable campaign-safe logo treatment",
       "do not invent look-alike words",
       "Slogan visibility requirement",
+      "Non-Negotiable Poster Visual Contract",
+      "Pre-render checklist",
+      "Slogan anchor requirement",
       "large secondary campaign object",
       "scene-derived",
       "No duplicate uploaded asset",
@@ -273,9 +307,12 @@ async function runRuntimeCheck() {
     for (const retainedToken of [
       "Mode Guardrails",
       "Hard KV Exclusions",
+      "Selected Scheme",
       "Scheme text sanitation rule",
       "Contact and occlusion audit",
       "Slogan visibility requirement",
+      "Non-Negotiable Poster Visual Contract",
+      "Pre-render checklist",
       "large secondary campaign object",
       "scene-derived",
     ]) {
@@ -404,6 +441,25 @@ async function runRuntimeCheck() {
     if (!userMapped.request.prompt.includes("Default pipeline: AI integrated redraw")) {
       issues.push("user-asset poster request should use AI integrated redraw by default");
     }
+    if (!userMapped.request.prompt.includes("BOSS anchor requirement")) {
+      issues.push("user-asset poster request should make uploaded BOSS a non-negotiable visual anchor");
+    }
+    const userAgnesMapped = mapperModule.mapPromptPackageToProviderRequest({
+      promptPackage: userAssetPrompt,
+      snapshot: userAssetSnapshot,
+      providerId: "agnes",
+      kind: "imageGeneration",
+    });
+    if (!userAgnesMapped.request.assets.some((asset) => /semanticRole=protagonist/.test(asset.description || ""))) {
+      issues.push("agnes user-asset poster request should keep uploaded protagonist raw reference");
+    }
+    if (!userAgnesMapped.request.assets.some((asset) => /semanticRole=antagonist/.test(asset.description || ""))) {
+      issues.push("agnes user-asset poster request should keep uploaded BOSS/threat raw reference");
+    }
+    if (userAgnesMapped.request.assets.some((asset) =>
+      /semanticRole=(brandLogo|compositionReference)/.test(asset.description || ""))) {
+      issues.push("agnes user-asset poster request should withhold raw logo/composition references");
+    }
     if (userMapped.request.prompt.includes("Identity-Safe Game Campaign KV Plate") || userMapped.request.prompt.includes("SCENE PLATE only")) {
       issues.push("user-asset poster request should not use scene-plate fallback unless explicitly forced");
     }
@@ -497,35 +553,35 @@ async function runRuntimeCheck() {
         "Default pipeline: AI integrated redraw",
       ],
 	      logo: [
-	        "Mode Quality Bar",
-	        "Logo quality target",
-	        "Logo Text Strategy",
-	        "copySafeBlankWordmark",
-	        "COPY-SAFE BLANK WORDMARK ENFORCEMENT",
-	        "polished blank wordmark plate",
-	        "do not render readable letters",
-	        "blank wordmark plate/mark system is the primary subject",
+	        "Logo Asset Task",
+	        "standalone game brand mark asset",
+	        "blank non-letter title plaque",
+	        "No readable text anywhere",
+	        "zero readable letters",
 	        "pure solid-color background",
-	        "Uploaded logos are brand references",
-        "without fake replacement text",
+	        "not a scene, poster",
+        "zero characters",
       ],
       announcement: [
-        "Mode Quality Bar",
-        "Announcement quality target",
-        "Announcement Copy Safety Strategy",
-        "editable copy-safe panel",
-        "copy-safe area",
-        "uploaded characters or key subjects can act as guide",
-        "do not cover the headline/copy zone",
+        "Game Announcement Card Task",
+        "large calm editable copy area",
+        "natural UI panel",
+        "Keep the copy area intentionally blank",
+        "small blank decorative brand badge",
+        "No character squads",
+        "blank editable copy zone",
+        "No readable generated text",
       ],
       collab: [
         "Mode Quality Bar",
         "Collab quality target",
+        "Non-Negotiable Collab Dual-Subject Contract",
         "Collab Brand Safety Strategy",
         "blankPartnerBrandPlate",
         "[Game Character]",
         "[Collab Partner]",
         "must remain separate visible entities",
+        "The image fails if the two sides",
         "do not merge characters",
         "Collab target: separate identities and logos",
       ],

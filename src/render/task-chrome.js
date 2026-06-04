@@ -6,6 +6,7 @@ export function renderTaskChrome(activeMode) {
   const queue = createQueueViewModel(activeMode);
   const liveGate = getLiveGateViewModel(activeMode);
   const manual = getManualLiveTestViewModel(activeMode);
+  const detailsOpen = Boolean(state.taskOpen);
   const imageFailureCount = queue.rows.filter((row) => row.kind === "imageGeneration" && row.status === "failed").length;
   const queueTone = queue.summary.failed > 0
     ? "warning"
@@ -17,13 +18,12 @@ export function renderTaskChrome(activeMode) {
     : "无任务";
 
   return `
-    <aside class="task-chrome compact-only" aria-label="任务与实机安全">
-      <button class="task-slim queue-slim ${queueTone}" type="button" aria-label="队列进度">
+    <aside class="task-chrome compact-only ${detailsOpen ? "open" : "collapsed"}" aria-label="任务与实机安全" data-task-open="${detailsOpen ? "true" : "false"}">
+      <button class="task-slim queue-slim ${queueTone}" type="button" data-action="toggle-task-panel" aria-expanded="${detailsOpen ? "true" : "false"}" aria-controls="task-detail-panel" aria-label="${detailsOpen ? "收起任务详情" : "展开任务详情"}">
         <span>QUEUE</span>
         <b>${escapeHtml(queueLabel)}</b>
+        <small class="task-slim-cue">${detailsOpen ? "收起" : "展开"}</small>
       </button>
-      ${renderQueueContext(queue, queueTone, imageFailureCount)}
-      ${renderResultOperationContext()}
       <button class="task-slim live-gate-slim ${liveGate.tone}" type="button" data-action="open-settings">
         <span>安全开关</span>
         <b>${escapeHtml(liveGate.stateLabel)}</b>
@@ -32,14 +32,21 @@ export function renderTaskChrome(activeMode) {
         <span>MANUAL LIVE TEST</span>
         <b>${escapeHtml(manual.status)}</b>
       </button>
-      <div class="live-gate-context ${liveGate.tone}">
-        <span>${escapeHtml(liveGate.providerName)}</span>
-        <strong>${escapeHtml(liveGate.blockerCount ? `待完成 ${liveGate.blockerCount} 项安全检查` : liveGate.stateLabel)}</strong>
-      </div>
-      <div class="manual-live-context ${manual.tone}">
-        <span>RESULT FILES</span>
-        <strong>${escapeHtml(`${manual.persistedFileCount}/${manual.resultCount}`)}</strong>
-      </div>
+      ${detailsOpen ? `
+        <div class="task-detail-panel" id="task-detail-panel">
+          ${renderQueueContext(queue, queueTone, imageFailureCount)}
+          ${renderResultOperationContext()}
+          <div class="live-gate-context ${liveGate.tone}">
+            <span>${escapeHtml(liveGate.providerName)}</span>
+            <strong>${escapeHtml(liveGate.qualityRisk ? liveGate.qualityRiskLabel : liveGate.blockerCount ? `待完成 ${liveGate.blockerCount} 项安全检查` : liveGate.stateLabel)}</strong>
+            ${liveGate.qualityRiskDetail ? `<small>${escapeHtml(liveGate.qualityRiskDetail)}</small>` : ""}
+          </div>
+          <div class="manual-live-context ${manual.tone}">
+            <span>RESULT FILES</span>
+            <strong>${escapeHtml(`${manual.persistedFileCount}/${manual.resultCount}`)}</strong>
+          </div>
+        </div>
+      ` : ""}
     </aside>
   `;
 }

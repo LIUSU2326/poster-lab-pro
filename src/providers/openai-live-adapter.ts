@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ProviderConfigFormSchema, type ProviderConfigForm } from "../schema/zod";
+import { ProviderConfigFormSchema, type ProviderConfigForm, type ProviderId } from "../schema/zod";
 import {
   ImageGenerationRequestSchema,
   ProviderHealthResponseSchema,
@@ -19,16 +19,22 @@ import {
   assetSemanticRole,
   modeAssetFusionDirective,
 } from "../assets/semantic-roles";
+import {
+  providerCapabilityPromptNote,
+  providerUsesExtraBodyImageReferences,
+} from "./provider-capability-profiles";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
+type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "agnes">;
 
 const OpenAIImageDataSchema = z
   .object({
-    url: z.string().url().optional(),
-    b64_json: z.string().min(1).optional(),
-    revised_prompt: z.string().optional(),
+    url: z.string().url().nullable().optional(),
+    b64_json: z.string().min(1).nullable().optional(),
+    revised_prompt: z.string().nullable().optional(),
   })
   .passthrough();
 
@@ -59,17 +65,18 @@ export type OpenAIImageTransport = (
 ) => Promise<OpenAIImageTransportResponse>;
 
 export type OpenAILiveImageAdapterOptions = {
+  providerId?: OpenAICompatibleImageProviderId;
   transport?: OpenAIImageTransport;
   now?: () => number;
 };
 
-function validateOpenAIConfig(config: ProviderConfigForm): ProviderConfigValidation {
+function validateOpenAICompatibleConfig(providerId: OpenAICompatibleImageProviderId, config: ProviderConfigForm): ProviderConfigValidation {
   const parsed = ProviderConfigFormSchema.parse(config);
   const missing: (keyof ProviderConfigForm)[] = [];
   const warnings: string[] = [];
 
-  if (parsed.providerId !== OPENAI_PROVIDER_ID) {
-    warnings.push(`Config providerId ${parsed.providerId} does not match adapter ${OPENAI_PROVIDER_ID}.`);
+  if (parsed.providerId !== providerId) {
+    warnings.push(`Config providerId ${parsed.providerId} does not match adapter ${providerId}.`);
   }
   if (!parsed.enabled) {
     missing.push("enabled");
@@ -88,12 +95,21 @@ function validateOpenAIConfig(config: ProviderConfigForm): ProviderConfigValidat
   };
 }
 
-function normalizeBaseUrl(config: ProviderConfigForm): string {
-  return (config.baseUrl?.trim() || DEFAULT_OPENAI_BASE_URL).replace(/\/+$/, "");
+function defaultBaseUrl(providerId: OpenAICompatibleImageProviderId): string {
+  return providerId === "agnes" ? DEFAULT_AGNES_BASE_URL : DEFAULT_OPENAI_BASE_URL;
 }
 
-function imageModel(request: ImageGenerationRequest, config: ProviderConfigForm): string {
-  return request.model || config.modelSlots.image || config.defaultModel || "gpt-image-2";
+function providerDisplayName(providerId: OpenAICompatibleImageProviderId): string {
+  return getProviderManifest(providerId).displayName;
+}
+
+function normalizeBaseUrl(providerId: OpenAICompatibleImageProviderId, config: ProviderConfigForm): string {
+  return (config.baseUrl?.trim() || defaultBaseUrl(providerId)).replace(/\/+$/, "");
+}
+
+function imageModel(providerId: OpenAICompatibleImageProviderId, request: ImageGenerationRequest, config: ProviderConfigForm): string {
+  const fallback = providerId === "agnes" ? "agnes-image-2.1-flash" : "gpt-image-2";
+  return request.model || config.modelSlots.image || config.defaultModel || fallback;
 }
 
 function modeQualityInstruction(request: ImageGenerationRequest): string {
@@ -101,7 +117,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
     case "icon":
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
-        "Composition bar: perfect 1:1 square artwork that fills all four corners, full-bleed icon framing, no OS app-icon mask, no rounded black square/container, no empty corner padding, no text, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory.",
+        "Composition bar: premium 1:1 square icon artwork with full-bleed clarity, one dominant subject, intentional polished edge treatment, no white border, no accidental corner padding, no separate dark container that shrinks the subject, no text, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory. Rounded corners or badge-like app-icon styling are acceptable when intentional and high quality.",
       ].join(" ");
     case "logo":
       return [
@@ -132,7 +148,78 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
   }
 }
 
-function imagePrompt(request: ImageGenerationRequest): string {
+function compressedProviderPriorityInstruction(
+  providerId: OpenAICompatibleImageProviderId,
+  request: ImageGenerationRequest,
+): string {
+  const profile = getProviderManifest(providerId).imageGeneration;
+  if (profile.promptProfile !== "compressed") return "";
+
+  if (request.context.mode === "poster") {
+    const protagonistAssets = request.assets.filter((asset) => assetSemanticRole(asset) === "protagonist");
+    const bossAssets = request.assets.filter((asset) => {
+      const role = assetSemanticRole(asset);
+      return role === "antagonist" || role === "keySubject";
+    });
+    const logoAssets = request.assets.filter((asset) => assetSemanticRole(asset) === "brandLogo");
+    const hasHero = hasSemanticRole(request, "protagonist");
+    const hasBoss = hasSemanticRole(request, "antagonist") || hasSemanticRole(request, "keySubject");
+    const hasLogo = hasSemanticRole(request, "brandLogo");
+    const hasTextTarget = /slogan|campaign-copy|copy-safe|typography|logo treatment|title plate/i.test(request.prompt);
+    const forceBlankTextPlates = profile.textRendering === "low" && hasTextTarget;
+    const required = [
+      hasHero ? "uploaded protagonist as a large readable actor" : "",
+      hasBoss ? "uploaded BOSS/key threat as a physically dominant threat" : "",
+      hasLogo ? "one logo-safe in-world treatment" : "",
+      hasTextTarget ? "visible blank slogan/copy-safe area tied to the scene" : "",
+    ].filter(Boolean).join("; ");
+
+    return [
+      "COMPRESSED MODEL PRIORITY CONTRACT:",
+      "Follow this short contract before the longer creative prompt below.",
+      required ? `Poster required anchors: ${required}.` : "",
+      protagonistAssets.length === 1
+        ? `EXACT HERO ROSTER LOCK: render one and only one playable hero from ${protagonistAssets[0]?.id}. If the prompt says squad/team/staff/chefs/helpers, reinterpret it as this single uploaded hero only. No extra human chefs, no helper crowd, no background duplicate heroes.`
+        : "",
+      protagonistAssets.length > 1
+        ? `EXACT HERO ROSTER LOCK: render exactly ${protagonistAssets.length} uploaded playable heroes, one per reference. Do not add unuploaded chef helpers, crowds, or duplicate hero copies.`
+        : "",
+      bossAssets.length > 0
+        ? `EXACT BOSS ROSTER LOCK: render the uploaded BOSS/key threat as one dominant threat subject from ${bossAssets.map((asset) => asset.id).join(", ")}. Do not split it into multiple small monsters, background copies, minions, or decorative mascots.`
+        : "",
+      logoAssets.length > 0
+        ? `EXACT LOGO LOCK: create one and only one logo-safe treatment for ${logoAssets.map((asset) => asset.id).join(", ")}.`
+        : "",
+      forceBlankTextPlates
+        ? "LOW TEXT RELIABILITY LOCK: this provider is not reliable for spelling. Do NOT render readable words, pseudo-letters, warped logo text, title text, slogan text, or glyph-like strokes. Use large polished blank in-world logo/slogan plates only, with clean empty surfaces for later copy."
+        : "",
+      "STYLE CONSISTENCY LOCK: keep the entire image in one stylized game illustration language. No photorealistic people, no real-world crowd, no spectators, no adult realistic knight, no stock-photo background, no live-action advertising look, and no pasted cartoon stickers over a realistic scene.",
+      "The poster fails if a required anchor is absent, tiny, hidden, duplicated, or replaced by a generic subject.",
+      "Hero and BOSS must share the same camera, perspective, lighting, contact shadows, occlusion, particles/VFX, and story action. Do not make a pretty background with small sticker-like subjects.",
+      "Logo/slogan treatment should be integrated as an in-world sign, plaque, banner, steam/sauce stroke, carved/metal relief, or blank copy-safe plate; no fake text, no garbled words, and no floating PPT-style overlay.",
+    ].filter(Boolean).join("\n");
+  }
+
+  if (request.context.mode === "collab") {
+    const partner = request.assets.find((asset) => asset.role === "collabCharacter");
+    const gameCharacter = request.assets.find((asset) => asset.role === "gameCharacter");
+    return [
+      "COMPRESSED MODEL PRIORITY CONTRACT:",
+      "Follow this short contract before the longer creative prompt below.",
+      partner ? `Collab partner anchor: ${partner.id} must appear as a separate readable co-star.` : "",
+      gameCharacter ? `Game character anchor: ${gameCharacter.id} must appear as a separate readable co-star.` : "",
+      partner && gameCharacter
+        ? "Both co-stars need comparable visual weight, shared lighting, and one clear interaction touchpoint. The image fails if one side disappears, becomes tiny, or the two identities merge into a hybrid."
+        : "",
+      "Use blank non-letter plates or neutral emblems for uncertain brand text. Do not invent partner names, fake sponsor words, or hybrid logo lettering.",
+    ].filter(Boolean).join("\n");
+  }
+
+  return "";
+}
+
+function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: ImageGenerationRequest): string {
+  const compressedPriorityInstruction = compressedProviderPriorityInstruction(providerId, request);
   const hasPosterMode = request.context.mode === "poster";
   const fusionDirective = request.assets.length ? modeAssetFusionDirective(request.context.mode, request.assets) : "";
   const referenceInstruction = modeReferenceInstruction(request);
@@ -174,7 +261,20 @@ function imagePrompt(request: ImageGenerationRequest): string {
     modeQualityInstruction(request),
     "Avoid flat collage, cheap clip-art, generic replacement characters, duplicated asset copies, and conflicting photorealistic backgrounds.",
   ].join(" ");
-  return [request.prompt, qualityInstruction, assetInstruction, negativeInstruction].filter(Boolean).join("\n\n");
+  const providerNote = providerCapabilityPromptNote({
+    providerId,
+    mode: request.context.mode,
+    hasReferenceAssets: request.assets.length > 0,
+    hasTextTargets: /slogan|wordmark|announcement|copy|logo text|typography/i.test(request.prompt),
+  });
+  return [
+    compressedPriorityInstruction,
+    request.prompt,
+    qualityInstruction,
+    assetInstruction,
+    providerNote,
+    negativeInstruction,
+  ].filter(Boolean).join("\n\n");
 }
 
 function hasSemanticRole(request: ImageGenerationRequest, role: ReturnType<typeof assetSemanticRole>): boolean {
@@ -244,40 +344,43 @@ function imageSize(request: ImageGenerationRequest): string {
   return `${request.width}x${request.height}`;
 }
 
-function missingConfigResult<T>(config: ProviderConfigForm): ProviderResult<T> {
-  const validation = validateOpenAIConfig(config);
+function missingConfigResult<T>(providerId: OpenAICompatibleImageProviderId, config: ProviderConfigForm): ProviderResult<T> {
+  const validation = validateOpenAICompatibleConfig(providerId, config);
   const hasMissingApiKey = validation.missing.includes("apiKey");
+  const displayName = providerDisplayName(providerId);
 
   return {
     ok: false,
     error: createProviderError(
-      OPENAI_PROVIDER_ID,
+      providerId,
       hasMissingApiKey ? "auth_failed" : "missing_config",
-      `OpenAI live adapter is missing configuration: ${validation.missing.join(", ")}`,
+      `${displayName} live adapter is missing configuration: ${validation.missing.join(", ")}`,
       {
         userMessage: hasMissingApiKey
-          ? "OpenAI API key is required before live image generation."
-          : "OpenAI provider configuration is incomplete.",
+          ? `${displayName} API key is required before live image generation.`
+          : `${displayName} provider configuration is incomplete.`,
       },
     ),
   };
 }
 
-function unavailableTransportResult<T>(): ProviderResult<T> {
+function unavailableTransportResult<T>(providerId: OpenAICompatibleImageProviderId): ProviderResult<T> {
+  const displayName = providerDisplayName(providerId);
   return {
     ok: false,
     error: createProviderError(
-      OPENAI_PROVIDER_ID,
+      providerId,
       "provider_unavailable",
-      "OpenAI live adapter requires an injected HTTP transport before network execution.",
+      `${displayName} live adapter requires an injected HTTP transport before network execution.`,
       {
-        userMessage: "OpenAI live execution is not connected in this environment.",
+        userMessage: `${displayName} live execution is not connected in this environment.`,
       },
     ),
   };
 }
 
-function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResult<T> {
+function providerErrorFromStatus<T>(providerId: OpenAICompatibleImageProviderId, status: number, body: unknown): ProviderResult<T> {
+  const displayName = providerDisplayName(providerId);
   const parsedError = z
     .object({
       error: z
@@ -292,14 +395,14 @@ function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResu
     .passthrough()
     .safeParse(body);
   const providerMessage = parsedError.success ? parsedError.data.error?.message : undefined;
-  const message = providerMessage || `OpenAI image generation failed with HTTP ${status}.`;
+  const message = providerMessage || `${displayName} image generation failed with HTTP ${status}.`;
 
   if (status <= 0) {
     return {
       ok: false,
-      error: createProviderError(OPENAI_PROVIDER_ID, "provider_unavailable", message, {
+      error: createProviderError(providerId, "provider_unavailable", message, {
         retryable: true,
-        userMessage: "OpenAI network request failed. Check proxy, VPN, or provider connectivity.",
+        userMessage: `${displayName} network request failed. Check proxy, VPN, or provider connectivity.`,
       }),
     };
   }
@@ -307,8 +410,8 @@ function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResu
   if (status === 401 || status === 403) {
     return {
       ok: false,
-      error: createProviderError(OPENAI_PROVIDER_ID, "auth_failed", message, {
-        userMessage: "OpenAI authentication failed. Check the API key and provider access.",
+      error: createProviderError(providerId, "auth_failed", message, {
+        userMessage: `${displayName} authentication failed. Check the API key and provider access.`,
       }),
     };
   }
@@ -316,9 +419,9 @@ function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResu
   if (status === 429) {
     return {
       ok: false,
-      error: createProviderError(OPENAI_PROVIDER_ID, "rate_limited", message, {
+      error: createProviderError(providerId, "rate_limited", message, {
         retryable: true,
-        userMessage: "OpenAI rate limit was reached. Retry after the provider limit resets.",
+        userMessage: `${displayName} rate limit was reached. Retry after the provider limit resets.`,
       }),
     };
   }
@@ -326,8 +429,8 @@ function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResu
   if (status === 402) {
     return {
       ok: false,
-      error: createProviderError(OPENAI_PROVIDER_ID, "quota_exceeded", message, {
-        userMessage: "OpenAI quota or billing limit was reached.",
+      error: createProviderError(providerId, "quota_exceeded", message, {
+        userMessage: `${displayName} quota or billing limit was reached.`,
       }),
     };
   }
@@ -335,33 +438,35 @@ function providerErrorFromStatus<T>(status: number, body: unknown): ProviderResu
   if (status >= 500) {
     return {
       ok: false,
-      error: createProviderError(OPENAI_PROVIDER_ID, "provider_unavailable", message, {
+      error: createProviderError(providerId, "provider_unavailable", message, {
         retryable: true,
-        userMessage: "OpenAI is temporarily unavailable. Retry later.",
+        userMessage: `${displayName} is temporarily unavailable. Retry later.`,
       }),
     };
   }
 
   return {
     ok: false,
-    error: createProviderError(OPENAI_PROVIDER_ID, "invalid_request", message, {
-      userMessage: "OpenAI rejected the image generation request.",
+    error: createProviderError(providerId, "invalid_request", message, {
+      userMessage: `${displayName} rejected the image generation request.`,
     }),
   };
 }
 
 function parseImageResponse(
+  providerId: OpenAICompatibleImageProviderId,
   request: ImageGenerationRequest,
   model: string,
   body: unknown,
   elapsedMs: number,
 ): ProviderResult<ProviderImageResponse> {
+  const displayName = providerDisplayName(providerId);
   const parsed = OpenAIImageGenerationResponseSchema.safeParse(body);
   if (!parsed.success) {
     return {
       ok: false,
-      error: createProviderError(OPENAI_PROVIDER_ID, "invalid_request", "OpenAI image response did not match the expected schema.", {
-        userMessage: "OpenAI returned an unexpected image response.",
+      error: createProviderError(providerId, "invalid_request", `${displayName} image response did not match the expected schema.`, {
+        userMessage: `${displayName} returned an unexpected image response.`,
       }),
     };
   }
@@ -369,7 +474,7 @@ function parseImageResponse(
   const assets = parsed.data.data
     .map((item, index) => {
       const rawAsset: Record<string, unknown> = {
-        id: `openai-${request.context.traceId || request.context.jobId || request.schemeId}-${index + 1}`,
+        id: `${providerId}-${request.context.traceId || request.context.jobId || request.schemeId}-${index + 1}`,
         mimeType: "image/png",
         width: request.width,
         height: request.height,
@@ -387,8 +492,8 @@ function parseImageResponse(
   if (assets.length === 0) {
     return {
       ok: false,
-      error: createProviderError(OPENAI_PROVIDER_ID, "invalid_request", "OpenAI image response did not include URL or base64 assets.", {
-        userMessage: "OpenAI returned no usable image assets.",
+      error: createProviderError(providerId, "invalid_request", `${displayName} image response did not include URL or base64 assets.`, {
+        userMessage: `${displayName} returned no usable image assets.`,
       }),
     };
   }
@@ -396,7 +501,7 @@ function parseImageResponse(
   return {
     ok: true,
     value: ProviderImageResponseSchema.parse({
-      providerId: OPENAI_PROVIDER_ID,
+      providerId,
       model,
       assets,
       usage: {
@@ -407,15 +512,99 @@ function parseImageResponse(
   };
 }
 
+function isLocalReferenceUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function localImageUrlToDataUrl(url: string, fetchImpl: typeof fetch): Promise<string> {
+  const response = await fetchImpl(url);
+  if (!response.ok) return url;
+
+  const contentType = response.headers.get("content-type") || "image/png";
+  if (!contentType.startsWith("image/")) return url;
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.byteLength === 0) return url;
+  return `data:${contentType.split(";")[0]};base64,${bytes.toString("base64")}`;
+}
+
+async function prepareOpenAIImageBodyForTransport(
+  body: Record<string, unknown>,
+  fetchImpl: typeof fetch,
+): Promise<Record<string, unknown>> {
+  const extraBody = body.extra_body;
+  if (!extraBody || typeof extraBody !== "object" || Array.isArray(extraBody)) return body;
+
+  const image = (extraBody as Record<string, unknown>).image;
+  if (!Array.isArray(image)) return body;
+
+  const preparedImages = await Promise.all(image.map(async (item) => {
+    if (typeof item !== "string" || !isLocalReferenceUrl(item)) return item;
+    return localImageUrlToDataUrl(item, fetchImpl);
+  }));
+
+  return {
+    ...body,
+    extra_body: {
+      ...(extraBody as Record<string, unknown>),
+      image: preparedImages,
+    },
+  };
+}
+
+async function imageUrlToBase64(url: string, fetchImpl: typeof fetch): Promise<string | null> {
+  try {
+    const response = await fetchImpl(url);
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get("content-type") || "image/png";
+    if (!contentType.startsWith("image/")) return null;
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.byteLength === 0) return null;
+    return bytes.toString("base64");
+  } catch {
+    return null;
+  }
+}
+
+async function attachImageResponseDataUrls(body: unknown, fetchImpl: typeof fetch): Promise<unknown> {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+  const record = body as Record<string, unknown>;
+  const data = record.data;
+  if (!Array.isArray(data)) return body;
+
+  const preparedData = await Promise.all(data.map(async (item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    const asset = item as Record<string, unknown>;
+    if (typeof asset.b64_json === "string" && asset.b64_json.length > 0) return item;
+    if (typeof asset.url !== "string" || !/^https?:\/\//i.test(asset.url)) return item;
+
+    const b64Json = await imageUrlToBase64(asset.url, fetchImpl);
+    return b64Json ? { ...asset, b64_json: b64Json } : item;
+  }));
+
+  return {
+    ...record,
+    data: preparedData,
+  };
+}
+
 export function createOpenAIHttpTransport(fetchImpl: typeof fetch): OpenAIImageTransport {
   return async (request) => {
     const parsed = OpenAIImageTransportRequestSchema.parse(request);
+    const requestBody = await prepareOpenAIImageBodyForTransport(parsed.body, fetchImpl);
     let response: Response;
     try {
       response = await fetchImpl(parsed.url, {
         method: parsed.method,
         headers: parsed.headers,
-        body: JSON.stringify(parsed.body),
+        body: JSON.stringify(requestBody),
       });
     } catch (error) {
       return OpenAIImageTransportResponseSchema.parse({
@@ -435,6 +624,9 @@ export function createOpenAIHttpTransport(fetchImpl: typeof fetch): OpenAIImageT
     } catch {
       body = null;
     }
+    if (response.ok) {
+      body = await attachImageResponseDataUrls(body, fetchImpl);
+    }
 
     return OpenAIImageTransportResponseSchema.parse({
       ok: response.ok,
@@ -444,27 +636,65 @@ export function createOpenAIHttpTransport(fetchImpl: typeof fetch): OpenAIImageT
   };
 }
 
+function referenceImageUrls(request: ImageGenerationRequest): string[] {
+  return Array.from(new Set(
+    request.assets
+      .map((asset) => asset.url || "")
+      .filter((url) => /^(https?:\/\/|data:image\/)/i.test(url)),
+  ));
+}
+
+function imageRequestBody(
+  providerId: OpenAICompatibleImageProviderId,
+  model: string,
+  request: ImageGenerationRequest,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model,
+    prompt: imagePrompt(providerId, request),
+    size: imageSize(request),
+    n: request.count,
+  };
+
+  if (providerUsesExtraBodyImageReferences(providerId)) {
+    const imageUrls = referenceImageUrls(request);
+    if (imageUrls.length > 0) {
+      body.extra_body = {
+        image: imageUrls,
+        response_format: "url",
+      };
+      if (model === "agnes-image-2.0-flash") {
+        body.tags = ["img2img"];
+      }
+    }
+  }
+
+  return body;
+}
+
 export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOptions = {}): GenerationProviderAdapter {
-  const manifest = getProviderManifest(OPENAI_PROVIDER_ID);
+  const providerId = options.providerId || OPENAI_PROVIDER_ID;
+  const manifest = getProviderManifest(providerId);
   const now = options.now || Date.now;
+  const displayName = manifest.displayName;
 
   return {
     manifest,
 
     validateConfig(config) {
-      return validateOpenAIConfig(config);
+      return validateOpenAICompatibleConfig(providerId, config);
     },
 
     async healthCheck(config): Promise<ProviderResult<ProviderHealthResponse>> {
-      const validation = validateOpenAIConfig(config);
+      const validation = validateOpenAICompatibleConfig(providerId, config);
       if (!validation.ok) {
         return {
           ok: true,
           value: ProviderHealthResponseSchema.parse({
-            providerId: OPENAI_PROVIDER_ID,
+            providerId,
             ok: false,
             status: "not_configured",
-            message: `OpenAI live adapter is missing configuration: ${validation.missing.join(", ")}`,
+            message: `${displayName} live adapter is missing configuration: ${validation.missing.join(", ")}`,
           }),
         };
       }
@@ -472,12 +702,12 @@ export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOpti
       return {
         ok: true,
         value: ProviderHealthResponseSchema.parse({
-          providerId: OPENAI_PROVIDER_ID,
+          providerId,
           ok: Boolean(options.transport),
           status: options.transport ? "ready" : "unavailable",
           message: options.transport
-            ? "OpenAI live adapter is configured with an injected transport."
-            : "OpenAI live adapter is configured but has no injected transport.",
+            ? `${displayName} live adapter is configured with an injected transport.`
+            : `${displayName} live adapter is configured but has no injected transport.`,
         }),
       };
     },
@@ -485,35 +715,30 @@ export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOpti
     async generateImage(request: ImageGenerationRequest, config: ProviderConfigForm): Promise<ProviderResult<ProviderImageResponse>> {
       const parsedRequest = ImageGenerationRequestSchema.parse(request);
       const parsedConfig = ProviderConfigFormSchema.parse(config);
-      const validation = validateOpenAIConfig(parsedConfig);
-      if (!validation.ok) return missingConfigResult(parsedConfig);
-      if (!options.transport) return unavailableTransportResult();
+      const validation = validateOpenAICompatibleConfig(providerId, parsedConfig);
+      if (!validation.ok) return missingConfigResult(providerId, parsedConfig);
+      if (!options.transport) return unavailableTransportResult(providerId);
 
-      const model = imageModel(parsedRequest, parsedConfig);
+      const model = imageModel(providerId, parsedRequest, parsedConfig);
       const startedAt = now();
       const transportResponse = await options.transport(
         OpenAIImageTransportRequestSchema.parse({
-          url: `${normalizeBaseUrl(parsedConfig)}${OPENAI_IMAGE_GENERATIONS_PATH}`,
+          url: `${normalizeBaseUrl(providerId, parsedConfig)}${OPENAI_IMAGE_GENERATIONS_PATH}`,
           method: "POST",
           headers: {
             Authorization: `Bearer ${parsedConfig.apiKey}`,
             "Content-Type": "application/json",
           },
-          body: {
-            model,
-            prompt: imagePrompt(parsedRequest),
-            size: imageSize(parsedRequest),
-            n: parsedRequest.count,
-          },
+          body: imageRequestBody(providerId, model, parsedRequest),
         }),
       );
       const parsedTransportResponse = OpenAIImageTransportResponseSchema.parse(transportResponse);
 
       if (!parsedTransportResponse.ok) {
-        return providerErrorFromStatus(parsedTransportResponse.status, parsedTransportResponse.body);
+        return providerErrorFromStatus(providerId, parsedTransportResponse.status, parsedTransportResponse.body);
       }
 
-      return parseImageResponse(parsedRequest, model, parsedTransportResponse.body, Math.max(0, now() - startedAt));
+      return parseImageResponse(providerId, parsedRequest, model, parsedTransportResponse.body, Math.max(0, now() - startedAt));
     },
   };
 }

@@ -25,7 +25,8 @@ import { createProviderDiagnosticService } from "./provider-diagnostics";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
 const GOOGLE_PROVIDER_ID = "google" as const;
-type ManualLiveProviderId = typeof OPENAI_PROVIDER_ID | typeof GOOGLE_PROVIDER_ID;
+const AGNES_PROVIDER_ID = "agnes" as const;
+type ManualLiveProviderId = typeof OPENAI_PROVIDER_ID | typeof GOOGLE_PROVIDER_ID | typeof AGNES_PROVIDER_ID;
 
 export type ManualLiveGenerationServiceOptions = {
   repository: StorageRepository;
@@ -167,7 +168,11 @@ export function createManualLiveGenerationService(
             }),
           );
         }
-        if (parsed.providerId !== OPENAI_PROVIDER_ID && parsed.providerId !== GOOGLE_PROVIDER_ID) {
+        if (
+          parsed.providerId !== OPENAI_PROVIDER_ID &&
+          parsed.providerId !== GOOGLE_PROVIDER_ID &&
+          parsed.providerId !== AGNES_PROVIDER_ID
+        ) {
           return QueuePlanManualLiveTestApiResponseSchema.parse(
             failure({
               code: "unsupported_provider",
@@ -321,7 +326,10 @@ export function createManualLiveGenerationService(
                 ...queueOptions,
                 ...(options.googleImageTransport ? { transport: options.googleImageTransport } : {}),
               })
-            : await runOpenAILiveQueue(queueInput, {
+            : await runOpenAILiveQueue({
+                ...queueInput,
+                providerId: parsed.providerId,
+              }, {
                 ...queueOptions,
                 ...(options.imageTransport ? { transport: options.imageTransport } : {}),
               });

@@ -39,6 +39,12 @@ const providerModelCatalog = {
     image: ["wan2.7-image-pro", "wan2.7-image", "qwen-image-2.0-pro", "qwen-image-2.0", "z-image-turbo"],
     vision: ["qwen3.6-plus", "qwen3.5-flash", "qwen3.5-plus"],
   },
+  agnes: {
+    default: ["agnes-2.0-flash", "agnes-image-2.1-flash", "agnes-image-2.0-flash", "agnes-1.5-flash"],
+    plan: ["agnes-2.0-flash", "agnes-1.5-flash"],
+    image: ["agnes-image-2.1-flash", "agnes-image-2.0-flash"],
+    vision: [],
+  },
 };
 
 function selectedCredentialState(providerId) {
@@ -115,21 +121,24 @@ function getSlotRoute(slotKey, selectedProvider, providers, kind, fallbackModel)
   const isConfigured = (provider) => Boolean(provider && provider.status !== "idle");
   const configuredProvider = providers.find((candidate) => candidate.status !== "idle" && supportsKind(candidate));
   const firstSupportedProvider = providers.find((candidate) => supportsKind(candidate));
+  const keepConfiguredUnsupportedProvider =
+    kind === "vision" && selectedProvider && !supportsKind(selectedProvider) && isConfigured(selectedProvider);
   const provider = (supportsKind(savedProvider) && isConfigured(savedProvider) ? savedProvider : null)
     || (supportsKind(selectedProvider) && isConfigured(selectedProvider) ? selectedProvider : null)
     || configuredProvider
+    || (keepConfiguredUnsupportedProvider ? selectedProvider : null)
     || (supportsKind(selectedProvider) ? selectedProvider : null)
     || (supportsKind(savedProvider) ? savedProvider : null)
     || firstSupportedProvider
     || selectedProvider
     || providers[0];
   const selection = getModelSelection(provider.id, kind, savedRoute.model || fallbackModel);
-  if (selection.value && (savedRoute.providerId !== provider.id || savedRoute.model !== selection.value)) {
+  if (savedRoute.providerId !== provider.id || (selection.value && savedRoute.model !== selection.value)) {
     state.providerSlotRoutes = {
       ...(state.providerSlotRoutes || {}),
       [slotKey]: {
         providerId: provider.id,
-        model: selection.value,
+        ...(selection.value ? { model: selection.value } : {}),
       },
     };
   }
@@ -148,6 +157,7 @@ function providerSourceLabel(provider) {
   if (id === "deepseek") return "DeepSeek 官方";
   if (id === "claude") return "Claude 官方";
   if (id === "qwen") return "Qwen 官方";
+  if (id === "agnes") return "Agnes AI";
   return provider?.name || "当前供应商";
 }
 
@@ -159,6 +169,7 @@ function providerEndpointKind(provider) {
   if (id === "deepseek") return "OpenAI 兼容 API";
   if (id === "claude") return "Anthropic API";
   if (id === "qwen") return "OpenAI 兼容 API";
+  if (id === "agnes") return "OpenAI-style API";
   return "自定义 API";
 }
 
@@ -226,6 +237,41 @@ function renderRoutePlanTestStatus() {
         </div>
       `).join("")}
       ${currentPlan.error ? `<p>${escapeHtml(currentPlan.error)}</p>` : ""}
+    </div>
+  `;
+}
+
+function providerConfigured(provider, credential = null) {
+  return Boolean(provider && (credential?.configured || provider.status !== "idle"));
+}
+
+function isAgnesCoreRoute() {
+  const routes = state.providerSlotRoutes || {};
+  return routes.concept?.providerId === "agnes" && routes.image?.providerId === "agnes";
+}
+
+function renderAgnesRouteAssist(providers) {
+  const agnesProvider = providers.find((provider) => provider.id === "agnes");
+  const agnesCredential = selectedCredentialState("agnes");
+  const configured = providerConfigured(agnesProvider, agnesCredential);
+  const coreRoute = isAgnesCoreRoute();
+  const referenceRoutes = ["styleReference", "compositionReference"].map((slot) => state.providerSlotRoutes?.[slot]?.providerId || "");
+  const referenceCovered = referenceRoutes.some((providerId) => providerId && providerId !== "agnes");
+  const buttonLabel = coreRoute ? "已使用 Agnes 核心生成" : "切到 Agnes 核心生成";
+
+  return `
+    <div class="agnes-route-assist ${coreRoute ? "active" : ""} ${configured ? "" : "disabled"}" aria-label="Agnes 核心生成路线">
+      <div>
+        <strong>Agnes 免费实测路线</strong>
+        <small>${configured
+          ? "一键把方案生成和图像生成切到 Agnes。画风/构图参考分析仍按模型能力闸门处理。"
+          : "保存 Agnes API Key 后，可一键切到 Agnes 方案生成 + 图像生成路线；画风/构图参考分析仍按模型能力闸门处理。"}</small>
+      </div>
+      <div class="agnes-route-chips">
+        <span class="${coreRoute ? "ok" : "warn"}">方案 / 图像 · ${coreRoute ? "Agnes" : "未全走 Agnes"}</span>
+        <span class="${referenceCovered ? "ok" : "warn"}">参考分析 · ${referenceCovered ? "视觉模型" : "需能力支持"}</span>
+      </div>
+      <button type="button" data-action="apply-agnes-core-route" ${configured && !coreRoute ? "" : "disabled"}>${escapeHtml(buttonLabel)}</button>
     </div>
   `;
 }
@@ -322,6 +368,13 @@ function renderLiveGatePanel() {
   const blockers = gate.blockers.length > 0
     ? gate.blockers.map((blocker) => `<li><strong>${escapeHtml(blocker.label)}</strong><span>${escapeHtml(blocker.message)}</span></li>`).join("")
     : `<li class="live-gate-ok">所有实机安全要求已满足。</li>`;
+  const qualityWarnings = gate.qualityWarnings?.length
+    ? `
+      <ul class="live-gate-quality-warnings" aria-label="生成质量风险提示">
+        ${gate.qualityWarnings.map((warning) => `<li><strong>${escapeHtml(warning.label)}</strong><span>${escapeHtml(warning.message)}</span></li>`).join("")}
+      </ul>
+    `
+    : "";
 
   return `
     <section class="provider-config-card live-gate-panel ${escapeHtml(gate.tone)}" aria-label="实机安全闸">
@@ -332,7 +385,7 @@ function renderLiveGatePanel() {
           <small>${escapeHtml(gate.helper)}</small>
         </div>
         <label class="live-switch" aria-label="开启实机安全闸">
-          <input type="checkbox" data-live-toggle="enabled" ${state.liveGate.enabled ? "checked" : ""}>
+          <input type="checkbox" data-live-toggle="enabled" aria-label="开启实机安全闸" ${state.liveGate.enabled ? "checked" : ""}>
           <i aria-hidden="true"></i>
         </label>
       </div>
@@ -368,17 +421,18 @@ function renderLiveGatePanel() {
         ${gate.confirmations.map((row) => `
           <label class="live-gate-row">
             <span>${escapeHtml(row.label)}</span>
-            <input type="checkbox" data-live-toggle="${escapeHtml(row.key)}" ${row.checked ? "checked" : ""}>
+            <input type="checkbox" data-live-toggle="${escapeHtml(row.key)}" aria-label="${escapeHtml(row.label)}" ${row.checked ? "checked" : ""}>
           </label>
         `).join("")}
         ${gate.prerequisites.map((row) => `
           <label class="live-gate-row prerequisite">
             <span>${escapeHtml(row.label)}</span>
-            <input type="checkbox" ${row.checked ? "checked" : ""} disabled>
+            <input type="checkbox" aria-label="${escapeHtml(row.label)}" ${row.checked ? "checked" : ""} disabled>
           </label>
         `).join("")}
       </div>
       <ul class="live-gate-blockers">${blockers}</ul>
+      ${qualityWarnings}
     </section>
   `;
 }
@@ -604,6 +658,7 @@ export function renderSettingsSheet() {
                   <input value="${escapeHtml(activeRoutePlan?.name || "")}" data-provider-route-name-draft="${escapeHtml(activeRoutePlan?.id || "")}" aria-label="编辑配置方案名称" />
                   <button type="button" data-action="rename-provider-route-plan" data-provider-route-name-target="${escapeHtml(activeRoutePlan?.id || "")}">保存</button>
                 </div>
+                ${renderAgnesRouteAssist(providers)}
                 ${renderRoutePlanTestStatus()}
               </div>
               <div class="model-slot-grid">

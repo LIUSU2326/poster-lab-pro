@@ -75,6 +75,30 @@ export function providerConfigFromStoredConfig(storedConfig: StoredProviderConfi
   });
 }
 
+function modelSlotForMappedKind(kind: ProviderMappedRequestKind): string | null {
+  if (kind === "briefGeneration") return "concept";
+  if (kind === "imageGeneration") return "image";
+  if (kind === "imageEdit") return "imageEdit";
+  if (kind === "upscale") return "upscale";
+  if (kind === "backgroundRemoval") return "backgroundRemoval";
+  return null;
+}
+
+function configForMappedRequestModel(config: ProviderConfigForm, mappedRequest: ProviderMappedRequest): ProviderConfigForm {
+  const model = "model" in mappedRequest ? mappedRequest.model?.trim() : "";
+  const slot = modelSlotForMappedKind(mappedRequest.kind);
+  if (!model || !slot) return config;
+
+  return ProviderConfigFormSchema.parse({
+    ...config,
+    defaultModel: config.defaultModel || model,
+    modelSlots: {
+      ...config.modelSlots,
+      [slot]: model,
+    },
+  });
+}
+
 function missingAdapter(providerId: ProviderId): ProviderExecutionResult {
   return {
     ok: false,
@@ -102,36 +126,37 @@ export async function executeMappedProviderRequest(
 ): Promise<ProviderExecutionResult> {
   const parsed = ProviderExecutionInputSchema.parse(input);
   const providerId = ProviderIdSchema.parse(parsed.mappedRequest.providerId);
+  const config = configForMappedRequestModel(parsed.config, parsed.mappedRequest);
   const adapter = registry[providerId];
   if (!adapter) return missingAdapter(providerId);
 
   if (parsed.mappedRequest.kind === "briefGeneration") {
     if (!adapter.generateBrief) return missingMethod(providerId, "briefGeneration");
     const mappedRequest: ProviderBriefMappedRequest = ProviderBriefMappedRequestSchema.parse(parsed.mappedRequest);
-    return adapter.generateBrief(mappedRequest.request, parsed.config);
+    return adapter.generateBrief(mappedRequest.request, config);
   }
 
   if (parsed.mappedRequest.kind === "imageGeneration") {
     if (!adapter.generateImage) return missingMethod(providerId, "imageGeneration");
     const mappedRequest: ProviderImageMappedRequest = ProviderImageMappedRequestSchema.parse(parsed.mappedRequest);
-    return adapter.generateImage(mappedRequest.request, parsed.config);
+    return adapter.generateImage(mappedRequest.request, config);
   }
 
   if (parsed.mappedRequest.kind === "imageEdit") {
     if (!adapter.editImage) return missingMethod(providerId, "imageEdit");
     const mappedRequest: ProviderImageEditMappedRequest = ProviderImageEditMappedRequestSchema.parse(parsed.mappedRequest);
-    return adapter.editImage(mappedRequest.request, parsed.config);
+    return adapter.editImage(mappedRequest.request, config);
   }
 
   if (parsed.mappedRequest.kind === "upscale") {
     if (!adapter.upscale) return missingMethod(providerId, "upscale");
     const mappedRequest: ProviderUpscaleMappedRequest = ProviderUpscaleMappedRequestSchema.parse(parsed.mappedRequest);
-    return adapter.upscale(mappedRequest.request, parsed.config);
+    return adapter.upscale(mappedRequest.request, config);
   }
 
   if (!adapter.removeBackground) return missingMethod(providerId, "backgroundRemoval");
   const mappedRequest: ProviderBackgroundRemovalMappedRequest = ProviderBackgroundRemovalMappedRequestSchema.parse(parsed.mappedRequest);
-  return adapter.removeBackground(mappedRequest.request, parsed.config);
+  return adapter.removeBackground(mappedRequest.request, config);
 }
 
 export async function executeMappedProviderRequestWithCredentials(

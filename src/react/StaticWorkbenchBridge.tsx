@@ -10,7 +10,7 @@ import {
 } from "../state.js";
 import { renderShell } from "../render/shell.js";
 import { bindEvents } from "../events.js";
-import { hydrateLocalSubmissionDraft } from "../local-draft-store.js";
+import { hydrateLocalProviderPreferences, hydrateLocalSubmissionDraft } from "../local-draft-store.js";
 import { loadWorkspaceSnapshotForWorkbench } from "../workspace-data-service.js";
 import { mountWorkbenchSections, type MountedWorkbenchSections } from "./mount-workbench-sections";
 
@@ -24,6 +24,7 @@ export function StaticWorkbenchBridge() {
 
     applyPrototypeStateFromUrl();
     hydrateLocalSubmissionDraft(state);
+    hydrateLocalProviderPreferences(state);
     state.apiMode = state.apiMode === "static" && window.location.search.includes("api=static") ? "static" : "http";
     ensureSelectedScheme();
 

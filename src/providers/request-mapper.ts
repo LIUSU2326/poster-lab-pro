@@ -8,6 +8,7 @@ import {
   isPosterIntegratedReferenceAsset,
   posterAssetReferenceName,
   modeAssetFusionDirective,
+  type AssetSemanticRole,
   type PosterAssetSemanticRole,
 } from "../assets/semantic-roles";
 import { PromptPackageSchema, type PromptAssetBinding, type PromptPackage } from "../prompts/contracts";
@@ -34,6 +35,7 @@ import {
   type UpscaleRequest,
 } from "./contracts";
 import { getProviderManifest } from "./manifests";
+import { providerImagePromptMaxChars } from "./provider-capability-profiles";
 import {
   posterCinematicKvQualityDirective,
   posterHeroPerformanceScaleLock,
@@ -204,19 +206,24 @@ export function resolveProviderModel(input: {
   const slotModel = providerConfig?.modelSlots[parsedSlot]?.trim();
   if (slotModel) return slotModel;
 
-  const defaultModel = providerConfig?.defaultModel?.trim();
-  if (defaultModel) return defaultModel;
-
   const manifestModel = getProviderManifest(input.providerId).modelSlots[parsedSlot]?.[0]?.trim();
-  return manifestModel || FALLBACK_MODELS[parsedSlot];
+  if (manifestModel) return manifestModel;
+
+  const defaultModel = providerConfig?.defaultModel?.trim();
+  return defaultModel || FALLBACK_MODELS[parsedSlot];
 }
+
+type ProviderAssetReferenceOptions = {
+  copySafeLogoText?: boolean;
+  imageGeneration?: boolean;
+};
 
 function toProviderAssetReference(
   binding: PromptAssetBinding,
   snapshot: WorkspaceSnapshot,
   roleIndex: number,
   mode: ProductionMode,
-  options: { copySafeLogoText?: boolean } = {},
+  options: ProviderAssetReferenceOptions = {},
 ): ProviderAssetReference {
   const asset = snapshot.assets.find((item) => item.id === binding.assetId);
   const candidateUrl = binding.url || assetUrl(asset);
@@ -248,17 +255,253 @@ function toProviderAssetReference(
   });
 }
 
+const ICON_IMAGE_REFERENCE_PRIORITY: Record<AssetSemanticRole, number> = {
+  keySubject: 0,
+  protagonist: 1,
+  prop: 2,
+  antagonist: 3,
+  brandLogo: 4,
+  environment: 99,
+  styleReference: 99,
+  compositionReference: 99,
+  supportingAsset: 99,
+};
+
+function orderedByImageReferencePriority(
+  mode: ProductionMode,
+  assets: PromptAssetBinding[],
+): PromptAssetBinding[] {
+  return assets
+    .map((asset, index) => ({ asset, index }))
+    .sort((left, right) => {
+      if (mode === "icon") {
+        const roleDelta = ICON_IMAGE_REFERENCE_PRIORITY[assetSemanticRole(left.asset)]
+          - ICON_IMAGE_REFERENCE_PRIORITY[assetSemanticRole(right.asset)];
+        if (roleDelta !== 0) return roleDelta;
+      }
+      return left.index - right.index;
+    })
+    .map((item) => item.asset);
+}
+
+function firstAsset(
+  assets: PromptAssetBinding[],
+  predicate: (asset: PromptAssetBinding) => boolean,
+): PromptAssetBinding | undefined {
+  return assets.find(predicate);
+}
+
+function uniqueAssets(assets: Array<PromptAssetBinding | undefined>): PromptAssetBinding[] {
+  const seen = new Set<string>();
+  return assets.filter((asset): asset is PromptAssetBinding => {
+    if (!asset || seen.has(asset.assetId)) return false;
+    seen.add(asset.assetId);
+    return true;
+  });
+}
+
+function filterImageReferenceAssetsForMode(
+  promptPackage: PromptPackage,
+  options: ProviderAssetReferenceOptions,
+): PromptAssetBinding[] {
+  if (!options.imageGeneration || promptPackage.target !== "image") return promptPackage.assets;
+  if (promptPackage.mode === "poster") return promptPackage.assets;
+
+  const assets = promptPackage.assets;
+  const bySemanticRole = (role: AssetSemanticRole) => (asset: PromptAssetBinding) =>
+    assetSemanticRole(asset) === role;
+  const bySourceRole = (...roles: string[]) => (asset: PromptAssetBinding) => roles.includes(asset.role);
+  const ordered = orderedByImageReferencePriority(promptPackage.mode, assets);
+
+  switch (promptPackage.mode) {
+    case "icon": {
+      const subject = ordered.find((asset) => {
+        const semanticRole = assetSemanticRole(asset);
+        return semanticRole === "keySubject"
+          || semanticRole === "protagonist"
+          || semanticRole === "prop"
+          || semanticRole === "antagonist"
+          || semanticRole === "brandLogo";
+      });
+      return subject ? [subject] : [];
+    }
+    case "logo":
+      if (options.copySafeLogoText) return [];
+      return uniqueAssets([firstAsset(assets, bySemanticRole("brandLogo"))]);
+    case "announcement":
+      return [];
+    case "collab": {
+      const gameCharacter = firstAsset(assets, (asset) =>
+        bySourceRole("gameCharacter")(asset) || assetSemanticRole(asset) === "keySubject");
+      const collabCharacter = firstAsset(assets, bySourceRole("collabCharacter"));
+      const gameLogo = firstAsset(assets, bySourceRole("gameLogo"));
+      const partnerLogo = firstAsset(assets, bySourceRole("brandLogo"));
+      return partnerLogo
+        ? uniqueAssets([collabCharacter, gameCharacter, gameLogo, partnerLogo])
+        : uniqueAssets([collabCharacter, gameCharacter]);
+    }
+    default:
+      return assets;
+  }
+}
+
+function imageReferencePolicyPromptBlock(
+  promptPackage: PromptPackage,
+  imageAssets: ProviderAssetReference[],
+  options: ProviderAssetReferenceOptions,
+): string {
+  if (promptPackage.target !== "image" || promptPackage.mode === "poster") return "";
+  const included = imageAssets.length
+    ? imageAssets.map((asset) => `${asset.role}/semanticRole=${assetSemanticRole(asset)}`).join(", ")
+    : "none";
+  const shared = [
+    "## Mode-Specific Visual Reference Intake",
+    `Raw image references sent to the image model for this mode: ${included}.`,
+    "Uploaded assets that are not sent as raw images are still represented by the prompt, reference analysis, semantic role map, and mode rules. Do not copy a full poster/layout/text-heavy reference image unless the current mode explicitly asks for that format.",
+  ];
+  const modeRule: Record<ProductionMode, string> = {
+    poster: "",
+    icon: "Icon mode isolation: use at most one uploaded subject/motif as identity reference. Do not copy poster composition, slogan lettering, UI panels, multi-character battle scenes, reference-sheet borders, crop marks, side labels, edge numbers, barcode-like strokes, or text from any uploaded reference. Final output must be a 1:1 text-free icon with one bold subject and minimal background. If the attached raw reference is a character, draw that character only; do not add a second large object, shield, weapon, bread club, food prop, badge, or hand-held item unless it is visibly present in that reference.",
+    logo: options.copySafeLogoText
+      ? "Logo mode copy-safe isolation: no raw logo lettering reference is sent because the requested wordmark is text-risky. Build a clean blank logo/wordmark plate, emblem, or mark system from non-text brand cues only. No scene, no characters, no poster background, no pseudo-letters."
+      : "Logo mode isolation: use only brand/logo references as raw images. Other uploaded assets are motif/style context only, not scene subjects. Final output must be a logo/mark system, not a poster or character scene.",
+    announcement: "Announcement mode isolation: raw references are limited to brand/supporting presenter imagery. Build a calm in-game announcement panel or event card with a strong copy-safe area; do not turn the render into an action poster and do not generate garbled operational text.",
+    collab: "Collab mode isolation: raw references are limited to participant identities and, only when both sides have uploaded brand references, separate brand logos. If the partner brandLogo is missing, do not use or redraw uploaded gameLogo lettering as visible text; reserve blank non-letter brand plates or neutral emblems. Render one clear instance of each side, keep them separate, and show a shared interaction; do not duplicate either side, merge them into a hybrid, or generate pseudo-letters.",
+  };
+  return [...shared, modeRule[promptPackage.mode]].filter(Boolean).join("\n");
+}
+
+function logoCopySafeImagePromptFromPromptPackage(input: {
+  promptPackage: PromptPackage;
+  modeState: WorkspaceModeState;
+  maxChars: number;
+}): string {
+  const backgroundColor = input.modeState.modeForm.mode === "logo"
+    ? input.modeState.modeForm.backgroundColor
+    : "#ffffff";
+  return joinPromptBlocks([
+    "## Logo Asset Task",
+    "Create a clean standalone game brand mark asset, not a scene, poster, title screen, splash art, menu, or character illustration.",
+    `Use a pure solid-color background (${backgroundColor || "#ffffff"}). Center one polished blank non-letter title plaque, emblem, badge, or mark system with strong silhouette and export-ready edges.`,
+    "No readable text anywhere. Do not render words, captions, pseudo-letters, subtitles, slogans, labels, or internal instruction terms. Do not render the concepts copy, safe, wordmark, blank, prompt, enforcement, logo mode, or provider note as visible letters.",
+    "Do not render chefs, player characters, BOSS creatures, monsters, portals, culinary rooms, battles, landscape backgrounds, UI panels, coins, weapons, food scenes, or poster storytelling. Use only abstract non-text motifs such as round baked-food geometry, cooking spark shapes, quest-route arcs, shield-like contour, bevels, highlights, and brand-colored materials.",
+    "The output should feel like a production logo/badge source image: simple, centered, readable as a silhouette at small size, with generous clear space.",
+    "Final audit before rendering: one centered non-text mark on a plain solid background; zero characters; zero scene; zero readable letters.",
+  ]).slice(0, input.maxChars);
+}
+
+function announcementImagePromptFromPromptPackage(input: {
+  promptPackage: PromptPackage;
+  maxChars: number;
+}): string {
+  return joinPromptBlocks([
+    "## Game Announcement Card Task",
+    "Create a polished in-game announcement/event card layout, not a campaign poster, battle KV, logo screen, or action illustration.",
+    "Highest priority: reserve a large calm editable copy area as the main visual hierarchy. The copy area should occupy roughly half of the canvas and read as a natural UI panel, parchment board, menu card, signboard, or event notice surface.",
+    "Keep the copy area intentionally blank or filled with simple non-readable placeholder strokes only. Do not generate operational text, fake text, slogans, pseudo-letters, title words, instruction words, or garbled lettering.",
+    "Use one small blank decorative brand badge or empty header medallion if needed; it must contain no readable letters. Do not copy or invent a game title.",
+    "Use optional small non-specific side decoration only if it does not compete with the copy area. No character squads, no battle pose, no BOSS, no action scene, no large mascot, no large logo.",
+    "Use a quiet illustrated game UI feel: clear foreground panel, soft themed background, low visual noise behind text zones, restrained particles, readable margins, and obvious hierarchy. Culinary-adventure motifs may appear as subtle frame ornaments only.",
+    "Final audit before rendering: it must look like an announcement card with a blank editable copy zone, not a poster. One tiny blank badge maximum. No character group. No readable generated text.",
+  ]).slice(0, input.maxChars);
+}
+
+function nonPosterImagePromptFromPromptPackage(input: {
+  promptPackage: PromptPackage;
+  snapshot: WorkspaceSnapshot;
+  modeState: WorkspaceModeState;
+  assets: ProviderAssetReference[];
+  copySafeLogoText: boolean;
+  maxChars: number;
+}): string {
+  const policyBlock = imageReferencePolicyPromptBlock(input.promptPackage, input.assets, {
+    copySafeLogoText: input.copySafeLogoText,
+    imageGeneration: true,
+  });
+  const mandatoryModeContract = input.promptPackage.mode === "collab"
+    ? collabMandatoryVisualContract(input.assets)
+    : "";
+  if (input.promptPackage.mode === "logo" && input.copySafeLogoText) {
+    return joinPromptBlocks([
+      policyBlock,
+      mandatoryModeContract,
+      logoCopySafeImagePromptFromPromptPackage({
+        promptPackage: input.promptPackage,
+        modeState: input.modeState,
+        maxChars: input.maxChars,
+      }),
+    ]).slice(0, input.maxChars);
+  }
+  if (input.promptPackage.mode === "announcement") {
+    return joinPromptBlocks([
+      policyBlock,
+      mandatoryModeContract,
+      announcementImagePromptFromPromptPackage({
+        promptPackage: input.promptPackage,
+        maxChars: input.maxChars,
+      }),
+    ]).slice(0, input.maxChars);
+  }
+  return joinPromptBlocks([
+    policyBlock,
+    mandatoryModeContract,
+    redactLogoCopySafeWordmarkPrompt({
+      prompt: normalizeModePlaceholderAliases(input.promptPackage.finalPrompt, input.promptPackage.mode),
+      snapshot: input.snapshot,
+      modeState: input.modeState,
+    }),
+  ]).slice(0, input.maxChars);
+}
+
 export function assetsFromPromptPackage(
   promptPackage: PromptPackage,
   snapshot: WorkspaceSnapshot,
-  options: { copySafeLogoText?: boolean } = {},
+  options: ProviderAssetReferenceOptions = {},
 ): ProviderAssetReference[] {
   const roleCounters = new Map<string, number>();
-  return promptPackage.assets.map((asset) => {
+  return filterImageReferenceAssetsForMode(promptPackage, options).map((asset) => {
     const nextIndex = (roleCounters.get(asset.role) || 0) + 1;
     roleCounters.set(asset.role, nextIndex);
     return toProviderAssetReference(asset, snapshot, nextIndex, promptPackage.mode, options);
   });
+}
+
+function providerImageAssetsForRequest(input: {
+  promptPackage: PromptPackage;
+  snapshot: WorkspaceSnapshot;
+  providerId: ProviderId;
+  copySafeLogoText: boolean;
+}): ProviderAssetReference[] {
+  const assets = assetsFromPromptPackage(input.promptPackage, input.snapshot, {
+    copySafeLogoText: input.copySafeLogoText,
+    imageGeneration: true,
+  });
+
+  if (input.providerId === "agnes" && input.promptPackage.mode === "poster") {
+    const priority: Record<AssetSemanticRole, number> = {
+      protagonist: 0,
+      antagonist: 1,
+      keySubject: 1,
+      prop: 2,
+      styleReference: 3,
+      brandLogo: 99,
+      environment: 99,
+      compositionReference: 99,
+      supportingAsset: 99,
+    };
+    return assets
+      .filter((asset) => {
+        const role = assetSemanticRole(asset);
+        return role === "protagonist" || role === "antagonist" || role === "keySubject" || role === "styleReference";
+      })
+      .sort((left, right) => {
+        const roleDelta = priority[assetSemanticRole(left)] - priority[assetSemanticRole(right)];
+        if (roleDelta !== 0) return roleDelta;
+        return assets.indexOf(left) - assets.indexOf(right);
+      });
+  }
+
+  return assets;
 }
 
 function creativeDirectionFromPromptPackage(promptPackage: PromptPackage): string {
@@ -314,6 +557,13 @@ function joinPromptBlocks(blocks: string[]): string {
   return blocks.map((block) => block.trim()).filter(Boolean).join("\n\n");
 }
 
+function normalizeModePlaceholderAliases(text: string, mode: ProductionMode): string {
+  if (mode !== "collab") return text;
+  return text
+    .replace(/\[Collab Character\]/gi, "[Collab Partner]")
+    .replace(/\[Partner Character\]/gi, "[Collab Partner]");
+}
+
 function joinPromptBlocksWithinLimit(input: {
   criticalBlocks: string[];
   flexibleBlocks: Array<{ text: string; maxChars: number; minChars?: number }>;
@@ -362,6 +612,77 @@ function integratedSloganPriorityBlock(sloganTargets: string): string {
   ].join("\n");
 }
 
+function posterRequiredAnchorNames(
+  assets: PromptAssetBinding[],
+  role: PosterAssetSemanticRole,
+  fallbackLabel: string,
+): string {
+  const matches = assets.filter((asset) => assetSemanticRole(asset) === role);
+  if (matches.length === 0) return "";
+  return matches
+    .map((asset, index) => asset.placeholder || posterAssetReferenceName(asset, index + 1))
+    .join(", ") || fallbackLabel;
+}
+
+function posterMandatoryVisualContract(input: {
+  promptPackage: PromptPackage;
+  sloganTargets: string;
+}): string {
+  const heroNames = posterRequiredAnchorNames(input.promptPackage.assets, "protagonist", "[Game Character]");
+  const bossNames = posterRequiredAnchorNames(input.promptPackage.assets, "antagonist", "[Boss]");
+  const logoNames = posterRequiredAnchorNames(input.promptPackage.assets, "brandLogo", "[Game Logo]");
+  const required = [
+    heroNames ? `protagonist anchor(s): ${heroNames}` : "",
+    bossNames ? `BOSS/threat anchor(s): ${bossNames}` : "",
+    logoNames ? `single brand/logo treatment: ${logoNames}` : "",
+    input.sloganTargets ? "visible integrated slogan/copy-safe treatment" : "",
+  ].filter(Boolean);
+
+  if (required.length === 0) return "";
+
+  return [
+    "## Non-Negotiable Poster Visual Contract",
+    `Final image fails if any required visual anchor is absent, tiny, hidden, duplicated, or replaced: ${required.join("; ")}.`,
+    heroNames
+      ? "Hero anchor requirement: at least one uploaded protagonist is a large readable foreground/midground actor with visible face/emotion, changed action pose, contact shadow, and set-piece/BOSS interaction."
+      : "",
+    bossNames
+      ? "BOSS anchor requirement: the uploaded BOSS/key threat is a physically dominant campaign subject, not a background ornament. It reads as a large secondary campaign object or main threat with lunge/impact/recoil intent, scale pressure, contact/landing cues, debris, particles, and environmental reaction."
+      : "",
+    logoNames
+      ? "Logo anchor requirement: use exactly one campaign-safe logo treatment. Reproduce uploaded lettering only if accurate; otherwise create one polished blank in-world sign/title plate without fake letters."
+      : "",
+    input.sloganTargets
+      ? "Slogan anchor requirement: slogan mode is active; reserve a large visible slogan area tied to the scheme action/material: oven sign, sauce stroke, steam ribbon, flag, carved plaque, neon board, metal/stone relief, or battle banner. If spelling is unsafe, leave the plate blank but visible."
+      : "",
+    "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible/reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
+  ].filter(Boolean).join("\n");
+}
+
+function collabMandatoryVisualContract(assets: ProviderAssetReference[]): string {
+  const collabPartner = assets.find((asset) => asset.role === "collabCharacter");
+  const gameCharacter = assets.find((asset) => asset.role === "gameCharacter");
+  const brandReferences = assets.filter((asset) => assetSemanticRole(asset) === "brandLogo");
+  if (!collabPartner && !gameCharacter && brandReferences.length === 0) return "";
+
+  return [
+    "## Non-Negotiable Collab Dual-Subject Contract",
+    collabPartner
+      ? `The uploaded collabCharacter reference (${collabPartner.id}) is [Collab Partner]. It must appear as a separate readable co-star, never as a tiny background mascot, hidden decoration, merged hybrid, or omitted partner.`
+      : "",
+    gameCharacter
+      ? `The uploaded gameCharacter reference (${gameCharacter.id}) is [Game Character]. It must appear as a separate readable co-star with its own preserved identity.`
+      : "",
+    collabPartner && gameCharacter
+      ? "Both co-stars must have comparable visual importance: balanced foreground/midground scale, readable silhouettes, shared lighting, and a visible interaction touchpoint such as exchanged props, cooking together, guarding the same objective, racing through the same portal, or reacting to the same impact."
+      : "",
+    "The image fails if the two sides are fused into one character, one side disappears, one side becomes a logo-only presence, or the partner is reduced to a background icon.",
+    brandReferences.length > 0
+      ? "Brand/logo handling: keep uploaded brand references separate. Use exact lettering only when clean; otherwise use blank non-letter plates or neutral emblems. Do not invent fake partner names, fake sponsor words, or hybrid logo text."
+      : "Brand/logo handling: if no complete partner brandLogo is available, create blank non-letter partner/game brand plates or neutral emblems only. Do not generate readable fake partner names or distorted game-logo text.",
+  ].filter(Boolean).join("\n");
+}
+
 function staticSchemeActionRewriteRule(): string {
   return "Static scheme action rewrite: if selected scheme text says a character/BOSS stands, sits, is placed, is located, faces off, or simply presses in from one side, reinterpret that staging into an active trailer moment: sprint, leap, block, parry, swing, brace, slide, climb, land with dust, burst through a doorway/portal, collide with the set piece, or react to impact. Preserve uploaded identity, but do not preserve static standee staging.";
 }
@@ -378,7 +699,10 @@ function rewriteStaticPosterActionPhrases(text: string): string {
     .replace(/(\[Boss(?: \d+)?\])\s*(?:站在|位于|被放置在|处于)/giu, "$1 以攻击或冲击姿态占据");
 }
 
-function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage): string {
+function posterIntegratedKvPromptFromPromptPackage(
+  promptPackage: PromptPackage,
+  maxChars = PROVIDER_PROMPT_MAX_CHARS,
+): string {
   const allowedSectionIds = new Set([
     "project",
     "mode",
@@ -445,6 +769,8 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage)
     logos.length > 0 ? `Logo lock: ${logos.map((asset, index) => posterAssetReferenceName(asset, index + 1)).join(", ")} means uploaded logo/brand reference(s); render exact lettering only when it can stay accurate, otherwise reserve one polished blank logo-safe treatment without fake text.` : "",
   ].filter(Boolean).join("\n");
   const sloganPriorityBlock = integratedSloganPriorityBlock(sloganTargets);
+  const visualContract = posterMandatoryVisualContract({ promptPackage, sloganTargets });
+  const schemeAnchor = compactPromptBlock(schemeText, 900);
 
   const architectureBlock = posterKvArchitectureDirective({
     seed: promptPackage.schemeId || promptPackage.id,
@@ -456,19 +782,21 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage)
     criticalBlocks: [
     "## Integrated Game Campaign KV Task",
     "Generate the final unified premium game campaign key visual as one coherent illustration.",
-    compactPromptBlock(schemeText, 1100),
     "Default pipeline: AI integrated redraw. Use uploaded image references as identity, semantic, style, composition, and brand anchors inside the model generation. Do not plan a separate background plate for local sticker compositing.",
+    schemeAnchor,
+    visualContract,
     "Use uploaded image references as binding visual anchors, not as static stickers. Subject assets may change pose, expression, action, camera angle, lighting, scale, and perspective to become vivid in-world actors or objects while preserving their recognizable identity.",
-    assetRoleInventory ? `## Uploaded Asset Role Semantics and Fusion Strategies\n${assetRoleInventory}` : "",
-    referenceMap ? `## Exact Uploaded Reference Map\n${referenceMap}` : "",
-    "ABSOLUTE HIGHEST PRIORITY - REFERENCE IDENTITY AND BLENDING: replicate the recognizable visual identity from uploaded identity/subject references while integrating them into the new scene's lighting. Preserve character face shape, hair colors, costume palette, body proportions, signature prop/tool, line weight, BOSS silhouette, crown, eye, teeth, tongue, mouth, color blocks, prop shape, and uploaded logo design.",
-    "Reference identity may only be reposed or re-lit. Do not age-up, add beard/mustache, change hairstyle or hair color, change costume, change body type/proportions, change species, or replace a chibi/mascot reference with a generic adult character.",
-    posterIdentitySafeMotionRule(),
+    assetRoleInventory ? "## Uploaded Asset Role Semantics and Fusion Strategies\nUse each uploaded asset according to its semantic duty and fusion strategy; these duties override loose scheme wording." : "",
     "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
     "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
     posterHeroPerformanceScaleLock(),
     posterSubjectAccessoryStrictnessLock(),
     staticSchemeActionRewriteRule(),
+    assetRoleInventory ? `## Detailed Uploaded Asset Role Map\n${assetRoleInventory}` : "",
+    referenceMap ? `## Exact Uploaded Reference Map\n${referenceMap}` : "",
+    "ABSOLUTE HIGHEST PRIORITY - REFERENCE IDENTITY AND BLENDING: replicate the recognizable visual identity from uploaded identity/subject references while integrating them into the new scene's lighting. Preserve character face shape, hair colors, costume palette, body proportions, signature prop/tool, line weight, BOSS silhouette, crown, eye, teeth, tongue, mouth, color blocks, prop shape, and uploaded logo design.",
+    "Reference identity may only be reposed or re-lit. Do not age-up, add beard/mustache, change hairstyle or hair color, change costume, change body type/proportions, change species, or replace a chibi/mascot reference with a generic adult character.",
+    posterIdentitySafeMotionRule(),
     "Do not give uploaded characters new weapons, armor, swords, shields, adult facial structures, noses, beards, mustaches, or costume variants unless those details are clearly present in the reference image.",
     "If the scheme prompt uses placeholders such as [Game Character 1], [Game Character 2], [Boss], or [Game Logo], replace those placeholders with the corresponding uploaded visual references. Do not describe or invent their physical appearance from text.",
     "Placeholder annotation rule: any written appearance, species, clothing, weapon, logo-lettering, color, or anatomy description attached to a placeholder is non-binding unless it is visibly present in the uploaded reference. The uploaded image reference is the source of truth; ignore conflicting or embellished placeholder descriptions.",
@@ -493,6 +821,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage)
       { text: supportingSectionText ? `## Workspace Creative Direction\n${supportingSectionText}` : sectionText, maxChars: 1200, minChars: 300 },
     ],
     closingBlocks: [
+    "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
     sloganPriorityBlock,
     "Allocate one readable campaign-safe logo treatment when uploaded logo/brand assets are present.",
     posterLogoSingleUseLock(),
@@ -517,6 +846,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage: PromptPackage)
     "## Mode Guardrails",
     guardrails,
     ],
+    maxChars,
   });
 }
 
@@ -531,7 +861,10 @@ function shouldUsePosterScenePlateFallback(promptPackage: PromptPackage): boolea
   return process.env.POSTER_LAB_FORCE_ASSET_OVERLAY === "1" || process.env.POSTER_LAB_FORCE_SCENE_PLATE === "1";
 }
 
-function posterIdentitySafePlatePromptFromPromptPackage(promptPackage: PromptPackage): string {
+function posterIdentitySafePlatePromptFromPromptPackage(
+  promptPackage: PromptPackage,
+  maxChars = PROVIDER_PROMPT_MAX_CHARS,
+): string {
   const allowedSectionIds = new Set([
     "project",
     "mode",
@@ -570,7 +903,7 @@ function posterIdentitySafePlatePromptFromPromptPackage(promptPackage: PromptPac
     "No finished uploaded character copies. No finished BOSS copy. No finished logo copy. No people. No chefs. No mascots. No monsters. No generic replacement heroes. No random chef protagonists. No duplicate characters. No shadow silhouettes or placeholder silhouettes. No text. No letters. No GAME LOGO words. No blank signboards or fake UI panels. No sticker collage. No flat pizza wallpaper. No photorealistic pizza macro photography. No black bars. No borders.",
     "## Mode Guardrails",
     guardrails,
-  ].filter(Boolean).join("\n\n").slice(0, 12000);
+  ].filter(Boolean).join("\n\n").slice(0, maxChars);
 }
 
 function assertPromptPackageReadyForProvider(promptPackage: PromptPackage): void {
@@ -782,17 +1115,28 @@ export function mapPromptPackageToImageRequest(input: {
     slot: "image",
     ...(input.model ? { model: input.model } : {}),
   });
+  const promptMaxChars = Math.min(PROVIDER_PROMPT_MAX_CHARS, providerImagePromptMaxChars(input.providerId));
   const count = input.count ?? modeState.outputSettings.imagesPerScheme;
   const useIdentitySafePlate = shouldUsePosterScenePlateFallback(input.promptPackage);
+  const copySafeLogoText = isLogoCopySafeBlankWordmarkModeState(modeState);
+  const assets = providerImageAssetsForRequest({
+    promptPackage: input.promptPackage,
+    snapshot: input.snapshot,
+    providerId: input.providerId,
+    copySafeLogoText,
+  });
 
   const prompt = input.promptPackage.mode === "poster"
     ? useIdentitySafePlate
-      ? posterIdentitySafePlatePromptFromPromptPackage(input.promptPackage)
-      : posterIntegratedKvPromptFromPromptPackage(input.promptPackage)
-    : redactLogoCopySafeWordmarkPrompt({
-        prompt: input.promptPackage.finalPrompt,
+      ? posterIdentitySafePlatePromptFromPromptPackage(input.promptPackage, promptMaxChars)
+      : posterIntegratedKvPromptFromPromptPackage(input.promptPackage, promptMaxChars)
+    : nonPosterImagePromptFromPromptPackage({
+        promptPackage: input.promptPackage,
         snapshot: input.snapshot,
         modeState,
+        assets,
+        copySafeLogoText,
+        maxChars: promptMaxChars,
       });
   const request = ImageGenerationRequestSchema.parse({
     context: createRequestContext(input),
@@ -801,9 +1145,7 @@ export function mapPromptPackageToImageRequest(input: {
     ...(input.promptPackage.negativePrompt.trim()
       ? { negativePrompt: input.promptPackage.negativePrompt.trim() }
       : {}),
-    assets: assetsFromPromptPackage(input.promptPackage, input.snapshot, {
-      copySafeLogoText: isLogoCopySafeBlankWordmarkModeState(modeState),
-    }),
+    assets,
     platformPreset: input.promptPackage.platform.platformPreset,
     aspectRatio: input.promptPackage.platform.aspectRatio,
     width: input.promptPackage.platform.width || inferredSize.width,

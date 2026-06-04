@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
-const currentVersion = "1.1.0-rc.4";
+const currentVersion = "1.1.0-rc.6";
 
 function read(filePath) {
   try {
@@ -86,8 +86,11 @@ for (const token of [
   "Fresh real generation is manual and opt-in only",
   "Never use a direct API/script path to bypass the App live safety gate",
   "Baseline Result Evidence",
-  "Fresh rc.4 Acceptance Status",
-  "pending live safety gate",
+  "Fresh rc.5 Acceptance Status",
+  "Agnes all-core multimode pass",
+  "Icon final job",
+  "Logo job",
+  "quality-risk",
 ]) {
   if (!realAcceptance.includes(token)) issues.push(`REAL_GENERATION_ACCEPTANCE.md: missing ${token}`);
 }

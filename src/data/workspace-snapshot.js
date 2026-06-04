@@ -97,6 +97,7 @@ function createSnapshotModeForm(modeId) {
   if (modeId === "logo") {
     return {
       mode: "logo",
+      styleTags: [],
       wordmark: "Pizza Kitchen Adventures",
       solidBackground: true,
       backgroundColor: "#ffffff",
@@ -106,6 +107,7 @@ function createSnapshotModeForm(modeId) {
   if (modeId === "icon") {
     return {
       mode: "icon",
+      styleTags: [],
       aspectRatio: "1:1",
       noText: true,
       fullBleedSquare: true,

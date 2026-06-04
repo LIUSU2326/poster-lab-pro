@@ -488,7 +488,8 @@ function renderResultQualityPanel(result) {
 
 function qualityFindingLabel(code) {
   return {
-    "icon-rounded-mask-risk": "图标边角",
+    "icon-rounded-mask-risk": "图标容器",
+    "icon-edge-text-mark-risk": "图标边缘标记",
     "logo-text-accuracy-review": "Logo 字形",
     "announcement-copy-safe-review": "文案安全区",
     "collab-missing-partner-brand-logo": "联名标识",
@@ -528,7 +529,7 @@ function renderResultActionButton(result, action, label) {
     : route.title;
   return `
     <button
-      class="${active ? "is-active" : ""} ${liveBlocked ? "is-live-blocked" : ""} ${route.native ? "is-native-route" : "uses-fallback-route"}"
+      class="${active ? "is-active" : ""} ${liveBlocked ? "is-live-blocked" : ""} ${route.supported ? "is-native-route" : "is-unsupported-route"}"
       type="button"
       data-result-action="${action}"
       data-result-id="${result.id}"
@@ -545,9 +546,15 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
   const confirmingDelete = state.schemeDeleteConfirmId === scheme.id;
   const schemeGeneration = getSchemeGenerationStatus(activeMode, scheme.id);
   const imageGeneration = getImageGenerationStatus(activeMode, scheme.id);
+  const liveGate = getLiveGateViewModel(activeMode);
+  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
+  const liveBlockedTitle = liveBlocked
+    ? liveGate.blockers?.[0]?.message || "先开启并通过实机安全闸，再调用真实模型服务"
+    : "";
   const rendering = scheme.status === "loading" || imageGeneration.active;
   const refreshing = schemeGeneration.active;
-  const refreshDisabled = refreshing || rendering || state.submission?.status === "submitting";
+  const refreshDisabled = refreshing || rendering || liveBlocked || state.submission?.status === "submitting";
+  const renderDisabled = rendering || liveBlocked;
   const hasPlanMedia = scheme.status === "failed" || schemeResults.some((result) => getResultPreviewUrl(result));
   const actionLabel = rendering
     ? "生成中"
@@ -571,7 +578,7 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
           data-action="refresh-scheme"
           data-scheme-refresh-id="${escapeHtml(scheme.id)}"
           aria-label="刷新这个方案"
-          title="刷新这个方案"
+          title="${escapeAttribute(liveBlockedTitle || "刷新这个方案")}"
           ${refreshDisabled ? "disabled" : ""}
         >${refreshing ? `<span class="button-spinner" aria-hidden="true"></span>` : "&#8635;"}</button>
       </header>
@@ -596,11 +603,12 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
             title="删除方案"
           >${confirmingDelete ? "确认删除" : "删除"}</button>
           <button
-            class="render-button ${rendering ? "loading" : ""}"
+            class="render-button ${rendering ? "loading" : ""} ${liveBlocked ? "is-live-blocked" : ""}"
             type="button"
             data-action="submit-generation"
             data-scheme-id="${escapeHtml(scheme.id)}"
-            ${rendering ? "disabled" : ""}
+            title="${escapeAttribute(liveBlockedTitle)}"
+            ${renderDisabled ? "disabled" : ""}
           >
             ${rendering ? `<span class="button-spinner" aria-hidden="true"></span><span>${actionLabel}</span>` : actionLabel}
           </button>

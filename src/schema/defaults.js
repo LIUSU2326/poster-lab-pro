@@ -93,6 +93,14 @@ const providerDefaults = {
       compositionReference: "qwen3.6-plus",
     },
   },
+  agnes: {
+    baseUrl: "https://apihub.agnes-ai.com/v1",
+    defaultModel: "agnes-image-2.1-flash",
+    modelSlots: {
+      concept: "agnes-2.0-flash",
+      image: "agnes-image-2.1-flash",
+    },
+  },
 };
 
 export function createProjectBriefDefaults(mode = "poster") {
@@ -123,13 +131,16 @@ export function createSloganSettingsDefaults() {
 
 export function createProviderConfigDefaults(providerId = "openai") {
   const defaults = providerDefaults[providerId] || providerDefaults.openai;
+  const modelSlots = providerId === "openai"
+    ? { ...defaultProviderModelSlots, ...(defaults.modelSlots || {}) }
+    : { ...(defaults.modelSlots || {}) };
   return {
     providerId,
     enabled: providerId === "openai",
     apiKey: "",
     baseUrl: defaults.baseUrl,
     defaultModel: defaults.defaultModel,
-    modelSlots: { ...defaultProviderModelSlots, ...(defaults.modelSlots || {}) },
+    modelSlots,
   };
 }
 

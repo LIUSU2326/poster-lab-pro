@@ -70,7 +70,7 @@ export type PosterAssetOverlayResult = {
 
 export type IconCanvasEdgeRepairProcessing = {
   strategy: "iconCanvasEdgeRepair";
-  reason: "roundedMaskRisk";
+  reason: "roundedMaskRisk" | "edgeTextMarkRisk";
   sourceWidth: number;
   sourceHeight: number;
   targetWidth: number;
@@ -287,6 +287,7 @@ export async function repairIconCanvasEdges(input: {
   dataUrl: string | null;
   width: number;
   height: number;
+  reason?: IconCanvasEdgeRepairProcessing["reason"];
 }): Promise<IconCanvasEdgeRepairResult> {
   if (!input.dataUrl) {
     return { dataUrl: null, width: input.width, height: input.height, processing: null };
@@ -308,6 +309,71 @@ export async function repairIconCanvasEdges(input: {
       .ensureAlpha()
       .png()
       .toBuffer();
+    if (input.reason === "edgeTextMarkRisk") {
+      const cleanCropSize = Math.max(1, Math.floor(Math.min(targetWidth, targetHeight) * 0.58));
+      const cleanLeft = Math.max(0, Math.floor((targetWidth - cleanCropSize) / 2));
+      const cleanTop = Math.max(0, Math.floor((targetHeight - cleanCropSize) / 2));
+      const background = await sharp(normalizedBytes, { failOn: "none" })
+        .extract({ left: cleanLeft, top: cleanTop, width: cleanCropSize, height: cleanCropSize })
+        .resize({ width: targetWidth, height: targetHeight, fit: "cover", kernel: "lanczos3" })
+        .blur(Math.max(8, Math.min(targetWidth, targetHeight) * 0.055))
+        .modulate({ brightness: 1.04, saturation: 0.78 })
+        .png()
+        .toBuffer();
+      const foregroundSize = Math.max(1, Math.floor(Math.min(targetWidth, targetHeight) * 0.86));
+      const foregroundBase = await sharp(normalizedBytes, { failOn: "none" })
+        .extract({ left: cleanLeft, top: cleanTop, width: cleanCropSize, height: cleanCropSize })
+        .resize({ width: foregroundSize, height: foregroundSize, fit: "cover", kernel: "lanczos3" })
+        .png()
+        .toBuffer();
+      const { data: foregroundSource, info: foregroundInfo } = await sharp(foregroundBase, { failOn: "none" })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const foregroundMask = softRoundedCenterMask(foregroundSize, foregroundSize);
+      const foregroundRgba = Buffer.alloc(foregroundSize * foregroundSize * 4);
+      for (let y = 0; y < foregroundSize; y += 1) {
+        for (let x = 0; x < foregroundSize; x += 1) {
+          const sourceOffset = (y * foregroundInfo.width + x) * foregroundInfo.channels;
+          const targetOffset = (y * foregroundSize + x) * 4;
+          const maskAlpha = foregroundMask[y * foregroundSize + x] ?? 255;
+          const sourceAlpha = foregroundSource[sourceOffset + 3] ?? 255;
+          foregroundRgba[targetOffset] = foregroundSource[sourceOffset] ?? 0;
+          foregroundRgba[targetOffset + 1] = foregroundSource[sourceOffset + 1] ?? 0;
+          foregroundRgba[targetOffset + 2] = foregroundSource[sourceOffset + 2] ?? 0;
+          foregroundRgba[targetOffset + 3] = Math.round((sourceAlpha * maskAlpha) / 255);
+        }
+      }
+      const foreground = await sharp(foregroundRgba, {
+        raw: { width: foregroundSize, height: foregroundSize, channels: 4 },
+      })
+        .png()
+        .toBuffer();
+      const repaired = await sharp(background, { failOn: "none" })
+        .composite([{
+          input: foreground,
+          left: Math.floor((targetWidth - foregroundSize) / 2),
+          top: Math.floor((targetHeight - foregroundSize) / 2),
+          blend: "over",
+        }])
+        .png()
+        .toBuffer();
+
+      return {
+        dataUrl: `data:image/png;base64,${repaired.toString("base64")}`,
+        width: targetWidth,
+        height: targetHeight,
+        processing: {
+          strategy: "iconCanvasEdgeRepair",
+          reason: "edgeTextMarkRisk",
+          sourceWidth: targetWidth,
+          sourceHeight: targetHeight,
+          targetWidth,
+          targetHeight,
+          tokenCost: 0,
+        },
+      };
+    }
     const background = await sharp(normalizedBytes, { failOn: "none" })
       .extract({ left, top, width: cropSize, height: cropSize })
       .resize({ width: targetWidth, height: targetHeight, fit: "cover", kernel: "lanczos3" })
@@ -353,7 +419,7 @@ export async function repairIconCanvasEdges(input: {
       height: targetHeight,
       processing: {
         strategy: "iconCanvasEdgeRepair",
-        reason: "roundedMaskRisk",
+        reason: input.reason || "roundedMaskRisk",
         sourceWidth: targetWidth,
         sourceHeight: targetHeight,
         targetWidth,

@@ -17,10 +17,15 @@ import {
   testProviderModelConnectionForWorkbench,
 } from './provider-credential-client.js';
 import { renderSettingsSheet } from './render/settings-sheet.js';
+import { saveLocalProviderPreferences } from './local-draft-store.js';
 
 const LEFT_PANEL_MIN = 280;
 const LEFT_PANEL_MAX = 520;
 const LEFT_PANEL_COLLAPSE_AT = 236;
+
+function persistProviderPreferences() {
+  saveLocalProviderPreferences(state);
+}
 
 export function bindEvents(render) {
   document.querySelectorAll("[data-mode]").forEach((button) => {
@@ -166,6 +171,11 @@ async function handleActionControl(control, event, render) {
   }
   if (action === "toggle-theme") state.theme = state.theme === "light" ? "dark" : "light";
   if (action === "toggle-copy") state.copyVisible = !state.copyVisible;
+  if (action === "toggle-task-panel") {
+    state.taskOpen = !state.taskOpen;
+    render();
+    return;
+  }
   if (action === "toggle-task") {
     state.settingsOpen = true;
     state.taskOpen = false;
@@ -438,6 +448,12 @@ async function handleActionControl(control, event, render) {
     await testCurrentProviderRoutePlan(render);
     return;
   }
+  if (action === "apply-agnes-core-route") {
+    applyAgnesCoreRoute();
+    persistProviderPreferences();
+    refreshSettingsLayer(render);
+    return;
+  }
   if (action === "run-manual-live-test") {
     const liveTestPromise = runManualLiveTestForWorkbench();
     state.taskOpen = true;
@@ -475,6 +491,7 @@ async function handleActionControl(control, event, render) {
     };
     state.providerRoutePlans = [...plans, plan];
     state.providerRoutePlan = plan.id;
+    persistProviderPreferences();
     refreshSettingsLayer(render);
     return;
   }
@@ -486,6 +503,7 @@ async function handleActionControl(control, event, render) {
       state.providerRoutePlans = (state.providerRoutePlans || []).map((plan) =>
         plan.id === planId ? { ...plan, name: nextName.slice(0, 24) } : plan,
       );
+      persistProviderPreferences();
       refreshSettingsLayer(render);
       return;
     }
@@ -495,6 +513,7 @@ async function handleActionControl(control, event, render) {
     if (plans.length > 1) {
       state.providerRoutePlans = plans.filter((plan) => plan.id !== state.providerRoutePlan);
       state.providerRoutePlan = state.providerRoutePlans[0]?.id || "standard";
+      persistProviderPreferences();
       refreshSettingsLayer(render);
       return;
     }
@@ -520,6 +539,7 @@ async function handleActionControl(control, event, render) {
         defaultModel: modelId,
       },
     };
+    persistProviderPreferences();
     refreshSettingsLayer(render);
     return;
   }
@@ -534,6 +554,7 @@ async function handleActionControl(control, event, render) {
       [providerId]: current.filter((model) => model !== modelId),
     };
     state.providerModelOverrides = removeProviderModelOverrideValue(providerId, modelId);
+    persistProviderPreferences();
     refreshSettingsLayer(render);
     return;
   }
@@ -728,6 +749,64 @@ function readCurrentProviderRoutePlanSlots(root = document) {
     .filter((item) => item.slot && item.providerId && item.model);
 }
 
+function applyAgnesCoreRoute() {
+  state.provider = "agnes";
+  state.providerRoutePlan = ensureProviderRoutePlan("agnes-core", "Agnes 核心测试");
+  state.providerSlotRoutes = {
+    ...(state.providerSlotRoutes || {}),
+    concept: {
+      providerId: "agnes",
+      model: "agnes-2.0-flash",
+    },
+    image: {
+      providerId: "agnes",
+      model: "agnes-image-2.1-flash",
+    },
+    styleReference: resolveReferenceAnalysisRoute("styleReference"),
+    compositionReference: resolveReferenceAnalysisRoute("compositionReference"),
+  };
+}
+
+function ensureProviderRoutePlan(planId, name) {
+  const plans = Array.isArray(state.providerRoutePlans) ? [...state.providerRoutePlans] : [];
+  if (!plans.some((plan) => plan.id === planId)) {
+    state.providerRoutePlans = [...plans, { id: planId, name }];
+  }
+  return planId;
+}
+
+function resolveReferenceAnalysisRoute(slot) {
+  const current = state.providerSlotRoutes?.[slot] || {};
+  if (current.providerId && current.providerId !== "agnes") return current;
+  const providerId = findConfiguredReferenceAnalysisProvider();
+  if (!providerId) return { providerId: "agnes" };
+  return {
+    providerId,
+    model: defaultReferenceAnalysisModel(providerId, slot),
+  };
+}
+
+function findConfiguredReferenceAnalysisProvider() {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const configured = (providerId) => {
+    const config = snapshot.providerConfigs?.[providerId];
+    return Boolean(config?.hasApiKey || config?.status === "success")
+      || (state.providerCredential.providerId === providerId && state.providerCredential.configured)
+      || (state.providerConnection.providerId === providerId && state.providerConnection.ok);
+  };
+  return ["google", "openai", "aigocode", "claude", "qwen"].find(configured) || "";
+}
+
+function defaultReferenceAnalysisModel(providerId, slot) {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const config = snapshot.providerConfigs?.[providerId] || {};
+  if (config.modelSlots?.[slot]) return config.modelSlots[slot];
+  if (providerId === "google") return "gemini-2.5-flash";
+  if (providerId === "claude") return "claude-sonnet-4-6";
+  if (providerId === "qwen") return "qwen3.6-plus";
+  return "gpt-5.5";
+}
+
 function escapeSelectorValue(value) {
   return String(value || "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
@@ -887,6 +966,7 @@ function bindProviderModelControls(render, root = document) {
           providerId: control.value,
         },
       };
+      persistProviderPreferences();
       refreshSettingsLayer(render);
     });
   });
@@ -903,6 +983,7 @@ function bindProviderModelControls(render, root = document) {
           defaultModel: control.value,
         },
       };
+      persistProviderPreferences();
     });
   });
 
@@ -926,6 +1007,7 @@ function bindProviderModelControls(render, root = document) {
           [slot]: control.value,
         },
       };
+      persistProviderPreferences();
     });
   });
 
@@ -934,6 +1016,7 @@ function bindProviderModelControls(render, root = document) {
       const planId = button.dataset.providerRoutePlan;
       if (!planId) return;
       state.providerRoutePlan = planId;
+      persistProviderPreferences();
       refreshSettingsLayer(render);
     });
   });
@@ -983,6 +1066,7 @@ async function handleProviderControl(button, render) {
   if (state.provider === providerId && state.settingsOpen) return;
 
   state.provider = providerId;
+  persistProviderPreferences();
   if (!state.settingsOpen) {
     render();
     return;

@@ -60,19 +60,22 @@ for (const token of [
   "costBasisLabel",
   "estimatePreparedGeneration",
   "plannedOutputFromQueue",
+  "getGenerationQualityWarnings",
+  "agnes_multireference_quality_review",
+  "qualityRisk",
 ]) {
   if (!viewModelSource.includes(token)) issues.push(`live-gate-view-model.js: missing ${token}`);
 }
 
 for (const [name, source, tokens] of [
   ["config-panel.js", configSource, ["模型、Key 与实机状态在顶部统一查看"]],
-  ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "open-settings", "costSummaryLabel"]],
+  ["topbar.js", topbarSource, ["live-gate-chip", "实机安全", "open-settings", "costSummaryLabel", "qualityRisk"]],
   ["inspector.js", inspectorSource, ["live-gate-inspector", "实机安全闸"]],
-  ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关"]],
+  ["task-chrome.js", taskChromeSource, ["live-gate-slim", "live-gate-context", "安全开关", "qualityRiskDetail"]],
   ["center-board.js", centerBoardSource, ["getLiveGateViewModel", "liveBlocked", "先通过实机安全闸"]],
   ["task-chrome.js", taskChromeSource, ["getManualLiveTestViewModel", "manual.disabled", "run-manual-live-test"]],
-  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "provider-setup-steps", "data-live-toggle", "data-live-cost-cap", "实机安全闸", "预计数量"]],
-  ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim", "live-gate-metric small"]],
+  ["settings-sheet.js", settingsSheetSource, ["live-gate-panel", "provider-setup-steps", "data-live-toggle", "data-live-cost-cap", "实机安全闸", "预计数量", "live-gate-quality-warnings"]],
+  ["styles.css", stylesSource, ["live-gate-chip", "live-gate-context", "live-gate-slim", "live-gate-metric small", "live-gate-quality-warnings", "run-mode-chip.warning"]],
 ]) {
   for (const token of tokens) {
     if (!source.includes(token)) issues.push(`${name}: missing ${token}`);
@@ -134,6 +137,20 @@ try {
   }
   if (!allowedGate.costSummaryLabel.includes("上限")) {
     issues.push("live gate should expose a cost summary label with accepted cap");
+  }
+
+  state.providerSlotRoutes = {
+    ...state.providerSlotRoutes,
+    concept: { providerId: "agnes", model: "agnes-2.0-flash" },
+    image: { providerId: "agnes", model: "agnes-image-2.1-flash" },
+  };
+  const agnesPosterGate = getLiveGateViewModel(modeSpecs.poster);
+  if (!agnesPosterGate.allowed || !agnesPosterGate.qualityRisk || !agnesPosterGate.qualityWarnings?.[0]?.message.includes("正式交付前需要人工复核")) {
+    issues.push("Agnes poster live gate should remain allowed but expose a visible quality-risk warning");
+  }
+  const agnesAnnouncementGate = getLiveGateViewModel(modeSpecs.announcement);
+  if (agnesAnnouncementGate.qualityRisk) {
+    issues.push("Agnes announcement live gate should not inherit Poster/Collab quality-risk warning");
   }
 
   state.workspaceSnapshot.queuePlans = [{
