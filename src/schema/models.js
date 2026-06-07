@@ -4,7 +4,7 @@ export const enums = {
   productionMode: ["poster", "collab", "announcement", "logo", "icon"],
   theme: ["light", "dark"],
   workbenchView: ["schemes", "text", "archive", "results", "compare", "export"],
-  providerId: ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"],
+  providerId: ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes", "mimo"],
   providerStatus: ["idle", "testing", "success", "warning", "error"],
   assetRole: [
     "gameCharacter",
@@ -19,7 +19,20 @@ export const enums = {
     "subjectReference",
   ],
   sloganMode: ["off", "auto", "global"],
-  sloganLanguage: ["zh-CN", "en-US", "ja-JP", "ko-KR"],
+  sloganLanguage: [
+    "en-US",
+    "zh-CN",
+    "zh-TW",
+    "ja-JP",
+    "ko-KR",
+    "fr-FR",
+    "de-DE",
+    "es-ES",
+    "pt-BR",
+    "id-ID",
+    "th-TH",
+    "vi-VN",
+  ],
   referenceStrength: ["weak", "composition", "highFidelityComposition"],
   platformPreset: [
     "steam",
@@ -149,7 +162,7 @@ export const formSchemas = {
   },
 
   SloganSettingsForm: {
-    mode: { enum: enums.sloganMode, default: "auto" },
+    mode: { enum: enums.sloganMode, default: "off" },
     globalSlogan: { type: "string", max: 80, nullable: true },
     languages: { enumArray: enums.sloganLanguage, default: ["en-US"] },
   },

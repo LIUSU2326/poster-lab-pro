@@ -33,6 +33,22 @@ function withProviderReadyMockAssets(snapshot) {
   };
 }
 
+function withPosterSloganMode(snapshot, mode = "auto") {
+  return {
+    ...snapshot,
+    modeStates: snapshot.modeStates.map((modeState) => modeState.mode === "poster"
+      ? {
+        ...modeState,
+        sloganSettings: {
+          ...(modeState.sloganSettings || {}),
+          mode,
+          languages: ["en-US"],
+        },
+      }
+      : modeState),
+  };
+}
+
 function createModeAsset(baseAsset, id, role, label, description = "") {
   const now = "2026-06-03T00:00:00.000Z";
   return {
@@ -186,7 +202,7 @@ async function runRuntimeCheck() {
   try {
     if (!runtime.storage || !runtime.prompts || !runtime.mapper) return;
 
-    const baseSnapshot = withProviderReadyMockAssets(runtime.storage.createMockWorkspaceSnapshot());
+    const baseSnapshot = withPosterSloganMode(withProviderReadyMockAssets(runtime.storage.createMockWorkspaceSnapshot()));
     const baseAsset = baseSnapshot.assets.find((asset) => asset.role === "gameCharacter") || baseSnapshot.assets[0];
     const modeAssets = [
       createModeAsset(baseAsset, "asset-beta6-game-character", "gameCharacter", "Uploaded playable character", "real protagonist reference"),

@@ -2,7 +2,6 @@ import { state } from '../state.js';
 import { renderConfigPanel } from './config-panel.js';
 import { renderTopbar } from './topbar.js';
 import { renderCenterBoard } from './center-board.js';
-import { renderTaskChrome } from './task-chrome.js';
 import { renderSettingsSheet } from './settings-sheet.js';
 
 export function renderShell(activeMode, selected) {
@@ -19,7 +18,6 @@ export function renderShell(activeMode, selected) {
         <section class="production-layout no-inspector figma-workbench-layout">
           ${renderCenterBoard(activeMode, selected)}
         </section>
-        ${renderTaskChrome(activeMode)}
       </main>
       ${state.settingsOpen ? renderSettingsSheet() : ""}
       ${state.generationChoiceOpen ? renderGenerationChoiceDialog(activeMode) : ""}

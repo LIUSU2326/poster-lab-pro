@@ -37,10 +37,12 @@ for (const token of [
 for (const token of [
   "simulate-asset-upload",
   "data-asset-role",
-  "asset-route-status",
-  "renderAssetOperation()",
 ]) {
   if (!configPanel.includes(token)) issues.push(`config-panel.js: missing asset UI token ${token}`);
+}
+
+for (const token of ["asset-route-status", "renderAssetOperation()"]) {
+  if (configPanel.includes(token)) issues.push(`config-panel.js: removed asset route UI token should stay absent (${token})`);
 }
 
 if (!events.includes("simulateWorkbenchAssetUpload")) {
@@ -288,8 +290,8 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
   if (state.assetOperation?.status !== "ready") {
     issues.push("assetOperation should be ready after successful asset route flow");
   }
-  if (calls[1]?.body?.replaceExisting !== true) {
-    issues.push("asset commit should replace an existing slot asset by default");
+  if (calls[1]?.body?.replaceExisting !== false) {
+    issues.push("asset commit should append multiple slot assets by default");
   }
 
   state.apiMode = "http";
@@ -324,8 +326,8 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
   if (!calls[2]?.body?.asset?.previewUrl?.includes("/uploads/workspaces/")) {
     issues.push("file asset commit should use the local public upload URL");
   }
-  if (calls[2]?.body?.replaceExisting !== true) {
-    issues.push("file asset commit should replace an existing slot asset by default");
+  if (calls[2]?.body?.replaceExisting !== false) {
+    issues.push("file asset commit should append multiple slot assets by default");
   }
 
   const oldLogo = {

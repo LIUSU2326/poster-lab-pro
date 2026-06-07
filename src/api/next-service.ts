@@ -1,5 +1,7 @@
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import { createLocalApiService } from "./service";
 import {
   EncryptedProviderCredentialRecordSchema,
@@ -18,14 +20,14 @@ import {
 } from "../providers";
 import {
   createGoogleImageFetchTransport,
-  createManualLiveGenerationService,
   createOpenAIImageFetchTransport,
-} from "./manual-live-generation";
+} from "./provider-image-transports";
 import {
   createOpenAICompatibleBriefAdapter,
   createOpenAICompatibleChatFetchTransport,
 } from "../providers/openai-compatible-brief-adapter";
 import { createProviderDiagnosticService } from "./provider-diagnostics";
+import { isQueueCancellationRequested } from "./queue-cancellation";
 
 function createFileCredentialVaultBackingStore(filePath: string): ProviderCredentialVaultBackingStore {
   let loaded = false;
@@ -94,7 +96,7 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     transport: createGoogleImageFetchTransport(fetchImpl),
   });
 
-  for (const providerId of ["openai", "aigocode", "deepseek", "qwen", "agnes"] as const) {
+  for (const providerId of ["openai", "aigocode", "deepseek", "qwen", "agnes", "mimo"] as const) {
     const briefAdapter = createOpenAICompatibleBriefAdapter({
       providerId,
       transport: chatTransport,
@@ -141,16 +143,90 @@ type NextApiSingleton = {
   localApiService: ReturnType<typeof createLocalApiService>;
   providerDiagnosticService: ReturnType<typeof createProviderDiagnosticService>;
   resultFileStore: ReturnType<typeof createLocalResultFileStore>;
-  manualLiveGenerationService: ReturnType<typeof createManualLiveGenerationService>;
 };
 
 declare global {
   // Keep the local API state shared across Next route module reloads in dev.
-  // This prevents the provider settings route and live-test route from seeing different in-memory vaults.
+  // This prevents provider settings and generation routes from seeing different in-memory vaults.
   var __posterLabNextApiSingleton: NextApiSingleton | undefined;
 }
 
+let runtimeProxyConfigured = false;
+
+function firstProxyValue(proxyServer: string, key: "http" | "https"): string {
+  const trimmed = proxyServer.trim();
+  if (!trimmed.includes("=")) return trimmed;
+  const pairs = trimmed
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => {
+      const index = item.indexOf("=");
+      return index > 0 ? [item.slice(0, index).toLowerCase(), item.slice(index + 1)] : ["", item];
+    });
+  return pairs.find(([name]) => name === key)?.[1]
+    || pairs.find(([name]) => name === "http")?.[1]
+    || pairs[0]?.[1]
+    || "";
+}
+
+function normalizeProxyUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+}
+
+function readWindowsUserProxy(): { httpProxy: string; httpsProxy: string } | null {
+  if (process.platform !== "win32") return null;
+  const key = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";
+  try {
+    const enabledRaw = execFileSync("reg", ["query", key, "/v", "ProxyEnable"], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    if (!/\bProxyEnable\b[\s\S]*0x1\b/i.test(enabledRaw)) return null;
+    const serverRaw = execFileSync("reg", ["query", key, "/v", "ProxyServer"], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    const match = serverRaw.match(/\bProxyServer\b\s+REG_SZ\s+(.+)\s*$/im);
+    const proxyServer = match?.[1]?.trim() || "";
+    if (!proxyServer) return null;
+    return {
+      httpProxy: normalizeProxyUrl(firstProxyValue(proxyServer, "http")),
+      httpsProxy: normalizeProxyUrl(firstProxyValue(proxyServer, "https")),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function appendNoProxy(value: string | undefined, additions: string[]): string {
+  const current = String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return Array.from(new Set([...current, ...additions])).join(",");
+}
+
+function configureRuntimeProxyFromSystem() {
+  if (runtimeProxyConfigured || process.env.POSTER_LAB_DISABLE_SYSTEM_PROXY === "1") return;
+  runtimeProxyConfigured = true;
+
+  if (!process.env.HTTPS_PROXY && !process.env.HTTP_PROXY && !process.env.ALL_PROXY) {
+    const proxy = readWindowsUserProxy();
+    if (proxy?.httpProxy) process.env.HTTP_PROXY = proxy.httpProxy;
+    if (proxy?.httpsProxy) process.env.HTTPS_PROXY = proxy.httpsProxy;
+  }
+
+  if (process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.ALL_PROXY) {
+    process.env.NO_PROXY = appendNoProxy(process.env.NO_PROXY, ["localhost", "127.0.0.1", "::1"]);
+    setGlobalDispatcher(new EnvHttpProxyAgent());
+  }
+}
+
 function createNextApiSingleton(): NextApiSingleton {
+  configureRuntimeProxyFromSystem();
   const runtimeDir = process.env.POSTER_LAB_RUNTIME_DIR || path.join(process.cwd(), "artifacts", "runtime");
   const repository = createJsonFileWorkspaceRepository({
     filePath: path.join(runtimeDir, "workspace-store.json"),
@@ -172,7 +248,8 @@ function createNextApiSingleton(): NextApiSingleton {
       credentialVault,
       providerRegistry: createQueueProviderRegistry(fetch),
       resultFileStore,
-      requireLiveExecutionGate: true,
+      requireLiveExecutionGate: false,
+      isQueueCancellationRequested,
     }),
     providerDiagnosticService: createProviderDiagnosticService({
       repository,
@@ -180,14 +257,6 @@ function createNextApiSingleton(): NextApiSingleton {
       transport: createProviderConnectionFetchTransport(fetch),
     }),
     resultFileStore,
-    manualLiveGenerationService: createManualLiveGenerationService({
-      repository,
-      credentialVault,
-      connectionTransport: createProviderConnectionFetchTransport(fetch),
-      imageTransport: createOpenAIImageFetchTransport(fetch),
-      googleImageTransport: createGoogleImageFetchTransport(fetch),
-      resultFileStore,
-    }),
   };
 }
 
@@ -199,4 +268,3 @@ export const nextCredentialVault = nextApiSingleton.credentialVault;
 export const nextLocalApiService = nextApiSingleton.localApiService;
 export const nextProviderDiagnosticService = nextApiSingleton.providerDiagnosticService;
 export const nextResultFileStore = nextApiSingleton.resultFileStore;
-export const nextManualLiveGenerationService = nextApiSingleton.manualLiveGenerationService;

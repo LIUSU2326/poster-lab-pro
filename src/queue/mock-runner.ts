@@ -75,9 +75,19 @@ function taskStarted(task: QueueTask): QueueTask {
   });
 }
 
+function taskCancelled(task: QueueTask): QueueTask {
+  return QueueTaskSchema.parse({
+    ...task,
+    status: "cancelled",
+    stage: "done",
+    progress: task.status === "running" ? task.progress : 0,
+    error: null,
+  });
+}
+
 function event(
   jobId: string,
-  type: "jobStarted" | "taskStarted" | "taskSucceeded" | "taskFailed" | "jobCompleted",
+  type: "jobStarted" | "taskStarted" | "taskSucceeded" | "taskFailed" | "jobCompleted" | "jobCancelled",
   message: string,
   taskId?: string,
 ) {
@@ -117,6 +127,7 @@ export type MockQueueRunOptions = {
   credentialRefs?: Partial<Record<ProviderId, ProviderCredentialRef>>;
   credentialResolver?: CredentialResolver;
   snapshot?: WorkspaceSnapshot;
+  isCancellationRequested?: (jobId: string) => boolean;
 };
 
 function isAdapter(value: GenerationProviderAdapter | MockQueueRunOptions | undefined): value is GenerationProviderAdapter {
@@ -601,8 +612,24 @@ export async function runMockQueuePlan(
   let tasks = initialPlan.tasks;
   let workingSnapshot = options.snapshot ? cloneWorkspaceSnapshot(options.snapshot) : undefined;
   const events: QueueEvent[] = [...initialPlan.events, event(initialPlan.job.id, "jobStarted", "Started mock queue run.")];
+  let cancelled = Boolean(options.isCancellationRequested?.(initialPlan.job.id));
+
+  function cancelOpenTasks(currentTaskId = "") {
+    tasks = tasks.map((task) => {
+      if (["succeeded", "failed", "cancelled", "skipped"].includes(task.status)) return task;
+      if (currentTaskId && task.id !== currentTaskId && task.status === "running") return task;
+      return taskCancelled(task);
+    });
+  }
 
   for (const originalTask of tasks) {
+    if (cancelled || options.isCancellationRequested?.(initialPlan.job.id)) {
+      cancelled = true;
+      cancelOpenTasks();
+      events.push(event(initialPlan.job.id, "jobCancelled", "Cancelled queue run before starting the next task."));
+      break;
+    }
+
     const latestTask = tasks.find((task) => task.id === originalTask.id) || originalTask;
     if (!canRun(latestTask, tasks)) continue;
 
@@ -617,6 +644,13 @@ export async function runMockQueuePlan(
         ...options,
         ...(workingSnapshot ? { snapshot: workingSnapshot } : {}),
       });
+      if (options.isCancellationRequested?.(initialPlan.job.id)) {
+        cancelled = true;
+        tasks = tasks.map((task) => (task.id === started.id ? taskCancelled(started) : task));
+        cancelOpenTasks(started.id);
+        events.push(event(initialPlan.job.id, "jobCancelled", "Cancelled queue run after provider response.", started.id));
+        break;
+      }
       if (!execution.ok) {
         const failed = taskFailed(started, execution.error);
         tasks = tasks.map((task) => (task.id === failed.id ? failed : task));
@@ -628,17 +662,27 @@ export async function runMockQueuePlan(
       providerMetadata = execution.metadata;
     }
 
+    if (options.isCancellationRequested?.(initialPlan.job.id)) {
+      cancelled = true;
+      tasks = tasks.map((task) => (task.id === started.id ? taskCancelled(started) : task));
+      cancelOpenTasks(started.id);
+      events.push(event(initialPlan.job.id, "jobCancelled", "Cancelled queue run before persisting task output.", started.id));
+      break;
+    }
+
     const completed = taskSucceeded(started, providerResultIds, providerMetadata);
     tasks = tasks.map((task) => (task.id === completed.id ? completed : task));
     workingSnapshot = applyBriefSchemesToSnapshot(workingSnapshot, initialPlan, completed);
     events.push(event(initialPlan.job.id, "taskSucceeded", `Completed ${completed.kind}.`, completed.id));
   }
 
-  const status = tasks.every((task) => task.status === "succeeded")
-    ? "completed"
-    : tasks.some((task) => task.status === "failed")
-      ? "failed"
-      : "partial";
+  const status = cancelled || tasks.some((task) => task.status === "cancelled")
+    ? "cancelled"
+    : tasks.every((task) => task.status === "succeeded")
+      ? "completed"
+      : tasks.some((task) => task.status === "failed")
+        ? "failed"
+        : "partial";
   const plan = QueuePlanSchema.parse({
     job: {
       ...initialPlan.job,
@@ -646,7 +690,14 @@ export async function runMockQueuePlan(
       updatedAt: nowIso(),
     },
     tasks,
-    events: [...events, event(initialPlan.job.id, "jobCompleted", `Mock queue ${status}.`)],
+    events: [
+      ...events,
+      event(
+        initialPlan.job.id,
+        status === "cancelled" ? "jobCancelled" : "jobCompleted",
+        status === "cancelled" ? "Queue run cancelled." : `Mock queue ${status}.`,
+      ),
+    ],
   });
 
   return {

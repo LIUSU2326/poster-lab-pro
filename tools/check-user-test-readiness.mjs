@@ -12,110 +12,65 @@ function read(filePath) {
   }
 }
 
+function requireTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (!source.includes(token)) issues.push(`${fileName}: missing ${token}`);
+  }
+}
+
+function forbidTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (source.includes(token)) issues.push(`${fileName}: should not include removed token ${token}`);
+  }
+}
+
 const pkg = read("package.json");
 const readme = read("README.md");
 const guide = read("USER_TESTING.md");
-const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
-const realAcceptance = read("REAL_GENERATION_ACCEPTANCE.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 const desktopTesting = read("DESKTOP_TESTING.md");
 const testing = read("TESTING.md");
 const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
-const appMetadata = read("src/app-metadata.js");
+const topbar = read("src/render/topbar.js");
+const configPanel = read("src/render/config-panel.js");
 
-for (const token of [
+requireTokens("package.json", pkg, [
   `"version": "${currentVersion}"`,
-  "\"user-test-readiness:check\"",
-]) {
-  if (!pkg.includes(token)) issues.push(`package.json: missing ${token}`);
-}
+  '"user-test-readiness:check"',
+]);
 
-for (const token of [
-  currentVersion,
-  "USER_TESTING.md",
-  "MULTIMODE_ACCEPTANCE.md",
-  "REAL_GENERATION_ACCEPTANCE.md",
-  "Desktop Test Path",
-  "release/mac/Poster Lab Pro.app",
-]) {
-  if (!readme.includes(token)) issues.push(`README.md: missing ${token}`);
-}
-
-for (const token of [
-  currentVersion,
-  "/Users/liusu/Desktop/Poster Lab Pro.app",
-  "http://127.0.0.1:3000",
-  "模型与 Key",
-  "live generation protection",
-  "accepted cost cap",
-  "Default automated checks must not spend provider credits",
-  "1-2 real generations per mode",
-  "MULTIMODE_ACCEPTANCE.md",
-  "REAL_GENERATION_ACCEPTANCE.md",
-  "max 1 real generation per mode",
-  "max 1 fresh real generation per mode",
-  "public/mock-assets/collab-partner-sundae-ranger.svg",
-  "old Logo/BOSS/partner assets do not reappear",
-  "Poster:",
-  "Icon:",
-  "Logo:",
-  "Announcement:",
-  "Collab:",
-  "Result Quality Audit",
-  "失败原因",
-  "重试失败图片",
-  "second confirmation click",
-]) {
-  if (!guide.includes(token)) issues.push(`USER_TESTING.md: missing ${token}`);
-}
-
-for (const token of [
-  currentVersion,
-  "Synthetic Collab Partner Asset",
-  "public/mock-assets/collab-partner-sundae-ranger.svg",
-  "Role: `collabCharacter`",
-  "blank partner brand plate",
-  "max 1 real generation per mode",
-]) {
-  if (!multimodeAcceptance.includes(token)) issues.push(`MULTIMODE_ACCEPTANCE.md: missing ${token}`);
-}
-
-for (const token of [
-  currentVersion,
-  "Fresh real generation is manual and opt-in only",
-  "Never use a direct API/script path to bypass the App live generation protection",
-  "Baseline Result Evidence",
-  "Fresh 1.1.0 Acceptance Status",
-  "Agnes all-core multimode pass",
-  "Icon final job",
-  "Logo job",
-  "quality-risk",
-]) {
-  if (!realAcceptance.includes(token)) issues.push(`REAL_GENERATION_ACCEPTANCE.md: missing ${token}`);
-}
-
-for (const token of [
-  currentVersion,
-  "User Test Readiness Gate",
-  "USER_TESTING.md",
-  "1-2 real generations per mode",
-]) {
-  if (!releaseChecklist.includes(token)) issues.push(`RELEASE_CHECKLIST.md: missing ${token}`);
-}
-
-for (const [fileName, source] of [
+for (const [file, source] of [
+  ["README.md", readme],
+  ["USER_TESTING.md", guide],
+  ["RELEASE_CHECKLIST.md", releaseChecklist],
   ["DESKTOP_TESTING.md", desktopTesting],
   ["TESTING.md", testing],
   ["ROADMAP.md", roadmap],
   ["DECISIONS.md", decisions],
 ]) {
-  if (!source.includes(currentVersion)) issues.push(`${fileName}: missing ${currentVersion}`);
+  requireTokens(file, source, [currentVersion, "No User-Facing Live Generation Switch"]);
 }
 
-for (const token of ["APP_VERSION", currentVersion, "APP_BUNDLE_HINT"]) {
-  if (!appMetadata.includes(token)) issues.push(`app-metadata.js: missing ${token}`);
-}
+requireTokens("USER_TESTING.md", guide, [
+  "http://127.0.0.1:3000",
+  "Model and API Key",
+  "Poster:",
+  "Icon:",
+  "Logo:",
+  "Announcement:",
+  "Collab:",
+]);
+
+forbidTokens("package.json", pkg, [
+  '"real-acceptance:check"',
+  '"workbench-live-gate-ui:check"',
+  '"desktop-live-test-control:check"',
+  '"manual-live-generation:check"',
+]);
+
+forbidTokens("topbar.js", topbar, ["topbar-meta", "bundle-path", "\u771f\u5b9e\u751f\u6210"]);
+forbidTokens("config-panel.js", configPanel, ["MANUAL CHECK", "\u624b\u52a8\u9a8c\u8bc1"]);
 
 for (const forbidden of [
   "OPENAI_API_KEY=",

@@ -11,15 +11,27 @@ function read(filePath) {
   }
 }
 
+function requireTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (!source.includes(token)) issues.push(`${fileName}: missing ${token}`);
+  }
+}
+
+function forbidTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (source.includes(token)) issues.push(`${fileName}: should not include removed token ${token}`);
+  }
+}
+
 const runbook = read("DESKTOP_TESTING.md");
 const decisions = read("DECISIONS.md");
 const roadmap = read("ROADMAP.md");
 const testing = read("TESTING.md");
 const pkg = read("package.json");
-const appMetadata = read("src/app-metadata.js");
 const topbar = read("src/render/topbar.js");
+const taskChrome = read("src/render/task-chrome.js");
 
-for (const token of [
+requireTokens("DESKTOP_TESTING.md", runbook, [
   "npm run check",
   "npm run poster-chain:check",
   "npm run build:next",
@@ -29,43 +41,42 @@ for (const token of [
   "1024",
   "768",
   "375px",
-  "Live provider tests are opt-in only",
-]) {
-  if (!runbook.includes(token)) issues.push(`DESKTOP_TESTING.md: missing ${token}`);
-}
+  "No User-Facing Live Generation Switch",
+]);
 
-for (const scriptName of ["check", "poster-chain:check", "build:next", "dev:next"]) {
-  if (!pkg.includes(`"${scriptName}"`)) issues.push(`package.json: missing ${scriptName} script`);
-}
-if (!pkg.includes("\"version\": \"1.1.0\"")) {
-  issues.push("package.json: desktop-visible version should match the current 1.1 beta milestone");
-}
+requireTokens("package.json", pkg, [
+  '"check"',
+  '"poster-chain:check"',
+  '"build:next"',
+  '"dev:next"',
+  '"desktop-test-path:check"',
+  '"version": "1.1.0"',
+]);
 
 for (const [file, source] of [
   ["DECISIONS.md", decisions],
   ["ROADMAP.md", roadmap],
   ["TESTING.md", testing],
 ]) {
-  if (!source.includes("Desktop Test Path")) {
-    issues.push(`${file}: missing Desktop Test Path update`);
-  }
+  requireTokens(file, source, ["Desktop Test Path", "No User-Facing Live Generation Switch"]);
 }
+
+forbidTokens("topbar.js", topbar, [
+  "APP_VERSION",
+  "APP_BUNDLE_HINT",
+  "APP_MAIN_BRANCH",
+  "topbar-meta",
+  "bundle-path",
+  "getDesktopBundlePath",
+  "posterLabDesktop?.appPath",
+]);
+
+forbidTokens("task-chrome.js", taskChrome, ["task-slim-cue"]);
 
 for (const forbidden of ["api.openai.com", "OPENAI_API_KEY=", "REPLICATE_API_TOKEN=", "curl "]) {
   if (runbook.includes(forbidden)) {
     issues.push(`DESKTOP_TESTING.md: safe local runbook must not prescribe live provider credentials or direct API calls (${forbidden})`);
   }
-}
-
-if (!pkg.includes("desktop-test-path:check")) {
-  issues.push("package.json: missing desktop-test-path:check script");
-}
-
-for (const token of ["APP_VERSION", "1.1.0", "APP_BUNDLE_HINT", "release/mac/Poster Lab Pro.app", "APP_MAIN_BRANCH"]) {
-  if (!appMetadata.includes(token)) issues.push(`app-metadata.js: missing desktop identity token ${token}`);
-}
-for (const token of ["APP_VERSION", "APP_BUNDLE_HINT", "topbar-meta", "bundle-path", "getDesktopBundlePath", "posterLabDesktop?.appPath"]) {
-  if (!topbar.includes(token)) issues.push(`topbar.js: missing visible app version/path token ${token}`);
 }
 
 if (issues.length > 0) {

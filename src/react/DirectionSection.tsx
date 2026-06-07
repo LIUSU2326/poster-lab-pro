@@ -80,7 +80,7 @@ const logoBackgroundOptions = [
   { label: "暖橙", value: "#fb923c" },
   { label: "透明后期", value: "#f8fafc" },
 ];
-const styleAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen"]);
+const styleAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen", "mimo"]);
 
 function normalizeInitialValues(values: ModeForm): ModeForm {
   const parsed = ModeFormSchema.parse(values);
@@ -238,9 +238,12 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   const styleProviderId = routeProviderForSlot("styleReference");
   const displayStylePreview = stylePreview && !stylePreviewBroken ? stylePreview : "";
   const canExtractStyle = Boolean(displayStylePreview) && analysisApiReady(styleProviderId) && styleAnalysisProviderReady(styleProviderId);
+  const unsupportedStyleProviderMessage = styleProviderId === "agnes"
+    ? "Agnes Image 2.1 Flash 支持图生图参考，但画风文字分析需要视觉理解模型，请把画风识别路由切到 MiMo、Google、OpenAI、AIGoCode、Claude 或 Qwen。"
+    : "当前供应商不支持画风识别，请切换到 MiMo、Google、OpenAI、AIGoCode、Claude 或 Qwen。";
   const styleDisabledReason = displayStylePreview
     ? !styleAnalysisProviderReady(styleProviderId)
-      ? "当前供应商不支持图片识别"
+      ? unsupportedStyleProviderMessage
       : !analysisApiReady(styleProviderId)
         ? "先配置可用的识别 API"
         : ""
@@ -316,7 +319,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       return;
     }
     if (!styleAnalysisProviderReady(styleProviderId)) {
-      setStyleAnalysisMessage("当前供应商不支持画风识别，请切换到 OpenAI、AIGoCode、Google、Claude 或 Qwen。");
+      setStyleAnalysisMessage(unsupportedStyleProviderMessage);
       return;
     }
     const imageDataUrl = latestStyleDataUrl();
@@ -447,6 +450,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
         ))}
       </div>
 
+      {activeTags.length > 0 ? (
       <div className="selected-style-strip" aria-live="polite">
         <strong>已选画风</strong>
         {activeTags.length > 0 ? (
@@ -461,65 +465,96 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
           <small>未选择</small>
         )}
       </div>
+      ) : null}
 
       {styleLibraryDialog}
     </>
   );
 
   if (mode === "announcement" && currentValues.mode === "announcement") {
-    const presets = ["维护公告", "版本更新", "限时礼包"];
+    const presetGroups = [
+      { title: "运营通知", items: ["维护公告", "版本更新", "系统升级"] },
+      { title: "活动运营", items: ["限时礼包", "累计签到", "赛事报名"] },
+      { title: "账号服务", items: ["账号找回", "封禁说明", "身份验证"] },
+    ];
+    const updateAnnouncementTitle = (announcementTitle: string) => {
+      const nextValues = { ...currentValues, announcementTitle };
+      form.setValue("announcementTitle", announcementTitle, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      void commit(nextValues);
+    };
+    const updateCopyPreset = (copyPreset: string) => {
+      const nextValues = { ...currentValues, copyPreset };
+      form.setValue("copyPreset", copyPreset, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      void commit(nextValues);
+    };
+    const updateLayoutMode = (layoutMode: "integratedTypography" | "regularPanel") => {
+      const nextValues = { ...currentValues, layoutMode };
+      form.setValue("layoutMode", layoutMode, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      void commit(nextValues);
+    };
+    const updateGroupShot = (groupShotWhenMultiCharacter: boolean) => {
+      const nextValues = { ...currentValues, groupShotWhenMultiCharacter };
+      form.setValue("groupShotWhenMultiCharacter", groupShotWhenMultiCharacter, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+      void commit(nextValues);
+    };
 
     return (
-      <div className="direction-section-rhf" data-rhf-direction-section>
-        <div className="preset-groups">
-          <div>
-            <strong>公告类型</strong>
-            <span>
-              {presets.map((preset) => (
-                <button
-                  className={currentValues.copyPreset === preset ? "active" : ""}
-                  type="button"
-                  key={preset}
-                  onClick={() => {
-                    const nextValues = { ...currentValues, copyPreset: preset };
-                    form.setValue("copyPreset", preset, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-                    void commit(nextValues);
-                  }}
-                >
-                  {preset}
-                </button>
-              ))}
-            </span>
-          </div>
-          <div>
+      <div className="direction-section-rhf announcement-direction-section" data-rhf-direction-section>
+        <label className="mode-text-field announcement-title-field">
+          <span>公告标题</span>
+          <input
+            aria-label="公告标题"
+            value={currentValues.announcementTitle}
+            placeholder="例如：停机维护、版本更新、限时礼包"
+            onChange={(event) => updateAnnouncementTitle(event.currentTarget.value)}
+          />
+        </label>
+        <div className="preset-groups announcement-preset-groups">
+          {presetGroups.map((group) => (
+            <div key={group.title}>
+              <strong>{group.title}</strong>
+              <span>
+                {group.items.map((preset) => (
+                  <button
+                    className={currentValues.copyPreset === preset ? "active" : ""}
+                    type="button"
+                    key={preset}
+                    onClick={() => updateCopyPreset(preset)}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </span>
+            </div>
+          ))}
+          <div className="announcement-layout-group">
             <strong>排版方式</strong>
             <span>
               <button
                 className={currentValues.layoutMode === "integratedTypography" ? "active" : ""}
                 type="button"
-                onClick={() => {
-                  const nextValues = { ...currentValues, layoutMode: "integratedTypography" as const };
-                  form.setValue("layoutMode", "integratedTypography", { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-                  void commit(nextValues);
-                }}
+                onClick={() => updateLayoutMode("integratedTypography")}
               >
                 融入场景
               </button>
               <button
                 className={currentValues.layoutMode === "regularPanel" ? "active" : ""}
                 type="button"
-                onClick={() => {
-                  const nextValues = { ...currentValues, layoutMode: "regularPanel" as const };
-                  form.setValue("layoutMode", "regularPanel", { shouldDirty: true, shouldTouch: true, shouldValidate: true });
-                  void commit(nextValues);
-                }}
+                onClick={() => updateLayoutMode("regularPanel")}
               >
                 常规面板
               </button>
             </span>
           </div>
         </div>
-        {upload}
+        <label className="direction-toggle announcement-toggle">
+          <input
+            type="checkbox"
+            checked={currentValues.groupShotWhenMultiCharacter}
+            onChange={(event) => updateGroupShot(event.currentTarget.checked)}
+          />
+          <span>多角色时作为公告陪衬，不遮挡文案区</span>
+        </label>
       </div>
     );
   }
@@ -675,7 +710,7 @@ function StyleReferenceUpload({
   onDrop: (event: DragEvent<HTMLElement>) => void;
 }) {
   return (
-    <div className={`style-reference-upload ${previewUrl ? "has-preview" : ""}`}>
+    <div className={`style-reference-upload compact-reference-card ${previewUrl ? "has-preview" : "is-empty"}`}>
       <button
         className="style-reference-main"
         type="button"
@@ -686,26 +721,32 @@ function StyleReferenceUpload({
         onDrop={onDrop}
       >
         <span className="style-reference-preview" aria-hidden="true">
-          {previewUrl ? <img className="style-preview-image" src={previewUrl} alt="" onError={onPreviewError} /> : null}
+          {previewUrl ? <img className="style-preview-image" src={previewUrl} alt="" onError={onPreviewError} /> : <span className="reference-plus">+</span>}
         </span>
         {previewUrl ? null : (
-          <span>
-            <strong>{title || "上传画风参考"}</strong>
-            <small>{status || helper}</small>
+          <span className="reference-upload-meta">
+            <strong>{title || "画风参考"}</strong>
+            {status ? <small>{status}</small> : null}
           </span>
         )}
       </button>
       {previewUrl ? (
-        <div className="style-reference-actions">
-          <button className="mini-solid-button" type="button" onClick={onExtract} disabled={!canExtract}>
-            提取画风
+        <>
+          <button className="reference-remove-button reference-corner-remove" type="button" onClick={() => void onRemove()} aria-label="删除画风参考图" title="删除参考图">
+            ×
           </button>
-          <button className="reference-remove-button" type="button" onClick={() => void onRemove()}>
-            删除
-          </button>
-        </div>
+          <div className="style-reference-actions reference-analysis-tools">
+            <button className="reference-analysis-button" type="button" onClick={onExtract} disabled={!canExtract} title={!canExtract && analysisMessage ? analysisMessage : undefined}>
+              <svg className="reference-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M5 19c4-1 5-4 6-8 1-4 4-6 8-6-1 4-3 7-6 9-3 2-5 3-8 5Z" />
+                <path d="M9 14c2 0 4 1 6 3" />
+              </svg>
+              <span>解析画风</span>
+            </button>
+          </div>
+        </>
       ) : null}
-      {analysisMessage ? (
+      {previewUrl && analysisMessage ? (
         <small className={canExtract ? "reference-ready-note" : "reference-muted-note"}>
           {analysisMessage}
         </small>

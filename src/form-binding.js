@@ -9,15 +9,21 @@ import {
 } from './schema/index.js';
 import { saveLocalSubmissionDraft } from './local-draft-store.js';
 import { runStaticGenerationServiceFlow } from './static-local-api-service.js';
-import { runHttpGenerationServiceFlow } from './http-generation-service.js';
+import { cancelHttpQueuePlan, runHttpGenerationServiceFlow } from './http-generation-service.js';
 import { applyGenerationFormValuesToSnapshot, getActiveGenerationFormValues } from './generation-form-runtime.js';
-import { getLiveGateViewModel } from './data/live-gate-view-model.js';
 import {
   evaluateQueuePlanCapabilityGate,
   providerCapabilityGateUserMessage,
 } from './provider-capabilities.js';
 
 const generatedBatchSchemePrefix = "generated-poster";
+const activeQueueStatuses = new Set(["queued", "running", "blocked"]);
+const terminalJobStatuses = new Set(["completed", "failed", "cancelled", "partial"]);
+const generationTaskKinds = new Set(["briefGeneration", "conceptGeneration", "imageGeneration"]);
+let activeGenerationController = null;
+let activeGenerationJobId = "";
+let activeGenerationTraceId = "";
+let activeGenerationCancelled = false;
 
 const platformPresetsByMode = {
   poster: ["tiktok", "metaAds"],
@@ -51,40 +57,126 @@ function shouldUseHttpServiceFlow() {
   return state.apiMode === "http";
 }
 
-function createLiveExecutionPayload(activeMode) {
-  const gate = getLiveGateViewModel(activeMode);
+function isAbortError(error) {
+  return error?.name === "AbortError" || /aborted|abort/i.test(String(error?.message || ""));
+}
+
+function getSubmissionJobId(submission = state.submission) {
+  return activeGenerationJobId
+    || submission?.queuePlanJobId
+    || submission?.serviceFlow?.queuePlanCreate?.data?.queuePlan?.job?.id
+    || "";
+}
+
+function findActiveGenerationPlan() {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const modeId = state.activeMode;
+  return [...(snapshot.queuePlans || [])].reverse().find((plan) => {
+    if (plan.job?.mode !== modeId) return false;
+    if (terminalJobStatuses.has(plan.job?.status)) return false;
+    return (plan.tasks || [])
+      .filter((task) => generationTaskKinds.has(task.kind))
+      .some((task) => activeQueueStatuses.has(task.status));
+  }) || null;
+}
+
+export function getActiveGenerationControl() {
+  const submission = state.submission;
+  if (!submission || submission.status !== "submitting") {
+    return { active: false, jobId: "", traceId: "" };
+  }
   return {
-    gate,
-    liveExecution: {
-      enabled: gate.allowed,
-      estimatedCost: gate.estimatedCost,
-      maxAcceptedCost: gate.maxAcceptedCost,
-      confirmations: {
-        liveRun: Boolean(state.liveGate.confirmations.liveRun),
-        providerCost: Boolean(state.liveGate.confirmations.providerCost),
-        externalProvider: Boolean(state.liveGate.confirmations.externalProvider),
-        resultStorage: Boolean(state.liveGate.confirmations.resultStorage),
-      },
-    },
+    active: true,
+    jobId: getSubmissionJobId(submission),
+    traceId: submission.traceId || activeGenerationTraceId,
+    mode: submission.mode || state.activeMode,
+    cancelled: activeGenerationCancelled,
   };
 }
 
-function createLiveGateBlockedServiceFlow(gate) {
-  return {
-    ok: false,
-    reason: "live_gate_blocked",
-    transport: "http",
-    error: {
-      name: "LiveGateBlocked",
-      message: gate.blockers?.[0]?.message || "请先开启真实生成保护，再调用外部模型服务。",
-      details: {
-        blockers: gate.blockers || [],
-        stateLabel: gate.stateLabel,
-        estimatedCost: gate.estimatedCost,
-        maxAcceptedCost: gate.maxAcceptedCost,
+export async function cancelActiveGenerationDraft(options = {}) {
+  const submission = state.submission;
+  if (!submission || submission.status !== "submitting") {
+    const activePlan = findActiveGenerationPlan();
+    if (!activePlan?.job?.id) return { ok: true, cancelled: false };
+    const workspaceId = state.workspaceId || getRuntimeWorkspaceSnapshot().metadata?.workspaceId || "";
+    const cancelEnvelope = state.apiMode === "http"
+      ? await cancelHttpQueuePlan(workspaceId, activePlan.job.id, {
+          fetchImpl: options.fetchImpl,
+        })
+      : { ok: true, cancelled: true };
+    if (cancelEnvelope.ok && cancelEnvelope.data?.snapshot) {
+      setRuntimeWorkspaceSnapshot(cancelEnvelope.data.snapshot, "http");
+    }
+    state.submission = {
+      status: "cancelled",
+      mode: state.activeMode,
+      queuePlanJobId: activePlan.job.id,
+      createdAt: nowIso(),
+      serviceFlow: {
+        ok: false,
+        reason: "cancelled",
+        cancelEnvelope,
       },
+    };
+    saveLocalSubmissionDraft(state.submission);
+    return cancelEnvelope;
+  }
+
+  activeGenerationCancelled = true;
+  const jobId = getSubmissionJobId(submission);
+  const workspaceId = state.workspaceId || getRuntimeWorkspaceSnapshot().metadata?.workspaceId || "";
+  const requestedAt = nowIso();
+  state.submission = {
+    ...submission,
+    status: "cancelled",
+    queuePlanJobId: jobId,
+    cancellation: {
+      requested: true,
+      jobId,
+      requestedAt,
+    },
+    serviceFlow: {
+      ...(submission.serviceFlow || {}),
+      ok: false,
+      reason: "cancelled",
+      cancelEnvelope: { ok: true, cancelled: true },
     },
   };
+  saveLocalSubmissionDraft(state.submission);
+
+  if (activeGenerationController) {
+    activeGenerationController.abort();
+  }
+
+  let cancelEnvelope = { ok: true, cancelled: true };
+  if (state.apiMode === "http" && jobId) {
+    cancelEnvelope = await cancelHttpQueuePlan(workspaceId, jobId, {
+      fetchImpl: options.fetchImpl,
+    });
+    if (cancelEnvelope.ok && cancelEnvelope.data?.snapshot) {
+      setRuntimeWorkspaceSnapshot(cancelEnvelope.data.snapshot, "http");
+    }
+  }
+
+  state.submission = {
+    ...(state.submission?.traceId === submission.traceId ? state.submission : submission),
+    status: "cancelled",
+    queuePlanJobId: jobId,
+    cancellation: {
+      requested: true,
+      jobId,
+      requestedAt,
+    },
+    serviceFlow: {
+      ...((state.submission?.traceId === submission.traceId ? state.submission.serviceFlow : submission.serviceFlow) || {}),
+      ok: false,
+      reason: "cancelled",
+      cancelEnvelope,
+    },
+  };
+  saveLocalSubmissionDraft(state.submission);
+  return cancelEnvelope;
 }
 
 function parseAssetRequirement(expression) {
@@ -552,15 +644,13 @@ function providerRouteForSlot(slot) {
     ["styleReference", "compositionReference"].includes(slot) && state.provider && !candidateIds.includes(state.provider) && configured(state.provider)
       ? state.provider
       : "";
-  const savedProvider = candidateIds.includes(route.providerId) ? route.providerId : "";
+  const savedProvider = route.providerId || "";
   const providerId = savedProvider && configured(savedProvider)
     ? savedProvider
     : configuredProvider || supportedCurrentProvider || unsupportedConfiguredCurrentProvider || savedProvider || candidateIds[0] || state.provider;
   const providerConfig = snapshot.providerConfigs?.[providerId] || {};
-  const routeModel = providerId === savedProvider ? route.model : "";
-  const model = candidateIds.includes(providerId)
-    ? normalizeRouteModel(providerId, routeModel || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "")
-    : "";
+  const routeModel = providerId === route.providerId ? route.model : "";
+  const model = normalizeRouteModel(providerId, routeModel || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "");
   return {
     providerId,
     ...(model ? { model } : {}),
@@ -593,6 +683,20 @@ function getProviderRoutesForSubmission() {
   };
 }
 
+function mergeQueuePlanIntoRuntimeSnapshot(queuePlan) {
+  if (!queuePlan?.job?.id) return;
+  const snapshot = clone(getRuntimeWorkspaceSnapshot());
+  snapshot.queuePlans = [
+    ...(snapshot.queuePlans || []).filter((plan) => plan.job?.id !== queuePlan.job.id),
+    queuePlan,
+  ];
+  snapshot.metadata = {
+    ...snapshot.metadata,
+    updatedAt: nowIso(),
+  };
+  setRuntimeWorkspaceSnapshot(snapshot, shouldUseHttpServiceFlow() ? "http" : "static");
+}
+
 export async function submitGenerationDraft(options = {}) {
   const normalizedOptions = normalizeGenerationOptions(options);
   const snapshot = createBoundWorkspaceSnapshot(normalizedOptions);
@@ -609,7 +713,6 @@ export async function submitGenerationDraft(options = {}) {
   const selected = snapshot.schemes.find((scheme) => scheme.id === selectedId) || getSelectedScheme();
   const activeMode = getActiveMode();
   const selectedSchemeId = selected?.id || selectedId;
-  const liveExecutionPayload = createLiveExecutionPayload(activeMode);
   if (activeMode.id === "poster" && selectedSchemeId) state.selectedScheme = selectedSchemeId;
 
   const submission = {
@@ -631,47 +734,63 @@ export async function submitGenerationDraft(options = {}) {
   state.submission = submission;
 
   if (combinedValidation.ok) {
-    if (shouldUseHttpServiceFlow() && !liveExecutionPayload.gate.allowed) {
-      const serviceFlow = createLiveGateBlockedServiceFlow(liveExecutionPayload.gate);
-      state.submission = {
-        ...submission,
-        status: "service-error",
-        transport: "http",
-        serviceFlow,
-      };
-      saveLocalSubmissionDraft(state.submission);
-      return state.submission;
-    }
+    const generationController = shouldUseHttpServiceFlow() ? new AbortController() : null;
+    activeGenerationController = generationController;
+    activeGenerationJobId = "";
+    activeGenerationTraceId = submission.traceId;
+    activeGenerationCancelled = false;
     try {
       const serviceFlow = shouldUseHttpServiceFlow()
         ? await runHttpGenerationServiceFlow(submission, {
-          ...options,
-          liveExecution: liveExecutionPayload.liveExecution,
-        })
+            ...options,
+            signal: generationController.signal,
+            onQueuePlanCreated: (queuePlan) => {
+              activeGenerationJobId = queuePlan.job.id;
+              mergeQueuePlanIntoRuntimeSnapshot(queuePlan);
+              state.submission = {
+                ...(state.submission || submission),
+                queuePlanJobId: queuePlan.job.id,
+              };
+              options.onQueuePlanCreated?.(queuePlan);
+            },
+          })
         : await runStaticGenerationServiceFlow(submission);
       if (serviceFlow.workspaceReload?.ok && serviceFlow.workspaceReload.data?.snapshot) {
         setRuntimeWorkspaceSnapshot(serviceFlow.workspaceReload.data.snapshot, serviceFlow.transport || "http");
       }
       state.submission = {
         ...submission,
+        queuePlanJobId: activeGenerationJobId,
         status: serviceFlow.ok ? "service-ready" : "service-error",
         transport: serviceFlow.transport || "static",
         serviceFlow,
       };
     } catch (error) {
+      const cancelled = activeGenerationCancelled || isAbortError(error);
+      const existingSubmission = state.submission?.traceId === submission.traceId ? state.submission : null;
       state.submission = {
         ...submission,
-        status: "service-error",
+        ...(cancelled && existingSubmission?.cancellation ? { cancellation: existingSubmission.cancellation } : {}),
+        queuePlanJobId: activeGenerationJobId || existingSubmission?.queuePlanJobId || "",
+        status: cancelled ? "cancelled" : "service-error",
         serviceFlow: {
+          ...(cancelled && existingSubmission?.serviceFlow ? existingSubmission.serviceFlow : {}),
           ok: false,
-          reason: "transport_error",
+          reason: cancelled ? "cancelled" : "transport_error",
           transport: submission.transport,
           error: {
             name: error?.name || "Error",
-            message: error?.message || "生成服务连接失败，请确认桌面服务已启动。",
+            message: cancelled ? "生成已停止。" : error?.message || "生成服务连接失败，请确认桌面服务已启动。",
           },
         },
       };
+    } finally {
+      if (activeGenerationTraceId === submission.traceId) {
+        activeGenerationController = null;
+        activeGenerationTraceId = "";
+        activeGenerationJobId = "";
+        activeGenerationCancelled = false;
+      }
     }
   } else {
     state.submission = {

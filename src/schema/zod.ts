@@ -3,7 +3,7 @@ import { z } from "zod";
 export const ProductionModeSchema = z.enum(["poster", "collab", "announcement", "logo", "icon"]);
 export const ThemeSchema = z.enum(["light", "dark"]);
 export const WorkbenchViewSchema = z.enum(["schemes", "text", "archive", "results", "compare", "export"]);
-export const ProviderIdSchema = z.enum(["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"]);
+export const ProviderIdSchema = z.enum(["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes", "mimo"]);
 export const ProviderStatusSchema = z.enum(["idle", "testing", "success", "warning", "error"]);
 export const AssetRoleSchema = z.enum([
   "gameCharacter",
@@ -18,7 +18,20 @@ export const AssetRoleSchema = z.enum([
   "subjectReference",
 ]);
 export const SloganModeSchema = z.enum(["off", "auto", "global"]);
-export const SloganLanguageSchema = z.enum(["zh-CN", "en-US", "ja-JP", "ko-KR"]);
+export const SloganLanguageSchema = z.enum([
+  "en-US",
+  "zh-CN",
+  "zh-TW",
+  "ja-JP",
+  "ko-KR",
+  "fr-FR",
+  "de-DE",
+  "es-ES",
+  "pt-BR",
+  "id-ID",
+  "th-TH",
+  "vi-VN",
+]);
 export const ReferenceStrengthSchema = z.enum(["weak", "composition", "highFidelityComposition"]);
 export const PlatformPresetSchema = z.enum([
   "steam",
@@ -152,7 +165,7 @@ export const OutputSettingsFormSchema = z
 
 export const SloganSettingsFormSchema = z
   .object({
-    mode: SloganModeSchema.default("auto"),
+    mode: SloganModeSchema.default("off"),
     globalSlogan: z.string().max(80).optional(),
     languages: z.array(SloganLanguageSchema).min(1).default(["en-US"]).transform((languages) => [languages[0] || "en-US"]),
   })

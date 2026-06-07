@@ -13,6 +13,18 @@ function connectionTestPath(workspaceId, providerId) {
   return `${credentialPath(workspaceId, providerId)}/connection-test`;
 }
 
+function activeProviderConfig(providerId) {
+  return state.workspaceSnapshot?.providerConfigs?.[providerId] || {};
+}
+
+function defaultProviderKeyRef(workspaceId, providerId) {
+  return `${workspaceId}:${providerId}:default`;
+}
+
+function activeProviderKeyRef(workspaceId, providerId) {
+  return activeProviderConfig(providerId).credentialKeyRef || defaultProviderKeyRef(workspaceId, providerId);
+}
+
 async function readEnvelope(response) {
   try {
     return await response.json();
@@ -75,13 +87,11 @@ function applyStatus(envelope, providerId) {
       status: "success",
       error: null,
       providerId,
+      keyRef: envelope.data.status.keyRef || "",
       masked: envelope.data.status.apiKeyMasked || "",
       configured,
       updatedAt: envelope.data.status.updatedAt || null,
     };
-    if (providerId === state.provider) {
-      state.liveGate.runtimeCredentialReady = configured;
-    }
   } else {
     state.providerCredential = {
       ...state.providerCredential,
@@ -89,9 +99,6 @@ function applyStatus(envelope, providerId) {
       providerId,
       error: envelope.error?.message || "Provider credential request failed.",
     };
-    if (providerId === state.provider) {
-      state.liveGate.runtimeCredentialReady = false;
-    }
   }
 
   return envelope;
@@ -140,6 +147,7 @@ export async function loadProviderCredentialStatusForWorkbench(options = {}) {
   state.providerCredential = {
     status: "loading",
     providerId,
+    keyRef: "",
     masked: "",
     configured: false,
     updatedAt: null,
@@ -157,6 +165,8 @@ export async function saveProviderCredentialForWorkbench(input, options = {}) {
   const providerId = input?.providerId || state.provider;
   const workspaceId = input?.workspaceId || state.workspaceId;
   const apiKey = input?.apiKey || "";
+  const keyRef = input?.keyRef || activeProviderKeyRef(workspaceId, providerId);
+  const label = input?.label || "";
   const baseUrl =
     input?.baseUrl ??
     document.querySelector(`[data-provider-base-url="${providerId}"]`)?.value?.trim() ??
@@ -183,6 +193,8 @@ export async function saveProviderCredentialForWorkbench(input, options = {}) {
     method: "POST",
     body: {
       apiKey,
+      keyRef,
+      ...(label ? { label } : {}),
       baseUrl,
       defaultModel,
       enabled: true,
@@ -193,9 +205,6 @@ export async function saveProviderCredentialForWorkbench(input, options = {}) {
 
   if (envelope.ok) {
     await loadWorkspaceSnapshotForWorkbench({ workspaceId, fetchImpl: options.fetchImpl });
-    if (providerId === state.provider) {
-      state.liveGate.runtimeCredentialReady = Boolean(envelope.data?.status?.configured);
-    }
   }
 
   return envelope;
@@ -204,6 +213,7 @@ export async function saveProviderCredentialForWorkbench(input, options = {}) {
 export async function revokeProviderCredentialForWorkbench(input = {}, options = {}) {
   const providerId = input.providerId || state.provider;
   const workspaceId = input.workspaceId || state.workspaceId;
+  const keyRef = input.keyRef || activeProviderKeyRef(workspaceId, providerId);
 
   state.providerCredential = {
     ...state.providerCredential,
@@ -215,14 +225,38 @@ export async function revokeProviderCredentialForWorkbench(input = {}, options =
   const envelope = await requestJson(credentialPath(workspaceId, providerId), {
     ...options,
     method: "DELETE",
+    body: { keyRef },
   });
   applyStatus(envelope, providerId);
 
   if (envelope.ok) {
     await loadWorkspaceSnapshotForWorkbench({ workspaceId, fetchImpl: options.fetchImpl });
-    if (providerId === state.provider) {
-      state.liveGate.runtimeCredentialReady = false;
-    }
+  }
+
+  return envelope;
+}
+
+export async function activateProviderCredentialForWorkbench(input = {}, options = {}) {
+  const providerId = input.providerId || state.provider;
+  const workspaceId = input.workspaceId || state.workspaceId;
+  const keyRef = input.keyRef || activeProviderKeyRef(workspaceId, providerId);
+
+  state.providerCredential = {
+    ...state.providerCredential,
+    status: "loading",
+    providerId,
+    error: null,
+  };
+
+  const envelope = await requestJson(credentialPath(workspaceId, providerId), {
+    ...options,
+    method: "PUT",
+    body: { keyRef },
+  });
+  applyStatus(envelope, providerId);
+
+  if (envelope.ok) {
+    await loadWorkspaceSnapshotForWorkbench({ workspaceId, fetchImpl: options.fetchImpl });
   }
 
   return envelope;
@@ -246,16 +280,13 @@ export async function testProviderConnectionForWorkbench(input = {}, options = {
     method: "POST",
     body: {
       ...(input.model ? { model: input.model } : {}),
+      keyRef: input.keyRef || activeProviderKeyRef(workspaceId, providerId),
       strictModel: input.strictModel ?? false,
       verifyModels: input.verifyModels ?? true,
       timeoutMs: input.timeoutMs || 10000,
     },
   });
   applyConnectionResult(envelope, providerId);
-
-  if (providerId === state.provider) {
-    state.liveGate.transportReady = Boolean(envelope.ok && envelope.data?.result?.ok);
-  }
 
   if (envelope.ok) {
     await loadWorkspaceSnapshotForWorkbench({ workspaceId, fetchImpl: options.fetchImpl });
@@ -273,6 +304,7 @@ export async function testProviderModelConnectionForWorkbench(input = {}, option
     method: "POST",
     body: {
       ...(input.model ? { model: input.model } : {}),
+      keyRef: input.keyRef || activeProviderKeyRef(workspaceId, providerId),
       strictModel: input.strictModel ?? true,
       verifyModels: input.verifyModels ?? true,
       timeoutMs: input.timeoutMs || 10000,

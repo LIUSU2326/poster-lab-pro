@@ -1,5 +1,24 @@
 # TESTING.md
 
+## 2026-06-05 No User-Facing Live Generation Switch
+
+Desktop Test Path checks:
+
+- Verify the main workbench does not show `真实生成`, `确认真实生成保护`, `手动验证`, `MANUAL CHECK`, version chips, branch chips, revision chips, or desktop bundle path chips.
+- Verify the bottom queue/task handle does not show a visible `收起` cue in the red-box task area.
+- Verify the scheme canvas does not show the old `还没有可展示的海报方案` card.
+- Verify `模型与 Key`, provider connection test, scheme generation, image rendering, result viewer, queue retry, and archive export still work.
+- Verify future release notes keep `No User-Facing Live Generation Switch` and do not add the `真实生成` switch back.
+
+Automated checks:
+
+- Run `npm run frontend-binding:check`.
+- Run `npm run ux-regression:check`.
+- Run `npm run desktop-test-path:check`.
+- Run `npm run release-candidate:check`.
+- Run `npm run user-test-readiness:check`.
+- Run `npm run check`.
+
 ## 2026-06-04 1.1.0 Poster/Collab/Announcement Quality Sprint
 
 Desktop Test Path checks:

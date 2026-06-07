@@ -7,8 +7,6 @@ import {
   updateResultOperation,
 } from './state.js';
 import { resolveResultOperationRoute, resultOperationRouting } from './provider-capabilities.js';
-import { modeSpecs } from './data/modes.js';
-import { getLiveGateViewModel } from './data/live-gate-view-model.js';
 
 function findResult(resultId) {
   return getModeResults().find((result) => result.id === resultId) || null;
@@ -35,24 +33,6 @@ function formatCost(value) {
   return typeof value === "number" ? `$${value.toFixed(2)}` : "真实成本未返回";
 }
 
-function createLiveExecutionPayload(activeMode) {
-  const gate = getLiveGateViewModel(activeMode);
-  return {
-    gate,
-    liveExecution: {
-      enabled: gate.allowed,
-      estimatedCost: gate.estimatedCost,
-      maxAcceptedCost: gate.maxAcceptedCost,
-      confirmations: {
-        liveRun: Boolean(state.liveGate.confirmations.liveRun),
-        providerCost: Boolean(state.liveGate.confirmations.providerCost),
-        externalProvider: Boolean(state.liveGate.confirmations.externalProvider),
-        resultStorage: Boolean(state.liveGate.confirmations.resultStorage),
-      },
-    },
-  };
-}
-
 export async function runResultOperationForWorkbench(operation, options = {}) {
   const config = resultOperationRouting[operation?.action];
   const sourceResult = findResult(operation?.resultId);
@@ -63,8 +43,6 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
   const workspaceId = state.workspaceId;
   const snapshot = getRuntimeWorkspaceSnapshot();
   const route = resolveResultOperationRoute(operation.action, state.provider);
-  const activeMode = modeSpecs[sourceResult.mode] || modeSpecs[state.activeMode] || modeSpecs.poster;
-  const liveExecutionPayload = createLiveExecutionPayload(activeMode);
 
   if (!route.supported) {
     updateResultOperation(operation.id, {
@@ -72,16 +50,6 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
       progress: 100,
       message: route.title,
     });
-    return null;
-  }
-
-  if (state.apiMode === "http" && !liveExecutionPayload.gate.allowed) {
-    updateResultOperation(operation.id, {
-      status: "failed",
-      progress: 100,
-      message: liveExecutionPayload.gate.blockers?.[0]?.message || "请先开启真实生成保护，再调用外部模型服务。",
-    });
-    state.taskOpen = true;
     return null;
   }
 
@@ -118,7 +86,6 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
 
     const queueRun = await service.runQueuePlan(workspaceId, queuePlanCreate.data.queuePlan.job.id, {
       archiveResults: true,
-      liveExecution: liveExecutionPayload.liveExecution,
     });
 
     if (!queueRun.ok) {

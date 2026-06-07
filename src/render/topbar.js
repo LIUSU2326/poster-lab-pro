@@ -1,26 +1,27 @@
 import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/workspace-adapters.js';
-import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
-import { getImageGenerationStatus } from '../data/generation-activity.js';
+import { getActiveGenerationCancelStatus, getImageGenerationStatus } from '../data/generation-activity.js';
 import { state } from '../state.js';
-import { APP_BUNDLE_HINT, APP_MAIN_BRANCH, APP_VERSION } from '../app-metadata.js';
 
 export function renderTopbar(activeMode) {
   const project = getWorkspaceProject();
   const summary = getWorkspaceSnapshotSummary();
   const modeLabel = getModeLabel(activeMode.id);
-  const liveGate = getLiveGateViewModel(activeMode);
   const failedImageCount = getFailedImageTaskCount(activeMode.id);
-  const resultCount = getModeResultCount(activeMode.id);
   const selectedScheme = getSelectedRenderableScheme(activeMode.id);
-  const canRenderImages = activeMode.id === "poster" || hasRenderableSchemes(activeMode.id);
+  const hasSchemes = hasRenderableSchemes(activeMode.id);
+  const canRenderImages = activeMode.id === "poster" || hasSchemes;
   const imageGeneration = getImageGenerationStatus(activeMode);
   const generatingImages = imageGeneration.active;
-  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
-  const liveBlockedTitle = liveBlocked ? "先确认真实生成保护，再调用外部模型服务" : "";
-  const selectedSchemeRenderDisabled = !selectedScheme || generatingImages || liveBlocked;
-  const runMode = getRunModeViewModel(liveGate);
-  const bundlePath = getDesktopBundlePath();
-  const bundleLabel = formatDesktopBundlePath(bundlePath);
+  const selectedSchemeGeneration = selectedScheme ? getImageGenerationStatus(activeMode, selectedScheme.id) : { active: false };
+  const generationCancel = getActiveGenerationCancelStatus(activeMode);
+  const imageProgressLabel = generatingImages && imageGeneration.total
+    ? `${imageGeneration.completed || 0}/${imageGeneration.total}`
+    : "";
+  const selectedSchemeRenderDisabled = !selectedScheme || selectedSchemeGeneration.active;
+  const primaryActionLabel = hasSchemes ? `批量${modeLabel}出图` : "生成方案并出图";
+  const primaryActionTitle = hasSchemes
+    ? `基于现有${modeLabel}方案批量出图`
+    : "先生成方案，再自动进入出图";
 
   return `
     <header class="topbar" data-workspace-revision="${escapeHtml(summary.revision)}" data-workspace-assets="${escapeHtml(summary.assetCount)}">
@@ -31,48 +32,40 @@ export function renderTopbar(activeMode) {
           <strong>${escapeHtml(project.name || "未命名项目")}</strong>
         </div>
       </div>
-      <div class="topbar-meta" aria-label="当前应用版本">
-        <span>v${escapeHtml(APP_VERSION)}</span>
-        <span>${escapeHtml(APP_MAIN_BRANCH)}</span>
-        <span class="bundle-path" title="${escapeHtml(bundlePath)}">${escapeHtml(bundleLabel)}</span>
-        <span>rev ${escapeHtml(summary.revision)}</span>
-      </div>
       <div class="view-switch top-view-switch" aria-label="主视图">
         <button class="${state.view === "schemes" ? "active" : ""}" type="button" data-view="schemes">方案</button>
-        <button class="${state.view === "results" ? "active" : ""}" type="button" data-view="results">结果${resultCount > 0 ? ` ${escapeHtml(resultCount)}` : ""}</button>
         <button class="${state.view === "archive" ? "active" : ""}" type="button" data-view="archive">归档</button>
       </div>
       <nav class="top-actions" aria-label="全局操作">
-        ${state.view === "archive" || state.view === "results" ? "" : `<button type="button" data-action="toggle-copy">${state.copyVisible ? "收起文案" : "展开文案"}</button>`}
+        ${state.view === "schemes" ? `
+          <button
+            type="button"
+            data-action="toggle-copy"
+            aria-pressed="${state.copyVisible ? "true" : "false"}"
+            title="${state.copyVisible ? "隐藏方案卡片里的详细文案" : "显示方案卡片里的详细文案"}"
+          >文案</button>
+        ` : ""}
         <button type="button" data-action="open-settings">模型与 Key</button>
-        <button
-          class="live-gate-chip ${liveGate.tone}"
-          type="button"
-          data-action="open-settings"
-          aria-label="打开真实生成保护"
-          title="打开模型与 API Key，确认真实生成保护"
-        >
-          <i aria-hidden="true"></i>
-          <span>真实生成</span>
-          <strong>${escapeHtml(liveGate.stateLabel)}</strong>
-        </button>
-        <span class="run-mode-chip ${escapeHtml(runMode.tone)}" aria-label="当前运行模式">
-          <b>${escapeHtml(runMode.label)}</b>
-          <small>${escapeHtml(runMode.detail)}</small>
-        </span>
         <button class="theme-switch ${state.theme}" type="button" data-action="toggle-theme" aria-label="切换亮色或暗色">
           <span class="${state.theme === "light" ? "active" : ""}">亮色</span>
           <span class="${state.theme === "dark" ? "active" : ""}">暗色</span>
         </button>
-        <button type="button" data-view="archive">归档导出</button>
         ${failedImageCount > 0 ? `<button class="retry-failed-button" type="button" data-action="retry-failed-images">重试失败 ${failedImageCount}</button>` : ""}
+        ${generationCancel.active ? `
+          <button
+            class="cancel-generation-button"
+            type="button"
+            data-action="cancel-generation"
+            title="停止当前批量任务，正在调用中的单个请求会在返回后停止后续任务"
+          >停止</button>
+        ` : ""}
         ${selectedScheme ? `
           <button
             class="selected-render-button"
             type="button"
             data-action="submit-generation"
             data-scheme-id="${escapeHtml(selectedScheme.id)}"
-            title="${escapeHtml(liveBlockedTitle || "只基于当前选中的方案出图")}"
+            title="只基于当前选中的方案出图"
             ${selectedSchemeRenderDisabled ? "disabled" : ""}
           >当前方案出图</button>
         ` : ""}
@@ -80,64 +73,23 @@ export function renderTopbar(activeMode) {
           class="primary-button generate-primary ${generatingImages ? "loading" : ""}"
           type="button"
           data-action="submit-generation"
-          title="${escapeHtml(liveBlockedTitle)}"
-          ${canRenderImages && !generatingImages && !liveBlocked ? "" : "disabled"}
+          title="${escapeHtml(primaryActionTitle)}"
+          ${canRenderImages && !generatingImages ? "" : "disabled"}
         >
           ${generatingImages ? `
             <span class="button-spinner" aria-hidden="true"></span>
             <span>生成中</span>
+            ${imageProgressLabel ? `<strong>${imageProgressLabel}</strong>` : ""}
           ` : `
             <svg class="top-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M8 5v14l11-7-11-7Z"></path>
             </svg>
-            <span>生成${modeLabel}</span>
+            <span>${escapeHtml(primaryActionLabel)}</span>
           `}
         </button>
       </nav>
     </header>
   `;
-}
-
-function getDesktopBundlePath() {
-  const appPath = globalThis.posterLabDesktop?.appPath;
-  return appPath || APP_BUNDLE_HINT;
-}
-
-function formatDesktopBundlePath(path) {
-  const value = String(path || APP_BUNDLE_HINT);
-  if (value.includes("/Desktop/Poster Lab Pro.app")) return "Desktop/Poster Lab Pro.app";
-  if (value.includes("/release/mac/Poster Lab Pro.app")) return "release/mac/Poster Lab Pro.app";
-  const match = value.match(/([^/]+\\.app)$/);
-  return match ? match[1] : value;
-}
-
-function getRunModeViewModel(liveGate) {
-  if (state.apiMode !== "http") {
-    return {
-      tone: "test",
-      label: "测试模式",
-      detail: "不调用模型",
-    };
-  }
-  if (liveGate.qualityRisk) {
-    return {
-      tone: "warning",
-      label: liveGate.qualityRiskLabel || "质量待复核",
-      detail: liveGate.qualityRiskDetail || "当前模型结果需人工验收",
-    };
-  }
-  if (liveGate.allowed) {
-    return {
-      tone: "live",
-      label: "实机已授权",
-      detail: liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定",
-    };
-  }
-  return {
-    tone: "local",
-    label: "本地服务",
-    detail: `真实生成关闭 · ${liveGate.costSummaryLabel || liveGate.estimatedCostLabel || "费用待定"}`,
-  };
 }
 
 function hasRenderableSchemes(modeId) {
@@ -158,11 +110,6 @@ function isRenderableScheme(modeId, scheme) {
     && scheme.status !== "pending"
     && !String(scheme.id || "").startsWith(`${modeId}-`)
     && !String(scheme.id || "").startsWith(`scheme-${modeId}-`);
-}
-
-function getModeResultCount(modeId) {
-  const snapshot = state.workspaceSnapshot || {};
-  return (snapshot.results || []).filter((result) => result.mode === modeId).length;
 }
 
 function getFailedImageTaskCount(modeId) {

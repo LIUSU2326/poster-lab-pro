@@ -153,6 +153,14 @@ function baseUrlForPort(port) {
   return `http://127.0.0.1:${port}`;
 }
 
+function devNodeRuntimePath() {
+  return process.env.npm_node_execpath || process.env.NODE || "node.exe";
+}
+
+function nextDevCliPath() {
+  return path.join(projectRoot(), "node_modules", "next", "dist", "bin", "next");
+}
+
 function requestOk(url, timeoutMs = 1200, statusOk = (statusCode) => statusCode >= 200 && statusCode < 500) {
   return new Promise((resolve) => {
     const request = http.get(url, { timeout: timeoutMs }, (response) => {
@@ -204,9 +212,13 @@ async function resolveNextTarget() {
 }
 
 function spawnNextDev(port, extraEnv = {}) {
-  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-  const args = ["run", "dev:next", "--", "--hostname", "127.0.0.1", "--port", String(port)];
-  const child = spawn(npmCommand, args, {
+  const nextCli = nextDevCliPath();
+  if (!fs.existsSync(nextCli)) {
+    throw new Error(`Next dev CLI is missing. Run npm install first: ${nextCli}`);
+  }
+
+  const args = [nextCli, "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)];
+  const child = spawn(devNodeRuntimePath(), args, {
     cwd: projectRoot(),
     env: { ...process.env, ...desktopRuntimeEnvironment(), ...extraEnv },
     stdio: ["ignore", "pipe", "pipe"],

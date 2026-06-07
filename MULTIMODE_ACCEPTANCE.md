@@ -1,8 +1,12 @@
 # MULTIMODE_ACCEPTANCE.md
 
+## No User-Facing Live Generation Switch
+
+This acceptance path must not require or restore a `真实生成` switch, `确认真实生成保护` action, manual verification control, or top-bar version/path metadata chips. Provider setup stays in the normal Model and API Key settings.
+
 ## Poster Lab Pro 1.1.0 Multimode Acceptance Matrix
 
-This matrix defines the 1.1.0 stable acceptance pass for Poster, Icon, Logo, Announcement, and Collab. It is meant to keep real generation bounded while preserving each mode's distinct visual goal.
+This matrix defines the 1.1.0 stable acceptance pass for Poster, Icon, Logo, Announcement, and Collab. It keeps provider-spend testing bounded while preserving each mode's distinct visual goal.
 
 ## Test App
 
@@ -14,8 +18,8 @@ This matrix defines the 1.1.0 stable acceptance pass for Poster, Icon, Logo, Ann
 ## Cost Rule
 
 - Default automated checks must not spend provider credits.
-- Real generation remains manual and opt-in through the live generation protection.
-- Run max 1 real generation per mode for this stable acceptance pass unless a clear blocking bug requires one focused rerun.
+- Provider-spend testing remains bounded and intentional.
+- Run the minimum generation needed per mode for clear pass/fail evidence unless a clear blocking bug requires one focused rerun.
 - Stop once pass/fail evidence is obvious; do not keep tuning prompts by taste.
 
 ## Synthetic Collab Partner Asset

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const issues = [];
+const currentVersion = "1.1.0";
 
 function read(path) {
   try {
@@ -11,11 +12,19 @@ function read(path) {
   }
 }
 
+function requireTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (!source.includes(token)) issues.push(`${fileName}: missing ${token}`);
+  }
+}
+
+function forbidTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (source.includes(token)) issues.push(`${fileName}: removed release token should stay absent (${token})`);
+  }
+}
+
 const pkg = read("package.json");
-const appMetadata = read("src/app-metadata.js");
-const topbar = read("src/render/topbar.js");
-const settingsSheet = read("src/render/settings-sheet.js");
-const formBinding = read("src/form-binding.js");
 const readme = read("README.md");
 const desktopTesting = read("DESKTOP_TESTING.md");
 const testing = read("TESTING.md");
@@ -23,96 +32,72 @@ const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
 const releaseChecklist = read("RELEASE_CHECKLIST.md");
 const userTesting = read("USER_TESTING.md");
-const multimodeAcceptance = read("MULTIMODE_ACCEPTANCE.md");
-const realAcceptance = read("REAL_GENERATION_ACCEPTANCE.md");
+const topbar = read("src/render/topbar.js");
+const settingsSheet = read("src/render/settings-sheet.js");
+const centerBoard = read("src/render/center-board.js");
+const configPanel = read("src/render/config-panel.js");
+const taskChrome = read("src/render/task-chrome.js");
 
-const currentVersion = "1.1.0";
-
-for (const token of [
+requireTokens("package.json", pkg, [
   `"version": "${currentVersion}"`,
-  "\"check\"",
-  "\"multimode-regression:check\"",
-  "\"multimode-acceptance:check\"",
-  "\"real-acceptance:check\"",
-  "\"ux-regression:check\"",
-  "\"user-test-readiness:check\"",
-  "\"desktop:pack:mac\"",
-  "\"release-candidate:check\"",
-]) {
-  if (!pkg.includes(token)) issues.push(`package.json: missing ${token}`);
-}
+  '"check"',
+  '"multimode-regression:check"',
+  '"multimode-acceptance:check"',
+  '"ux-regression:check"',
+  '"user-test-readiness:check"',
+  '"desktop:pack:mac"',
+  '"release-candidate:check"',
+]);
 
-for (const token of ["APP_VERSION", currentVersion, "APP_BUNDLE_HINT", "APP_MAIN_BRANCH"]) {
-  if (!appMetadata.includes(token)) issues.push(`app-metadata.js: missing ${token}`);
-}
+forbidTokens("package.json", pkg, [
+  '"real-acceptance:check"',
+  '"workbench-live-gate-ui:check"',
+  '"desktop-live-test-control:check"',
+  '"manual-live-generation:check"',
+]);
 
-for (const token of ["APP_VERSION", "bundle-path", "APP_MAIN_BRANCH", "posterLabDesktop?.appPath"]) {
-  if (!topbar.includes(token)) issues.push(`topbar.js: missing visible identity token ${token}`);
-}
-
-for (const token of [
-  "provider-setup-steps",
-  "真实生成保护",
-  "estimatedCostLabel",
-  "maxAcceptedCost",
-  "data-live-cost-cap",
-  "live-gate-checks",
-]) {
-  if (!settingsSheet.includes(token) && !formBinding.includes(token)) {
-    issues.push(`live gate UI: missing ${token}`);
-  }
-}
-
-for (const [file, source] of [
+const releaseDocs = [
   ["README.md", readme],
   ["DESKTOP_TESTING.md", desktopTesting],
   ["TESTING.md", testing],
   ["ROADMAP.md", roadmap],
+  ["DECISIONS.md", decisions],
   ["RELEASE_CHECKLIST.md", releaseChecklist],
   ["USER_TESTING.md", userTesting],
-  ["MULTIMODE_ACCEPTANCE.md", multimodeAcceptance],
-  ["REAL_GENERATION_ACCEPTANCE.md", realAcceptance],
+];
+
+for (const [file, source] of releaseDocs) {
+  requireTokens(file, source, [currentVersion, "No User-Facing Live Generation Switch"]);
+}
+
+for (const [file, source] of [
+  ["topbar.js", topbar],
+  ["settings-sheet.js", settingsSheet],
+  ["center-board.js", centerBoard],
+  ["config-panel.js", configPanel],
+  ["task-chrome.js", taskChrome],
 ]) {
-  for (const token of [currentVersion, "Desktop Test Path", "release/mac/Poster Lab Pro.app"]) {
-    if (!source.includes(token)) issues.push(`${file}: missing ${token}`);
-  }
+  forbidTokens(file, source, [
+    "live-gate",
+    "manual-live",
+    "run-manual-live-test",
+    "data-live-toggle",
+    "data-live-cost-cap",
+    "topbar-meta",
+    "bundle-path",
+    "APP_VERSION",
+    "APP_BUNDLE_HINT",
+    "APP_MAIN_BRANCH",
+    "release/mac/Poster Lab Pro.app",
+    "\u771f\u5b9e\u751f\u6210",
+    "\u786e\u8ba4\u771f\u5b9e\u751f\u6210\u4fdd\u62a4",
+    "\u624b\u52a8\u9a8c\u8bc1",
+    "\u8fd8\u6ca1\u6709\u53ef\u5c55\u793a",
+  ]);
 }
 
-for (const token of [
-  "Manual Live Generation Protection",
-  "Accepted cost cap",
-  "Default automated checks must not spend provider credits",
-  "AI integrated redraw",
-  "Local overlay is a fallback",
-  "Known Non-Blocking Watch Items",
-]) {
-  if (!releaseChecklist.includes(token)) issues.push(`RELEASE_CHECKLIST.md: missing ${token}`);
-}
-
-if (!decisions.includes("D092")) {
-  issues.push("DECISIONS.md: missing D092 real generation QA decision");
-}
-
-if (!testing.includes("1.1.0 User Test Readiness Release Update")) {
-  issues.push("TESTING.md: missing 1.1.0 user test readiness release section");
-}
-
-for (const token of [
-  "1.1.0 Multimode Acceptance Matrix Release Update",
-  "npm run multimode-acceptance:check",
-  "1.1.0 Controlled Real Acceptance Release Update",
-  "npm run real-acceptance:check",
-]) {
-  if (!testing.includes(token)) issues.push(`TESTING.md: missing ${token}`);
-}
-
-for (const token of [
-  "Fresh real generation is manual and opt-in only",
-  "Never use a direct API/script path to bypass the App live generation protection",
-  "Agnes all-core multimode pass",
-  "quality-risk",
-]) {
-  if (!realAcceptance.includes(token)) issues.push(`REAL_GENERATION_ACCEPTANCE.md: missing ${token}`);
+if (!decisions.includes("D112")) {
+  issues.push("DECISIONS.md: missing D112 cleanup decision");
 }
 
 if (issues.length > 0) {

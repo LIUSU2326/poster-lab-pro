@@ -24,7 +24,7 @@ export function mountWorkbenchSections(host: HTMLElement, options: WorkbenchSect
     const modeShort = target.dataset.modeShort || mode;
     const revision = Number(target.dataset.revision || 0);
     const assetCount = Number(target.dataset.assetCount || 0);
-    const formValues = getActiveGenerationFormValues();
+    const formValues = getActiveGenerationFormValues(mode);
     const section = target.closest(".config-section");
     section?.classList.add("has-react-brief");
 
@@ -36,6 +36,7 @@ export function mountWorkbenchSections(host: HTMLElement, options: WorkbenchSect
         revision={revision}
         assetCount={assetCount}
         initialValues={formValues.projectBrief}
+        onRequestRender={options.onRequestRender}
       />,
     );
     roots.push(root);
@@ -72,7 +73,7 @@ export function mountWorkbenchSections(host: HTMLElement, options: WorkbenchSect
     const mode = target.dataset.outputMode as ProductionMode;
     const outputSizes = parseJsonArray(target.dataset.outputSizes);
     const sizeNote = target.dataset.sizeNote || "";
-    const formValues = getActiveGenerationFormValues();
+    const formValues = getActiveGenerationFormValues(mode);
     const section = target.closest(".config-section");
     section?.classList.add("has-react-output");
 
@@ -93,7 +94,7 @@ export function mountWorkbenchSections(host: HTMLElement, options: WorkbenchSect
     const styles = parseJsonArray(target.dataset.styles);
     const directionTitle = target.dataset.directionTitle || "";
     const directionHelper = target.dataset.directionHelper || "";
-    const formValues = getActiveGenerationFormValues();
+    const formValues = getActiveGenerationFormValues(mode);
     const section = target.closest(".config-section");
     section?.classList.add("has-react-direction");
 
@@ -127,7 +128,7 @@ function parseJsonArray(value: string | undefined): string[] {
   }
 }
 
-function parseJsonArrayOfObjects(value: string | undefined): Array<{ role?: string; label: string; state: string; tone: string; sourceType?: string; previewUrl?: string | null }> {
+function parseJsonArrayOfObjects(value: string | undefined): Array<{ role?: string; label: string; state: string; tone: string; sourceType?: string; previewUrl?: string | null; previewUrls?: string[]; assetCount?: number }> {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
@@ -140,6 +141,8 @@ function parseJsonArrayOfObjects(value: string | undefined): Array<{ role?: stri
         tone: item && typeof item.tone === "string" ? item.tone : "blue",
         sourceType: item && typeof item.sourceType === "string" ? item.sourceType : undefined,
         previewUrl: item && typeof item.previewUrl === "string" ? item.previewUrl : null,
+        previewUrls: item && Array.isArray(item.previewUrls) ? item.previewUrls.map(String).filter(Boolean) : [],
+        assetCount: item && Number.isFinite(Number(item.assetCount)) ? Number(item.assetCount) : 0,
       }));
   } catch {
     return [];

@@ -53,8 +53,8 @@ for (const [fileName, source] of [
   assert(source.includes("unsupported_capability") || source.includes("providerCapabilities"), `${fileName}: missing capability failure plumbing`);
 }
 
-assert(configPanel.includes("model-capability-note"), "config-panel.js: model capability note must be visible in UI");
 assert(configPanel.includes("evaluateProviderRouteCapabilityGate"), "config-panel.js: routing summary must evaluate route capabilities");
+assert(!configPanel.includes("model-capability-note"), "config-panel.js: model capability note should stay out of the compact UI");
 assert(apiContracts.includes("unsupported_capability"), "contracts.ts: API error code must include unsupported_capability");
 assert(nextResponse.includes("unsupported_capability: 422"), "next-response.ts: unsupported_capability must map to 422");
 assert(providerIndex.includes("evaluateQueuePlanCapabilityGate"), "providers/index.ts: capability gate must be exported");

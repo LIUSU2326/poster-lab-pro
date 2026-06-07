@@ -30,8 +30,6 @@ for (const token of [
   "ProviderConnectionTestApiResponseSchema",
   "QueuePlanCreateApiRequestSchema",
   "QueuePlanRunApiRequestSchema",
-  "QueuePlanManualLiveTestApiRequestSchema",
-  "QueuePlanManualLiveTestApiResponseSchema",
   "AssetUploadPlanApiRequestSchema",
   "AssetBinaryUploadApiRequestSchema",
   "AssetCommitApiRequestSchema",
@@ -57,7 +55,6 @@ for (const routeId of [
   "provider.connection.test",
   "queue.plan.create",
   "queue.plan.run",
-  "queue.plan.live.test",
   "asset.upload.plan",
   "asset.binary.upload",
   "asset.record.commit",
@@ -81,8 +78,6 @@ for (const schema of [
   "QueueSummarySchema",
   "WorkspaceQueueWorkerInputSchema",
   "WorkspaceQueueWorkerResultSchema",
-  "OpenAILiveQueueRunResultSchema",
-  "LiveExecutionSafetyInputSchema",
   "AssetUploadPlanResultSchema",
   "AssetBinaryUploadResultSchema",
   "AssetCommitResultSchema",
@@ -116,6 +111,12 @@ for (const forbidden of [
 
 if (!barrel.includes("contracts")) {
   issues.push("index.ts: missing contracts export");
+}
+
+for (const removed of ["QueuePlanManualLiveTest", "queue.plan.live.test", "manual-live-generation"]) {
+  if (contracts.includes(removed) || barrel.includes(removed)) {
+    issues.push(`manual live-test API contract should be removed (${removed})`);
+  }
 }
 
 if (issues.length > 0) {

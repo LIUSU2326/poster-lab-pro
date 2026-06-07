@@ -130,6 +130,22 @@ function withProviderReadyMockAssets(snapshot) {
   };
 }
 
+function withPosterSloganMode(snapshot, mode = "auto") {
+  return {
+    ...snapshot,
+    modeStates: snapshot.modeStates.map((modeState) => modeState.mode === "poster"
+      ? {
+        ...modeState,
+        sloganSettings: {
+          ...(modeState.sloganSettings || {}),
+          mode,
+          languages: ["en-US"],
+        },
+      }
+      : modeState),
+  };
+}
+
 async function runRuntimeCheck() {
   const outDir = path.join(root, `.tmp-provider-request-check-${Date.now()}`);
   mkdirSync(outDir, { recursive: true });
@@ -187,7 +203,7 @@ async function runRuntimeCheck() {
     const prompts = await import(pathToFileURL(promptModulePath).href);
     const mapperModule = await import(pathToFileURL(mapperModulePath).href);
 
-    const snapshot = withProviderReadyMockAssets(storage.createMockWorkspaceSnapshot());
+    const snapshot = withPosterSloganMode(withProviderReadyMockAssets(storage.createMockWorkspaceSnapshot()));
     const imagePrompt = prompts.createImagePromptPackage({
       snapshot,
       mode: "poster",
@@ -234,8 +250,8 @@ async function runRuntimeCheck() {
     if (!agnesMapped.request.prompt.includes("Default pipeline: AI integrated redraw")) {
       issues.push("agnes provider profile must not replace the shared integrated redraw Poster logic");
     }
-    if (!agnesMapped.request.assets.every((asset) => !asset.url && /agnesRawImageWithheld=true/.test(asset.description || ""))) {
-      issues.push("agnes poster image request should retain asset semantics but withhold every raw image URL");
+    if (!agnesMapped.request.assets.every((asset) => asset.url && !asset.url.includes("example.com"))) {
+      issues.push("agnes poster image request should retain provider-ready visual reference URLs for extra_body.image");
     }
     if (!agnesMapped.request.assets.some((asset) => /semanticRole=protagonist/.test(asset.description || ""))) {
       issues.push("agnes poster image request should keep uploaded protagonist semantic reference");
@@ -452,8 +468,8 @@ async function runRuntimeCheck() {
       providerId: "agnes",
       kind: "imageGeneration",
     });
-    if (!userAgnesMapped.request.assets.every((asset) => !asset.url && /agnesRawImageWithheld=true/.test(asset.description || ""))) {
-      issues.push("agnes user-asset poster request should retain asset semantics but withhold every raw image URL");
+    if (!userAgnesMapped.request.assets.every((asset) => asset.url && !asset.url.includes("example.com"))) {
+      issues.push("agnes user-asset poster request should retain provider-ready visual reference URLs for extra_body.image");
     }
     if (!userAgnesMapped.request.assets.some((asset) => /semanticRole=protagonist/.test(asset.description || ""))) {
       issues.push("agnes user-asset poster request should keep uploaded protagonist semantic reference");

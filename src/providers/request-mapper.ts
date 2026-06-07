@@ -35,6 +35,7 @@ import {
   type UpscaleRequest,
 } from "./contracts";
 import { getProviderManifest } from "./manifests";
+import { normalizeMimoProviderModel } from "./mimo-compat";
 import { providerImagePromptMaxChars } from "./provider-capability-profiles";
 import {
   posterCinematicKvQualityDirective,
@@ -204,13 +205,13 @@ export function resolveProviderModel(input: {
 
   const providerConfig = input.snapshot.providerConfigs[input.providerId];
   const slotModel = providerConfig?.modelSlots[parsedSlot]?.trim();
-  if (slotModel) return slotModel;
+  if (slotModel) return normalizeMimoProviderModel(input.providerId, slotModel);
 
   const manifestModel = getProviderManifest(input.providerId).modelSlots[parsedSlot]?.[0]?.trim();
-  if (manifestModel) return manifestModel;
+  if (manifestModel) return normalizeMimoProviderModel(input.providerId, manifestModel);
 
   const defaultModel = providerConfig?.defaultModel?.trim();
-  return defaultModel || FALLBACK_MODELS[parsedSlot];
+  return normalizeMimoProviderModel(input.providerId, defaultModel || FALLBACK_MODELS[parsedSlot]);
 }
 
 type ProviderAssetReferenceOptions = {
@@ -476,19 +477,6 @@ function providerImageAssetsForRequest(input: {
     copySafeLogoText: input.copySafeLogoText,
     imageGeneration: true,
   });
-
-  if (input.providerId === "agnes" && input.promptPackage.mode === "poster") {
-    return assets.map((asset) => ProviderAssetReferenceSchema.parse({
-      id: asset.id,
-      role: asset.role,
-      ...(asset.mimeType ? { mimeType: asset.mimeType } : {}),
-      description: [
-        "agnesRawImageWithheld=true",
-        "reason=Agnes poster treats extra_body.image as source imagery; keep semantic role in prompt but do not send raw URL.",
-        asset.description || "",
-      ].filter(Boolean).join("; ").slice(0, 500),
-    }));
-  }
 
   return assets;
 }

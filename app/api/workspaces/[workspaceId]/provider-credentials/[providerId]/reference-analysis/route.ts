@@ -3,6 +3,7 @@ import { providerCredentialKeyRef } from "../../../../../../../src/api/provider-
 import { nextCredentialVault, nextRepository } from "../../../../../../../src/api/next-service";
 import { ProviderIdSchema } from "../../../../../../../src/schema/zod";
 import { getProviderManifest } from "../../../../../../../src/providers/manifests";
+import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "../../../../../../../src/providers/mimo-compat";
 
 const ReferenceAnalysisRequestSchema = z.object({
   kind: z.enum(["composition", "full", "style"]),
@@ -19,6 +20,7 @@ const DEFAULT_BASE_URLS: Record<z.infer<typeof ProviderIdSchema>, string> = {
   claude: "https://api.anthropic.com/v1",
   qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
   agnes: "https://apihub.agnes-ai.com/v1",
+  mimo: "https://token-plan-cn.xiaomimimo.com/v1",
 };
 
 function json(data: unknown, init?: ResponseInit) {
@@ -34,7 +36,7 @@ async function readJsonBody(request: Request): Promise<unknown> {
 }
 
 function normalizeBaseUrl(value: string | undefined, providerId: z.infer<typeof ProviderIdSchema>): string {
-  return (value?.trim() || DEFAULT_BASE_URLS[providerId]).replace(/\/+$/, "");
+  return normalizeMimoProviderBaseUrl(providerId, value?.trim() || DEFAULT_BASE_URLS[providerId]);
 }
 
 function parseImageDataUrl(value: string): { mimeType: string; base64: string } {
@@ -169,7 +171,7 @@ function formatProviderError(url: string, status: number, body: unknown): string
 
 function normalizeReferenceModel(providerId: z.infer<typeof ProviderIdSchema>, model: string): string {
   if (providerId === "google" && model === "gemini-3-pro-preview") return "gemini-3.1-pro-preview";
-  return model;
+  return normalizeMimoProviderModel(providerId, model);
 }
 
 async function runOpenAICompatible(input: {
@@ -290,18 +292,21 @@ export async function POST(
     const manifest = getProviderManifest(providerId);
     const requiredCapability = body.kind === "style" ? "styleReferenceAnalysis" : "compositionReferenceAnalysis";
     if (!manifest.capabilities.includes(requiredCapability)) {
+      const unsupportedMessage = providerId === "agnes"
+        ? "Agnes Image 2.1 Flash 支持图生图参考，但构图/画风文字分析需要视觉理解模型。请将参考图识别路由切换到小米 MiMo、OpenAI、AIGoCode、Google AI Studio、Claude 或 Qwen。"
+        : "当前供应商不支持参考图识别，请切换到小米 MiMo、OpenAI、AIGoCode、Google AI Studio、Claude 或 Qwen。";
       return json({
         ok: false,
         error: {
           code: "unsupported_provider",
-          message: "当前供应商不支持参考图识别，请切换到 OpenAI、AIGoCode、Google AI Studio、Claude 或 Qwen。",
+          message: unsupportedMessage,
         },
       }, { status: 400 });
     }
 
     const credentialStatus = await nextCredentialVault.describe({
       providerId,
-      keyRef: providerCredentialKeyRef({ workspaceId, providerId }),
+      keyRef: providerCredentialKeyRef({ workspaceId, providerId, keyRef: config.credentialKeyRef }),
     });
     if (!credentialStatus.credentialRef) {
       return json({ ok: false, error: { code: "missing_api_key", message: "请先保存 API Key。" } }, { status: 400 });
@@ -313,7 +318,9 @@ export async function POST(
     }
 
     const slot = body.kind === "style" ? "styleReference" : "compositionReference";
-    const model = normalizeReferenceModel(providerId, config.modelSlots?.[slot] || config.defaultModel || "gpt-5.2");
+    const model = providerId === "mimo"
+      ? "mimo-v2-omni"
+      : normalizeReferenceModel(providerId, config.modelSlots?.[slot] || config.defaultModel || "gpt-5.2");
     const baseUrl = normalizeBaseUrl(config.baseUrl, providerId);
     const image = parseImageDataUrl(body.imageDataUrl);
     const prompt = promptFor(body.kind, body.label);

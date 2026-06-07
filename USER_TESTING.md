@@ -1,5 +1,9 @@
 # USER_TESTING.md
 
+## No User-Facing Live Generation Switch
+
+The workbench should not show a `真实生成` switch, `确认真实生成保护` action, `手动验证` / `MANUAL CHECK`, or top-bar version/path chips. Provider setup is handled from `Model and API Key` / `模型与 Key`, and generation starts from the normal scheme/image generation actions.
+
 ## Poster Lab Pro 1.1.0 User Test Guide
 
 This guide is for a local desktop trial of Poster Lab Pro 1.1.0 stable.
@@ -12,28 +16,23 @@ This guide is for a local desktop trial of Poster Lab Pro 1.1.0 stable.
 - Local service URL after the app opens: `http://127.0.0.1:3000`
 - Desktop Test Path: `DESKTOP_TESTING.md`
 - Multimode Acceptance Matrix: `MULTIMODE_ACCEPTANCE.md`
-- Controlled Real Acceptance Log: `REAL_GENERATION_ACCEPTANCE.md`
 
 ## Before Testing
 
 1. Open `/Users/liusu/Desktop/Poster Lab Pro.app`.
-2. Confirm the top bar shows `v1.1.0`, `main`, the desktop bundle path, and the workspace revision.
-3. Open `模型与 Key`.
+2. Confirm the top bar no longer shows version/path metadata chips or `真实生成`.
+3. Open `Model and API Key` / `??? Key`.
 4. Save or confirm the provider API Key.
 5. Run the provider connection test.
-6. Enable the live generation protection only when you are ready to spend provider credits.
-7. Set an accepted cost cap that is at least the estimated cost.
+6. Generate schemes/images from the normal generation buttons.
 
 ## Safe Cost Rule
 
 - Default automated checks must not spend provider credits.
-- Real generation is manual and opt-in only.
-- For acceptance, run only 1-2 real generations per mode when needed.
-- For the multimode acceptance pass, use `MULTIMODE_ACCEPTANCE.md` and run max 1 real generation per mode unless there is one clear blocking bug.
-- For the real acceptance pass, use `REAL_GENERATION_ACCEPTANCE.md` and run max 1 fresh real generation per mode unless one clear blocking bug needs a focused rerun.
-- Never use a direct API/script path to bypass the App live generation protection.
+- Provider-spend testing should stay bounded and intentional.
+- For acceptance, run only the minimum image generations needed for clear pass/fail evidence.
+- For the multimode acceptance pass, use `MULTIMODE_ACCEPTANCE.md`.
 - Stop tuning prompts after obvious pass/fail evidence; do not run unlimited retries.
-- If the live generation protection blocks a run, treat that as correct behavior until credentials, connection, confirmations, storage, and cost cap are ready.
 
 ## Asset Test Flow
 
@@ -90,28 +89,23 @@ Collab:
 For every generated image:
 
 1. Open the result viewer.
-2. Check the Result Quality Audit pill/panel.
-3. Use `回到方案` to inspect the source scheme.
-4. Use `重生成片` only for clear failures.
-5. Use delete only after the second confirmation click.
-6. Download only ready/stored results.
+2. Use `回到方案` to inspect the source scheme.
+3. Use `重生成片` only for clear failures.
+4. Use delete only after the second confirmation click.
+5. Download only ready/stored results.
 
 ## Failure Recovery
 
-- If generation fails, check the queue area for `失败原因` and next-step guidance.
+- If generation fails, use the failed-image retry and card-level status instead of a persistent queue panel.
 - Use `重试失败图片` for retryable failed image tasks.
-- If provider/auth/cost blocks appear, open `模型与 Key` and check credentials, connection, live generation confirmations, and cost cap.
+- If provider/auth blocks appear, open `Model and API Key` / `??? Key` and check credentials, connection, and selected routes.
 - If old data appears after asset deletion, delete the affected slot again, refresh/reopen the desktop app, and report the workspace revision and asset role.
 
 ## What To Report
 
 When reporting a problem, include:
 
-- App version shown in the top bar.
-- Workspace revision.
 - Mode.
 - Uploaded asset roles.
 - Scheme title or result id.
-- Whether the live generation protection was enabled.
-- Result Quality Audit findings.
 - What looked wrong visually.

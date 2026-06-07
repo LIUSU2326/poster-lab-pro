@@ -1,3 +1,4 @@
+import { modeSpecs } from './data/modes.js';
 import { getActiveMode, getRuntimeWorkspaceSnapshot, setRuntimeWorkspaceSnapshot, state } from './state.js';
 import { createModeFormDefaults, createOutputSettingsDefaults, createProjectBriefDefaults, createSloganSettingsDefaults } from './schema/index.js';
 
@@ -82,9 +83,10 @@ function commitSnapshot(snapshot, source = "form") {
   setRuntimeWorkspaceSnapshot(snapshot, source);
 }
 
-export function getActiveGenerationFormValues() {
+export function getActiveGenerationFormValues(modeIdOverride = "") {
   const snapshot = getRuntimeWorkspaceSnapshot();
-  const modeId = activeModeId();
+  const modeId = modeSpecs[modeIdOverride] ? modeIdOverride : activeModeId();
+  const modeSpec = modeSpecs[modeId] || getActiveMode();
   const modeState = findModeState(snapshot, modeId);
   const modeForm = normalizeRuntimeModeForm({
     ...createModeFormDefaults(modeId),
@@ -103,7 +105,7 @@ export function getActiveGenerationFormValues() {
       ...createProjectBriefDefaults(modeId),
       ...(modeState?.projectBrief || {}),
       projectName: snapshot.project.name,
-      gameDescription: modeState?.projectBrief?.gameDescription || snapshot.project.description || getActiveMode().description,
+      gameDescription: modeState?.projectBrief?.gameDescription || snapshot.project.description || modeSpec.description,
     },
     outputSettings,
     sloganSettings: normalizeRuntimeSloganSettings({
@@ -166,7 +168,8 @@ export function updateGenerationFormField(path, rawValue) {
   const snapshot = clone(getRuntimeWorkspaceSnapshot());
   const modeId = activeModeId();
   const modeState = ensureModeState(snapshot, modeId);
-  const value = parseFieldValue(path, rawValue);
+  const parsedValue = parseFieldValue(path, rawValue);
+  const value = path === "sloganSettings.languages" ? [parsedValue] : parsedValue;
 
   setPath(modeState, path, value);
   modeState.updatedAt = nowIso();

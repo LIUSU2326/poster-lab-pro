@@ -9499,7 +9499,7 @@ select:focus-visible,
   align-content: start;
   gap: 12px;
   min-height: 0;
-  padding: 18px 22px 22px;
+  padding: 18px 22px 88px;
   overflow: auto;
 }
 
@@ -11163,7 +11163,7 @@ select:focus-visible,
 
 .queue-row i em,
 .task-progress em {
-  transition: width 300ms var(--ease-move);
+  transition: opacity var(--motion-base) var(--ease-standard);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -13232,7 +13232,7 @@ select:focus-visible,
   border-radius: inherit;
   background: linear-gradient(90deg, var(--accent), color-mix(in oklch, var(--accent), white 34%));
   content: "";
-  transition: width 0.24s ease;
+  transition: opacity var(--motion-base, 180ms) var(--ease-standard, ease);
 }
 
 .batch-progress i::after {
@@ -13638,4 +13638,2705 @@ select:focus-visible,
 .prototype-shell > .config-panel:not(.collapsed),
 .config-panel:not(.collapsed) {
   grid-template-rows: auto auto auto minmax(0, 1fr) auto !important;
+}
+
+/* 2026-06-05 config-panel cleanup: optional fields, suite editor, and topbar polish. */
+.config-panel .guidance-box .inline-add-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.config-panel .guidance-tag-list {
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-flow: row wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.config-panel .guidance-tag-list button {
+  flex: 0 1 auto !important;
+  max-width: 100% !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+.slogan-language-field {
+  display: grid;
+  gap: 6px;
+}
+
+.slogan-language-field span {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.slogan-language-field select {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 34px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.asset-slot-card.is-empty {
+  border-color: color-mix(in oklch, var(--line), var(--text-tertiary) 14%);
+  background: color-mix(in oklch, var(--panel-soft), var(--panel) 48%);
+  box-shadow: none;
+}
+
+.asset-slot-card.is-empty:hover {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 52%);
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 82%);
+}
+
+.asset-slot-upload.is-empty i.asset-empty-thumb {
+  display: grid;
+  height: 50px;
+  place-items: center;
+  border: 1px dashed color-mix(in oklch, var(--accent), var(--line) 42%);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel-raised), transparent 8%), var(--panel-soft));
+  color: var(--accent);
+}
+
+.asset-slot-upload.is-empty i.asset-empty-thumb span {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 36%);
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.asset-slot-upload.is-empty small {
+  color: var(--text-tertiary);
+}
+
+.asset-category-panel-primary {
+  position: relative;
+}
+
+.asset-category-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-height: 24px !important;
+  padding-inline: 9px !important;
+}
+
+.asset-category-add-trigger,
+.suite-add-trigger {
+  display: inline-flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  border: 1px dashed color-mix(in oklch, var(--accent), var(--line) 46%);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 82%);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.asset-category-add-trigger span,
+.suite-add-trigger span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 58%);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.output-settings-rhf > .suite-add-trigger {
+  order: 4;
+}
+
+.suite-manager-modal .suite-list {
+  grid-template-columns: 1fr !important;
+}
+
+.suite-card button small {
+  min-height: 18px;
+}
+
+.model-plan-card.unconfigured {
+  border-color: color-mix(in oklch, var(--line), var(--text-tertiary) 18%) !important;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel-soft), transparent 20%), var(--panel)) !important;
+}
+
+.model-plan-card.unconfigured > span {
+  border: 1px solid var(--line) !important;
+  background: var(--control-bg) !important;
+  color: var(--text-tertiary) !important;
+}
+
+.model-plan-empty {
+  display: block !important;
+  width: 100% !important;
+  padding: 8px 9px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--panel-soft) !important;
+  color: var(--text-tertiary) !important;
+  font-size: 11px !important;
+  font-weight: 680 !important;
+  line-height: 1.4 !important;
+}
+
+.topbar {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(360px, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.topbar-project {
+  justify-self: start !important;
+}
+
+.top-view-switch {
+  position: relative !important;
+  justify-self: center !important;
+  grid-template-columns: repeat(3, minmax(72px, 1fr)) !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+}
+
+.top-view-switch button {
+  position: relative !important;
+  z-index: 1 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.top-view-switch .active {
+  background: transparent !important;
+  color: var(--accent-ink) !important;
+  box-shadow: none !important;
+}
+
+.top-view-switch::before {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  top: 3px !important;
+  bottom: 3px !important;
+  left: 3px !important;
+  width: calc((100% - 6px) / 3) !important;
+  border: 1px solid color-mix(in oklch, var(--accent-line), transparent 56%) !important;
+  border-radius: 999px !important;
+  background: var(--primary-surface) !important;
+  box-shadow: 0 6px 18px color-mix(in oklch, var(--ink), transparent 92%) !important;
+  transition: transform 180ms var(--ease-move, ease) !important;
+}
+
+.top-view-switch:has(button:nth-child(2).active)::before {
+  transform: translateX(100%) !important;
+}
+
+.top-view-switch:has(button:nth-child(3).active)::before {
+  transform: translateX(200%) !important;
+}
+
+.top-actions {
+  justify-self: end !important;
+  min-width: 0 !important;
+}
+
+.top-actions .theme-switch {
+  width: 124px !important;
+  min-height: 34px !important;
+  border: 1px solid var(--border-subtle) !important;
+  background: var(--panel-lift) !important;
+  box-shadow: inset 0 1px 0 color-mix(in oklch, white, transparent 58%) !important;
+}
+
+.top-actions .theme-switch::before {
+  top: 3px !important;
+  bottom: 3px !important;
+  left: 3px !important;
+  width: calc((100% - 6px) / 2) !important;
+  border: 1px solid color-mix(in oklch, var(--accent-line), transparent 52%) !important;
+  background: #050505 !important;
+  box-shadow: 0 5px 14px color-mix(in oklch, var(--ink), transparent 88%) !important;
+}
+
+.top-actions .theme-switch.dark::before {
+  transform: translateX(100%) !important;
+}
+
+.top-actions .theme-switch span {
+  display: inline-flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 8px !important;
+  z-index: 1 !important;
+  font-size: 11px !important;
+  font-weight: 820 !important;
+  white-space: nowrap !important;
+}
+
+.top-actions .theme-switch span.active {
+  color: #fff !important;
+}
+
+:root[data-theme="dark"] .asset-slot-card.is-empty,
+:root[data-theme="dark"] .model-plan-card.unconfigured,
+:root[data-theme="dark"] .model-plan-empty,
+:root[data-theme="dark"] .slogan-language-field select {
+  border-color: var(--border-default) !important;
+  background: var(--panel-soft) !important;
+}
+
+:root[data-theme="dark"] .top-actions .theme-switch {
+  background: var(--panel-soft) !important;
+}
+
+@media (max-width: 1180px) {
+  .topbar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .topbar-project,
+  .top-view-switch,
+  .top-actions {
+    justify-self: stretch !important;
+  }
+
+  .top-actions {
+    justify-content: flex-start !important;
+  }
+}
+
+/* 2026-06-05 quiet workbench distillation. */
+.brief-field-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.project-name-add,
+.icon-plus-button,
+.asset-category-quick-add {
+  display: grid !important;
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  font-size: 18px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+}
+
+.project-name-add {
+  border: 1px solid color-mix(in oklch, var(--accent), var(--line) 45%);
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 72%);
+  color: var(--accent);
+}
+
+.project-library-compact-head {
+  min-height: 78px !important;
+  padding: 20px 22px !important;
+}
+
+.project-library-compact-head h1 {
+  margin: 0 !important;
+  font-size: 28px !important;
+  letter-spacing: 0 !important;
+}
+
+.project-library-empty {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.assets-section-react {
+  position: relative;
+}
+
+.asset-category-quick-add {
+  position: absolute;
+  top: -42px;
+  right: 0;
+  z-index: 2;
+  border: 1px solid color-mix(in oklch, var(--accent), var(--line) 42%) !important;
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 78%) !important;
+  color: var(--accent) !important;
+}
+
+.asset-category-quick-add strong {
+  display: none;
+}
+
+.asset-category-panel-primary {
+  margin: 0 0 10px !important;
+  padding: 10px 42px 10px 10px !important;
+  border-style: solid !important;
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+}
+
+.asset-grid {
+  gap: 10px !important;
+}
+
+.asset-slot-card {
+  position: relative !important;
+  min-height: 104px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in oklch, var(--accent-soft), transparent 34%), transparent 42%),
+    linear-gradient(145deg, color-mix(in oklch, var(--panel-raised), transparent 5%), var(--panel)) !important;
+}
+
+.asset-slot-card.has-preview {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 44%) !important;
+}
+
+.asset-slot-upload {
+  display: grid !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 104px !important;
+  grid-template-rows: minmax(58px, 1fr) auto !important;
+  gap: 8px !important;
+  padding: 8px !important;
+  border: 0 !important;
+  background: transparent !important;
+  text-align: left !important;
+}
+
+.asset-slot-upload i.asset-empty-thumb,
+.asset-slot-upload i.asset-preview {
+  display: grid !important;
+  width: 100% !important;
+  height: 58px !important;
+  min-height: 58px !important;
+  place-items: center !important;
+  border-radius: 7px !important;
+}
+
+.asset-slot-upload i.asset-preview {
+  border: 0 !important;
+}
+
+.asset-slot-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.asset-slot-meta strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 840;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-slot-meta small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.asset-slot-delete,
+.reference-remove-button {
+  display: grid !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+
+.asset-slot-delete {
+  position: absolute !important;
+  top: 7px !important;
+  right: 7px !important;
+  border: 1px solid color-mix(in oklch, var(--danger), var(--line) 62%) !important;
+  background: color-mix(in oklch, var(--panel), transparent 8%) !important;
+  color: color-mix(in oklch, var(--danger), var(--text) 20%) !important;
+}
+
+.compact-reference-card {
+  margin-top: 10px !important;
+  padding: 8px !important;
+  border-radius: var(--radius-sm) !important;
+  background:
+    radial-gradient(circle at 12% 10%, color-mix(in oklch, var(--accent-soft), transparent 25%), transparent 45%),
+    color-mix(in oklch, var(--panel-soft), var(--panel) 36%) !important;
+}
+
+.compact-reference-card.is-empty {
+  border-style: dashed !important;
+  border-color: color-mix(in oklch, var(--line-strong), var(--accent) 18%) !important;
+}
+
+.compact-reference-card .reference-upload-main,
+.compact-reference-card .style-reference-main {
+  grid-template-columns: 48px minmax(0, 1fr) !important;
+  min-height: 54px !important;
+}
+
+.compact-reference-card .reference-thumb,
+.compact-reference-card .style-reference-preview {
+  display: grid !important;
+  width: 48px !important;
+  height: 48px !important;
+  place-items: center !important;
+}
+
+.compact-reference-card.has-preview .reference-thumb,
+.compact-reference-card.has-preview .style-reference-preview {
+  width: 100% !important;
+  height: 98px !important;
+}
+
+.reference-plus {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 35%);
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.style-reference-actions,
+.reference-analysis-tools {
+  display: flex !important;
+  gap: 6px !important;
+  justify-content: flex-end !important;
+}
+
+.suite-manager-head small,
+.single-output-note,
+.output-note,
+.provider-route-note,
+.route-plan-test-hint,
+.result-quality-pill,
+.result-quality-panel {
+  display: none !important;
+}
+
+.suite-manager-toolbar {
+  grid-template-columns: 1fr !important;
+}
+
+.suite-card {
+  display: grid !important;
+  gap: 10px !important;
+  padding: 12px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--panel) !important;
+}
+
+.suite-card.active-entry {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 28%) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 78%) !important;
+}
+
+.suite-card > button {
+  text-align: left !important;
+}
+
+.suite-delete-button {
+  justify-self: end;
+}
+
+.suite-empty-note {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.suite-inline-add-row {
+  margin-top: 4px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.top-view-switch {
+  grid-template-columns: repeat(2, minmax(72px, 1fr)) !important;
+}
+
+.top-view-switch::before {
+  width: calc((100% - 6px) / 2) !important;
+}
+
+.top-view-switch:has(button:nth-child(2).active)::before {
+  transform: translateX(100%) !important;
+}
+
+.top-view-switch:has(button:nth-child(3).active)::before {
+  transform: none !important;
+}
+
+.model-plan-card {
+  gap: 8px !important;
+}
+
+.model-plan-card .mini-ghost-button {
+  justify-self: end;
+}
+
+.model-plan-routes {
+  grid-column: 1 / -1;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.provider-config-sheet .settings-body {
+  grid-template-columns: 220px minmax(0, 1fr) !important;
+}
+
+.provider-config-head {
+  padding: 12px 14px !important;
+}
+
+.provider-config-card,
+.provider-config-sheet .provider-state-card.connection-test-status {
+  padding: 12px !important;
+}
+
+.provider-card-title small,
+.provider-config-head span,
+.provider-config-sheet .model-slot small,
+.provider-source-summary,
+.provider-capabilities,
+.connection-models {
+  display: none !important;
+}
+
+.provider-config-sheet .model-slot-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.provider-config-sheet .model-slot {
+  gap: 8px !important;
+  padding: 10px !important;
+}
+
+.provider-config-sheet .provider-list button {
+  min-height: 52px !important;
+}
+
+.provider-config-sheet .provider-list button small {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+:root[data-theme="dark"] .asset-slot-card,
+:root[data-theme="dark"] .compact-reference-card,
+:root[data-theme="dark"] .suite-card {
+  border-color: var(--border-default) !important;
+  background: var(--panel-soft) !important;
+}
+
+/* 2026-06-06 sidebar action recovery: keep the batch CTA visible. */
+.prototype-shell > .config-panel:not(.collapsed),
+.config-panel:not(.collapsed) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+}
+
+.config-scroll {
+  min-height: 0 !important;
+  padding-bottom: 18px !important;
+}
+
+.config-action {
+  display: grid !important;
+  gap: 8px !important;
+  align-items: center !important;
+  position: relative !important;
+  z-index: 4 !important;
+  padding: 12px 18px 16px !important;
+  border-top: 1px solid var(--border-default) !important;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel), transparent 10%), var(--panel) 42%) !important;
+}
+
+.config-action .primary-button.wide {
+  width: 100% !important;
+  min-height: 46px !important;
+}
+
+/* 2026-06-06 product polish: quieter empty state and clearer secondary actions. */
+.scheme-plan-list:has(.scheme-board-empty) {
+  display: grid !important;
+  min-height: 100% !important;
+  place-items: center !important;
+}
+
+.scheme-board-empty {
+  display: grid;
+  width: min(460px, calc(100% - 48px));
+  gap: 12px;
+  align-items: center;
+  justify-items: center;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in oklch, var(--line), var(--accent) 18%);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--panel), transparent 6%);
+  box-shadow: 0 18px 50px color-mix(in oklch, var(--text), transparent 92%);
+  text-align: center;
+}
+
+.scheme-board-empty strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.scheme-board-empty small {
+  display: block;
+  max-width: 38ch;
+  margin-top: 5px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.scheme-board-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.scheme-board-empty-actions button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-raised);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.scheme-board-empty-actions .primary-button {
+  border-color: color-mix(in oklch, var(--text), transparent 18%);
+  background: var(--text);
+  color: var(--panel);
+}
+
+.project-name-add svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.asset-slot-delete {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-3px) scale(0.96) !important;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease !important;
+}
+
+.asset-slot-card:hover .asset-slot-delete,
+.asset-slot-card:focus-within .asset-slot-delete {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+.provider-key-form {
+  margin: 0;
+}
+
+.settings-disclosure {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.settings-disclosure summary {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.settings-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-disclosure summary small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.settings-disclosure summary::after {
+  content: "+";
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.settings-disclosure[open] summary::after {
+  content: "-";
+}
+
+.settings-disclosure .custom-model-manager {
+  padding: 0 12px 12px;
+}
+
+.settings-disclosure .provider-config-card {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: transparent;
+}
+
+/* 2026-06-06 provider credential polish: honest status, sortable list, multi-key slots. */
+.provider-config-detail.provider-detail {
+  padding-bottom: 24px !important;
+}
+
+.provider-config-sheet .provider-list button {
+  cursor: grab;
+  user-select: none;
+}
+
+.provider-config-sheet .provider-list button:active {
+  cursor: grabbing;
+}
+
+.provider-config-sheet .provider-list button.dragging {
+  opacity: 0.62;
+}
+
+.provider-config-sheet .provider-list button.drag-over {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 28%) !important;
+  box-shadow: inset 3px 0 0 color-mix(in oklch, var(--accent), white 8%);
+}
+
+.provider-config-sheet .provider-status.testing,
+.provider-config-sheet .provider-status.idle {
+  background: color-mix(in oklch, var(--panel-soft), var(--panel-raised) 32%);
+  color: var(--text-secondary);
+}
+
+.provider-config-sheet .provider-status.error {
+  background: color-mix(in oklch, var(--danger), white 84%);
+  color: color-mix(in oklch, var(--danger), black 22%);
+}
+
+.provider-key-form {
+  display: grid;
+  gap: 8px;
+}
+
+.provider-key-label-field {
+  display: grid;
+  gap: 6px;
+}
+
+.provider-key-label-field span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 820;
+}
+
+.provider-key-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.provider-key-form-actions button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.provider-key-form-actions small {
+  display: inline !important;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.provider-key-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.provider-key-profiles button {
+  display: inline-grid;
+  min-width: 118px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-soft);
+  color: var(--text);
+  text-align: left;
+}
+
+.provider-key-profiles button.active {
+  border-color: color-mix(in oklch, var(--success), var(--line) 38%);
+  background: color-mix(in oklch, var(--success-soft), var(--panel) 72%);
+}
+
+.provider-key-profiles span {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-key-profiles small {
+  display: inline !important;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-config-actions.settings-actions {
+  position: sticky !important;
+  bottom: 0 !important;
+  margin: 4px -2px 0 !important;
+  padding: 12px 2px 0 !important;
+  border-top: 1px solid color-mix(in oklch, var(--line), transparent 35%);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel), transparent 18%), var(--panel) 42%) !important;
+}
+
+:root[data-theme="dark"] .provider-config-sheet .provider-status.warning {
+  background: color-mix(in oklch, var(--warning), transparent 76%);
+  color: color-mix(in oklch, var(--warning), white 26%);
+}
+
+:root[data-theme="dark"] .provider-config-sheet .provider-status.error {
+  background: color-mix(in oklch, var(--danger), transparent 80%);
+  color: color-mix(in oklch, var(--danger), white 30%);
+}
+
+:root[data-theme="dark"] .provider-key-profiles button.active {
+  background: color-mix(in oklch, var(--success), transparent 86%);
+}
+
+/* 2026-06-06 Product Design audit: restrained color hierarchy and purposeful motion. */
+.project-save-control {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.project-name-add {
+  transition:
+    transform var(--motion-fast, 120ms) var(--ease-enter, ease),
+    border-color var(--motion-base, 180ms) var(--ease-standard, ease),
+    background-color var(--motion-base, 180ms) var(--ease-standard, ease),
+    box-shadow var(--motion-base, 180ms) var(--ease-standard, ease),
+    color var(--motion-base, 180ms) var(--ease-standard, ease) !important;
+}
+
+.project-name-add.is-saved {
+  border-color: color-mix(in oklch, var(--success), var(--line) 42%) !important;
+  background: color-mix(in oklch, var(--success-soft), var(--panel) 64%) !important;
+  color: color-mix(in oklch, var(--success), var(--text) 18%) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--success), transparent 86%) !important;
+}
+
+.project-save-feedback {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 7px;
+  border: 1px solid color-mix(in oklch, var(--success), var(--line) 50%);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--success-soft), var(--panel) 78%);
+  color: color-mix(in oklch, var(--success), var(--text) 18%);
+  font-size: 11px;
+  font-weight: 820;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.config-action .primary-button.wide,
+.scheme-board-empty-actions .primary-button {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 18%) !important;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--accent), white 10%), var(--accent-hover)) !important;
+  color: var(--accent-ink) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white, transparent 66%),
+    0 14px 30px color-mix(in oklch, var(--accent), transparent 78%) !important;
+}
+
+.scheme-board-empty {
+  border-color: color-mix(in oklch, var(--accent), var(--line) 55%) !important;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in oklch, var(--accent-soft), transparent 16%), transparent 50%),
+    color-mix(in oklch, var(--panel), transparent 4%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--accent), transparent 88%),
+    0 18px 50px color-mix(in oklch, var(--text), transparent 92%) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .project-name-add:hover,
+  .scheme-board-empty-actions button:hover,
+  .config-action .primary-button.wide:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.project-name-add:active,
+.scheme-board-empty-actions button:active,
+.config-action .primary-button.wide:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-name-add,
+  .scheme-board-empty-actions button,
+  .config-action .primary-button.wide {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+:root[data-theme="dark"] .scheme-board-empty,
+:root[data-theme="dark"] .settings-disclosure {
+  border-color: var(--border-default);
+  background: var(--panel);
+}
+
+/* 2026-06-06 black-prism correction: color lives in material sheen, not feature colors. */
+:root {
+  --prism-ink-0: oklch(0.092 0.008 262);
+  --prism-ink-1: oklch(0.13 0.010 262);
+  --prism-ink-2: oklch(0.19 0.012 262);
+  --prism-ink-3: oklch(0.26 0.014 262);
+  --prism-paper: oklch(0.985 0.004 92);
+  --prism-paper-soft: oklch(0.956 0.005 92);
+  --prism-line: oklch(0.54 0.010 262 / 0.24);
+  --prism-line-strong: oklch(0.78 0.012 262 / 0.34);
+  --prism-sheen-warm: oklch(0.76 0.080 46 / 0.18);
+  --prism-sheen-cool: oklch(0.74 0.060 180 / 0.13);
+  --prism-sheen-violet: oklch(0.72 0.070 302 / 0.14);
+  --prism-sheen-lime: oklch(0.80 0.070 132 / 0.10);
+  --prism-button-text: oklch(0.985 0.004 92);
+  --prism-neutral-focus: 0 0 0 3px oklch(0.18 0.010 262 / 0.14);
+  --focus-ring: var(--prism-neutral-focus);
+}
+
+:root[data-theme="dark"] {
+  --prism-paper: oklch(0.18 0.010 262);
+  --prism-paper-soft: oklch(0.14 0.010 262);
+  --prism-line: oklch(0.86 0.008 92 / 0.16);
+  --prism-line-strong: oklch(0.90 0.008 92 / 0.28);
+  --prism-neutral-focus: 0 0 0 3px oklch(0.84 0.010 92 / 0.18);
+}
+
+.scheme-plan-board .figma-board-block {
+  position: relative !important;
+  isolation: isolate !important;
+  border: 1px solid var(--prism-line) !important;
+  background:
+    radial-gradient(ellipse at 18% 8%, var(--prism-sheen-violet), transparent 32%),
+    radial-gradient(ellipse at 78% 14%, var(--prism-sheen-cool), transparent 30%),
+    radial-gradient(ellipse at 52% 104%, var(--prism-sheen-warm), transparent 42%),
+    radial-gradient(ellipse at 90% 82%, var(--prism-sheen-lime), transparent 34%),
+    linear-gradient(135deg, var(--prism-ink-2), var(--prism-ink-0) 58%, oklch(0.16 0.010 38)) !important;
+  color: var(--prism-button-text) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.09),
+    inset 0 -120px 160px oklch(0.02 0.006 262 / 0.34),
+    0 24px 70px oklch(0.18 0.018 262 / 0.16) !important;
+}
+
+.scheme-plan-board .figma-board-block::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, oklch(1 0 0 / 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, oklch(1 0 0 / 0.035) 1px, transparent 1px),
+    linear-gradient(115deg, transparent 0 18%, oklch(1 0 0 / 0.08) 42%, transparent 66%);
+  background-size: 36px 36px, 36px 36px, auto;
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.scheme-plan-board .figma-board-block > * {
+  position: relative;
+  z-index: 1;
+}
+
+.scheme-plan-list:has(.scheme-board-empty) {
+  padding: 28px !important;
+}
+
+.scheme-board-empty {
+  border-color: oklch(1 0 0 / 0.38) !important;
+  background:
+    linear-gradient(180deg, oklch(0.992 0.003 92 / 0.94), oklch(0.955 0.004 92 / 0.90)) !important;
+  color: oklch(0.13 0.010 262) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.75),
+    0 22px 64px oklch(0.03 0.010 262 / 0.34) !important;
+}
+
+.scheme-board-empty strong {
+  color: oklch(0.13 0.010 262) !important;
+}
+
+.scheme-board-empty small {
+  color: oklch(0.39 0.010 262 / 0.74) !important;
+}
+
+.top-actions button.generate-primary,
+.top-actions .primary-button.generate-primary,
+.config-action .primary-button.wide,
+.scheme-board-empty-actions .primary-button {
+  position: relative !important;
+  isolation: isolate !important;
+  overflow: hidden !important;
+  border-color: var(--prism-line-strong) !important;
+  background:
+    linear-gradient(180deg, var(--prism-ink-3), var(--prism-ink-1) 62%, var(--prism-ink-0)) !important;
+  color: var(--prism-button-text) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.13),
+    inset 0 -1px 0 oklch(0 0 0 / 0.38),
+    0 14px 30px oklch(0.12 0.012 262 / 0.22) !important;
+}
+
+.top-actions button.generate-primary::before,
+.top-actions .primary-button.generate-primary::before,
+.config-action .primary-button.wide::before,
+.scheme-board-empty-actions .primary-button::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(112deg, transparent 0 22%, var(--prism-sheen-warm), var(--prism-sheen-cool), var(--prism-sheen-violet), transparent 78%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.top-actions button.generate-primary:hover,
+.top-actions .primary-button.generate-primary:hover,
+.config-action .primary-button.wide:hover,
+.scheme-board-empty-actions .primary-button:hover {
+  border-color: oklch(0.88 0.010 92 / 0.42) !important;
+  background:
+    linear-gradient(180deg, oklch(0.31 0.016 262), var(--prism-ink-2) 60%, var(--prism-ink-0)) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.16),
+    inset 0 -1px 0 oklch(0 0 0 / 0.40),
+    0 16px 34px oklch(0.10 0.012 262 / 0.26) !important;
+}
+
+.top-actions [data-action="open-settings"],
+.top-actions .selected-render-button,
+.scheme-board-empty-actions button:not(.primary-button),
+.asset-category-add-trigger,
+.suite-add-trigger {
+  border-color: var(--border-default) !important;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel-lift), transparent 2%), color-mix(in oklch, var(--panel-soft), transparent 4%)) !important;
+  color: var(--text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.top-actions [data-action="open-settings"]:hover,
+.top-actions .selected-render-button:hover,
+.scheme-board-empty-actions button:not(.primary-button):hover,
+.asset-category-add-trigger:hover,
+.suite-add-trigger:hover {
+  border-color: color-mix(in oklch, var(--ink), var(--border-default) 78%) !important;
+  color: var(--text-primary) !important;
+  transform: translateY(-1px);
+}
+
+.project-name-add,
+.icon-plus-button,
+.asset-category-quick-add {
+  border-color: var(--border-default) !important;
+  background: var(--panel-lift) !important;
+  color: var(--text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.project-name-add:hover,
+.icon-plus-button:hover,
+.asset-category-quick-add:hover {
+  border-color: color-mix(in oklch, var(--ink), var(--border-default) 72%) !important;
+  background: var(--control-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.project-name-add.is-saved {
+  border-color: color-mix(in oklch, var(--success), var(--border-default) 58%) !important;
+  background: color-mix(in oklch, var(--success-soft), var(--panel) 82%) !important;
+  color: color-mix(in oklch, var(--success), var(--text-primary) 42%) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--success), transparent 88%) !important;
+}
+
+.project-save-feedback {
+  border-color: color-mix(in oklch, var(--success), var(--border-default) 68%) !important;
+  background: color-mix(in oklch, var(--success-soft), var(--panel) 88%) !important;
+  color: color-mix(in oklch, var(--success), var(--text-primary) 48%) !important;
+}
+
+.asset-slot-card.is-empty {
+  border-color: var(--border-default) !important;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel), transparent 1%), color-mix(in oklch, var(--panel-soft), transparent 5%)) !important;
+}
+
+.asset-slot-card.is-empty:hover {
+  border-color: color-mix(in oklch, var(--ink), var(--border-default) 80%) !important;
+  background: var(--panel) !important;
+}
+
+.asset-slot-upload.is-empty i.asset-empty-thumb {
+  border-color: color-mix(in oklch, var(--ink), var(--border-default) 84%) !important;
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 0.52), transparent 58%),
+    linear-gradient(135deg, color-mix(in oklch, var(--panel-lift), transparent 0%), color-mix(in oklch, var(--panel-soft), transparent 4%)) !important;
+  color: var(--text-secondary) !important;
+}
+
+.asset-slot-upload.is-empty i.asset-empty-thumb span,
+.asset-category-add-trigger span,
+.suite-add-trigger span {
+  background: color-mix(in oklch, var(--panel), var(--ink) 4%) !important;
+  color: var(--text-secondary) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ink), transparent 88%) !important;
+}
+
+.language-chip-row button.active,
+.segmented-mini button.active,
+.top-actions .theme-switch::before,
+.top-view-switch::before {
+  border-color: var(--prism-line-strong) !important;
+  background:
+    linear-gradient(180deg, var(--prism-ink-3), var(--prism-ink-1) 68%, var(--prism-ink-0)) !important;
+  color: var(--prism-button-text) !important;
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.12), 0 8px 18px oklch(0.12 0.012 262 / 0.18) !important;
+}
+
+.language-chip-row button:hover {
+  border-color: color-mix(in oklch, var(--ink), var(--border-default) 76%) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="dark"] .scheme-board-empty {
+  border-color: oklch(1 0 0 / 0.16) !important;
+  background:
+    linear-gradient(180deg, oklch(0.18 0.010 262 / 0.96), oklch(0.12 0.010 262 / 0.96)) !important;
+  color: oklch(0.94 0.004 92) !important;
+}
+
+:root[data-theme="dark"] .scheme-board-empty strong {
+  color: oklch(0.94 0.004 92) !important;
+}
+
+:root[data-theme="dark"] .scheme-board-empty small {
+  color: oklch(0.82 0.006 92 / 0.62) !important;
+}
+
+.config-section .section-title span::before,
+:root[data-theme="dark"] .config-section .section-title span::before {
+  background:
+    linear-gradient(180deg, var(--prism-ink-3), var(--prism-ink-0)) !important;
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.12) !important;
+}
+
+/* 2026-06-06 playful-prism correction: purple is the creative stage, black is the tool material. */
+:root {
+  --play-purple-0: oklch(0.86 0.092 304);
+  --play-purple-1: oklch(0.79 0.108 297);
+  --play-purple-2: oklch(0.72 0.096 291);
+  --play-lilac-soft: oklch(0.94 0.038 302);
+  --play-mint-soft: oklch(0.93 0.070 142);
+  --play-lime-soft: oklch(0.90 0.095 124);
+  --play-cream-soft: oklch(0.97 0.032 84);
+  --play-coral-soft: oklch(0.92 0.058 32);
+  --play-ink-wash: oklch(0.16 0.012 272 / 0.13);
+  --play-line: oklch(0.64 0.052 292 / 0.34);
+}
+
+.scheme-plan-board .figma-board-block {
+  color: oklch(0.16 0.018 274) !important;
+  border: 1px solid var(--play-line) !important;
+  background:
+    radial-gradient(ellipse at 16% 8%, oklch(0.96 0.070 326 / 0.62), transparent 34%),
+    radial-gradient(ellipse at 84% 16%, oklch(0.92 0.080 158 / 0.42), transparent 30%),
+    radial-gradient(ellipse at 52% 106%, oklch(0.90 0.078 58 / 0.44), transparent 42%),
+    linear-gradient(135deg, var(--play-purple-0), var(--play-purple-1) 52%, var(--play-purple-2)) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.44),
+    inset 0 -86px 130px oklch(0.42 0.070 296 / 0.20),
+    0 26px 76px oklch(0.32 0.040 292 / 0.18) !important;
+}
+
+.scheme-plan-board .figma-board-block::before {
+  background:
+    linear-gradient(90deg, oklch(0.23 0.028 284 / 0.07) 1px, transparent 1px),
+    linear-gradient(180deg, oklch(0.23 0.028 284 / 0.055) 1px, transparent 1px),
+    radial-gradient(circle at 18% 20%, oklch(1 0 0 / 0.20), transparent 2px),
+    linear-gradient(116deg, transparent 0 24%, oklch(1 0 0 / 0.18) 44%, transparent 67%) !important;
+  background-size: 38px 38px, 38px 38px, 62px 62px, auto !important;
+  opacity: 0.34 !important;
+}
+
+:root[data-theme="dark"] .scheme-plan-board .figma-board-block {
+  background:
+    radial-gradient(ellipse at 18% 8%, oklch(0.82 0.090 318 / 0.30), transparent 34%),
+    radial-gradient(ellipse at 82% 18%, oklch(0.74 0.070 158 / 0.22), transparent 30%),
+    radial-gradient(ellipse at 50% 106%, oklch(0.70 0.062 42 / 0.25), transparent 42%),
+    linear-gradient(135deg, oklch(0.35 0.064 292), oklch(0.25 0.052 286) 56%, oklch(0.20 0.042 278)) !important;
+  color: oklch(0.95 0.010 296) !important;
+}
+
+.scheme-board-empty {
+  border-color: oklch(1 0 0 / 0.54) !important;
+  background:
+    radial-gradient(ellipse at 12% 0%, oklch(0.95 0.054 304 / 0.76), transparent 48%),
+    linear-gradient(180deg, oklch(0.995 0.006 88 / 0.92), oklch(0.965 0.018 300 / 0.90)) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.78),
+    0 18px 54px oklch(0.28 0.050 292 / 0.18) !important;
+}
+
+.slogan-settings-card {
+  border-color: color-mix(in oklch, var(--play-purple-1), var(--border-default) 56%) !important;
+  background:
+    radial-gradient(circle at 12% 8%, oklch(1 0 0 / 0.66), transparent 36%),
+    linear-gradient(135deg, var(--play-lilac-soft), var(--play-cream-soft) 62%, oklch(0.94 0.040 322)) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.66),
+    0 10px 26px oklch(0.36 0.030 292 / 0.08) !important;
+}
+
+.slogan-settings-card .segmented-mini {
+  border-color: oklch(0.70 0.040 296 / 0.32) !important;
+  background: oklch(0.985 0.010 96 / 0.72) !important;
+}
+
+.slogan-settings-card .segmented-mini button.active,
+.slogan-settings-card select:focus,
+.slogan-settings-card input:focus {
+  box-shadow: 0 0 0 3px oklch(0.77 0.098 296 / 0.24) !important;
+}
+
+.focus-section-card,
+.focus-guidance-card {
+  background:
+    radial-gradient(circle at 16% 8%, oklch(1 0 0 / 0.45), transparent 34%),
+    linear-gradient(135deg, var(--play-lime-soft), var(--play-mint-soft)) !important;
+}
+
+.asset-slot-card {
+  --asset-a: oklch(0.95 0.030 286);
+  --asset-b: oklch(0.985 0.012 90);
+  --asset-c: oklch(0.74 0.046 286 / 0.38);
+}
+
+.asset-slot-card.blue {
+  --asset-a: oklch(0.93 0.044 247);
+  --asset-b: oklch(0.98 0.016 212);
+  --asset-c: oklch(0.66 0.060 248 / 0.38);
+}
+
+.asset-slot-card.ink {
+  --asset-a: oklch(0.90 0.018 260);
+  --asset-b: oklch(0.985 0.008 92);
+  --asset-c: oklch(0.34 0.022 260 / 0.26);
+}
+
+.asset-slot-card.orange {
+  --asset-a: oklch(0.93 0.060 46);
+  --asset-b: oklch(0.99 0.018 76);
+  --asset-c: oklch(0.66 0.080 46 / 0.36);
+}
+
+.asset-slot-card.teal,
+.asset-slot-card.emerald {
+  --asset-a: oklch(0.92 0.050 166);
+  --asset-b: oklch(0.985 0.020 142);
+  --asset-c: oklch(0.62 0.066 166 / 0.34);
+}
+
+.asset-slot-card.ice {
+  --asset-a: oklch(0.94 0.030 220);
+  --asset-b: oklch(0.985 0.014 194);
+  --asset-c: oklch(0.70 0.045 220 / 0.34);
+}
+
+.asset-slot-card.violet,
+.asset-slot-card.custom {
+  --asset-a: oklch(0.93 0.050 304);
+  --asset-b: oklch(0.985 0.018 326);
+  --asset-c: oklch(0.68 0.074 304 / 0.36);
+}
+
+.asset-slot-card.is-empty {
+  border-color: var(--asset-c) !important;
+  background:
+    radial-gradient(circle at 16% 10%, oklch(1 0 0 / 0.68), transparent 34%),
+    radial-gradient(ellipse at 96% 88%, color-mix(in oklch, var(--asset-a), transparent 16%), transparent 52%),
+    linear-gradient(150deg, var(--asset-b), var(--asset-a)) !important;
+}
+
+.asset-slot-card.is-empty:hover {
+  border-color: color-mix(in oklch, var(--asset-c), var(--ink) 28%) !important;
+  background:
+    radial-gradient(circle at 16% 10%, oklch(1 0 0 / 0.78), transparent 34%),
+    linear-gradient(150deg, oklch(1 0 0 / 0.92), var(--asset-a)) !important;
+  transform: translateY(-1px);
+}
+
+.asset-slot-upload.is-empty i.asset-empty-thumb {
+  border-color: color-mix(in oklch, var(--asset-c), var(--ink) 12%) !important;
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 0.76), oklch(1 0 0 / 0.22)),
+    linear-gradient(135deg, var(--asset-a), var(--asset-b)) !important;
+}
+
+.asset-slot-upload.is-empty i.asset-empty-thumb span {
+  background: color-mix(in oklch, oklch(1 0 0), var(--asset-a) 42%) !important;
+  color: color-mix(in oklch, var(--ink), var(--asset-c) 34%) !important;
+}
+
+.compact-reference-card {
+  background:
+    radial-gradient(circle at 10% 12%, oklch(1 0 0 / 0.62), transparent 36%),
+    linear-gradient(135deg, oklch(0.985 0.012 96), oklch(0.955 0.030 296)) !important;
+}
+
+.style-library-panel {
+  width: min(920px, calc(100vw - 72px)) !important;
+  max-height: min(78vh, 760px) !important;
+}
+
+.style-library-panel .style-library-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)) !important;
+  grid-auto-flow: dense !important;
+  gap: 10px !important;
+}
+
+.style-library-panel .style-library-option {
+  min-height: 76px !important;
+  grid-template-columns: 64px minmax(0, 1fr) !important;
+  align-items: center !important;
+}
+
+.style-library-panel .style-library-option:nth-child(9n + 1),
+.style-library-panel .style-library-option:nth-child(13n + 5) {
+  grid-column: span 2;
+  min-height: 92px !important;
+  grid-template-columns: 104px minmax(0, 1fr) !important;
+}
+
+.style-library-panel .style-library-option:nth-child(9n + 1) .style-library-swatch,
+.style-library-panel .style-library-option:nth-child(13n + 5) .style-library-swatch {
+  width: 104px !important;
+}
+
+.announcement-direction-section {
+  gap: 10px !important;
+}
+
+.announcement-title-field {
+  padding: 10px !important;
+  border: 1px solid color-mix(in oklch, var(--play-purple-1), var(--border-default) 62%) !important;
+  border-radius: var(--radius-sm) !important;
+  background:
+    radial-gradient(circle at 10% 4%, oklch(1 0 0 / 0.64), transparent 34%),
+    linear-gradient(135deg, var(--play-lilac-soft), oklch(0.99 0.012 94)) !important;
+}
+
+.announcement-preset-groups {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.announcement-preset-groups > div {
+  border-color: color-mix(in oklch, var(--play-purple-1), var(--border-default) 70%) !important;
+  background:
+    linear-gradient(135deg, oklch(0.99 0.010 96), color-mix(in oklch, var(--play-lilac-soft), var(--play-cream-soft) 38%)) !important;
+}
+
+.announcement-preset-groups > div:nth-child(2) {
+  background:
+    linear-gradient(135deg, oklch(0.99 0.014 92), var(--play-cream-soft)) !important;
+}
+
+.announcement-preset-groups > div:nth-child(3) {
+  background:
+    linear-gradient(135deg, oklch(0.99 0.010 96), var(--play-mint-soft)) !important;
+}
+
+.announcement-preset-groups button.active {
+  border-color: oklch(0.42 0.030 270 / 0.38) !important;
+  background:
+    linear-gradient(180deg, var(--prism-ink-3), var(--prism-ink-0)) !important;
+  color: var(--prism-button-text) !important;
+  box-shadow: 0 8px 18px oklch(0.20 0.018 270 / 0.15) !important;
+}
+
+.announcement-toggle {
+  border-color: color-mix(in oklch, var(--play-lime-soft), var(--border-default) 40%) !important;
+  background: linear-gradient(135deg, var(--play-mint-soft), oklch(0.99 0.010 96)) !important;
+}
+
+.logo-design-card,
+.direction-section-rhf:has(.guardrail-chips) .guardrail-chips {
+  background:
+    linear-gradient(135deg, oklch(0.99 0.010 96), oklch(0.955 0.024 296)) !important;
+}
+
+@media (max-width: 760px) {
+  .style-library-panel {
+    width: min(94vw, 560px) !important;
+  }
+
+  .style-library-panel .style-library-grid {
+    grid-template-columns: repeat(auto-fit, minmax(142px, 1fr)) !important;
+  }
+
+  .style-library-panel .style-library-option:nth-child(9n + 1),
+  .style-library-panel .style-library-option:nth-child(13n + 5) {
+    grid-column: span 1;
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+    min-height: 76px !important;
+  }
+}
+
+/* 2026-06-06 dark contrast and compact mode controls. */
+.locked-text-strategy {
+  padding: 10px !important;
+}
+
+.locked-text-strategy .slogan-settings-head {
+  margin-bottom: 8px !important;
+}
+
+.locked-text-strategy .guardrail-chips {
+  margin-top: 0 !important;
+}
+
+.mode-design-card {
+  gap: 9px !important;
+  padding: 10px !important;
+}
+
+.logo-background-picker {
+  gap: 7px !important;
+}
+
+.logo-background-grid {
+  gap: 6px !important;
+}
+
+.direction-section-rhf .guardrail-chips {
+  padding: 6px !important;
+  gap: 5px !important;
+}
+
+.direction-section-rhf .guardrail-chips span {
+  min-height: 22px !important;
+  padding: 3px 8px !important;
+}
+
+.style-reference-upload.compact-reference-card .reference-upload-meta small {
+  display: none !important;
+}
+
+:root[data-theme="dark"] .slogan-settings-card,
+:root[data-theme="dark"] .announcement-title-field,
+:root[data-theme="dark"] .announcement-preset-groups > div,
+:root[data-theme="dark"] .announcement-toggle,
+:root[data-theme="dark"] .logo-design-card,
+:root[data-theme="dark"] .direction-section-rhf:has(.guardrail-chips) .guardrail-chips,
+:root[data-theme="dark"] .compact-reference-card {
+  border-color: oklch(0.78 0.040 296 / 0.22) !important;
+  background:
+    radial-gradient(circle at 12% 0%, oklch(0.56 0.080 304 / 0.20), transparent 38%),
+    linear-gradient(135deg, oklch(0.19 0.030 284), oklch(0.14 0.026 274)) !important;
+  color: oklch(0.94 0.010 296) !important;
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.07) !important;
+}
+
+:root[data-theme="dark"] .slogan-settings-card strong,
+:root[data-theme="dark"] .slogan-settings-card span,
+:root[data-theme="dark"] .announcement-title-field span,
+:root[data-theme="dark"] .announcement-preset-groups strong,
+:root[data-theme="dark"] .announcement-toggle span,
+:root[data-theme="dark"] .mode-design-card strong,
+:root[data-theme="dark"] .mode-design-card span,
+:root[data-theme="dark"] .compact-reference-card strong,
+:root[data-theme="dark"] .asset-slot-meta strong {
+  color: oklch(0.96 0.008 296) !important;
+}
+
+:root[data-theme="dark"] .slogan-settings-card small,
+:root[data-theme="dark"] .compact-reference-card small,
+:root[data-theme="dark"] .asset-slot-meta small {
+  color: oklch(0.78 0.018 296 / 0.82) !important;
+}
+
+:root[data-theme="dark"] .slogan-settings-card input,
+:root[data-theme="dark"] .slogan-settings-card select,
+:root[data-theme="dark"] .announcement-title-field input,
+:root[data-theme="dark"] .mode-design-card input {
+  border-color: oklch(0.72 0.030 296 / 0.22) !important;
+  background: oklch(0.12 0.020 274 / 0.92) !important;
+  color: oklch(0.96 0.008 296) !important;
+}
+
+:root[data-theme="dark"] .slogan-settings-card input::placeholder,
+:root[data-theme="dark"] .announcement-title-field input::placeholder,
+:root[data-theme="dark"] .mode-design-card input::placeholder {
+  color: oklch(0.72 0.018 296 / 0.62) !important;
+}
+
+:root[data-theme="dark"] .slogan-settings-card .segmented-mini {
+  border-color: oklch(0.76 0.030 296 / 0.22) !important;
+  background: oklch(0.11 0.020 274 / 0.86) !important;
+}
+
+:root[data-theme="dark"] .slogan-settings-card .segmented-mini button:not(.active) {
+  color: oklch(0.80 0.014 296 / 0.82) !important;
+}
+
+:root[data-theme="dark"] .announcement-preset-groups button,
+:root[data-theme="dark"] .logo-background-grid button,
+:root[data-theme="dark"] .style-recommendation-grid button,
+:root[data-theme="dark"] .chip-grid button {
+  border-color: oklch(0.76 0.030 296 / 0.18) !important;
+  background: oklch(0.13 0.018 274 / 0.84) !important;
+  color: oklch(0.88 0.010 296) !important;
+}
+
+:root[data-theme="dark"] .announcement-preset-groups button.active,
+:root[data-theme="dark"] .style-recommendation-grid button.active,
+:root[data-theme="dark"] .chip-grid button.active {
+  border-color: oklch(0.82 0.040 296 / 0.34) !important;
+  background:
+    linear-gradient(180deg, oklch(0.36 0.034 274), oklch(0.16 0.022 274)) !important;
+  color: oklch(0.98 0.004 296) !important;
+}
+
+:root[data-theme="dark"] .asset-slot-card.is-empty {
+  border-color: color-mix(in oklch, var(--asset-c), oklch(0.82 0.020 296) 36%) !important;
+  background:
+    radial-gradient(circle at 16% 10%, oklch(0.62 0.060 296 / 0.14), transparent 34%),
+    radial-gradient(ellipse at 94% 88%, color-mix(in oklch, var(--asset-a), transparent 52%), transparent 54%),
+    linear-gradient(150deg, oklch(0.16 0.026 274), oklch(0.12 0.022 268)) !important;
+}
+
+:root[data-theme="dark"] .asset-slot-card.is-empty:hover {
+  border-color: color-mix(in oklch, var(--asset-c), oklch(0.88 0.020 296) 52%) !important;
+  background:
+    radial-gradient(circle at 16% 10%, oklch(0.70 0.070 296 / 0.18), transparent 34%),
+    linear-gradient(150deg, oklch(0.19 0.030 274), oklch(0.13 0.024 268)) !important;
+}
+
+:root[data-theme="dark"] .asset-slot-upload.is-empty i.asset-empty-thumb {
+  border-color: oklch(0.74 0.030 296 / 0.30) !important;
+  background:
+    linear-gradient(180deg, oklch(0.25 0.030 276 / 0.82), oklch(0.14 0.022 274 / 0.72)) !important;
+}
+
+:root[data-theme="dark"] .asset-slot-upload.is-empty i.asset-empty-thumb span,
+:root[data-theme="dark"] .reference-plus {
+  background: oklch(0.24 0.035 276) !important;
+  color: oklch(0.90 0.030 296) !important;
+  box-shadow: inset 0 0 0 1px oklch(0.82 0.030 296 / 0.22) !important;
+}
+
+:root[data-theme="dark"] .reference-upload-card.is-empty,
+:root[data-theme="dark"] .style-reference-upload.is-empty {
+  border-color: oklch(0.76 0.030 296 / 0.30) !important;
+}
+
+:root[data-theme="dark"] .scheme-board-empty {
+  background:
+    radial-gradient(ellipse at 12% 0%, oklch(0.48 0.070 304 / 0.24), transparent 48%),
+    linear-gradient(180deg, oklch(0.18 0.024 280 / 0.96), oklch(0.12 0.020 274 / 0.96)) !important;
+}
+
+:root[data-theme="dark"] .top-view-switch button {
+  color: oklch(0.78 0.014 296 / 0.82) !important;
+}
+
+:root[data-theme="dark"] .top-view-switch .active {
+  color: oklch(0.98 0.004 296) !important;
+  text-shadow: 0 1px 0 oklch(0 0 0 / 0.38) !important;
+}
+
+/* 2026-06-06: compact production feedback and readable scheme cards. */
+:root {
+  --generation-active-a: oklch(0.82 0.13 154);
+  --generation-active-b: oklch(0.76 0.12 206);
+  --generation-active-text: oklch(0.16 0.022 248);
+  --scheme-card-max: 468px;
+}
+
+:root[data-theme="dark"] {
+  --generation-active-a: oklch(0.74 0.14 154);
+  --generation-active-b: oklch(0.70 0.13 210);
+  --generation-active-text: oklch(0.12 0.026 258);
+}
+
+.config-action .batch-progress {
+  display: none !important;
+}
+
+.config-action .primary-button.wide.loading.has-progress,
+.generate-primary.loading,
+.render-button.loading {
+  border-color: color-mix(in oklch, var(--generation-active-b), transparent 22%) !important;
+  background: linear-gradient(135deg, var(--generation-active-a), var(--generation-active-b)) !important;
+  color: var(--generation-active-text) !important;
+  box-shadow:
+    0 14px 34px color-mix(in oklch, var(--generation-active-b), transparent 72%),
+    inset 0 1px 0 color-mix(in oklch, oklch(0.98 0.006 105), transparent 32%) !important;
+  opacity: 1 !important;
+}
+
+.config-action .primary-button.wide.loading.has-progress {
+  justify-content: center !important;
+  position: relative !important;
+  min-height: 46px !important;
+}
+
+.config-action .primary-button.wide.loading.has-progress strong,
+.generate-primary.loading strong,
+.render-button.loading strong {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 42px !important;
+  height: 24px !important;
+  padding: 0 9px !important;
+  border-radius: 999px !important;
+  background: color-mix(in oklch, oklch(0.98 0.006 105), transparent 66%) !important;
+  color: var(--generation-active-text) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.config-action .primary-button.wide.loading.has-progress strong {
+  position: absolute !important;
+  right: 12px !important;
+}
+
+.render-button.loading strong {
+  min-width: 36px !important;
+  height: 22px !important;
+  font-size: 10px !important;
+}
+
+.scheme-plan-list,
+.scheme-plan-list.text-mode {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(360px, var(--scheme-card-max))) !important;
+  justify-content: start !important;
+  align-content: start !important;
+  align-items: start !important;
+  gap: 18px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100% !important;
+  padding: 24px !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.scheme-card.plan-card,
+.scheme-card.plan-card:first-child,
+.scheme-card.plan-card.copy-hidden,
+.scheme-card.plan-card.copy-hidden:first-child,
+.scheme-card.plan-card.without-plan-media,
+.scheme-card.plan-card.without-plan-media:first-child {
+  width: min(100%, var(--scheme-card-max)) !important;
+  max-width: var(--scheme-card-max) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  grid-template-rows: auto !important;
+  align-self: start !important;
+  overflow: hidden !important;
+  padding: 16px !important;
+}
+
+.scheme-card.plan-card.copy-visible {
+  gap: 12px !important;
+}
+
+.scheme-card.plan-card.with-plan-media {
+  --scheme-card-max: 560px;
+}
+
+.plan-card header {
+  min-height: 30px !important;
+}
+
+.plan-card header h2 {
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0 !important;
+}
+
+.plan-brief-strip {
+  display: grid !important;
+  gap: 4px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  background: color-mix(in oklch, var(--panel-soft), var(--panel) 42%) !important;
+}
+
+.plan-brief-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: fit-content !important;
+  min-height: 20px !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  background: color-mix(in oklch, var(--play-lilac-soft, oklch(0.94 0.035 296)), var(--panel) 34%) !important;
+  color: color-mix(in oklch, var(--accent), var(--text) 38%) !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+}
+
+.plan-brief-strip strong {
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.plan-brief-strip small {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+}
+
+.scheme-copy-details {
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.scheme-copy-field {
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  background: color-mix(in oklch, var(--panel-soft), var(--panel) 36%) !important;
+}
+
+.scheme-copy-field span {
+  color: var(--text) !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+.scheme-copy-field p {
+  max-height: 88px !important;
+  margin-top: 6px !important;
+  overflow: auto !important;
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+.scheme-card.plan-card.without-plan-media .plan-image-frame {
+  display: none !important;
+}
+
+.scheme-card.plan-card .plan-image-state.failed.compact {
+  min-height: 74px !important;
+  height: auto !important;
+  padding: 12px 14px !important;
+  border-radius: 8px !important;
+  border-color: color-mix(in oklch, var(--danger), transparent 50%) !important;
+  background:
+    linear-gradient(135deg, color-mix(in oklch, var(--danger), transparent 88%), color-mix(in oklch, var(--panel-soft), transparent 12%)) !important;
+}
+
+.scheme-card.plan-card .plan-image-state.failed.compact strong {
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+}
+
+.scheme-card.plan-card .plan-image-state.failed.compact small {
+  display: -webkit-box !important;
+  max-width: 54ch !important;
+  overflow: hidden !important;
+  color: color-mix(in oklch, var(--text), transparent 18%) !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+}
+
+.scheme-card.plan-card footer {
+  gap: 10px !important;
+  margin-top: 2px !important;
+}
+
+.version-pager {
+  flex: 1 1 auto !important;
+}
+
+.scheme-card-actions {
+  gap: 8px !important;
+}
+
+.cancel-generation-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 32px !important;
+  padding: 0 13px !important;
+  border: 1px solid color-mix(in oklch, var(--danger), transparent 62%) !important;
+  border-radius: 999px !important;
+  background: color-mix(in oklch, var(--danger-soft), var(--panel) 42%) !important;
+  color: color-mix(in oklch, var(--danger), var(--text) 12%) !important;
+  font-size: 12px !important;
+  font-weight: 820 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+}
+
+.cancel-generation-button:hover {
+  border-color: color-mix(in oklch, var(--danger), transparent 38%) !important;
+  background: color-mix(in oklch, var(--danger-soft), var(--panel) 18%) !important;
+  color: color-mix(in oklch, var(--danger), var(--text) 4%) !important;
+}
+
+.config-action .cancel-generation-button.compact {
+  width: auto !important;
+  min-width: 76px !important;
+  min-height: 30px !important;
+  margin-top: 2px !important;
+  justify-self: center !important;
+  font-size: 12px !important;
+}
+
+:root[data-theme="dark"] .plan-brief-strip,
+:root[data-theme="dark"] .scheme-copy-field {
+  background: color-mix(in oklch, var(--panel-soft), oklch(0.19 0.03 280) 24%) !important;
+}
+
+:root[data-theme="dark"] .plan-brief-label {
+  background: oklch(0.24 0.035 296 / 0.86) !important;
+  color: oklch(0.91 0.030 296) !important;
+}
+
+:root[data-theme="dark"] .scheme-copy-field p,
+:root[data-theme="dark"] .plan-brief-strip small {
+  color: color-mix(in oklch, var(--text), transparent 22%) !important;
+}
+
+:root[data-theme="dark"] .cancel-generation-button {
+  border-color: oklch(0.70 0.080 24 / 0.34) !important;
+  background: color-mix(in oklch, var(--danger-soft), var(--panel) 24%) !important;
+  color: oklch(0.91 0.038 24) !important;
+}
+
+/* Scheme card copy should stay readable when the long prompt is collapsed. */
+.plan-brief-label {
+  display: none !important;
+}
+
+.plan-card .plan-brief-strip {
+  align-content: center !important;
+  min-height: 58px !important;
+  padding: 12px 14px !important;
+}
+
+.plan-card .plan-brief-strip strong {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  color: var(--text) !important;
+  font-size: 14px !important;
+  line-height: 1.38 !important;
+  white-space: normal !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+}
+
+.plan-card .plan-brief-strip small {
+  display: block !important;
+  width: 100% !important;
+  margin-top: 2px !important;
+  overflow: hidden !important;
+  color: var(--muted) !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.scheme-card.plan-card.copy-hidden,
+.scheme-card.plan-card.copy-hidden:first-child,
+.scheme-card.plan-card.copy-hidden.with-plan-media,
+.scheme-card.plan-card.copy-hidden.with-plan-media:first-child {
+  grid-template-rows: auto auto auto auto !important;
+}
+
+.scheme-card.plan-card.copy-hidden .plan-image-state.failed.compact {
+  min-height: 86px !important;
+}
+
+.scheme-card.plan-card.copy-hidden footer {
+  margin-top: 0 !important;
+}
+
+:root[data-theme="dark"] .plan-card .plan-brief-strip strong {
+  color: oklch(0.94 0.014 282) !important;
+}
+
+:root[data-theme="dark"] .plan-card .plan-brief-strip small {
+  color: oklch(0.75 0.018 282) !important;
+}
+
+@container (max-width: 760px) {
+  .scheme-plan-list,
+  .scheme-plan-list.text-mode {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 14px !important;
+  }
+
+  .scheme-card.plan-card,
+  .scheme-card.plan-card:first-child,
+  .scheme-card.plan-card.with-plan-media {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* 2026-06-07 result/archive UX repair: make generated images inspectable without losing history context. */
+.scheme-card.plan-card .plan-image-frame.has-image {
+  height: clamp(232px, 32vh, 360px) !important;
+  min-height: 232px !important;
+  max-height: 360px !important;
+  aspect-ratio: auto !important;
+  align-items: center !important;
+  justify-items: center !important;
+  border: 1px solid color-mix(in oklch, var(--border-default), transparent 8%) !important;
+  background:
+    linear-gradient(45deg, color-mix(in oklch, var(--panel-soft), #050505 5%) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in oklch, var(--panel-soft), #050505 5%) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in oklch, var(--panel-soft), #050505 5%) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in oklch, var(--panel-soft), #050505 5%) 75%),
+    var(--panel-lift) !important;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0 !important;
+  background-size: 16px 16px !important;
+}
+
+.scheme-card.plan-card .plan-image-frame.has-image.is-portrait {
+  height: clamp(288px, 42vh, 440px) !important;
+  max-height: 440px !important;
+}
+
+.scheme-card.plan-card .plan-image-frame.has-image.is-square {
+  height: clamp(250px, 35vh, 380px) !important;
+  max-height: 380px !important;
+}
+
+.scheme-card.plan-card .plan-image-frame.has-image img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.archive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+.archive-card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 12px 30px rgba(22, 26, 34, 0.06);
+}
+
+.archive-card.selected {
+  border-color: var(--accent-line);
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 62%);
+}
+
+.archive-card-select {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  padding: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: 0 8px 22px rgba(22, 26, 34, 0.12);
+}
+
+.archive-card-preview {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 160px;
+  overflow: hidden;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background:
+    linear-gradient(45deg, color-mix(in oklch, var(--panel-soft), #050505 5%) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in oklch, var(--panel-soft), #050505 5%) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in oklch, var(--panel-soft), #050505 5%) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in oklch, var(--panel-soft), #050505 5%) 75%),
+    var(--panel-lift);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+  cursor: zoom-in;
+}
+
+.archive-card-preview.is-landscape {
+  aspect-ratio: 16 / 9;
+}
+
+.archive-card-preview.is-portrait {
+  aspect-ratio: 3 / 4;
+}
+
+.archive-card-preview.is-square,
+.archive-card-preview.empty {
+  aspect-ratio: 1 / 1;
+}
+
+.archive-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.archive-card-preview i {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: rgba(5, 5, 5, 0.76);
+  color: #fffffb;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-card-preview.empty > span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.archive-card-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.archive-card-body strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 820;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-card-body small {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.archive-card-footer .row-actions {
+  margin-left: auto;
+}
+
+.result-viewer {
+  grid-template-rows: minmax(0, 1fr) auto !important;
+  gap: 16px !important;
+  padding: 28px 48px 24px !important;
+}
+
+.result-viewer-stage {
+  width: min(94vw, 1480px) !important;
+  height: min(78vh, calc(100vh - 150px)) !important;
+}
+
+.result-viewer-stage img {
+  max-height: min(78vh, calc(100vh - 150px)) !important;
+  border-width: 6px !important;
+  border-radius: 6px !important;
+}
+
+.result-viewer-close {
+  top: 22px !important;
+  right: 22px !important;
+}
+
+.result-viewer-dock {
+  max-width: min(96vw, 1180px) !important;
+  min-height: 58px !important;
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  justify-content: center !important;
+}
+
+.result-viewer-count {
+  min-width: 170px !important;
+  max-width: 260px !important;
+}
+
+.result-viewer-count strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-viewer-specs {
+  flex-wrap: wrap;
+}
+
+.scheme-card.plan-card .plan-image-frame.has-image > img,
+.archive-card-preview > img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+}
+
+/* 2026-06-07 archive/assets cleanup: quiet production surfaces, explicit multi-asset previews. */
+.scheme-plan-board .figma-board-block {
+  border-color: color-mix(in oklch, var(--border-default), transparent 10%) !important;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, oklch(0.965 0.018 302), var(--panel) 24%), color-mix(in oklch, oklch(0.925 0.030 292), var(--canvas) 28%)) !important;
+  color: var(--text-primary) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--panel-raised), transparent 14%),
+    0 18px 48px color-mix(in oklch, var(--ink), transparent 91%) !important;
+}
+
+.scheme-plan-board .figma-board-block::before {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel-raised), transparent 78%), transparent 42%),
+    radial-gradient(ellipse at 18% 0%, color-mix(in oklch, oklch(0.98 0.040 326), transparent 42%), transparent 36%),
+    radial-gradient(ellipse at 86% 8%, color-mix(in oklch, oklch(0.93 0.050 160), transparent 58%), transparent 30%) !important;
+  background-size: auto !important;
+  opacity: 0.72 !important;
+}
+
+:root[data-theme="dark"] .scheme-plan-board .figma-board-block {
+  background:
+    linear-gradient(180deg, oklch(0.18 0.024 284), oklch(0.13 0.020 274)) !important;
+  color: oklch(0.94 0.010 286) !important;
+}
+
+.scheme-card.plan-card .plan-image-frame.has-image,
+.archive-card-preview {
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in oklch, var(--panel-raised), transparent 22%), transparent 52%),
+    linear-gradient(180deg, color-mix(in oklch, var(--panel-lift), var(--panel) 18%), color-mix(in oklch, var(--panel-soft), var(--panel) 34%)) !important;
+  background-position: center !important;
+  background-size: auto !important;
+}
+
+.scheme-card.plan-card .plan-image-frame.has-image {
+  height: clamp(250px, 36vh, 430px) !important;
+  border-color: color-mix(in oklch, var(--border-default), transparent 4%) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--panel-raised), transparent 24%) !important;
+}
+
+.scheme-card.plan-card .plan-image-frame.has-image.is-portrait {
+  height: clamp(320px, 48vh, 520px) !important;
+  max-height: 520px !important;
+}
+
+.archive-shell {
+  height: 100%;
+  overflow: auto;
+}
+
+.archive-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 28px 18px !important;
+  border-radius: 18px 18px 0 0;
+  background:
+    linear-gradient(135deg, color-mix(in oklch, oklch(0.91 0.050 296), var(--panel) 30%), color-mix(in oklch, oklch(0.93 0.044 156), var(--panel) 42%)) !important;
+}
+
+.archive-header h1 {
+  margin-top: 5px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.archive-header p {
+  max-width: 52ch;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.archive-selection-bar {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  padding: 10px 22px !important;
+  border-bottom: 1px solid var(--border-default);
+  background: color-mix(in oklch, var(--panel), transparent 4%) !important;
+  backdrop-filter: blur(10px);
+}
+
+.archive-grid {
+  grid-template-columns: repeat(auto-fill, minmax(188px, 236px)) !important;
+  justify-content: start !important;
+  align-items: start !important;
+  gap: 14px !important;
+  padding: 18px 22px 24px !important;
+}
+
+.archive-card {
+  gap: 8px !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 22px color-mix(in oklch, var(--ink), transparent 94%) !important;
+}
+
+.archive-card-preview {
+  min-height: 118px !important;
+  border-radius: 6px !important;
+}
+
+.archive-card-preview.is-landscape {
+  aspect-ratio: 16 / 9 !important;
+}
+
+.archive-card-preview.is-portrait {
+  aspect-ratio: 9 / 14 !important;
+}
+
+.archive-card-preview.is-square,
+.archive-card-preview.empty {
+  aspect-ratio: 1 / 1 !important;
+}
+
+.archive-card-body strong {
+  white-space: normal !important;
+  line-height: 1.3 !important;
+}
+
+.archive-card-footer {
+  align-items: center !important;
+}
+
+.asset-slot-upload i.asset-preview {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklch, var(--panel-soft), var(--panel) 20%) !important;
+}
+
+.asset-preview-main {
+  position: absolute;
+  inset: 0;
+}
+
+.asset-preview-stack .asset-preview-main {
+  filter: saturate(1.02);
+}
+
+.asset-stack-strip {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--panel), transparent 12%);
+  box-shadow: 0 6px 14px color-mix(in oklch, var(--ink), transparent 82%);
+}
+
+.asset-stack-strip img {
+  width: 22px;
+  height: 22px;
+  border: 1px solid color-mix(in oklch, var(--panel-raised), transparent 10%);
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.asset-count-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0 6px;
+  border: 1px solid color-mix(in oklch, var(--panel-raised), transparent 14%);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--ink), transparent 12%);
+  color: color-mix(in oklch, var(--panel-raised), transparent 0%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.asset-slot-meta small + small {
+  display: none;
+}
+
+.compact-reference-card.has-preview {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px !important;
+  padding: 8px !important;
+  border-color: color-mix(in oklch, var(--accent), var(--border-default) 62%) !important;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel), transparent 2%), color-mix(in oklch, var(--panel-soft), transparent 0%)) !important;
+}
+
+.compact-reference-card.has-preview .reference-upload-main,
+.compact-reference-card.has-preview .style-reference-main {
+  min-height: 0 !important;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 6px !important;
+}
+
+.compact-reference-card.has-preview .reference-thumb,
+.compact-reference-card.has-preview .style-reference-preview {
+  position: relative;
+  height: 104px !important;
+  border-radius: 6px !important;
+  background: color-mix(in oklch, var(--panel-raised), var(--panel-soft) 30%) !important;
+}
+
+.compact-reference-card.has-preview .reference-preview-image,
+.compact-reference-card.has-preview .style-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.compact-reference-card.has-preview .reference-upload-meta {
+  min-height: 18px;
+}
+
+.compact-reference-card.has-preview .reference-upload-meta small {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.reference-count-badge {
+  top: 7px;
+  right: 7px;
+}
+
+.reference-analysis-tools,
+.style-reference-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end !important;
+}
+
+.reference-ready-note,
+.reference-muted-note {
+  grid-column: 1 / -1;
+  max-height: 54px;
+  overflow: auto;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--panel), var(--panel-soft) 32%);
+}
+
+:root[data-theme="dark"] .scheme-card.plan-card .plan-image-frame.has-image,
+:root[data-theme="dark"] .archive-card-preview,
+:root[data-theme="dark"] .compact-reference-card.has-preview .reference-thumb,
+:root[data-theme="dark"] .compact-reference-card.has-preview .style-reference-preview {
+  background:
+    radial-gradient(ellipse at 50% 0%, oklch(0.28 0.026 282 / 0.52), transparent 52%),
+    linear-gradient(180deg, oklch(0.17 0.020 274), oklch(0.12 0.018 268)) !important;
+}
+
+/* 2026-06-07 reference preview controls: one visual grammar for assets, composition, and style. */
+.asset-slot-upload i.asset-preview,
+.compact-reference-card.has-preview .reference-thumb,
+.compact-reference-card.has-preview .style-reference-preview {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--panel-raised), transparent 4%), color-mix(in oklch, var(--panel-soft), transparent 0%)) !important;
+}
+
+.asset-preview-img.asset-preview-main,
+.compact-reference-card.has-preview .reference-preview-image,
+.compact-reference-card.has-preview .style-preview-image {
+  object-fit: contain !important;
+  padding: 4px;
+}
+
+.compact-reference-card.has-preview {
+  position: relative;
+}
+
+.compact-reference-card.has-preview .reference-thumb,
+.compact-reference-card.has-preview .style-reference-preview {
+  overflow: hidden;
+}
+
+.reference-remove-button.reference-corner-remove {
+  position: absolute !important;
+  top: 14px !important;
+  left: 14px !important;
+  z-index: 5;
+  display: grid !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  place-items: center;
+  padding: 0 !important;
+  border: 1px solid oklch(0.70 0.17 24 / 0.55) !important;
+  border-radius: 999px !important;
+  background: color-mix(in oklch, var(--panel), transparent 6%) !important;
+  color: oklch(0.58 0.21 25) !important;
+  box-shadow: 0 8px 18px color-mix(in oklch, var(--ink), transparent 88%);
+  font-size: 17px !important;
+  font-weight: 760 !important;
+  line-height: 1 !important;
+}
+
+.reference-remove-button.reference-corner-remove:hover {
+  border-color: oklch(0.62 0.22 25 / 0.78) !important;
+  background: oklch(0.98 0.018 24) !important;
+  color: oklch(0.52 0.23 24) !important;
+  transform: translateY(-1px);
+}
+
+.reference-analysis-tools,
+.style-reference-actions.reference-analysis-tools {
+  display: flex !important;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: flex-end !important;
+  gap: 6px;
+}
+
+.reference-analysis-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px !important;
+  border: 1px solid color-mix(in oklch, var(--border-default), var(--ink) 4%) !important;
+  border-radius: 7px !important;
+  background: color-mix(in oklch, var(--panel), transparent 2%) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 5px 14px color-mix(in oklch, var(--ink), transparent 94%);
+  font-size: 12px !important;
+  font-weight: 820 !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+}
+
+.reference-analysis-button:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--accent), var(--border-default) 45%) !important;
+  background: color-mix(in oklch, var(--accent-soft), var(--panel) 74%) !important;
+  color: color-mix(in oklch, var(--accent), var(--text-primary) 18%) !important;
+  transform: translateY(-1px);
+}
+
+.reference-analysis-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  box-shadow: none;
+}
+
+.reference-action-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.reference-count-badge {
+  right: 8px;
+  left: auto;
+}
+
+:root[data-theme="dark"] .asset-slot-upload i.asset-preview,
+:root[data-theme="dark"] .compact-reference-card.has-preview .reference-thumb,
+:root[data-theme="dark"] .compact-reference-card.has-preview .style-reference-preview {
+  background:
+    radial-gradient(ellipse at 50% 0%, oklch(0.26 0.024 282 / 0.48), transparent 55%),
+    linear-gradient(180deg, oklch(0.17 0.020 274), oklch(0.13 0.018 268)) !important;
+}
+
+.scheme-board-empty.is-generating {
+  min-width: 330px;
+}
+
+.scheme-board-empty-progress {
+  grid-column: 1 / -1;
+  width: min(280px, 100%);
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--border-default), transparent 44%);
+}
+
+.scheme-board-empty-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, oklch(0.68 0.15 158), oklch(0.70 0.16 210));
+  transition: width 180ms ease-out;
 }

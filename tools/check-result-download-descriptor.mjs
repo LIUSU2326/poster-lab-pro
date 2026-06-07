@@ -272,6 +272,23 @@ async function runRuntimeCheck() {
       issues.push("persisted result files should resolve to localFile download descriptors");
     }
 
+    const localFileWithAssetUrlResult = {
+      ...localFileResult,
+      id: "result-local-file-with-asset-url",
+      assetUrl: "https://cdn.example.com/stale-result.png",
+    };
+    const localFileWithAssetUrlSnapshot = storage.WorkspaceSnapshotSchema.parse({
+      ...snapshot,
+      results: [localFileWithAssetUrlResult],
+    });
+    const localFileWithAssetUrlDescriptor = results.createResultDownloadDescriptor({
+      snapshot: localFileWithAssetUrlSnapshot,
+      resultId: localFileWithAssetUrlResult.id,
+    });
+    if (!localFileWithAssetUrlDescriptor?.available || localFileWithAssetUrlDescriptor.source !== "localFile") {
+      issues.push("persisted local result files should take precedence over stale assetUrl values");
+    }
+
     const repository = storage.createMemoryDraftRepository([inlineSnapshot]);
     const service = api.createLocalApiService({ repository });
     const apiDescriptor = await service.describeResultDownload({

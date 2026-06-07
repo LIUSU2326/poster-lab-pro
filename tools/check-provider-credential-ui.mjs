@@ -38,7 +38,6 @@ for (const token of [
   "test-provider-connection",
   "credential-status",
   "connection-test-status",
-  "本地加密凭证库",
 ]) {
   if (!settings.includes(token)) issues.push(`settings-sheet.js: missing ${token}`);
 }

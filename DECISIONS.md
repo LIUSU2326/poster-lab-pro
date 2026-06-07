@@ -1,5 +1,22 @@
 # DECISIONS.md
 
+## D112: Remove The User-Facing Live Generation Switch
+
+Status: accepted
+
+Label: No User-Facing Live Generation Switch
+
+Context: The workbench accumulated a visible `真实生成` chip, live-generation protection settings, manual verification controls, version/path metadata chips, and empty-state prompts that now compete with the core generation workflow. The requested product direction is to remove those surfaces and not plan them back into later versions.
+
+Decision: Remove the user-facing real-generation switch/protection surface, manual live-test route, manual verification UI, version/branch/bundle metadata chips, and the empty scheme-board prompt card. The normal model/key configuration, provider connection test, queue execution, result storage, and result operations remain part of the generation workflow. Future plans must not reintroduce a `真实生成` switch or `确认真实生成保护` path.
+
+Impact:
+
+- Main header is cleaner and no longer displays version, branch, revision, bundle, or release-path helper chips.
+- Settings focuses on model/API Key and provider routing, not live-generation confirmations.
+- Empty scheme canvas can remain quiet until real schemes exist.
+- Release checks now verify the removed UI stays absent.
+
 ## D111: 1.1.0 Prioritizes Prompt Anchor Compression For Poster And Collab
 
 Status: accepted

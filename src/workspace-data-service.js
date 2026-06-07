@@ -112,6 +112,15 @@ function dedupeFreshSessionAssets(assets = []) {
 
 function normalizeLoadedWorkspaceState(snapshot) {
   const updatedAt = nowIso();
+  const sloganDefaultMigration = "2026-06-05-slogan-off-default";
+  const sloganDefaultMigrationCutoff = Date.parse("2026-06-05T00:00:00.000Z");
+  const snapshotUpdatedAt = Date.parse(snapshot.metadata?.updatedAt || "");
+  const isBeforeSloganDefaultCutoff = !Number.isFinite(snapshotUpdatedAt) || snapshotUpdatedAt < sloganDefaultMigrationCutoff;
+  const needsSloganDefaultMigration =
+    snapshot.metadata?.sloganDefaultMigration !== sloganDefaultMigration && isBeforeSloganDefaultCutoff;
+  const metadata = needsSloganDefaultMigration
+    ? { ...snapshot.metadata, sloganDefaultMigration }
+    : snapshot.metadata;
   const assets = dedupeFreshSessionAssets(snapshot.assets || []);
   const assetIds = new Set(assets.map((asset) => asset.id));
   const gameLogoIds = assets.filter((asset) => asset.role === "gameLogo").map((asset) => asset.id);
@@ -130,20 +139,35 @@ function normalizeLoadedWorkspaceState(snapshot) {
           : (snapshot.brandKit.logos || []).filter((assetId) => assetIds.has(assetId)),
       }
     : snapshot.brandKit;
-  const modeStates = (snapshot.modeStates || []).map((modeState) => ({
-    ...modeState,
-    selectedSchemeIds: (modeState.selectedSchemeIds || []).filter((schemeId) => schemeIds.has(schemeId)),
-  }));
+  const modeStates = (snapshot.modeStates || []).map((modeState) => {
+    const nextModeState = {
+      ...modeState,
+      selectedSchemeIds: (modeState.selectedSchemeIds || []).filter((schemeId) => schemeIds.has(schemeId)),
+    };
+    if (
+      needsSloganDefaultMigration
+      && nextModeState.sloganSettings?.mode === "auto"
+      && !String(nextModeState.sloganSettings?.globalSlogan || "").trim()
+    ) {
+      nextModeState.sloganSettings = {
+        ...nextModeState.sloganSettings,
+        mode: "off",
+      };
+    }
+    return nextModeState;
+  });
   const changed = JSON.stringify({
     assets,
     characters,
     brandKit,
     modeStates,
+    metadata,
   }) !== JSON.stringify({
     assets: snapshot.assets || [],
     characters: snapshot.characters || [],
     brandKit: snapshot.brandKit,
     modeStates: snapshot.modeStates || [],
+    metadata: snapshot.metadata,
   });
 
   if (!changed) return { snapshot, changed: false };
@@ -159,7 +183,7 @@ function normalizeLoadedWorkspaceState(snapshot) {
         updatedAt,
       })),
       metadata: {
-        ...snapshot.metadata,
+        ...metadata,
         revision: Number(snapshot.metadata?.revision || 0) + 1,
         updatedAt,
       },

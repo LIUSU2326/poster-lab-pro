@@ -33,47 +33,61 @@ export function renderArchiveBoard() {
         ${archiveRows.length === 0 ? `
           <div class="archive-empty" role="status">
             <strong>暂无归档图片</strong>
-            <small>真实生成完成后，可在这里批量选择并导出图片。</small>
+            <small>生成并保存图片后，可在这里批量选择并导出。</small>
           </div>
-        ` : `<div class="archive-table">
-          <div class="archive-row head">
-            <span>选择</span><span>资源</span><span>关联项目</span><span>模型 / 画风</span><span>生成时间</span><span>状态</span><span>操作</span>
-          </div>
-          ${archiveRows.map((row) => `
-            <div class="archive-row ${selectedIds.has(row.id) ? "selected" : ""}">
-              <label class="archive-select-cell" aria-label="选择 ${escapeHtml(row.title)}">
-                <input type="checkbox" data-archive-select="${escapeHtml(row.id)}" ${selectedIds.has(row.id) ? "checked" : ""} />
-                <span></span>
-              </label>
-              <div class="archive-title">
-                <span class="mini-thumb ${row.tone}">
-                  ${row.previewUrl ? `<img src="${escapeHtml(row.previewUrl)}" alt="" width="44" height="44" loading="lazy">` : ""}
-                  <i>${row.type}</i>
-                </span>
-                <div>
-                  <strong>${escapeHtml(row.title)}</strong>
-                  <small>${row.width && row.height ? `${row.width}x${row.height}` : "图片资源"}</small>
-                </div>
-              </div>
-              <span>${escapeHtml(row.project)}</span>
-              <span>${escapeHtml(row.model)}</span>
-              <span>${escapeHtml(formatArchiveTime(row.createdAt))}</span>
-              <span class="status-chip ${row.status}">${escapeHtml(row.state)}</span>
-              <div class="row-actions">
-                <button
-                  type="button"
-                  data-action="open-result-viewer"
-                  data-result-id="${escapeHtml(row.resultId)}"
-                  data-result-view="results"
-                >查看</button>
-                ${row.downloadUrl ? `<a href="${escapeHtml(row.downloadUrl)}" download data-archive-download="${escapeHtml(row.id)}">下载</a>` : `<button type="button" disabled>下载</button>`}
-              </div>
-            </div>
-          `).join("")}
+        ` : `<div class="archive-grid">
+          ${archiveRows.map((row) => renderArchiveCard(row, selectedIds.has(row.id))).join("")}
         </div>`}
       </div>
     </section>
   `;
+}
+
+function renderArchiveCard(row, selected) {
+  const sizeLabel = row.width && row.height ? `${row.width}x${row.height}` : "图片资源";
+  const orientation = archiveOrientation(row);
+
+  return `
+    <article class="archive-card ${selected ? "selected" : ""}">
+      <label class="archive-card-select archive-select-cell" aria-label="选择 ${escapeHtml(row.title)}">
+        <input type="checkbox" data-archive-select="${escapeHtml(row.id)}" ${selected ? "checked" : ""} />
+        <span></span>
+      </label>
+      <button
+        class="archive-card-preview ${escapeHtml(orientation)} ${row.previewUrl ? "" : "empty"}"
+        type="button"
+        data-action="open-result-viewer"
+        data-result-id="${escapeHtml(row.resultId)}"
+        aria-label="查看 ${escapeHtml(row.title)} 大图"
+      >
+        ${row.previewUrl
+          ? `<img src="${escapeHtml(row.previewUrl)}" alt="${escapeHtml(row.title)}" width="${escapeHtml(row.width || 320)}" height="${escapeHtml(row.height || 320)}" loading="lazy">`
+          : `<span>暂无预览</span>`}
+        <i>${escapeHtml(row.type)}</i>
+      </button>
+      <div class="archive-card-body">
+        <strong>${escapeHtml(row.title)}</strong>
+        <small>${escapeHtml(sizeLabel)} · ${escapeHtml(row.model)}</small>
+        <small>${escapeHtml(row.project)} · ${escapeHtml(formatArchiveTime(row.createdAt))}</small>
+      </div>
+      <div class="archive-card-footer">
+        <span class="status-chip ${row.status}">${escapeHtml(row.state)}</span>
+        <div class="row-actions">
+          <button type="button" data-action="open-result-viewer" data-result-id="${escapeHtml(row.resultId)}">查看</button>
+          ${row.downloadUrl ? `<a href="${escapeHtml(row.downloadUrl)}" download data-archive-download="${escapeHtml(row.id)}">下载</a>` : `<button type="button" disabled>下载</button>`}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function archiveOrientation(row) {
+  const width = Number(row.width || 0);
+  const height = Number(row.height || 0);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return "is-square";
+  if (height > width * 1.2) return "is-portrait";
+  if (width > height * 1.2) return "is-landscape";
+  return "is-square";
 }
 
 function formatArchiveTime(value) {

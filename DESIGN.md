@@ -1,10 +1,63 @@
 # DESIGN.md
 
-## 2026-06-05 Live Generation Protection UI
+## 2026-06-06 Playful Prism Workbench Calibration
 
-Status: accepted for the 1.1.0 stable surface.
+Status: accepted for the current desktop workbench surface.
 
-The former live gate UI is presented to users as live generation protection. The settings sheet should explain that real provider calls are opt-in, require cost/external-provider/result-storage confirmations, and keep system checks visually separate from user confirmations. Top-bar and empty-state entry points use `真实生成` / `确认真实生成保护` rather than test-only wording.
+The interface should keep a premium creative-tool shell, but the production board is allowed to feel playful and imaginative. The desired direction is a "colorful black" tool frame around a purple creative stage: black carries precision and command weight; purple, mint, lime, and warm cream carry the game-production energy.
+
+UI rules:
+
+- The center scheme display area should use a purple material canvas with subtle texture, light, and depth. Do not flatten it into a plain blue/purple block or return it to a fully black void unless the user explicitly asks for that mode.
+- Black remains the shared language for primary generation actions, selected navigation, and high-emphasis controls. Do not make every feature a different color.
+- Slogan and focus guidance can use soft mint, lime, lilac, and cream surfaces to make the workbench feel friendlier, but they should stay quiet enough for repeated daily use.
+- Empty asset upload cards may use low-chroma tinted backgrounds by asset type. The color should imply material category and reduce blankness, not act like a status badge.
+- Announcement mode is not a generic style picker. It should expose announcement title, announcement type, copy-safe layout, and supporting-character behavior; visual references belong in the asset/reference upload area.
+- Logo mode should emphasize wordmark, solid background, and mark readability. Icon mode should emphasize 1:1, no text, one strong subject, and small-size readability.
+- Style libraries should favor fast scanning with larger mixed-size tiles and search, not a long two-column list.
+
+## 2026-06-06 Black Prism Workbench Calibration
+
+Status: accepted for the current desktop workbench surface.
+
+The interface should return to a premium creative-tool language: black-led, material, quiet, and precise. The desired direction is "colorful black": color appears as subtle optical reflection, edge sheen, focus feedback, or semantic status only, not as one separate color per feature.
+
+UI rules:
+
+- The center production board should use an ink / graphite material surface with restrained spectral highlights. Avoid the flat blue-purple canvas treatment.
+- Primary generation actions use one shared ink material vocabulary. Do not make the bottom scheme action blue while the top render action is black.
+- Model, save, add, upload, and theme controls should stay neutral unless they are selected or disabled. Avoid turning every function into a colored button.
+- Blue is not the default visual identity of this product. Use it only when it communicates a real state and no quieter neutral treatment will work.
+- Keep semantic colors muted and local. Success, warning, and error should not become decorative badges.
+- Motion stays subtle: hover lift, pressed feedback, and soft material sheen only. Do not add flashy glow or animated rainbow effects.
+
+## 2026-06-05 No User-Facing Live Generation Switch
+
+Status: accepted for the current 1.1.0 workbench surface.
+
+The main workbench should not show a `真实生成` chip, a live-generation protection panel, manual verification controls, or version/path metadata chips. The header should stay focused on project identity, view switching, model/key settings, theme, archive export, failed-image retry, and generation actions. The scheme canvas may be blank when no scheme exists; do not center a prompt card that says there is no displayable poster yet.
+
+UI rules:
+
+- Remove visible `收起` text from the bottom queue handle; the compact task control can rely on state, iconography, and accessibility labels.
+- Remove `手动验证` / `MANUAL CHECK` from the left configuration area.
+- Remove top-bar version, branch, revision, app bundle, and release-path chips.
+- Keep model routing warnings only when they directly explain current provider capability; do not bring back a global real-generation switch.
+
+## 2026-06-05 Quiet Workbench Language
+
+Status: accepted for the current desktop surface.
+
+The app interface should be concise and restrained. It is a production tool, not an expanded user manual. Keep controls close to the object they affect, use progressive disclosure for setup-heavy areas, and prefer short labels over explanatory paragraphs.
+
+UI rules:
+
+- Project Library uses direct add/import/delete actions. Do not bring back form-like project-save explanations.
+- The top switch only exposes the working views users need now: Scheme and Archive. Do not restore a standalone Results page in the top navigation.
+- Queue progress should not return as a bottom persistent panel. Put task feedback in cards, toasts, or transient status when needed.
+- Upload controls should be asset-first: plus button, preview, compact label, and inline remove action. Avoid repeated helper text such as “click upload”.
+- Model and API Key settings should keep provider, key, base URL, model, route, save, and test controls, but avoid setup essays inside the app.
+- Result large preview should not show quality audit or inspection panels. Technical quality metadata may stay local for diagnostics, but it must not become visible review copy by default.
 
 ## 2026-05-25 Center Board Correction: Scheme-Owned Results
 

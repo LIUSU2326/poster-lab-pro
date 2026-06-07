@@ -32,6 +32,7 @@ import {
 } from "./poster-kv-architectures";
 import { sanitizePosterSchemeText } from "./poster-scheme-sanitizer";
 import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "../prompts/slogan-policy";
+import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "./mimo-compat";
 
 const CHAT_COMPLETIONS_PATH = "/chat/completions";
 
@@ -41,6 +42,7 @@ const defaultBaseUrls: Partial<Record<ProviderId, string>> = {
   deepseek: "https://api.deepseek.com",
   qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
   agnes: "https://apihub.agnes-ai.com/v1",
+  mimo: "https://token-plan-cn.xiaomimimo.com/v1",
 };
 
 export const OpenAICompatibleChatTransportRequestSchema = z.object({
@@ -162,11 +164,14 @@ function validateConfig(providerId: ProviderId, config: ProviderConfigForm): Pro
 }
 
 function normalizeBaseUrl(providerId: ProviderId, config: ProviderConfigForm): string {
-  return (config.baseUrl?.trim() || defaultBaseUrls[providerId] || "").replace(/\/+$/, "");
+  return normalizeMimoProviderBaseUrl(providerId, config.baseUrl?.trim() || defaultBaseUrls[providerId] || "");
 }
 
 function conceptModel(config: ProviderConfigForm): string {
-  return config.modelSlots.concept || getProviderManifest(config.providerId).modelSlots.concept?.[0] || config.defaultModel || "gpt-5.5";
+  return normalizeMimoProviderModel(
+    config.providerId,
+    config.modelSlots.concept || getProviderManifest(config.providerId).modelSlots.concept?.[0] || config.defaultModel || "gpt-5.5",
+  );
 }
 
 function configError<T>(providerId: ProviderId, config: ProviderConfigForm): ProviderResult<T> {
@@ -237,6 +242,7 @@ function buildPosterBriefMessages(request: BriefGenerationRequest) {
         "You are a senior game marketing art director.",
         "Return JSON only. No markdown, no commentary.",
         "Each scheme must include title, brief, prompt, promptZh, promptEn, and slogans.",
+        "The title field must be written in Simplified Chinese, even when the slogan target language is English, Japanese, or Korean.",
         "promptZh must be a Chinese image-generation prompt. promptEn must be an English image-generation prompt.",
         "languageTargets contains exactly one target slogan language. Return slogans only for that selected language.",
         "Infer each uploaded asset's semantic poster duty from semanticRole, role, label, and description: protagonist, antagonist, brandLogo, prop, environment, styleReference, compositionReference, keySubject, or supportingAsset.",
@@ -298,6 +304,7 @@ function buildPosterBriefMessages(request: BriefGenerationRequest) {
           "Use divergent story-composition archetypes across the batch, such as boss encounter, kitchen siege, ingredient heist, wilderness chase, restaurant defense, portal discovery, victory feast, caravan expedition, VIP demand versus ingredient hunt, or staff-training-to-boss-fight contrast.",
           "Do not default to a simple horizontal scene with heroes standing left and right on a pizza surface. Giant food can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
           "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",
+          "Every scheme title must be concise Simplified Chinese, 6-16 Chinese characters when possible. Do not return English titles such as Comic Panel, Oven Portal, Ambush, or Break In.",
           "Avoid flat sticker collage, cheap clip-art composition, floating elements, tabletop food wallpaper, random extra mascots, generic replacement characters, and duplicate copies of uploaded assets.",
           "If exactly one protagonist/gameCharacter asset is listed, design around [Game Character 1] as the only playable hero. Multiple-hero language is forbidden in that case.",
           posterHeroPerformanceScaleLock(),
@@ -380,6 +387,7 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
     modeBriefIdentityRule(mode),
     "Respect creativeDirection, selected style tags, output size, reference analysis, and prompt constraints.",
     "Every scheme must have a unique title, unique visual direction, and unique image prompt without reusing a sentence template.",
+    "Every scheme title must be concise Simplified Chinese. Do not return an English title.",
   ];
 
   if (mode === "icon") {
@@ -453,6 +461,7 @@ function buildModeBriefMessages(request: BriefGenerationRequest) {
         "You are a senior game creative production director.",
         "Return JSON only. No markdown, no commentary.",
         "Each scheme must include title, brief, prompt, promptZh, promptEn, and slogans.",
+        "The title field must be written in Simplified Chinese, regardless of slogan language.",
         "promptZh must be a Chinese image-generation prompt. promptEn must be an English image-generation prompt.",
         "This request is mode-specific. Do not inherit poster/KV architecture rules unless mode is poster.",
         "Do not plan pasted overlays. Uploaded assets are identity, brand, style, composition, or subject references that should be redrawn naturally according to the current mode.",

@@ -1,9 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
+import { getRuntimeWorkspaceSnapshot, state } from "../state.js";
 import { ProjectBriefFormSchema, type ProductionMode, type ProjectBriefForm } from "../schema/zod";
 
 type BriefSectionProps = {
@@ -12,6 +13,7 @@ type BriefSectionProps = {
   revision: number;
   assetCount: number;
   initialValues: ProjectBriefForm;
+  onRequestRender?: (() => void) | undefined;
 };
 
 function normalizeInitialValues(values: ProjectBriefForm): ProjectBriefForm {
@@ -44,8 +46,9 @@ function joinGuidance(items: string[]): string {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean))).join("\n");
 }
 
-export function BriefSection({ initialValues }: BriefSectionProps) {
+export function BriefSection({ initialValues, onRequestRender }: BriefSectionProps) {
   const defaults = useMemo(() => normalizeInitialValues(initialValues), [initialValues]);
+  const saveFeedbackTimerRef = useRef<number | null>(null);
   const form = useForm<ProjectBriefForm>({
     resolver: zodResolver(ProjectBriefFormSchema) as Resolver<ProjectBriefForm>,
     defaultValues: defaults,
@@ -58,6 +61,11 @@ export function BriefSection({ initialValues }: BriefSectionProps) {
     ...values,
   };
   const [focusDraft, setFocusDraft] = useState("");
+  const [saveFeedbackVisible, setSaveFeedbackVisible] = useState(false);
+
+  useEffect(() => () => {
+    if (saveFeedbackTimerRef.current !== null) window.clearTimeout(saveFeedbackTimerRef.current);
+  }, []);
 
   const commit = async (nextValues: ProjectBriefForm) => {
     const parsed = ProjectBriefFormSchema.safeParse(nextValues);
@@ -98,10 +106,59 @@ export function BriefSection({ initialValues }: BriefSectionProps) {
     void addFocusDraft();
   };
 
+  const saveProjectToLibrary = () => {
+    const snapshot = getRuntimeWorkspaceSnapshot();
+    const name = String(currentValues.projectName || snapshot.project?.name || "").trim() || "\u672a\u547d\u540d\u9879\u76ee";
+    const description = String(currentValues.gameDescription || snapshot.project?.description || "").trim();
+    const draft = {
+      id: state.projectLibraryActiveEntryId || `project-${Date.now().toString(36)}`,
+      name,
+      description,
+      updatedAt: new Date().toISOString(),
+    };
+    const entries = Array.isArray(state.projectLibraryEntries) ? [...state.projectLibraryEntries] : [];
+    const existingIndex = entries.findIndex((entry) => entry.id === draft.id);
+    if (existingIndex >= 0) entries[existingIndex] = draft;
+    else entries.unshift(draft);
+
+    state.projectLibraryEntries = entries.slice(0, 24);
+    state.projectLibraryActiveEntryId = draft.id;
+    state.projectLibraryMessage = "\u5f53\u524d\u9879\u76ee\u540d\u79f0\u548c\u63cf\u8ff0\u5df2\u4fdd\u5b58\u3002";
+    setSaveFeedbackVisible(true);
+    if (saveFeedbackTimerRef.current !== null) window.clearTimeout(saveFeedbackTimerRef.current);
+    saveFeedbackTimerRef.current = window.setTimeout(() => setSaveFeedbackVisible(false), 1200);
+    if (state.view === "project-library") onRequestRender?.();
+  };
+
+  const handleProjectSave = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    saveProjectToLibrary();
+  };
+
   return (
     <div className="brief-section-rhf" data-rhf-brief-section>
-      <label className="brief-field">
-        <span>项目名称</span>
+      <label className="brief-field project-name-field">
+        <span className="brief-field-title-row">
+          <span>项目名称</span>
+          <span className="project-save-control">
+          <button
+            className={`project-name-add ${saveFeedbackVisible ? "is-saved" : ""}`}
+            type="button"
+            data-action="project-library-save-current"
+            onClick={handleProjectSave}
+            aria-label="保存当前项目到项目库"
+            title="保存到项目库"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 5.5A1.5 1.5 0 0 1 6.5 4h9.2L19 7.3v11.2a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 18.5v-13Z"></path>
+              <path d="M8 4v6h8V4"></path>
+              <path d="M8 16h8"></path>
+            </svg>
+          </button>
+          {saveFeedbackVisible ? <small className="project-save-feedback" role="status">{"\u5df2\u4fdd\u5b58"}</small> : null}
+          </span>
+        </span>
         <input
           aria-label="项目名称"
           value={currentValues.projectName}

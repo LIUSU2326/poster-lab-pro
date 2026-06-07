@@ -51,8 +51,12 @@ for (const [file, source] of [
   ["ROADMAP.md", roadmap],
   ["TESTING.md", testing],
 ]) {
-  if (!source.includes("Live Execution Protection") && !source.includes("live execution gate")) {
-    issues.push(`${file}: missing live execution protection update`);
+  if (
+    !source.includes("No User-Facing Live Generation Switch") &&
+    !source.includes("Live Execution Protection") &&
+    !source.includes("live execution gate")
+  ) {
+    issues.push(`${file}: missing current live execution boundary update`);
   }
 }
 

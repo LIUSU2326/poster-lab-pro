@@ -10,9 +10,6 @@ import { ProviderCredentialVaultStatusSchema } from "../providers/encrypted-cred
 import { ProviderConnectionTestResultSchema } from "../providers/connection-diagnostic-contracts";
 import { ProviderMappedRequestSchema, ProviderRequestMapperInputSchema } from "../providers/request-mapper";
 import { QueuePlanSchema, QueueSummarySchema } from "../queue/contracts";
-import { LiveExecutionSafetyInputSchema } from "../queue/live-execution-gate";
-import { OpenAILiveQueueRunResultSchema } from "../queue/openai-live-queue";
-import { GoogleLiveQueueRunResultSchema } from "../queue/google-live-queue";
 import { WorkspaceQueueWorkerInputSchema, WorkspaceQueueWorkerResultSchema } from "../queue/workspace-worker";
 import { WorkspaceSnapshotSchema, WorkspaceSnapshotSummarySchema } from "../storage/contracts";
 import {
@@ -38,7 +35,6 @@ export const ApiRouteIdSchema = z.enum([
   "provider.connection.test",
   "queue.plan.create",
   "queue.plan.run",
-  "queue.plan.live.test",
   "asset.upload.plan",
   "asset.binary.upload",
   "asset.record.commit",
@@ -137,6 +133,7 @@ export const ProviderRequestMapApiResponseSchema = z.union([
 export const ProviderCredentialStatusApiRequestSchema = z.object({
   workspaceId: z.string().min(1),
   providerId: ProviderIdSchema,
+  keyRef: z.string().min(1).max(160).optional(),
 });
 
 export const ProviderCredentialStatusApiResponseSchema = z.union([
@@ -152,6 +149,7 @@ export const ProviderCredentialStatusApiResponseSchema = z.union([
 
 export const ProviderCredentialSaveApiRequestSchema = ProviderCredentialStatusApiRequestSchema.extend({
   apiKey: z.string().min(1).max(4096),
+  label: z.string().min(1).max(80).optional(),
   baseUrl: z.string().url().or(z.literal("")).optional(),
   defaultModel: z.string().min(1).max(120).optional(),
   enabled: z.boolean().default(true),
@@ -169,6 +167,12 @@ export const ProviderCredentialSaveApiResponseSchema = z.union([
 ]);
 
 export const ProviderCredentialDeleteApiRequestSchema = ProviderCredentialStatusApiRequestSchema;
+
+export const ProviderCredentialActivateApiRequestSchema = ProviderCredentialStatusApiRequestSchema.extend({
+  keyRef: z.string().min(1).max(160),
+});
+
+export const ProviderCredentialActivateApiResponseSchema = ProviderCredentialStatusApiResponseSchema;
 
 export const ProviderCredentialDeleteApiResponseSchema = z.union([
   apiSuccessEnvelope(
@@ -246,36 +250,6 @@ export const QueuePlanRunApiRequestSchema = WorkspaceQueueWorkerInputSchema;
 
 export const QueuePlanRunApiResponseSchema = z.union([
   apiSuccessEnvelope(WorkspaceQueueWorkerResultSchema),
-  ApiFailureEnvelopeSchema,
-]);
-
-export const QueuePlanManualLiveTestApiRequestSchema = z.object({
-  workspaceId: z.string().min(1),
-  jobId: z.string().min(1),
-  providerId: z.enum(["openai", "google", "agnes"]).default("openai"),
-  enabled: z.boolean().default(false),
-  safety: LiveExecutionSafetyInputSchema.default({
-    estimatedCost: 0,
-    maxAcceptedCost: 0,
-    confirmations: {
-      liveRun: false,
-      providerCost: false,
-      externalProvider: false,
-      resultStorage: false,
-    },
-  }),
-  timeoutMs: z.number().int().min(1000).max(30000).default(10000),
-  traceId: z.string().min(1).default("trace-manual-live-generation-test"),
-});
-
-export const QueuePlanManualLiveTestApiResponseSchema = z.union([
-  apiSuccessEnvelope(
-    z.object({
-      result: z.union([OpenAILiveQueueRunResultSchema, GoogleLiveQueueRunResultSchema]),
-      connection: ProviderConnectionTestResultSchema.optional(),
-      providerConfigUpdated: z.boolean(),
-    }),
-  ),
   ApiFailureEnvelopeSchema,
 ]);
 
@@ -373,14 +347,14 @@ export type ProviderCredentialSaveApiRequest = z.infer<typeof ProviderCredential
 export type ProviderCredentialSaveApiResponse = z.infer<typeof ProviderCredentialSaveApiResponseSchema>;
 export type ProviderCredentialDeleteApiRequest = z.infer<typeof ProviderCredentialDeleteApiRequestSchema>;
 export type ProviderCredentialDeleteApiResponse = z.infer<typeof ProviderCredentialDeleteApiResponseSchema>;
+export type ProviderCredentialActivateApiRequest = z.infer<typeof ProviderCredentialActivateApiRequestSchema>;
+export type ProviderCredentialActivateApiResponse = z.infer<typeof ProviderCredentialActivateApiResponseSchema>;
 export type ProviderConnectionTestApiRequest = z.infer<typeof ProviderConnectionTestApiRequestSchema>;
 export type ProviderConnectionTestApiResponse = z.infer<typeof ProviderConnectionTestApiResponseSchema>;
 export type QueuePlanCreateApiRequest = z.input<typeof QueuePlanCreateApiRequestSchema>;
 export type QueuePlanCreateApiResponse = z.infer<typeof QueuePlanCreateApiResponseSchema>;
 export type QueuePlanRunApiRequest = z.infer<typeof QueuePlanRunApiRequestSchema>;
 export type QueuePlanRunApiResponse = z.infer<typeof QueuePlanRunApiResponseSchema>;
-export type QueuePlanManualLiveTestApiRequest = z.infer<typeof QueuePlanManualLiveTestApiRequestSchema>;
-export type QueuePlanManualLiveTestApiResponse = z.infer<typeof QueuePlanManualLiveTestApiResponseSchema>;
 export type AssetUploadPlanApiRequest = z.infer<typeof AssetUploadPlanApiRequestSchema>;
 export type AssetUploadPlanApiResponse = z.infer<typeof AssetUploadPlanApiResponseSchema>;
 export type AssetBinaryUploadApiRequest = z.infer<typeof AssetBinaryUploadApiRequestSchema>;
@@ -472,13 +446,6 @@ export const apiRouteContracts = {
     path: "/api/workspaces/:workspaceId/queue-plans/:jobId/run",
     requestSchema: QueuePlanRunApiRequestSchema,
     responseSchema: QueuePlanRunApiResponseSchema,
-  },
-  queuePlanManualLiveTest: {
-    routeId: "queue.plan.live.test",
-    method: "POST",
-    path: "/api/workspaces/:workspaceId/queue-plans/:jobId/live-test",
-    requestSchema: QueuePlanManualLiveTestApiRequestSchema,
-    responseSchema: QueuePlanManualLiveTestApiResponseSchema,
   },
   assetUploadPlan: {
     routeId: "asset.upload.plan",

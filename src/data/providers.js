@@ -76,6 +76,17 @@ export const providers = [
     caps: ["OpenAI 兼容", "图像生成", "多图参考"],
     note: "Agnes AI / Sapiens AI 的 OpenAI-style API。支持 agnes-2.0-flash 文本方案和 agnes-image-2.x 图像生成/编辑。",
   },
+  {
+    id: "mimo",
+    name: "小米 MiMo",
+    state: "未启用",
+    status: "idle",
+    key: "",
+    model: "mimo-v2.5-pro",
+    url: "https://token-plan-cn.xiaomimimo.com/v1",
+    caps: ["方案生成", "OpenAI 兼容", "多 Key"],
+    note: "小米 MiMo OpenAI-compatible API。适合作为方案生成和路由测试供应商；图像生成请继续路由到支持生图的模型。",
+  },
 ];
 
 export const modelSlots = [
@@ -84,7 +95,7 @@ export const modelSlots = [
     name: "方案生成",
     flow: "需求简报 -> 创意方案",
     value: "gemini-2.5-flash",
-    options: ["gemini-2.5-flash", "gemini-2.5-pro", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1", "deepseek-v4-flash", "deepseek-v4-pro", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.7-max", "agnes-2.0-flash"],
+    options: ["gemini-2.5-flash", "gemini-2.5-pro", "gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1", "deepseek-v4-flash", "deepseek-v4-pro", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.7-max", "agnes-2.0-flash", "mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-pro", "mimo-v2-omni"],
   },
   {
     id: "image",
@@ -98,13 +109,13 @@ export const modelSlots = [
     name: "风格参考分析",
     flow: "风格参考识别",
     value: "gemini-2.5-flash",
-    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
+    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus", "mimo-v2-omni"],
   },
   {
     id: "compositionReference",
     name: "构图参考分析",
     flow: "构图参考识别",
     value: "gemini-2.5-flash",
-    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus"],
+    options: ["gpt-5.5", "gpt-5.4", "gpt-5.2", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "claude-opus-4-7", "claude-sonnet-4-6", "qwen3.6-plus", "mimo-v2-omni"],
   },
 ];

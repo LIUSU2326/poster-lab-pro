@@ -5,6 +5,9 @@ import "../styles.css";
 export const metadata: Metadata = {
   title: "Poster Lab Pro Workbench",
   description: "AI batch creative workbench for game marketing assets.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

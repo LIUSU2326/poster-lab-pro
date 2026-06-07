@@ -4,6 +4,7 @@ import { runProviderConnectionDiagnostic, type ProviderConnectionTransport } fro
 import type { EncryptedProviderCredentialVault } from "../providers/encrypted-credential-vault";
 import type { StorageRepository, StoredProviderConfig } from "../storage";
 import { ProviderIdSchema } from "../schema/zod";
+import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "../providers/mimo-compat";
 import {
   ApiFailureEnvelopeSchema,
   ProviderConnectionTestApiRequestSchema,
@@ -79,6 +80,14 @@ function providerStatusFromConnection(status: z.infer<typeof ProviderConnectionT
   return "warning" as const;
 }
 
+function normalizeProviderModelSlots(providerId: string, slots: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(slots)
+      .map(([slot, model]) => [slot, normalizeMimoProviderModel(providerId, model)])
+      .filter(([, model]) => model),
+  );
+}
+
 async function mirrorProviderDiagnostic(input: {
   repository: StorageRepository;
   workspaceId: string;
@@ -89,10 +98,19 @@ async function mirrorProviderDiagnostic(input: {
   if (!loaded.ok) return { updated: false };
 
   const updatedAt = new Date().toISOString();
+  const defaultModel = normalizeMimoProviderModel(input.config.providerId, input.config.defaultModel);
+  const modelSlots = normalizeProviderModelSlots(input.config.providerId, input.config.modelSlots);
+  if (input.config.providerId === "mimo") {
+    delete modelSlots.image;
+    if (defaultModel && !modelSlots.concept) modelSlots.concept = defaultModel;
+  }
   const nextConfig = {
     ...input.config,
     enabled: input.result.ok ? true : input.config.enabled,
     status: providerStatusFromConnection(input.result.status),
+    baseUrl: normalizeMimoProviderBaseUrl(input.config.providerId, input.config.baseUrl),
+    defaultModel,
+    modelSlots,
     updatedAt,
   };
 
@@ -142,6 +160,7 @@ export function createProviderDiagnosticService(options: ProviderDiagnosticServi
           keyRef: providerCredentialKeyRef({
             workspaceId: parsed.workspaceId,
             providerId,
+            keyRef: parsed.keyRef || storedConfig?.credentialKeyRef,
           }),
         });
         const diagnostic = await runProviderConnectionDiagnostic({

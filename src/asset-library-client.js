@@ -199,7 +199,6 @@ function commitStaticAsset(asset, options = {}) {
   const updatedAt = nowIso(options);
   const assets = snapshot.assets.filter((item) => (
     item.id !== asset.id
-    && !(item.role === asset.role && item.label === asset.label)
   ));
   assets.push({ ...asset, updatedAt });
 
@@ -307,7 +306,7 @@ async function runWorkbenchAssetUpload(input = {}, options = {}) {
   const commit = canCommitAsset
     ? await client.commitAssetRecord(workspaceId, {
       asset: plannedAsset,
-      replaceExisting: true,
+      replaceExisting: false,
     })
     : binaryUpload || uploadPlan;
   const assetList = commit.ok
@@ -421,7 +420,8 @@ async function runRemoveWorkbenchAssetsByRoleLabel(role, label = "", options = {
     Object.entries(state.referenceUploadDataUrls || {}).filter(([key]) => {
       if (!key.startsWith(`${role}:`)) return true;
       if (!label) return false;
-      return false;
+      if (key === `${role}:style` || key === `${role}:composition`) return false;
+      return key !== `${role}:${label}` && !key.startsWith(`${role}:${label}:`);
     }),
   );
   state.referenceAnalysis = Object.fromEntries(
@@ -429,7 +429,7 @@ async function runRemoveWorkbenchAssetsByRoleLabel(role, label = "", options = {
       const matchesRole = key.startsWith(`${role}:`) || value?.role === role;
       if (!matchesRole) return true;
       if (!label) return false;
-      return value?.label !== label && !key.startsWith(`${role}:`);
+      return value?.label !== label && key !== `${role}:${label}` && !key.startsWith(`${role}:${label}:`);
     }),
   );
 

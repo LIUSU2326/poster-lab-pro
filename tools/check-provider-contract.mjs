@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const requiredProviderIds = ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes"];
+const requiredProviderIds = ["openai", "aigocode", "google", "deepseek", "claude", "qwen", "agnes", "mimo"];
 const requiredContractFiles = [
   "src/providers/contracts.ts",
   "src/providers/manifests.ts",
@@ -78,7 +78,7 @@ for (const token of [
   if (!manifests.includes(token)) issues.push(`manifests.ts: missing provider image capability token ${token}`);
 }
 
-for (const providerId of ["openai", "aigocode", "google", "claude", "qwen"]) {
+for (const providerId of ["openai", "aigocode", "google", "claude", "qwen", "mimo"]) {
   const row = legacyCapabilities.match(new RegExp(`${providerId}: \\[[^\\]]+\\]`))?.[0] || "";
   if (!row.includes("styleReferenceAnalysis") || !row.includes("compositionReferenceAnalysis")) {
     issues.push(`provider-capabilities.js: ${providerId} must expose both reference analysis capabilities`);

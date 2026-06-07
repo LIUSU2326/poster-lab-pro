@@ -1,5 +1,21 @@
 # ROADMAP.md
 
+## 2026-06-05 No User-Facing Live Generation Switch
+
+### Completed In This Pass
+
+- Removed the user-facing `真实生成` chip/switch, live-generation protection entry points, cost-cap confirmation UI, and manual verification route from the workbench surface.
+- Removed visible version, branch, revision, desktop bundle path, and release-path chips from the main top bar.
+- Removed the bottom task area's visible `收起` cue and the old manual verification/result-file context rows.
+- Removed the empty scheme-board prompt card that said there was no displayable poster yet.
+- Updated checks and release documentation so future versions do not add the `真实生成` switch back.
+
+### Next Version Plan
+
+- Do not reintroduce a user-facing `真实生成` switch, `确认真实生成保护` action, `手动验证` control, or manual live-test route.
+- Keep normal provider/model/key setup and generation execution available through the existing generation workflow.
+- Future release work should focus on output quality, result management, and mode-specific generation behavior.
+
 ## 2026-06-04 1.1.0 Poster/Collab/Announcement Quality Sprint
 
 ### Completed In This Pass

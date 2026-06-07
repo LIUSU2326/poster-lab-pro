@@ -114,6 +114,13 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
       image: "agnes-image-2.1-flash",
     },
   },
+  mimo: {
+    baseUrl: "https://token-plan-cn.xiaomimimo.com/v1",
+    defaultModel: "mimo-v2.5-pro",
+    modelSlots: {
+      concept: "mimo-v2.5-pro",
+    },
+  },
 };
 
 export function createProjectBriefDefaults(mode: ProductionMode = "poster"): ProjectBriefForm {
@@ -135,7 +142,7 @@ export function createOutputSettingsDefaults(mode: ProductionMode = "poster"): O
 
 export function createSloganSettingsDefaults(): SloganSettingsForm {
   return {
-    mode: "auto",
+    mode: "off",
     globalSlogan: "",
     languages: ["en-US"],
   };

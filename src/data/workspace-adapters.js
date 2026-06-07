@@ -1,11 +1,11 @@
 import { modeSpecs } from './modes.js';
 import { modelSlots, providers as providerFixtures } from './providers.js';
-import { getResultDownloadUrl, getRuntimeWorkspaceSnapshot } from '../state.js';
+import { getResultDownloadUrl, getRuntimeWorkspaceSnapshot, state } from '../state.js';
 
 const providerStateLabels = {
   idle: "未启用",
   testing: "测试中",
-  success: "已配置",
+  success: "已连接",
   warning: "需检查",
   error: "错误",
 };
@@ -46,6 +46,24 @@ const rolePriorityByMode = {
 };
 
 const providerFallbacks = Object.fromEntries(providerFixtures.map((provider) => [provider.id, provider]));
+const mimoDefaultBaseUrl = "https://token-plan-cn.xiaomimimo.com/v1";
+const mimoDefaultModel = "mimo-v2.5-pro";
+const mimoLegacyBaseUrls = new Set(["https://api.xiaomimimo.com/v1"]);
+const mimoLegacyModels = new Set(["mimo-v2.3", "mimo-v2.2", "mimo-v2.1"]);
+
+function normalizeProviderUrl(providerId, value, fallback = "") {
+  const normalized = (value || fallback || "").trim().replace(/\/+$/, "");
+  if (providerId !== "mimo") return normalized;
+  if (!normalized || mimoLegacyBaseUrls.has(normalized)) return mimoDefaultBaseUrl;
+  return normalized;
+}
+
+function normalizeProviderModel(providerId, value, fallback = "") {
+  const normalized = (value || fallback || "").trim();
+  if (providerId !== "mimo") return normalized;
+  if (!normalized || mimoLegacyModels.has(normalized)) return mimoDefaultModel;
+  return normalized;
+}
 
 function runtimeSnapshot() {
   return getRuntimeWorkspaceSnapshot();
@@ -62,8 +80,13 @@ export function getProviderRows() {
     ...fixtureIds,
     ...Object.keys(configs).filter((providerId) => !fixtureIds.includes(providerId)),
   ];
+  const order = Array.isArray(state.providerOrder) ? state.providerOrder : [];
+  const orderedProviderIds = [
+    ...order.filter((providerId) => providerIds.includes(providerId)),
+    ...providerIds.filter((providerId) => !order.includes(providerId)),
+  ];
 
-  return providerIds.map((providerId) => {
+  return orderedProviderIds.map((providerId) => {
     const fallback = providerFallbacks[providerId] || {};
     const provider = configs[providerId] || {
       providerId,
@@ -75,16 +98,20 @@ export function getProviderRows() {
       capabilities: fallback.caps || [],
       note: fallback.note || "",
     };
+    const model = normalizeProviderModel(provider.providerId, provider.defaultModel, fallback.model);
+    const url = normalizeProviderUrl(provider.providerId, provider.baseUrl, fallback.url);
     return {
       id: provider.providerId,
       name: provider.displayName || fallback.name || provider.providerId,
       state: providerStateLabels[provider.status] || provider.status,
       status: provider.status,
       key: provider.apiKeyMasked || fallback.key || "未配置",
-      model: provider.defaultModel || fallback.model || "未选择",
-      url: provider.baseUrl || fallback.url || "未设置",
+      model: model || "未选择",
+      url: url || "未设置",
       caps: provider.capabilities || fallback.caps || [],
       note: provider.note || fallback.note || "静态配置示意，尚未执行真实连接测试。",
+      credentialKeyRef: provider.credentialKeyRef || "",
+      credentialProfiles: Array.isArray(provider.credentialProfiles) ? provider.credentialProfiles : [],
     };
   });
 }
@@ -117,10 +144,12 @@ export function getArchiveRows() {
         || result?.thumbnailUrl
         || "";
 
+      const displayTitle = scheme?.title || row.title;
+
       return {
         id: row.id,
         resultId: row.resultAssetId,
-        title: row.title,
+        title: displayTitle,
         project: snapshot.project.name,
         model: result?.model || row.model,
         state: archiveStateLabels[row.state] || row.state,
@@ -134,6 +163,11 @@ export function getArchiveRows() {
         createdAt: result?.createdAt || row.createdAt || "",
         updatedAt: result?.updatedAt || row.updatedAt || "",
       };
+    })
+    .sort((left, right) => {
+      const rightTime = Date.parse(right.createdAt || right.updatedAt || "");
+      const leftTime = Date.parse(left.createdAt || left.updatedAt || "");
+      return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
     });
 }
 
@@ -179,31 +213,50 @@ export function getAssetSlotsForMode(modeId, fallbackAssets = []) {
     .sort((a, b) => Date.parse(a.updatedAt || a.createdAt || "") - Date.parse(b.updatedAt || b.createdAt || ""))
     .forEach((asset) => {
       if (!fallbackRoles.has(asset.role)) return;
-      uploadedByRole.set(asset.role, asset);
+      const current = uploadedByRole.get(asset.role) || [];
+      current.push(asset);
+      uploadedByRole.set(asset.role, current);
     });
 
   if (fallbackSlots.length > 0) {
     return fallbackSlots.map((slot) => {
-      const asset = uploadedByRole.get(slot.role);
+      const assets = uploadedByRole.get(slot.role) || [];
+      const asset = assets.at(-1);
       return {
         role: slot.role,
         label: slot.label,
         sourceType: asset?.sourceType || slot.sourceType || "placeholder",
         state: asset?.sourceType && asset.sourceType !== "placeholder" ? "uploaded" : slot.state,
         tone: roleTone[slot.role] || slot.tone || "blue",
+        assetCount: assets.length,
+        previewUrls: assets.map((item) => normalizePreviewUrl(item.previewUrl)).filter(Boolean),
         previewUrl: normalizePreviewUrl(asset?.previewUrl || slot.previewUrl),
       };
     });
   }
 
-  return [...uploadedByRole.values()].map((asset) => ({
+  return [...uploadedByRole.values()].flatMap((assets) => {
+    const grouped = new Map();
+    for (const asset of assets) {
+      const key = `${asset.role}:${asset.label || ""}`;
+      const current = grouped.get(key) || [];
+      current.push(asset);
+      grouped.set(key, current);
+    }
+    return [...grouped.values()].map((group) => {
+      const asset = group.at(-1);
+      return {
     role: asset.role,
     label: asset.label,
     sourceType: asset.sourceType,
     state: asset.sourceType === "placeholder" ? "placeholder" : (asset.usage || ["input"]).join(" / "),
     tone: roleTone[asset.role] || "blue",
+    assetCount: group.length,
+    previewUrls: group.map((item) => normalizePreviewUrl(item.previewUrl)).filter(Boolean),
     previewUrl: normalizePreviewUrl(asset.previewUrl),
-  }));
+      };
+    });
+  });
 }
 
 export function getDefaultAssetRoleForMode(modeId) {

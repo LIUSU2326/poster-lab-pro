@@ -4,18 +4,20 @@
   getModeResults,
   getModeSchemes,
   getResultDownloadUrl,
+  getRuntimeWorkspaceSnapshot,
   getSchemeById,
 } from '../state.js';
 import { renderArchiveBoard } from './archive-board.js';
 import { resolveResultOperationRoute } from '../provider-capabilities.js';
-import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
-import { getImageGenerationStatus, getSchemeGenerationStatus } from '../data/generation-activity.js';
+import { getBatchSchemeGenerationStatus, getImageFailureStatus, getImageGenerationStatus, getSchemeGenerationStatus } from '../data/generation-activity.js';
 import { getWorkspaceProject, getWorkspaceSnapshotSummary } from '../data/workspace-adapters.js';
 import { modeSpecs } from '../data/modes.js';
 
 export function renderCenterBoard(activeMode, selected) {
-  if (state.view === "archive") return renderArchiveBoard();
-  if (state.view === "results") return renderResultBoard(activeMode);
+  if (state.view === "archive") return `
+    ${renderArchiveBoard()}
+    ${state.resultViewerOpen ? renderResultViewer() : ""}
+  `;
   if (state.view === "project-library") return renderProjectLibraryBoard(activeMode);
 
   const schemes = getModeSchemes();
@@ -62,32 +64,35 @@ function isRealGeneratedResult(result) {
 
 function renderSchemeBoardEmpty(activeMode) {
   const modeLabel = getModeLabel(activeMode.id);
+  const schemeGeneration = getBatchSchemeGenerationStatus(activeMode);
+  if (schemeGeneration.active) {
+    return `
+      <div class="scheme-board-empty is-generating">
+        <div>
+          <strong>正在生成方案</strong>
+          <small>已完成 ${escapeHtml(schemeGeneration.completed || 0)}/${escapeHtml(schemeGeneration.total || 0)}，生成完成后会自动展示方案卡片。</small>
+        </div>
+        <div class="scheme-board-empty-progress" aria-hidden="true">
+          <i style="width: ${escapeHtml(Math.max(4, schemeGeneration.progress || 0))}%"></i>
+        </div>
+      </div>
+    `;
+  }
   const modelReady = requiredModelRoutesReady();
-  const liveGate = getLiveGateViewModel(activeMode);
-  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
   return `
-    <div class="scheme-plan-empty" role="status">
-      <span>${escapeHtml(getModeAbbrev(activeMode.id))}</span>
-      <strong>还没有可展示的${escapeHtml(modeLabel)}方案</strong>
-      <small>${escapeHtml(modelReady
-        ? liveBlocked
-          ? "左侧配置已就绪，但真实生成需要先确认保护。"
-          : "左侧配置已经就绪。先生成一组方案，再选择具体方案出图。"
-        : "先检查模型与 Key，再生成方案批次。已有上传素材会作为视觉参考进入方案与生图链路。"
-      )}</small>
-      <div class="scheme-plan-empty-actions">
-        <button
-          class="primary-button"
-          type="button"
-          data-action="generate-schemes"
-          title="${escapeAttribute(liveBlocked ? "先确认真实生成保护，再调用外部模型服务" : "")}"
-          ${liveBlocked ? "disabled" : ""}
-        >生成方案批次</button>
-        ${liveBlocked
-          ? `<button type="button" data-action="open-settings">确认真实生成保护</button>`
-          : modelReady
-            ? ""
-            : `<button type="button" data-action="open-settings">检查模型与 Key</button>`}
+    <div class="scheme-board-empty ${modelReady ? "is-ready" : "needs-model"}">
+      <div>
+        <strong>${modelReady ? "准备生成方案" : "先配置模型"}</strong>
+        <small>${modelReady
+          ? `生成${escapeHtml(modeLabel)}方案后，再用顶部出图入口批量渲染。`
+          : "保存 API Key 后即可生成方案。"}
+        </small>
+      </div>
+      <div class="scheme-board-empty-actions">
+        ${modelReady
+          ? `<button class="primary-button" type="button" data-action="generate-schemes">生成方案批次</button>
+             <button type="button" data-action="open-settings">模型与 Key</button>`
+          : `<button class="primary-button" type="button" data-action="open-settings">模型与 Key</button>`}
       </div>
     </div>
   `;
@@ -115,36 +120,30 @@ function renderProjectLibraryBoard(activeMode) {
 
   return `
     <section class="center-board project-library-board" aria-label="项目库">
-      <div class="project-library-hero">
+      <div class="project-library-hero project-library-compact-head">
         <div>
-          <span>PROJECT LIBRARY</span>
           <h1>项目库</h1>
-          <p>只保存游戏名称和游戏描述。导入后会快速填入左侧项目表单，不会改动素材、方案或归档结果。</p>
         </div>
         <div class="project-library-top-actions">
-          <button class="primary" type="button" data-action="project-library-save-current">保存当前项目</button>
+          <button class="primary" type="button" data-action="project-library-save-current">保存当前</button>
           <button type="button" data-view="schemes">收起项目库</button>
         </div>
       </div>
       ${state.projectLibraryMessage ? `<p class="project-library-message">${escapeHtml(state.projectLibraryMessage)}</p>` : ""}
 
       <div class="project-library-grid">
-        <article class="project-library-card current">
-          <span>当前表单</span>
-          <strong>${escapeHtml(project.name || "未命名项目")}</strong>
-          <p>${escapeHtml(project.description || "暂无项目描述。")}</p>
-          <div class="project-library-actions">
-            <button type="button" data-action="project-library-save-current">保存到项目库</button>
-          </div>
-        </article>
-        ${entries.map((entry) => `
+        ${entries.length === 0 ? `
+          <article class="project-library-empty">
+            <strong>还没有保存的项目</strong>
+            <button type="button" data-action="project-library-save-current">保存当前项目</button>
+          </article>
+        ` : entries.map((entry) => `
           <article class="project-library-card ${entry.id === activeEntryId ? "active-entry" : ""}">
-            <span>${entry.id === activeEntryId ? "当前记录" : "已保存项目"}</span>
             <strong>${escapeHtml(entry.name || "未命名项目")}</strong>
-            <p>${escapeHtml(entry.description || "暂无项目描述。")}</p>
+            ${entry.description ? `<p>${escapeHtml(entry.description)}</p>` : ""}
             <small>${escapeHtml(formatProjectEntryDate(entry.updatedAt))}</small>
             <div class="project-library-actions">
-              <button type="button" data-action="project-library-import" data-project-entry-id="${escapeAttribute(entry.id)}">导入到表单</button>
+              <button type="button" data-action="project-library-import" data-project-entry-id="${escapeAttribute(entry.id)}">导入</button>
               <button class="danger" type="button" data-action="project-library-delete-entry" data-project-entry-id="${escapeAttribute(entry.id)}">删除</button>
             </div>
           </article>
@@ -156,14 +155,7 @@ function renderProjectLibraryBoard(activeMode) {
 
 function getProjectLibraryEntries(project) {
   const savedEntries = Array.isArray(state.projectLibraryEntries) ? state.projectLibraryEntries : [];
-  if (savedEntries.length > 0) return savedEntries;
-
-  return [{
-    id: project.id || "current-project",
-    name: project.name || "未命名项目",
-    description: project.description || "",
-    updatedAt: state.workspaceSnapshot?.metadata?.updatedAt || "",
-  }];
+  return savedEntries;
 }
 
 function formatProjectEntryDate(value) {
@@ -264,15 +256,9 @@ function getProjectLibraryFallbackAssets() {
 function renderResultEmpty(activeMode) {
   const modeLabel = getModeLabel(activeMode.id);
   const hasSchemes = getModeSchemes().some((scheme) => !isSeedWorkspaceScheme(activeMode, scheme));
-  const liveGate = getLiveGateViewModel(activeMode);
-  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
   const helper = hasSchemes
-    ? liveBlocked
-      ? "已有方案可用于出图。先确认真实生成保护，再调用外部模型服务生成图片。"
-      : "已有方案可用于出图。继续生成后，这里会显示图片、尺寸、模型输出和下载操作。"
-    : liveBlocked
-      ? `还没有${modeLabel}方案。先确认真实生成保护，再生成方案与图片。`
-      : `还没有${modeLabel}方案。可以直接生成${modeLabel}，系统会先出方案再进入图片渲染。`;
+    ? "已有方案可用于出图。继续生成后，这里会显示图片、尺寸、模型输出和下载操作。"
+    : `还没有${modeLabel}方案。可以直接生成${modeLabel}，系统会先出方案再进入图片渲染。`;
   return `
     <div class="result-empty">
       <span>${getModeAbbrev(activeMode.id)}</span>
@@ -283,10 +269,7 @@ function renderResultEmpty(activeMode) {
           class="primary-button"
           type="button"
           data-action="submit-generation"
-          title="${escapeAttribute(liveBlocked ? "先确认真实生成保护，再调用外部模型服务" : "")}"
-          ${liveBlocked ? "disabled" : ""}
         >生成${escapeHtml(modeLabel)}</button>
-        ${liveBlocked ? `<button type="button" data-action="open-settings">确认真实生成保护</button>` : ""}
         <button type="button" data-view="schemes">${hasSchemes ? "查看已有方案" : "回到方案"}</button>
       </div>
     </div>
@@ -341,7 +324,6 @@ function renderResultCard(result) {
           ${result.model ? `<span>${escapeHtml(result.model)}</span>` : ""}
           <span>${escapeHtml(formatResultDate(result.updatedAt || result.createdAt))}</span>
         </div>
-        ${renderResultQualityPill(result)}
         <div class="result-quick-actions">
           <button type="button" data-action="open-result-viewer" data-result-id="${escapeHtml(result.id)}">查看</button>
           <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
@@ -390,10 +372,13 @@ function renderPenIcon() {
 
 function renderResultViewer() {
   const results = getModeResults();
-  const result = results.find((item) => item.id === state.selectedResult) || results[0];
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const result = results.find((item) => item.id === state.selectedResult)
+    || (snapshot.results || []).find((item) => item.id === state.selectedResult)
+    || results[0];
   if (!result) return "";
 
-  const scheme = getSchemeById(result.schemeId);
+  const scheme = getSchemeById(result.schemeId) || (snapshot.schemes || []).find((item) => item.id === result.schemeId);
   const display = scheme ? getSchemeDisplay({ id: result.mode }, scheme) : null;
   const previewUrl = getResultPreviewUrl(result);
   const downloadUrl = getResultDownloadUrlForViewer(result);
@@ -409,7 +394,6 @@ function renderResultViewer() {
           ? `<img src="${previewUrl}" alt="${escapeHtml(display?.title || scheme?.title || result.id)}" width="1280" height="720">`
           : `<div class="result-viewer-placeholder">本地预览暂不可用</div>`}
       </div>
-      ${renderResultQualityPanel(result)}
       <div class="result-viewer-dock">
         <div class="result-viewer-count">
           <span>${escapeHtml(display?.code || scheme?.code || "RESULT")}</span>
@@ -431,112 +415,39 @@ function renderResultViewer() {
   `;
 }
 
-function getResultQualityAudit(result) {
-  const audit = result?.metadata?.qualityAudit;
-  if (!audit || typeof audit !== "object" || audit.version !== "result-quality-audit.v1") return null;
-  const findings = Array.isArray(audit.findings) ? audit.findings : [];
-  const summary = ["pass", "review", "warning"].includes(audit.summary) ? audit.summary : "review";
-  return { ...audit, summary, findings };
-}
-
-function resultQualityTone(summary) {
-  if (summary === "warning") return "warning";
-  if (summary === "review") return "review";
-  return "pass";
-}
-
-function resultQualityLabel(audit) {
-  if (!audit) return "";
-  const count = audit.findings.length;
-  if (audit.summary === "pass") return "质检通过";
-  if (audit.summary === "warning") return `需处理 ${count}`;
-  return `需复核 ${count}`;
-}
-
-function renderResultQualityPill(result) {
-  const audit = getResultQualityAudit(result);
-  if (!audit) return "";
-  return `
-    <div class="result-quality-pill ${resultQualityTone(audit.summary)}" title="${escapeAttribute(resultQualityLabel(audit))}">
-      <span>质检</span>
-      <strong>${escapeHtml(resultQualityLabel(audit))}</strong>
-    </div>
-  `;
-}
-
-function renderResultQualityPanel(result) {
-  const audit = getResultQualityAudit(result);
-  if (!audit || audit.findings.length === 0) return "";
-  const findings = audit.findings.slice(0, 3);
-  return `
-    <div class="result-quality-panel ${resultQualityTone(audit.summary)}" aria-label="结果质检提示">
-      <div>
-        <span>Result Quality Audit</span>
-        <strong>${escapeHtml(resultQualityLabel(audit))}</strong>
-      </div>
-      <ul>
-        ${findings.map((item) => `
-          <li>
-            <strong>${escapeHtml(qualityFindingLabel(item.code))}</strong>
-            <span>${escapeHtml(item.recommendation || item.message || item.code)}</span>
-          </li>
-        `).join("")}
-      </ul>
-    </div>
-  `;
-}
-
-function qualityFindingLabel(code) {
-  return {
-    "icon-rounded-mask-risk": "图标容器",
-    "icon-edge-text-mark-risk": "图标边缘标记",
-    "logo-text-accuracy-review": "Logo 字形",
-    "announcement-copy-safe-review": "文案安全区",
-    "collab-missing-partner-brand-logo": "联名标识",
-    "target-aspect-ratio-review": "尺寸比例",
-    "local-overlay-fallback-applied": "本地兜底",
-  }[code] || "质检提示";
-}
-
 function getResultPreviewUrl(result) {
   const mockPreviewUrl = typeof result?.metadata?.mockPreviewUrl === "string" ? result.metadata.mockPreviewUrl : "";
   if (mockPreviewUrl) return mockPreviewUrl;
-  if (result?.metadata?.source === "mock-provider") return "/mock-results/pizza-poster-preview.svg";
   if (result?.metadata?.resultFile?.storageKey) return getResultDownloadUrl(result, { inline: true });
   if (typeof result?.thumbnailUrl === "string" && result.thumbnailUrl) return result.thumbnailUrl;
   if (typeof result?.assetUrl === "string" && result.assetUrl) return result.assetUrl;
+  if (result?.metadata?.source === "mock-provider") return "/mock-results/pizza-poster-preview.svg";
   return "";
 }
 
 function getResultDownloadUrlForViewer(result) {
   const mockPreviewUrl = typeof result?.metadata?.mockPreviewUrl === "string" ? result.metadata.mockPreviewUrl : "";
   if (mockPreviewUrl) return mockPreviewUrl;
-  if (result?.metadata?.source === "mock-provider") return "/mock-results/pizza-poster-preview.svg";
   if (result?.metadata?.resultFile?.storageKey) return getResultDownloadUrl(result);
   if (typeof result?.assetUrl === "string" && result.assetUrl) return result.assetUrl;
   if (typeof result?.thumbnailUrl === "string" && result.thumbnailUrl) return result.thumbnailUrl;
+  if (result?.metadata?.source === "mock-provider") return "/mock-results/pizza-poster-preview.svg";
   return "";
 }
 
 function renderResultActionButton(result, action, label) {
   const active = isResultOperationActive(action, result.id);
   const route = resolveResultOperationRoute(action, state.provider);
-  const activeMode = modeSpecs[result.mode] || modeSpecs[state.activeMode] || { id: result.mode || state.activeMode };
-  const liveGate = getLiveGateViewModel(activeMode);
-  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
-  const disabledTitle = liveBlocked
-    ? liveGate.blockers?.[0]?.message || "请先确认真实生成保护，再调用外部模型服务。"
-    : route.title;
   return `
     <button
-      class="${active ? "is-active" : ""} ${liveBlocked ? "is-live-blocked" : ""} ${route.supported ? "is-native-route" : "is-unsupported-route"}"
+      class="${active ? "is-active" : ""} ${route.supported ? "is-native-route" : "is-unsupported-route"}"
       type="button"
       data-result-action="${action}"
       data-result-id="${result.id}"
       data-route-provider="${escapeHtml(route.providerId)}"
-      title="${escapeHtml(disabledTitle)}"
-      aria-label="${escapeHtml(disabledTitle)}"
-      ${route.supported && !liveBlocked ? "" : "disabled"}
+      title="${escapeHtml(route.title)}"
+      aria-label="${escapeHtml(route.title)}"
+      ${route.supported ? "" : "disabled"}
     >${active ? "已入队" : label}</button>
   `;
 }
@@ -546,20 +457,21 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
   const confirmingDelete = state.schemeDeleteConfirmId === scheme.id;
   const schemeGeneration = getSchemeGenerationStatus(activeMode, scheme.id);
   const imageGeneration = getImageGenerationStatus(activeMode, scheme.id);
-  const liveGate = getLiveGateViewModel(activeMode);
-  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
-  const liveBlockedTitle = liveBlocked
-    ? liveGate.blockers?.[0]?.message || "先确认真实生成保护，再调用外部模型服务"
-    : "";
+  const imageFailure = getImageFailureStatus(activeMode, scheme.id);
   const rendering = scheme.status === "loading" || imageGeneration.active;
   const refreshing = schemeGeneration.active;
-  const refreshDisabled = refreshing || rendering || liveBlocked || state.submission?.status === "submitting";
-  const renderDisabled = rendering || liveBlocked;
-  const hasPlanMedia = scheme.status === "failed" || schemeResults.some((result) => getResultPreviewUrl(result));
+  const refreshDisabled = refreshing || rendering;
+  const renderDisabled = rendering;
+  const imageProgressLabel = rendering && imageGeneration.total
+    ? `${imageGeneration.completed || 0}/${imageGeneration.total}`
+    : "";
+  const hasPlanMedia = scheme.status === "failed" || imageFailure.failed || schemeResults.some((result) => getResultPreviewUrl(result));
   const actionLabel = rendering
     ? "生成中"
     : scheme.status === "failed"
       ? "重试"
+      : imageFailure.failed
+        ? "重试出图"
       : activeMode.id === "logo"
         ? "生成标识"
         : activeMode.id === "icon"
@@ -578,18 +490,15 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
           data-action="refresh-scheme"
           data-scheme-refresh-id="${escapeHtml(scheme.id)}"
           aria-label="刷新这个方案"
-          title="${escapeAttribute(liveBlockedTitle || "刷新这个方案")}"
+          title="刷新这个方案"
           ${refreshDisabled ? "disabled" : ""}
         >${refreshing ? `<span class="button-spinner" aria-hidden="true"></span>` : "&#8635;"}</button>
       </header>
 
-      <div class="plan-brief-strip">
-        <strong>${escapeHtml(display.primary)}</strong>
-        <small>${escapeHtml(display.secondary)}</small>
-      </div>
+      ${renderPlanBriefStrip(display)}
       ${state.copyVisible ? renderTextBlocks(display) : ""}
 
-      ${renderPlanImageArea(activeMode, scheme, display, schemeResults)}
+      ${renderPlanImageArea(activeMode, scheme, display, schemeResults, imageFailure)}
 
       <footer>
         ${renderSchemeVersionPager(scheme, schemeResults)}
@@ -603,14 +512,13 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
             title="删除方案"
           >${confirmingDelete ? "确认删除" : "删除"}</button>
           <button
-            class="render-button ${rendering ? "loading" : ""} ${liveBlocked ? "is-live-blocked" : ""}"
+            class="render-button ${rendering ? "loading" : ""}"
             type="button"
             data-action="submit-generation"
             data-scheme-id="${escapeHtml(scheme.id)}"
-            title="${escapeAttribute(liveBlockedTitle)}"
             ${renderDisabled ? "disabled" : ""}
           >
-            ${rendering ? `<span class="button-spinner" aria-hidden="true"></span><span>${actionLabel}</span>` : actionLabel}
+            ${rendering ? `<span class="button-spinner" aria-hidden="true"></span><span>${actionLabel}</span>${imageProgressLabel ? `<strong>${imageProgressLabel}</strong>` : ""}` : actionLabel}
           </button>
         </div>
       </footer>
@@ -618,22 +526,40 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
   `;
 }
 
-function renderPlanImageArea(activeMode, scheme, display, schemeResults) {
+function renderPlanBriefStrip(display) {
+  const primary = String(display.primary || "").trim() || "方案要点";
+  const secondary = normalizeBriefSecondaryLabel(display.secondary);
+  return `
+    <div class="plan-brief-strip">
+      <strong>${escapeHtml(primary)}</strong>
+      ${secondary ? `<small>${escapeHtml(secondary)}</small>` : ""}
+    </div>
+  `;
+}
+
+function normalizeBriefSecondaryLabel(value) {
+  const text = String(value || "").trim();
+  if (!text || text.toLowerCase() === "custom") return "";
+  return text;
+}
+
+function renderPlanImageArea(activeMode, scheme, display, schemeResults, imageFailure = { failed: false }) {
   const variantIndex = getSelectedSchemeVariantIndex(scheme.id);
   const primaryResult = schemeResults[variantIndex] || schemeResults.find((result) => getResultPreviewUrl(result)) || schemeResults[0];
   const previewUrl = primaryResult ? getResultPreviewUrl(primaryResult) : "";
+  const orientation = primaryResult ? getResultOrientation(primaryResult) : "";
 
   if (previewUrl && primaryResult) {
     return `
       <div
-        class="plan-image-frame has-image clickable"
+        class="plan-image-frame has-image clickable ${escapeHtml(orientation)}"
         data-action="open-result-viewer"
         data-result-id="${escapeHtml(primaryResult.id)}"
         role="button"
         tabindex="0"
         aria-label="查看大图"
       >
-        <img src="${previewUrl}" alt="${escapeHtml(display.title)}" width="640" height="360" loading="lazy">
+        <img src="${previewUrl}" alt="${escapeHtml(display.title)}" width="${escapeHtml(primaryResult.width || 640)}" height="${escapeHtml(primaryResult.height || 360)}" loading="lazy">
         <span class="plan-image-size">${escapeHtml(formatResultSize(primaryResult))}</span>
         <div class="result-preview-actions plan-preview-actions">
           ${renderPreviewIconButton(primaryResult.id, "view")}
@@ -648,6 +574,15 @@ function renderPlanImageArea(activeMode, scheme, display, schemeResults) {
       <div class="plan-image-frame plan-image-state failed">
         <strong>方案生成失败</strong>
         <small>${escapeHtml(display.brief || "Provider 暂时不可用，请重试生成方案。")}</small>
+      </div>
+    `;
+  }
+
+  if (imageFailure.failed) {
+    return `
+      <div class="plan-image-frame plan-image-state failed compact">
+        <strong>出图失败</strong>
+        <small>${escapeHtml(imageFailure.message || "图片生成暂时失败，请稍后重试。")}</small>
       </div>
     `;
   }
@@ -672,6 +607,15 @@ function renderSchemeVersionPager(scheme, schemeResults) {
 function getSelectedSchemeVariantIndex(schemeId) {
   const rawValue = state.selectedSchemeVariants?.[schemeId];
   return Number.isFinite(rawValue) ? Math.max(0, Math.floor(rawValue)) : 0;
+}
+
+function getResultOrientation(result) {
+  const width = Number(result?.width || 0);
+  const height = Number(result?.height || 0);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return "is-landscape";
+  if (height > width * 1.2) return "is-portrait";
+  if (width > height * 1.2) return "is-landscape";
+  return "is-square";
 }
 
 function groupResultsByScheme(results) {
@@ -942,8 +886,8 @@ const schemeDisplayCopy = {
 
 function getSchemeDisplay(activeMode, scheme) {
   if (state.workspaceLoadStatus !== "static") {
-    const title = localizeSchemeTitle(scheme.title);
-    const primary = localizeSchemeTitle(scheme.zh || scheme.title || "");
+    const title = localizeSchemeTitle(scheme.title, activeMode?.id);
+    const primary = String(scheme.zh || "").trim() || localizeSchemeTitle(scheme.title, activeMode?.id);
     const secondary = localizeSchemeSubtitle(scheme.en || scheme.platform || "");
     const brief = localizeSchemeBrief(scheme.brief || "");
     const prompt = localizeSchemePrompt(scheme.prompt || "");
@@ -951,7 +895,7 @@ function getSchemeDisplay(activeMode, scheme) {
     const promptEn = localizeSchemePrompt(scheme.promptEn || "");
     return {
       code: scheme.code || "ART",
-      title: title || "生成素材",
+      title: title || `${getModeName(activeMode?.id)}设计方案`,
       primary: primary || "宣发素材",
       secondary: secondary || "生产可用",
       brief: brief || "暂无方案说明。",
@@ -976,13 +920,69 @@ function getSchemeDisplay(activeMode, scheme) {
   };
 }
 
-function localizeSchemeTitle(value) {
+function localizeSchemeTitle(value, modeId = "poster") {
   const text = String(value || "").trim();
   const normalized = text.toLowerCase();
   if (normalized === "poster production direction") return "海报生产方向";
   if (normalized === "from brief to batch output") return "从创意到批量出图";
   if (normalized === "poster campaign result") return "海报生成结果";
-  return text;
+  if (containsCjk(text)) return text;
+
+  const knownTitles = {
+    "comic panel: oven portal ambush": "漫画分镜：烤炉传送门突袭",
+    "oven portal ambush": "烤炉传送门突袭",
+    "break in. cook out": "破门开烤",
+    "bake the wild": "烘焙荒野",
+  };
+  if (knownTitles[normalized]) return knownTitles[normalized];
+
+  const localized = localizeEnglishSchemePhrase(text);
+  if (localized && containsCjk(localized)) return localized;
+  return {
+    poster: "海报设计方案",
+    collab: "联名视觉方案",
+    announcement: "公告视觉方案",
+    logo: "Logo 设计方案",
+    icon: "图标设计方案",
+  }[modeId] || "设计方案";
+}
+
+function containsCjk(value) {
+  return /[\u3400-\u9fff]/.test(String(value || ""));
+}
+
+function localizeEnglishSchemePhrase(value) {
+  let text = String(value || "").trim();
+  if (!text) return "";
+
+  const replacements = [
+    ["Comic Panel", "漫画分镜"],
+    ["Oven Portal", "烤炉传送门"],
+    ["Portal", "传送门"],
+    ["Ambush", "突袭"],
+    ["Kitchen Siege", "厨房围城"],
+    ["Boss Encounter", "Boss 遭遇战"],
+    ["Ingredient Heist", "食材夺取"],
+    ["Wilderness Chase", "荒野追逐"],
+    ["Restaurant Defense", "餐厅防线"],
+    ["Victory Feast", "胜利盛宴"],
+    ["VIP Demand", "VIP 订单压力"],
+    ["Break In", "破门而入"],
+    ["Cook Out", "开火烹制"],
+    ["Panel", "分镜"],
+    ["Portal", "传送门"],
+    ["Oven", "烤炉"],
+    ["Wild", "荒野"],
+  ];
+
+  for (const [from, to] of replacements) {
+    text = text.replace(new RegExp(escapeRegExp(from), "gi"), to);
+  }
+  return text.replace(/\s*:\s*/g, "：").replace(/\s{2,}/g, " ").trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function localizeSchemeSubtitle(value) {

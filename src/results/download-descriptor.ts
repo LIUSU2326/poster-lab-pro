@@ -106,16 +106,6 @@ export function createResultDownloadDescriptor(input: {
     height: providerAsset?.height || parsedResult.height,
   };
 
-  if (parsedResult.assetUrl) {
-    return ResultDownloadDescriptorSchema.parse({
-      ...base,
-      available: true,
-      source: "assetUrl",
-      url: parsedResult.assetUrl,
-      message: "Result is available from its stored asset URL.",
-    });
-  }
-
   if (resultFile) {
     return ResultDownloadDescriptorSchema.parse({
       ...base,
@@ -126,6 +116,16 @@ export function createResultDownloadDescriptor(input: {
       byteSize: resultFile.byteSize,
       ...(resultFile.publicUrl ? { url: resultFile.publicUrl } : {}),
       message: "Result is available from persisted local file storage.",
+    });
+  }
+
+  if (parsedResult.assetUrl) {
+    return ResultDownloadDescriptorSchema.parse({
+      ...base,
+      available: true,
+      source: "assetUrl",
+      url: parsedResult.assetUrl,
+      message: "Result is available from its stored asset URL.",
     });
   }
 

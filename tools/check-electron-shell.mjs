@@ -14,6 +14,8 @@ function read(filePath) {
 const pkg = read("package.json");
 const main = read("electron/main.cjs");
 const preload = read("electron/preload.cjs");
+const desktopLauncher = read("launch-poster-lab-desktop.ps1");
+const desktopCmd = read("Poster Lab Pro Desktop.cmd");
 const roadmap = read("ROADMAP.md");
 const decisions = read("DECISIONS.md");
 const testing = read("TESTING.md");
@@ -22,6 +24,9 @@ for (const token of [
   "BrowserWindow",
   "resolveNextTarget",
   "spawnNextDev",
+  "devNodeRuntimePath",
+  "nextDevCliPath",
+  "Next dev CLI is missing",
   "waitForNext",
   "configureLocalSessionProxy",
   "proxyBypassRules",
@@ -38,6 +43,23 @@ for (const token of [
 
 for (const token of ["contextBridge", "posterLabDesktop", "appPath", "resolveDesktopAppPath", "onNextExit"]) {
   if (!preload.includes(token)) issues.push(`electron/preload.cjs: missing ${token}`);
+}
+
+for (const token of [
+  ".next\\standalone\\server.js",
+  "Sync-PosterLabStandaloneAssets",
+  "Start-PosterLabProductionService",
+  "POSTER_LAB_DESKTOP_URL",
+]) {
+  if (!desktopLauncher.includes(token)) issues.push(`launch-poster-lab-desktop.ps1: missing ${token}`);
+}
+
+if (desktopLauncher.includes('Start-Process -FilePath "npm.cmd" -ArgumentList @("run", "dev:next")')) {
+  issues.push("launch-poster-lab-desktop.ps1: desktop launcher must not start Next dev/HMR");
+}
+
+if (!desktopCmd.includes("launch-poster-lab-desktop.ps1")) {
+  issues.push("Poster Lab Pro Desktop.cmd: must delegate to launch-poster-lab-desktop.ps1");
 }
 
 for (const token of [

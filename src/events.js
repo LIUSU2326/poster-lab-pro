@@ -1,15 +1,14 @@
 import { state, ensureSelectedResult, ensureSelectedScheme, queueResultOperation, getRuntimeWorkspaceSnapshot } from './state.js';
-import { submitGenerationDraft } from './form-binding.js';
-import { runManualLiveTestForWorkbench } from './manual-live-test-client.js';
+import { cancelActiveGenerationDraft, submitGenerationDraft } from './form-binding.js';
 import { runResultOperationForWorkbench } from './result-operation-client.js';
 import { deleteResultForWorkbench } from './result-management-client.js';
 import { simulateWorkbenchAssetUpload } from './asset-library-client.js';
 import { clearGeneratedSchemesForWorkbench, deleteGeneratedSchemeForWorkbench, resetGeneratedSchemeForWorkbench } from './scheme-management-client.js';
 import { getArchiveRows } from './data/workspace-adapters.js';
 import { modeSpecs } from './data/modes.js';
-import { getLiveGateViewModel } from './data/live-gate-view-model.js';
-import { setGenerationFormChoice, updateGenerationFormField } from './generation-form-runtime.js';
+import { getActiveGenerationFormValues, setGenerationFormChoice, updateGenerationFormField } from './generation-form-runtime.js';
 import {
+  activateProviderCredentialForWorkbench,
   loadProviderCredentialStatusForWorkbench,
   revokeProviderCredentialForWorkbench,
   saveProviderCredentialForWorkbench,
@@ -22,6 +21,7 @@ import { saveLocalProviderPreferences } from './local-draft-store.js';
 const LEFT_PANEL_MIN = 280;
 const LEFT_PANEL_MAX = 520;
 const LEFT_PANEL_COLLAPSE_AT = 236;
+let globalKeyboardBound = false;
 
 function persistProviderPreferences() {
   saveLocalProviderPreferences(state);
@@ -43,7 +43,7 @@ export function bindEvents(render) {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextView = button.dataset.view;
-      state.view = nextView === "archive" || nextView === "results" || nextView === "schemes"
+      state.view = nextView === "archive" || nextView === "schemes"
         ? nextView
         : nextView === "project-library"
           ? state.view === "project-library" ? "schemes" : "project-library"
@@ -81,7 +81,6 @@ export function bindEvents(render) {
       if (event.target?.closest?.("a, button, [data-action]")) return;
       state.selectedResult = card.dataset.resultId;
       state.selectedResultUserSet = true;
-      state.view = "results";
       state.resultViewerOpen = true;
       render();
     });
@@ -90,7 +89,6 @@ export function bindEvents(render) {
         event.preventDefault();
         state.selectedResult = card.dataset.resultId;
         state.selectedResultUserSet = true;
-        state.view = "results";
         state.resultViewerOpen = true;
         render();
       }
@@ -133,10 +131,11 @@ export function bindEvents(render) {
   bindProviderModelControls(render);
   bindArchiveControls(render);
 
-  bindLiveGateControls(render);
   bindGenerationFormControls(render);
   bindResizeDividers(render);
   bindSettingsResize();
+  bindProviderKeyForms();
+  bindGlobalKeyboardShortcuts(render);
 }
 
 function bindActionControls(render, root = document) {
@@ -152,23 +151,41 @@ function bindActionControls(render, root = document) {
   });
 }
 
+function bindProviderKeyForms(root = document) {
+  root.querySelectorAll("[data-provider-key-form]").forEach((form) => {
+    form.addEventListener("submit", (event) => event.preventDefault());
+  });
+}
+
+function bindGlobalKeyboardShortcuts(render) {
+  if (globalKeyboardBound) return;
+  globalKeyboardBound = true;
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (state.settingsOpen) {
+      state.settingsOpen = false;
+      event.preventDefault();
+      render();
+      return;
+    }
+    if (state.resultViewerOpen) {
+      state.resultViewerOpen = false;
+      event.preventDefault();
+      render();
+      return;
+    }
+    if (state.generationChoiceOpen) {
+      state.generationChoiceOpen = false;
+      event.preventDefault();
+      render();
+    }
+  });
+}
+
 async function handleActionControl(control, event, render) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   const action = control.dataset.action;
-  if (generationActionRequiresLiveGate(action)) {
-    const gate = getBlockedGenerationLiveGate();
-    if (gate) {
-      state.submission = createLocalServiceError(
-        "live_gate_blocked",
-        gate.blockers?.[0]?.message || "请先开启真实生成保护，再调用外部模型服务。",
-      );
-      state.taskOpen = true;
-      state.settingsOpen = true;
-      render();
-      return;
-    }
-  }
   if (action === "toggle-theme") state.theme = state.theme === "light" ? "dark" : "light";
   if (action === "toggle-copy") state.copyVisible = !state.copyVisible;
   if (action === "toggle-task-panel") {
@@ -210,6 +227,8 @@ async function handleActionControl(control, event, render) {
       return;
     } else {
       const providerSettings = readProviderSettingsFromSheet(providerId);
+      const label = readProviderKeyLabel(providerId);
+      const keyRef = currentProviderCredentialKeyRef(providerId);
       state.providerCredential = {
         ...state.providerCredential,
         status: "saving",
@@ -217,10 +236,51 @@ async function handleActionControl(control, event, render) {
         error: null,
       };
       refreshSettingsLayer(render);
-      await saveProviderCredentialForWorkbench({ providerId, apiKey, ...providerSettings });
+      await saveProviderCredentialForWorkbench({ providerId, apiKey, keyRef, label, ...providerSettings });
       refreshSettingsLayer(render);
       return;
     }
+  }
+  if (action === "save-provider-key-profile") {
+    const providerId = control.dataset.providerId || state.provider;
+    const input = document.querySelector(`[data-provider-api-key="${providerId}"]`);
+    const apiKey = input?.value?.trim() || "";
+    if (!apiKey) {
+      state.providerCredential = {
+        ...state.providerCredential,
+        status: "error",
+        providerId,
+        error: "请输入新的 API Key 后再添加 Key 槽位。",
+      };
+      refreshSettingsLayer(render);
+      return;
+    }
+
+    const providerSettings = readProviderSettingsFromSheet(providerId);
+    const label = readProviderKeyLabel(providerId, `Key ${Date.now().toString(36).slice(-4)}`);
+    const keyRef = createProviderCredentialKeyRef(providerId);
+    state.providerCredential = {
+      ...state.providerCredential,
+      status: "saving",
+      providerId,
+      error: null,
+    };
+    refreshSettingsLayer(render);
+    await saveProviderCredentialForWorkbench({ providerId, apiKey, keyRef, label, ...providerSettings });
+    state.providerConnection = getIdleProviderConnection(providerId);
+    refreshSettingsLayer(render);
+    return;
+  }
+  if (action === "activate-provider-key") {
+    const providerId = control.dataset.providerId || state.provider;
+    const keyRef = control.dataset.keyRef || "";
+    if (!keyRef) return;
+    await activateProviderCredentialForWorkbench({ providerId, keyRef });
+    if (state.provider === providerId) {
+      state.providerConnection = getIdleProviderConnection(providerId);
+    }
+    refreshSettingsLayer(render);
+    return;
   }
   if (action === "test-provider-connection") {
     const providerId = control.dataset.providerId || state.provider;
@@ -241,6 +301,8 @@ async function handleActionControl(control, event, render) {
       }
 
       const providerSettings = readProviderSettingsFromSheet(providerId);
+      const label = readProviderKeyLabel(providerId);
+      const keyRef = currentProviderCredentialKeyRef(providerId);
       state.providerCredential = {
         ...state.providerCredential,
         status: "saving",
@@ -248,7 +310,7 @@ async function handleActionControl(control, event, render) {
         error: null,
       };
       refreshSettingsLayer(render);
-      const saveEnvelope = await saveProviderCredentialForWorkbench({ providerId, apiKey, ...providerSettings });
+      const saveEnvelope = await saveProviderCredentialForWorkbench({ providerId, apiKey, keyRef, label, ...providerSettings });
       if (!saveEnvelope.ok) {
         refreshSettingsLayer(render);
         return;
@@ -264,7 +326,7 @@ async function handleActionControl(control, event, render) {
       message: "正在测试供应商连接...",
     };
     refreshSettingsLayer(render);
-    await testProviderConnectionForWorkbench({ providerId });
+    await testProviderConnectionForWorkbench({ providerId, keyRef: currentProviderCredentialKeyRef(providerId) });
     refreshSettingsLayer(render);
     return;
   }
@@ -279,6 +341,7 @@ async function handleActionControl(control, event, render) {
     refreshSettingsLayer(render);
     await revokeProviderCredentialForWorkbench({
       providerId,
+      keyRef: control.dataset.keyRef || currentProviderCredentialKeyRef(providerId),
     });
     if (state.provider === providerId) {
       state.providerConnection = getIdleProviderConnection(providerId);
@@ -287,6 +350,7 @@ async function handleActionControl(control, event, render) {
     return;
   }
   if (action === "generate-schemes") {
+    const schemeCountOverride = getCurrentSchemeCountOverride();
     const clearEnvelope = await clearGeneratedSchemesForWorkbench({ modeId: state.activeMode });
     if (!clearEnvelope.ok) {
       state.submission = createLocalServiceError("generate_schemes_clear_failed", clearEnvelope.error?.message || "清空旧方案失败。");
@@ -297,12 +361,22 @@ async function handleActionControl(control, event, render) {
     }
     const submissionPromise = submitGenerationDraft({
       schemeStrategy: "regenerate",
+      ...(schemeCountOverride ? { schemeCountOverride } : {}),
       renderImages: false,
     });
     state.view = "schemes";
     state.taskOpen = false;
     render();
     finishSubmission(await submissionPromise);
+    render();
+    return;
+  }
+  if (action === "cancel-generation") {
+    const cancelPromise = cancelActiveGenerationDraft();
+    state.taskOpen = false;
+    render();
+    await cancelPromise;
+    state.taskOpen = false;
     render();
     return;
   }
@@ -353,12 +427,12 @@ async function handleActionControl(control, event, render) {
       outputOverrides: outputOverridesForResult(result),
       renderImages: true,
     });
-    state.view = "results";
+    state.view = "schemes";
     state.taskOpen = false;
     render();
     finishSubmission(await submissionPromise);
     selectNewestResultForScheme(result.schemeId, result.id);
-    state.view = "results";
+    state.view = "schemes";
     state.resultViewerOpen = Boolean(state.selectedResult);
     render();
     return;
@@ -392,9 +466,10 @@ async function handleActionControl(control, event, render) {
           renderImages: true,
         };
       } else if (state.activeMode === "poster") {
-        state.generationChoiceOpen = true;
-        render();
-        return;
+        generationOptions = {
+          schemeStrategy: "continue",
+          renderImages: true,
+        };
       } else {
         generationOptions = {
           schemeStrategy: "continue",
@@ -451,17 +526,8 @@ async function handleActionControl(control, event, render) {
   if (action === "apply-agnes-core-route") {
     applyAgnesCoreRoute();
     persistProviderPreferences();
-    refreshSettingsLayer(render);
+    renderPreservingSettings(render);
     return;
-  }
-  if (action === "run-manual-live-test") {
-    const liveTestPromise = runManualLiveTestForWorkbench();
-    state.taskOpen = true;
-    render();
-    await liveTestPromise;
-    state.view = "schemes";
-    state.selectedResultUserSet = false;
-    ensureSelectedResult();
   }
   if (action === "simulate-asset-upload") {
     const assetPromise = simulateWorkbenchAssetUpload({
@@ -474,6 +540,10 @@ async function handleActionControl(control, event, render) {
   if (action === "rotate-direction-library") {
     const modeId = control.dataset.directionMode || state.activeMode;
     const current = state.directionLibraryOffset?.[modeId] || 0;
+    if (modeSpecs[modeId]) {
+      state.activeMode = modeId;
+      state.view = "schemes";
+    }
     state.directionLibraryOffset = {
       ...(state.directionLibraryOffset || {}),
       [modeId]: current + 1,
@@ -491,8 +561,9 @@ async function handleActionControl(control, event, render) {
     };
     state.providerRoutePlans = [...plans, plan];
     state.providerRoutePlan = plan.id;
+    state.providerRoutingOpen = true;
     persistProviderPreferences();
-    refreshSettingsLayer(render);
+    renderPreservingSettings(render);
     return;
   }
   if (action === "rename-provider-route-plan") {
@@ -503,8 +574,9 @@ async function handleActionControl(control, event, render) {
       state.providerRoutePlans = (state.providerRoutePlans || []).map((plan) =>
         plan.id === planId ? { ...plan, name: nextName.slice(0, 24) } : plan,
       );
+      state.providerRoutingOpen = true;
       persistProviderPreferences();
-      refreshSettingsLayer(render);
+      renderPreservingSettings(render);
       return;
     }
   }
@@ -513,8 +585,9 @@ async function handleActionControl(control, event, render) {
     if (plans.length > 1) {
       state.providerRoutePlans = plans.filter((plan) => plan.id !== state.providerRoutePlan);
       state.providerRoutePlan = state.providerRoutePlans[0]?.id || "standard";
+      state.providerRoutingOpen = true;
       persistProviderPreferences();
-      refreshSettingsLayer(render);
+      renderPreservingSettings(render);
       return;
     }
   }
@@ -540,7 +613,7 @@ async function handleActionControl(control, event, render) {
       },
     };
     persistProviderPreferences();
-    refreshSettingsLayer(render);
+    renderPreservingSettings(render);
     return;
   }
   if (action === "delete-provider-custom-model") {
@@ -555,7 +628,7 @@ async function handleActionControl(control, event, render) {
     };
     state.providerModelOverrides = removeProviderModelOverrideValue(providerId, modelId);
     persistProviderPreferences();
-    refreshSettingsLayer(render);
+    renderPreservingSettings(render);
     return;
   }
   if (action === "project-library-save-current") {
@@ -590,7 +663,6 @@ async function handleActionControl(control, event, render) {
       state.selectedResult = control.dataset.resultId;
       state.selectedResultUserSet = true;
     }
-    if (control.dataset.resultView === "results") state.view = "results";
     state.resultViewerOpen = true;
   }
   if (action === "goto-result-scheme") {
@@ -609,7 +681,7 @@ async function handleActionControl(control, event, render) {
     if (state.resultDeleteConfirmId !== resultId) {
       state.resultDeleteConfirmId = resultId;
       state.schemeDeleteConfirmId = "";
-      state.view = "results";
+      state.view = "schemes";
       render();
       return;
     }
@@ -619,7 +691,7 @@ async function handleActionControl(control, event, render) {
       state.taskOpen = false;
     }
     state.resultDeleteConfirmId = "";
-    state.view = "results";
+    state.view = "schemes";
     render();
     return;
   }
@@ -629,24 +701,6 @@ async function handleActionControl(control, event, render) {
   }
   event.stopPropagation();
   render();
-}
-
-function generationActionRequiresLiveGate(action) {
-  return [
-    "generate-schemes",
-    "refresh-scheme",
-    "regenerate-result",
-    "submit-generation",
-    "retry-failed-images",
-    "confirm-generation-choice",
-  ].includes(action);
-}
-
-function getBlockedGenerationLiveGate() {
-  if (state.apiMode !== "http") return null;
-  const activeMode = modeSpecs[state.activeMode] || modeSpecs.poster;
-  const gate = getLiveGateViewModel(activeMode);
-  return gate.allowed ? null : gate;
 }
 
 function hasExistingPosterProduction() {
@@ -696,6 +750,12 @@ function finishSubmission(submission) {
     state.taskOpen = true;
     state.settingsOpen = false;
   }
+}
+
+function getCurrentSchemeCountOverride() {
+  const value = Number(getActiveGenerationFormValues()?.outputSettings?.schemeCount);
+  if (!Number.isFinite(value)) return null;
+  return Math.max(1, Math.min(20, Math.round(value)));
 }
 
 function createLocalServiceError(reason, message) {
@@ -794,7 +854,7 @@ function findConfiguredReferenceAnalysisProvider() {
       || (state.providerCredential.providerId === providerId && state.providerCredential.configured)
       || (state.providerConnection.providerId === providerId && state.providerConnection.ok);
   };
-  return ["google", "openai", "aigocode", "claude", "qwen"].find(configured) || "";
+  return ["google", "openai", "aigocode", "claude", "qwen", "mimo"].find(configured) || "";
 }
 
 function defaultReferenceAnalysisModel(providerId, slot) {
@@ -804,6 +864,7 @@ function defaultReferenceAnalysisModel(providerId, slot) {
   if (providerId === "google") return "gemini-2.5-flash";
   if (providerId === "claude") return "claude-sonnet-4-6";
   if (providerId === "qwen") return "qwen3.6-plus";
+  if (providerId === "mimo") return "mimo-v2-omni";
   return "gpt-5.5";
 }
 
@@ -840,7 +901,7 @@ async function testCurrentProviderRoutePlan(render) {
     const envelope = await testProviderModelConnectionForWorkbench({
       providerId: slot.providerId,
       model: slot.model,
-      strictModel: true,
+      strictModel: false,
       verifyModels: true,
       timeoutMs: 12000,
     });
@@ -881,6 +942,50 @@ async function testCurrentProviderRoutePlan(render) {
 function bindProviderControls(render, root = document) {
   root.querySelectorAll("[data-provider]").forEach((button) => {
     button.addEventListener("click", () => handleProviderControl(button, render));
+  });
+  bindProviderReorderControls(render, root);
+}
+
+function bindProviderReorderControls(render, root = document) {
+  root.querySelectorAll("[data-provider-order-item]").forEach((button) => {
+    button.addEventListener("dragstart", (event) => {
+      const providerId = button.dataset.providerOrderItem;
+      if (!providerId) return;
+      event.dataTransfer?.setData("text/plain", providerId);
+      event.dataTransfer?.setData("application/x-poster-provider", providerId);
+      event.dataTransfer.effectAllowed = "move";
+      button.classList.add("dragging");
+    });
+    button.addEventListener("dragend", () => {
+      button.classList.remove("dragging");
+      root.querySelectorAll("[data-provider-order-item].drag-over").forEach((item) => item.classList.remove("drag-over"));
+    });
+    button.addEventListener("dragover", (event) => {
+      const types = Array.from(event.dataTransfer?.types || []);
+      if (!types.includes("application/x-poster-provider")) return;
+      event.preventDefault();
+      button.classList.add("drag-over");
+      event.dataTransfer.dropEffect = "move";
+    });
+    button.addEventListener("dragleave", () => {
+      button.classList.remove("drag-over");
+    });
+    button.addEventListener("drop", (event) => {
+      const fromProvider = event.dataTransfer?.getData("application/x-poster-provider")
+        || event.dataTransfer?.getData("text/plain");
+      const toProvider = button.dataset.providerOrderItem;
+      if (!fromProvider || !toProvider || fromProvider === toProvider) return;
+      event.preventDefault();
+      const currentOrder = Array.from(root.querySelectorAll("[data-provider-order-item]"))
+        .map((item) => item.dataset.providerOrderItem)
+        .filter(Boolean);
+      const nextOrder = currentOrder.filter((providerId) => providerId !== fromProvider);
+      const targetIndex = nextOrder.indexOf(toProvider);
+      nextOrder.splice(targetIndex < 0 ? nextOrder.length : targetIndex, 0, fromProvider);
+      state.providerOrder = nextOrder;
+      persistProviderPreferences();
+      refreshSettingsLayer(render);
+    });
   });
 }
 
@@ -955,11 +1060,32 @@ function readProviderSettingsFromSheet(providerId) {
   };
 }
 
+function readProviderKeyLabel(providerId, fallback = "默认 Key") {
+  return document.querySelector(`[data-provider-key-label="${providerId}"]`)?.value?.trim().slice(0, 80) || fallback;
+}
+
+function currentProviderCredentialKeyRef(providerId) {
+  return state.workspaceSnapshot?.providerConfigs?.[providerId]?.credentialKeyRef
+    || `${state.workspaceId}:${providerId}:default`;
+}
+
+function createProviderCredentialKeyRef(providerId) {
+  return `${state.workspaceId}:${providerId}:${Date.now().toString(36)}`;
+}
+
 function bindProviderModelControls(render, root = document) {
+  root.querySelectorAll(".model-routing-disclosure").forEach((details) => {
+    details.addEventListener("toggle", () => {
+      state.providerRoutingOpen = Boolean(details.open);
+      persistProviderPreferences();
+    });
+  });
+
   root.querySelectorAll("[data-provider-slot-provider]").forEach((control) => {
     control.addEventListener("change", () => {
       const slot = control.dataset.providerSlotProvider;
       if (!slot) return;
+      state.providerRoutingOpen = true;
       state.providerSlotRoutes = {
         ...(state.providerSlotRoutes || {}),
         [slot]: {
@@ -967,7 +1093,7 @@ function bindProviderModelControls(render, root = document) {
         },
       };
       persistProviderPreferences();
-      refreshSettingsLayer(render);
+      renderPreservingSettings(render);
     });
   });
 
@@ -984,6 +1110,7 @@ function bindProviderModelControls(render, root = document) {
         },
       };
       persistProviderPreferences();
+      renderPreservingSettings(render);
     });
   });
 
@@ -992,6 +1119,7 @@ function bindProviderModelControls(render, root = document) {
       const providerId = control.dataset.providerId || state.provider;
       const slot = control.dataset.providerModelSlot;
       if (!slot) return;
+      state.providerRoutingOpen = true;
       state.providerSlotRoutes = {
         ...(state.providerSlotRoutes || {}),
         [slot]: {
@@ -1008,6 +1136,7 @@ function bindProviderModelControls(render, root = document) {
         },
       };
       persistProviderPreferences();
+      renderPreservingSettings(render);
     });
   });
 
@@ -1015,9 +1144,10 @@ function bindProviderModelControls(render, root = document) {
     button.addEventListener("click", () => {
       const planId = button.dataset.providerRoutePlan;
       if (!planId) return;
+      state.providerRoutingOpen = true;
       state.providerRoutePlan = planId;
       persistProviderPreferences();
-      refreshSettingsLayer(render);
+      renderPreservingSettings(render);
     });
   });
 
@@ -1029,7 +1159,9 @@ function bindProviderModelControls(render, root = document) {
       state.providerRoutePlans = (state.providerRoutePlans || []).map((plan) =>
         plan.id === planId ? { ...plan, name: nextName.slice(0, 24) } : plan,
       );
-      refreshSettingsLayer(render);
+      state.providerRoutingOpen = true;
+      persistProviderPreferences();
+      renderPreservingSettings(render);
     });
   });
 
@@ -1060,6 +1192,13 @@ function removeProviderModelOverrideValue(providerId, modelId) {
   return overrides;
 }
 
+function renderPreservingSettings(render) {
+  const detailScrollTop = document.querySelector(".provider-detail")?.scrollTop || 0;
+  render();
+  const nextDetail = document.querySelector(".provider-detail");
+  if (nextDetail) nextDetail.scrollTop = detailScrollTop;
+}
+
 async function handleProviderControl(button, render) {
   const providerId = button.dataset.provider;
   if (!providerId) return;
@@ -1073,12 +1212,12 @@ async function handleProviderControl(button, render) {
   }
 
   state.providerConnection = getIdleProviderConnection(providerId);
-  refreshSettingsLayer(render);
+  renderPreservingSettings(render);
 
   await loadProviderCredentialStatusForWorkbench({ providerId });
   if (state.provider === providerId && state.settingsOpen) {
     state.providerConnection = getIdleProviderConnection(providerId);
-    refreshSettingsLayer(render);
+    renderPreservingSettings(render);
   }
 }
 
@@ -1102,6 +1241,10 @@ function refreshSettingsLayer(render) {
   }
 
   const detailScrollTop = current.querySelector(".provider-detail")?.scrollTop || 0;
+  const modelRoutingDisclosure = current.querySelector(".model-routing-disclosure");
+  if (modelRoutingDisclosure) {
+    state.providerRoutingOpen = Boolean(modelRoutingDisclosure.open);
+  }
   const wrapper = document.createElement("div");
   wrapper.innerHTML = renderSettingsSheet().trim();
   const nextLayer = wrapper.firstElementChild;
@@ -1135,6 +1278,7 @@ function refreshSettingsLayer(render) {
     const rebindRoot = activeLayer.querySelector(".settings-body") || activeLayer;
     bindActionControls(render, rebindRoot);
     bindKeyRevealControls(rebindRoot);
+    bindProviderKeyForms(rebindRoot);
     bindProviderControls(render, rebindRoot);
     bindProviderModelControls(render, rebindRoot);
   }
@@ -1255,34 +1399,6 @@ function getDownloadExtension(url) {
   if (cleanUrl.endsWith(".webp")) return "webp";
   if (cleanUrl.endsWith(".svg")) return "svg";
   return "png";
-}
-
-function bindLiveGateControls(render) {
-  document.querySelectorAll("[data-live-toggle]").forEach((control) => {
-    control.addEventListener("change", () => {
-      setLiveGateValue(control.dataset.liveToggle, Boolean(control.checked));
-      render();
-    });
-  });
-
-  document.querySelectorAll("[data-live-cost-cap]").forEach((control) => {
-    control.addEventListener("change", () => {
-      const value = Number(control.value);
-      state.liveGate.maxAcceptedCost = Number.isFinite(value) ? Math.max(0, value) : 0;
-      render();
-    });
-  });
-}
-
-function setLiveGateValue(path, value) {
-  if (!path) return;
-  const parts = path.split(".");
-  let cursor = state.liveGate;
-  for (const part of parts.slice(0, -1)) {
-    cursor[part] = cursor[part] || {};
-    cursor = cursor[part];
-  }
-  cursor[parts[parts.length - 1]] = value;
 }
 
 function bindGenerationFormControls(render) {

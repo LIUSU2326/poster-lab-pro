@@ -1,8 +1,16 @@
 # PRODUCT.md
 
-## 2026-06-05 MVP Scope Update: Live Execution Protection
+## 2026-06-05 MVP Scope Update: No User-Facing Live Generation Switch
 
-The live execution gate remains a real product safety boundary, but the user-facing surface is live generation protection. Users should understand three things before any provider call runs: an external model will be called, provider quota or cost may be consumed, and generated files will be saved locally. System checks such as API Key, network, and result storage readiness must be visible but secondary to the user confirmations.
+The workbench no longer exposes a user-facing `真实生成` switch, live generation protection panel, or manual verification route. Provider credentials, connection tests, model routing, queue execution, and result storage remain part of the normal generation flow, but generation should not be blocked by a separate real-generation confirmation surface.
+
+Product boundaries:
+
+- Do not reintroduce the `真实生成` top-bar chip, live-generation protection switch, cost-cap confirmation UI, or `确认真实生成保护` empty-state action.
+- Do not reintroduce `手动验证` / `MANUAL CHECK` controls or the manual live-test route.
+- Do not show version, branch, revision, desktop bundle path, or release path metadata as small prompt chips in the main workbench header.
+- The empty scheme board can stay visually quiet; do not show the old `还没有可展示的海报方案` card.
+- Keep normal `模型与 Key`, connection test, scheme generation, image rendering, queue status, result review, and archive export flows.
 
 ## 2026-05-28 MVP Scope Update: Scheme-First Poster Production
 
@@ -357,16 +365,16 @@ This update clarifies foundational MVP capabilities that affect the static workb
 12. 系统先生成多套设计方案 brief。
 13. 用户检查方案，锁定宣传词、角色、构图、画风或平台规格。
 14. 用户一键批量生成图片。
-15. 用户在结果画廊中筛选、收藏、下载。
-16. 用户对结果进行局部重绘、高清放大、背景移除。
-17. 用户按平台规格导出。
+15. 用户在方案卡或大图预览中查看、下载、重新生成或继续处理图片。
+16. 用户按平台规格导出。
 
 ## 工作台体验目标
 
 主工作台采用明亮中性专业创意生产台方向，并融合游戏发行后台和创意导演式画布的优点。
 
 - 使用 Figma 式三栏工作台：左侧控制区、中央画布、右侧检查器。
-- 使用 Runway 式任务和素材管理：素材、任务、结果都可追踪。
+- 使用克制的生产工具语言：界面服务动作，不把配置区写成展开的使用说明书。
+- 使用 Runway 式任务和素材管理：素材和任务可追踪，但底部 Queue 不作为常驻面板。
 - 使用 Midjourney / Magnific 式结果派生：生成结果可继续变体、放大、重绘和筛选。
 - 使用 Canva 式平台规格选择：用户按平台和用途选择尺寸，不需要记忆参数。
 - 不做营销落地页、大圆角卡片、过多渐变、玩具感或空洞科技感。
@@ -378,9 +386,9 @@ This update clarifies foundational MVP capabilities that affect the static workb
 - 左侧是生产配置区，承载项目输入、素材引用、参考图、风格、尺寸、数量、宣传词和高级参数。
 - 中央是生产板，优先展示方案卡网格、方案组结果、文本展开态和结果空状态。
 - 右侧是上下文检查器，只服务当前选中的方案或图片。
-- 顶部是全局动作区，承载项目切换、展开文本、收藏夹、档案馆、停止任务和批量渲染。
-- 任务反馈以 toast、轻量队列和卡片内状态为主，不用大面积任务面板压过中央生产板。
-- 结果管理包含收藏、归档、查看大图、下载、重新生成、变体和后处理入口。
+- 顶部是全局动作区，承载项目识别、方案/归档切换、模型配置、主题、归档导出和批量渲染。
+- 任务反馈以 toast、卡片内状态和临时状态为主，不用大面积 Queue 面板压过中央生产板。
+- 图片管理包含归档、查看大图、下载、重新生成、变体和后处理入口；不保留独立结果页作为主导航。
 
 ## MVP 范围
 

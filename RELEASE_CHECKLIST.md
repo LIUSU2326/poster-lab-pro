@@ -1,5 +1,11 @@
 # RELEASE_CHECKLIST.md
 
+## No User-Facing Live Generation Switch
+
+- Do not ship a top-bar `真实生成` chip/switch, `确认真实生成保护` path, `手动验证` / `MANUAL CHECK` control, or manual live-test route.
+- Do not show version, branch, revision, bundle path, or release path as small metadata chips in the workbench header.
+- Do not restore the old empty scheme-board card that says there is no displayable poster yet.
+
 ## Current Stable Release
 
 - Version: `1.1.0`
@@ -16,25 +22,13 @@ Run these before promoting a build:
 2. `npm run release-candidate:check`
 3. `npm run user-test-readiness:check`
 4. `npm run multimode-acceptance:check`
-5. `npm run real-acceptance:check`
-6. `npm run desktop:pack:mac`
-7. Replace `/Users/liusu/Desktop/Poster Lab Pro.app` with `release/mac/Poster Lab Pro.app`.
-8. Verify `CFBundleShortVersionString` matches the current version.
-9. Launch the desktop app and verify `http://127.0.0.1:3000` returns the workbench HTML.
-10. Verify the top bar shows the version and desktop bundle path.
-11. Verify settings shows provider setup order, connection test, live generation protection, estimated cost, and accepted cost cap.
-12. Use `USER_TESTING.md`, `MULTIMODE_ACCEPTANCE.md`, and `REAL_GENERATION_ACCEPTANCE.md` for the manual user trial.
-
-## Manual Live Generation Protection
-
-Live provider calls remain opt-in:
-
-- Saved encrypted provider credential is required.
-- Connection test must pass.
-- Live generation protection must be confirmed.
-- User must confirm live run, provider cost responsibility, external-provider execution, and result storage.
-- Accepted cost cap must be greater than or equal to estimated cost.
-- Default automated checks must not spend provider credits.
+5. `npm run desktop:pack:mac`
+6. Replace `/Users/liusu/Desktop/Poster Lab Pro.app` with `release/mac/Poster Lab Pro.app`.
+7. Verify `CFBundleShortVersionString` matches the current version.
+8. Launch the desktop app and verify `http://127.0.0.1:3000` returns the workbench HTML.
+9. Verify the top bar does not show version/path metadata chips or `真实生成`.
+10. Verify settings focuses on provider setup, connection test, and model routing.
+11. Use `USER_TESTING.md` and `MULTIMODE_ACCEPTANCE.md` for the manual user trial.
 
 ## 1.1 Stable Acceptance
 
@@ -57,9 +51,8 @@ Live provider calls remain opt-in:
 - Packaged beta.4 live validation passed for Logo (`job-logo-project-pizza-kitchen-beta4-logo-clean-redaction-mpwt2nz8`) and Announcement (`job-announcement-project-pizza-kitchen-beta4-announcement-copy-safe-mpwt6kqf`).
 - Beta.5 Collab live validation passed with synthetic partner asset `asset-collab-star-cream-partner-beta5` and job `job-collab-project-pizza-kitchen-beta5-collab-star-cream-mpwv1j6s`; the expected missing partner `brandLogo` audit stayed at review with a blank partner brand plate.
 - Beta.6 adds `npm run multimode-regression:check` as a zero-cost cross-mode gate for Poster, Icon, Logo, Announcement, and Collab prompt/provider requests; it also keeps `Mode Guardrails` preserved when long prompt packages are compacted.
-- UX/reliability gate: `npm run ux-regression:check` covers mode navigation, blocked live generation, result management, settings protection, project library, queue failure recovery, and destructive-action confirmation.
-- User Test Readiness Gate: `USER_TESTING.md` and `npm run user-test-readiness:check`; manual acceptance should run only 1-2 real generations per mode when needed.
-- Multimode Acceptance Gate: `MULTIMODE_ACCEPTANCE.md`, `npm run multimode-acceptance:check`, and the synthetic Collab partner fixture `public/mock-assets/collab-partner-sundae-ranger.svg`; no-partner Collab testing stays explicit and real generation remains bounded.
-- Real Acceptance Gate: `REAL_GENERATION_ACCEPTANCE.md` and `npm run real-acceptance:check`; Fresh real generation is manual and opt-in only, pending App live generation protection, and must not be triggered through a direct API/script path that bypasses visible safety confirmations.
+- UX/reliability gate: `npm run ux-regression:check` covers mode navigation, removed live-generation switch surfaces, result management, settings protection, project library, queue failure recovery, and destructive-action confirmation.
+- User Test Readiness Gate: `USER_TESTING.md` and `npm run user-test-readiness:check`; manual acceptance should run only the minimum generations needed for clear evidence.
+- Multimode Acceptance Gate: `MULTIMODE_ACCEPTANCE.md`, `npm run multimode-acceptance:check`, and the synthetic Collab partner fixture `public/mock-assets/collab-partner-sundae-ranger.svg`; no-partner Collab testing stays explicit and provider-spend testing remains bounded.
 - 1.1.0 front-loads Poster `KV ACTION MINI-BRIEF` and Collab partner-first dual-subject locks for compressed providers. Agnes Poster/Collab are still quality-risk modes requiring manual visual review; capability/storage success alone is not stable-quality acceptance.
 - Signed installer, auto-update, crash reporting, and a production release channel are not part of this local stable gate.

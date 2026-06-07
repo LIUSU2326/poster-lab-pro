@@ -28,6 +28,17 @@ export const StoredProviderConfigSchema = z.object({
   status: ProviderStatusSchema.default("idle"),
   hasApiKey: z.boolean().default(false),
   apiKeyMasked: z.string().max(120).default(""),
+  credentialKeyRef: z.string().min(1).max(160).optional(),
+  credentialProfiles: z
+    .array(
+      z.object({
+        keyRef: z.string().min(1).max(160),
+        label: z.string().min(1).max(80),
+        apiKeyMasked: z.string().max(120).default(""),
+        updatedAt: z.string().datetime().nullable().default(null),
+      }),
+    )
+    .default([]),
   baseUrl: z.string().url().or(z.literal("")).default(""),
   defaultModel: z.string().max(120).default(""),
   modelSlots: z.partialRecord(ProviderModelSlotSchema, z.string().min(1)).default({}),
@@ -95,6 +106,7 @@ export const WorkspaceSnapshotMetadataSchema = z.object({
   ownerId: z.string().min(1).nullable().default(null),
   backend: StorageBackendSchema.default("memory"),
   revision: z.number().int().min(1).default(1),
+  sloganDefaultMigration: z.string().min(1).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

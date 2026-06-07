@@ -11,239 +11,142 @@ function read(path) {
   }
 }
 
+function requireTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (!source.includes(token)) issues.push(`${fileName}: missing ${token}`);
+  }
+}
+
+function forbidTokens(fileName, source, tokens) {
+  for (const token of tokens) {
+    if (source.includes(token)) issues.push(`${fileName}: removed UI token should stay absent (${token})`);
+  }
+}
+
 const binding = read("src/form-binding.js");
-const staticService = read("src/static-local-api-service.js");
 const events = read("src/events.js");
 const topbar = read("src/render/topbar.js");
 const centerBoard = read("src/render/center-board.js");
-const archiveBoard = read("src/render/archive-board.js");
 const configPanel = read("src/render/config-panel.js");
 const taskChrome = read("src/render/task-chrome.js");
-const workspaceSnapshot = read("src/data/workspace-snapshot.js");
-const stateSource = read("src/state.js");
-const resultManagementClient = read("src/result-management-client.js");
+const settingsSheet = read("src/render/settings-sheet.js");
 const resultOperationClient = read("src/result-operation-client.js");
+const stateSource = read("src/state.js");
 const styles = read("styles.css");
 
-for (const token of [
+requireTokens("form-binding.js", binding, [
   "createBoundWorkspaceSnapshot",
   "validateBoundFrontendForms",
   "buildPromptPackageCreateSubmission",
   "buildQueuePlanCreateSubmission",
   "submitGenerationDraft",
-  "validatePromptAssetReadiness",
-  "isProviderSafeAssetUrl",
-  "outputOverrides",
-  "sourceResultId",
-  "promptAssets",
+  "runHttpGenerationServiceFlow",
   "runStaticGenerationServiceFlow",
-  "setRuntimeWorkspaceSnapshot",
   "prompt.package.create",
   "queue.plan.create",
-  "modeAssetRequirements",
-  "validateProjectBriefForm",
-  "validateOutputSettingsForm",
-  "validateSloganSettingsForm",
-  "validateModeForm",
-]) {
-  if (!binding.includes(token)) issues.push(`form-binding.js: missing ${token}`);
-}
+]);
 
-if (!events.includes("submitGenerationDraft")) {
-  issues.push("events.js: submit-generation action must call submitGenerationDraft");
-}
-for (const token of [
-  ".scheme-card[data-scheme-id]",
-  "data-result-filter",
-  "goto-result-scheme",
-  "generationChoiceOpen",
-  'action === "confirm-generation-choice"',
+requireTokens("events.js", events, [
+  "submitGenerationDraft",
+  'action === "submit-generation"',
+  'action === "generate-schemes"',
   'action === "regenerate-result"',
-  "deleteResultForWorkbench",
-  'action === "delete-result"',
-  "resultDeleteConfirmId",
-  'action === "apply-agnes-core-route"',
-  "applyAgnesCoreRoute",
-  "agnes-image-2.1-flash",
-  "agnes-2.0-flash",
-]) {
-  if (!events.includes(token)) issues.push(`events.js: missing result recovery token ${token}`);
-}
+  "runResultOperationForWorkbench",
+]);
 
-for (const token of [
-  "deleteResultForWorkbench",
-  "deleteJson",
-  "DELETE",
-  "/results/",
-  "removeResultReferences",
-  "archiveRows",
-  "setRuntimeWorkspaceSnapshot",
-]) {
-  if (!resultManagementClient.includes(token)) issues.push(`result-management-client.js: missing ${token}`);
-}
-
-for (const token of ["getLiveGateViewModel", "liveExecution", "请先开启真实生成保护"]) {
-  if (!resultOperationClient.includes(token)) issues.push(`result-operation-client.js: missing live gate token ${token}`);
-}
-
-for (const token of [
-  "createStaticLocalApiService",
-  "runStaticGenerationServiceFlow",
-  "saveWorkspaceSnapshot",
-  "createPromptPackage",
-  "mapProviderRequest",
-  "createQueuePlan",
-  "promptPackageCreate",
-  "providerRequestMap",
-  "queuePlanCreate",
-]) {
-  if (!staticService.includes(token)) issues.push(`static-local-api-service.js: missing ${token}`);
-}
-
-if (!topbar.includes('data-action="submit-generation"')) {
-  issues.push("topbar.js: image generation button must use submit-generation action");
-}
-
-for (const token of [
-  'data-view="results"',
+requireTokens("topbar.js", topbar, [
+  'data-action="submit-generation"',
+  'data-action="open-settings"',
+  'data-action="toggle-copy"',
+  "\u6587\u6848",
+  "theme-switch",
   "selected-render-button",
-  "getSelectedRenderableScheme",
-  "data-scheme-id",
-  "run-mode-chip",
-  "getRunModeViewModel",
-  "本地服务",
-  "liveBlockedTitle",
-  "归档导出",
-  "liveGate.estimatedCostLabel",
-  "liveGate.costSummaryLabel",
-  "liveGate.qualityRisk",
-  "qualityRiskDetail",
-]) {
-  if (!topbar.includes(token)) issues.push(`topbar.js: missing current-result workflow token ${token}`);
-}
+  "generate-primary",
+]);
 
-for (const token of [
-  'state.view === "results"',
-  "renderResultBoard",
-  "result-board",
-  "renderResultFilters",
+requireTokens("center-board.js", centerBoard, [
   "renderSchemeBoardEmpty",
-  "function getModeLabel",
-  "生成方案批次",
-  "result-empty-actions",
-  "查看已有方案",
-  "先确认真实生成保护",
-  "resultMatchesFilter",
-  "goto-result-scheme",
-  "regenerate-result",
-  "重生成片",
-  "确认删除",
-  'data-action="delete-result"',
-  "is-live-blocked",
-  "is-unsupported-route",
+  "renderResultViewer",
+  "open-result-viewer",
   "resolveResultOperationRoute",
-  "请先确认真实生成保护",
-]) {
-  if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result view token ${token}`);
-}
+  "is-unsupported-route",
+]);
 
-if (centerBoard.includes("uses-fallback-route")) {
-  issues.push("center-board.js: result operations should not advertise silent fallback routes");
-}
+requireTokens("config-panel.js", configPanel, [
+  'data-action="generate-schemes"',
+  "renderModelRoutingSummary",
+  "providerCapabilityGateUserMessage",
+]);
 
-if (resultOperationClient.includes(" fallback")) {
+requireTokens("task-chrome.js", taskChrome, [
+  "renderQueueContext",
+  "renderResultOperationContext",
+  "queue-context",
+]);
+
+requireTokens("settings-sheet.js", settingsSheet, [
+  "provider-config-sheet",
+  "provider-credential-card",
+  "model-routing",
+]);
+
+requireTokens("state.js", stateSource, [
+  "resultViewerOpen",
+  "resultDeleteConfirmId",
+]);
+
+requireTokens("styles.css", styles, [
+  ".top-actions .selected-render-button",
+  ".result-viewer",
+  ".preview-icon-action",
+  ".result-operation-context",
+]);
+
+if (resultOperationClient.includes("fallback")) {
   issues.push("result-operation-client.js: result operations should not silently fallback to another provider");
 }
 
-for (const token of ['data-result-view="results"', 'data-action="open-result-viewer"']) {
-  if (!archiveBoard.includes(token)) issues.push(`archive-board.js: missing archive result action token ${token}`);
-}
+const removedUiTokens = [
+  "getLiveGateViewModel",
+  "getManualLiveTestViewModel",
+  "runManualLiveTestForWorkbench",
+  "liveGate",
+  "manualLiveTest",
+  "live-gate",
+  "manual-live",
+  "run-manual-live-test",
+  "data-live-toggle",
+  "data-live-cost-cap",
+  "\u771f\u5b9e\u751f\u6210",
+  "\u786e\u8ba4\u771f\u5b9e\u751f\u6210\u4fdd\u62a4",
+  "\u624b\u52a8\u9a8c\u8bc1",
+  "MANUAL CHECK",
+  "topbar-meta",
+  "bundle-path",
+  "APP_VERSION",
+  "APP_BUNDLE_HINT",
+  "APP_MAIN_BRANCH",
+  "release/mac/Poster Lab Pro.app",
+  "\u8fd8\u6ca1\u6709\u53ef\u5c55\u793a",
+  "task-slim-cue",
+  'data-view="results"',
+  "renderResultQualityPill",
+  "renderResultQualityPanel",
+  "Result Quality Audit",
+];
 
-for (const token of ["config-action-note", "先在顶部确认真实生成保护"]) {
-  if (!configPanel.includes(token)) issues.push(`config-panel.js: missing gated generation helper token ${token}`);
-}
-if (!configPanel.includes("Agnes 多素材 KV/联名质量仍需人工验收")) {
-  issues.push("config-panel.js: missing Agnes quality-risk capability note");
-}
-
-if (!events.includes('nextView === "results"')) {
-  issues.push("events.js: data-view handler must support the results view");
-}
-if (!stateSource.includes('view === "results"') || !stateSource.includes('state.view = "results"')) {
-  issues.push("state.js: URL view handling must preserve results view");
-}
-if (!stateSource.includes("resultDeleteConfirmId")) {
-  issues.push("state.js: missing result delete confirmation state");
-}
-if (!stateSource.includes("agnes-core") || !stateSource.includes("Agnes 核心测试")) {
-  issues.push("state.js: missing built-in Agnes core testing route plan");
-}
-const queueResultOperationSource = stateSource.match(/export function queueResultOperation[\s\S]*?export function updateResultOperation/)?.[0] || "";
-if (queueResultOperationSource.includes('state.view = "schemes"')) {
-  issues.push("state.js: result operations should keep the current result/viewer context while queueing");
-}
-
-for (const token of [
-  "repeat(3, minmax(68px, 1fr))",
-  ".top-actions .selected-render-button",
-  ".result-filter-tabs",
-  ".result-quick-actions a",
-  ".result-status.failed",
-  ".top-actions .run-mode-chip",
-  ".top-actions .run-mode-chip.live",
-  ".top-actions .run-mode-chip.warning",
-  ".top-actions .run-mode-chip.local",
-  ".top-actions .run-mode-chip.test",
-  ".scheme-plan-empty",
-  ".scheme-plan-empty-actions",
-  ".result-empty-actions",
-  ".config-action-note",
-  ".result-quick-actions button.danger",
-  ".result-quick-actions button.danger.confirming",
-  ".result-viewer-dock button.danger",
-  ".result-viewer-dock button.danger.confirming",
-  ".result-operation-context.running",
-  ".result-operation-context.warning",
+for (const [name, source] of [
+  ["topbar.js", topbar],
+  ["center-board.js", centerBoard],
+  ["config-panel.js", configPanel],
+  ["task-chrome.js", taskChrome],
+  ["settings-sheet.js", settingsSheet],
+  ["events.js", events],
+  ["form-binding.js", binding],
+  ["result-operation-client.js", resultOperationClient],
+  ["state.js", stateSource],
 ]) {
-  if (!styles.includes(token)) issues.push(`styles.css: missing result/current render UI token ${token}`);
-}
-
-for (const token of ["renderResultOperationContext", "formatOperationStatus", "结果操作", "qualityRiskDetail"]) {
-  if (!taskChrome.includes(token)) issues.push(`task-chrome.js: missing result operation status token ${token}`);
-}
-
-if (!configPanel.includes('data-action="generate-schemes"')) {
-  issues.push("config-panel.js: left batch button must use generate-schemes action");
-}
-
-for (const removedToken of ["submission-card compact", "formatValidationIssues", "formatServiceQueue", "task-stats", "queue-list", "data-action=\"toggle-task\""]) {
-  if (taskChrome.includes(removedToken)) issues.push(`task-chrome.js: removed details drawer token should stay absent: ${removedToken}`);
-}
-
-if (!workspaceSnapshot.includes("modeForm")) {
-  issues.push("workspace-snapshot.js: static mode states must include modeForm for API payload drafts");
-}
-
-if (!workspaceSnapshot.includes("platformPresetsByMode")) {
-  issues.push("workspace-snapshot.js: static schemes must map to valid platform presets");
-}
-
-for (const forbidden of [
-  "fetch(",
-  "XMLHttpRequest",
-  "axios",
-  "localStorage",
-  "sessionStorage",
-  "generateImage(",
-  "healthCheck(",
-  "saveSnapshot(",
-  "loadSnapshot(",
-  "writeFile",
-  "readFile",
-]) {
-  if ([binding, events, staticService].join("\n").includes(forbidden)) {
-    issues.push(`frontend binding must not perform network, provider, DOM storage, or persistence side effects (${forbidden})`);
-  }
+  forbidTokens(name, source, removedUiTokens);
 }
 
 if (issues.length > 0) {

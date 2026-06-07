@@ -10,6 +10,7 @@ import {
 import type { CredentialResolver, ProviderCredentialRef } from "./credentials";
 import type { ProviderErrorCode } from "./contracts";
 import { getProviderManifest } from "./manifests";
+import { MIMO_DEFAULT_BASE_URL, normalizeMimoBaseUrl, normalizeMimoProviderModel } from "./mimo-compat";
 
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_AIGOCODE_BASE_URL = "https://api.aigocode.com/v1";
@@ -18,6 +19,7 @@ const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 const DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com/v1";
 const DEFAULT_QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
+const DEFAULT_MIMO_BASE_URL = MIMO_DEFAULT_BASE_URL;
 
 export const ProviderConnectionTransportRequestSchema = z.object({
   url: z.string().url(),
@@ -135,6 +137,7 @@ function probeUrl(config: StoredProviderConfig): string {
   if (config.providerId === "claude") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_CLAUDE_BASE_URL)}/models`;
   if (config.providerId === "qwen") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_QWEN_BASE_URL)}/models`;
   if (config.providerId === "agnes") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_AGNES_BASE_URL)}/models`;
+  if (config.providerId === "mimo") return `${normalizeMimoBaseUrl(config.baseUrl)}/models`;
   return normalizeBaseUrl(config.baseUrl, "");
 }
 
@@ -197,6 +200,9 @@ function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids:
   }
   if (providerId === "google" && defaultModel.startsWith("gemini-")) {
     return ids.some((id) => id.startsWith("gemini-"));
+  }
+  if (providerId === "mimo" && defaultModel.startsWith("mimo-")) {
+    return ids.some((id) => id.startsWith("mimo-"));
   }
   return false;
 }
@@ -371,7 +377,10 @@ export async function runProviderConnectionDiagnostic(input: {
     });
   }
 
-  const defaultModel = parsed.model || input.storedConfig.defaultModel || input.storedConfig.modelSlots.image || manifest.modelSlots.image?.[0];
+  const defaultModel = normalizeMimoProviderModel(
+    parsed.providerId,
+    parsed.model || input.storedConfig.defaultModel || input.storedConfig.modelSlots.image || manifest.modelSlots.image?.[0],
+  );
   let apiKey = "";
   if (manifest.apiKeyRequired) {
     const resolved = await resolveApiKey({

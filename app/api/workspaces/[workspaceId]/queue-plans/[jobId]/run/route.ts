@@ -1,5 +1,6 @@
 import { nextLocalApiService } from "../../../../../../../src/api/next-service";
 import { jsonEnvelope, readJsonBody, routeWorkspaceId } from "../../../../../../../src/api/next-response";
+import { clearQueueCancellation } from "../../../../../../../src/api/queue-cancellation";
 import type { QueuePlanRunApiRequest } from "../../../../../../../src/api/contracts";
 
 type RouteContext = {
@@ -10,11 +11,16 @@ export async function POST(request: Request, context: RouteContext) {
   const workspaceId = await routeWorkspaceId(context);
   const params = await context.params;
   const body = await readJsonBody<Partial<QueuePlanRunApiRequest>>(request);
-  const envelope = await nextLocalApiService.runQueuePlan({
-    ...body,
-    workspaceId,
-    jobId: params.jobId,
-  } as QueuePlanRunApiRequest);
+  const jobId = params.jobId;
+  try {
+    const envelope = await nextLocalApiService.runQueuePlan({
+      ...body,
+      workspaceId,
+      jobId,
+    } as QueuePlanRunApiRequest);
 
-  return jsonEnvelope(envelope);
+    return jsonEnvelope(envelope);
+  } finally {
+    clearQueueCancellation(jobId);
+  }
 }

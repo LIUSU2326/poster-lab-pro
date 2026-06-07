@@ -22,7 +22,6 @@ const routes = {
   providerConnectionTest: read("app/api/workspaces/[workspaceId]/provider-credentials/[providerId]/connection-test/route.ts"),
   queuePlans: read("app/api/workspaces/[workspaceId]/queue-plans/route.ts"),
   queuePlanRun: read("app/api/workspaces/[workspaceId]/queue-plans/[jobId]/run/route.ts"),
-  queuePlanLiveTest: read("app/api/workspaces/[workspaceId]/queue-plans/[jobId]/live-test/route.ts"),
   assetLibrary: read("app/api/workspaces/[workspaceId]/assets/route.ts"),
   assetUploadPlan: read("app/api/workspaces/[workspaceId]/assets/upload-plan/route.ts"),
   assetBinaryUpload: read("app/api/workspaces/[workspaceId]/assets/upload-binary/route.ts"),
@@ -33,7 +32,7 @@ const routes = {
 for (const token of ["createLocalApiService", "createJsonFileWorkspaceRepository", "createMockWorkspaceSnapshot"]) {
   if (!service.includes(token)) issues.push(`next-service.ts: missing ${token}`);
 }
-for (const token of ["createManualLiveGenerationService", "nextManualLiveGenerationService", "createOpenAIImageFetchTransport"]) {
+for (const token of ["createOpenAIImageFetchTransport", "createGoogleImageFetchTransport", "provider-image-transports"]) {
   if (!service.includes(token)) issues.push(`next-service.ts: missing ${token}`);
 }
 
@@ -52,7 +51,6 @@ const routeExpectations = [
   ["providerConnectionTest", "testProviderConnection", "nextProviderDiagnosticService"],
   ["queuePlans", "createQueuePlan", "nextLocalApiService"],
   ["queuePlanRun", "runQueuePlan", "nextLocalApiService"],
-  ["queuePlanLiveTest", "runManualLiveGenerationTest", "nextManualLiveGenerationService"],
   ["assetLibrary", "listWorkspaceAssets", "nextLocalApiService"],
   ["assetLibrary", "commitAssetRecord", "nextLocalApiService"],
   ["assetUploadPlan", "createAssetUploadPlan", "nextLocalApiService"],
@@ -75,6 +73,10 @@ if (!routes.assetBinaryUpload.includes("formData")) {
 }
 if (!routes.assetBinaryUpload.includes("jsonEnvelope")) {
   issues.push("assetBinaryUpload: must return jsonEnvelope");
+}
+
+for (const removed of ["nextManualLiveGenerationService", "createManualLiveGenerationService", "live-test"]) {
+  if (service.includes(removed)) issues.push(`next-service.ts: manual live-test service should be removed (${removed})`);
 }
 
 for (const [routeName, route] of Object.entries(routes)) {

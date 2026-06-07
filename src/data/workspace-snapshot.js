@@ -65,7 +65,7 @@ function createModeState(mode) {
       imagesPerScheme: 1,
     },
     sloganSettings: {
-      mode: "auto",
+      mode: "off",
       globalSlogan: "",
       languages: ["en-US"],
     },

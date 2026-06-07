@@ -6,8 +6,7 @@ import {
   getWorkspaceProject,
   getWorkspaceSnapshotSummary,
 } from '../data/workspace-adapters.js';
-import { getBatchSchemeGenerationStatus } from '../data/generation-activity.js';
-import { getLiveGateViewModel } from '../data/live-gate-view-model.js';
+import { getActiveGenerationCancelStatus, getBatchSchemeGenerationStatus } from '../data/generation-activity.js';
 import { getActiveGenerationFormValues } from '../generation-form-runtime.js';
 import { state } from '../state.js';
 import {
@@ -78,6 +77,7 @@ const modeCopy = {
 
 export function renderConfigPanel(activeMode) {
   const batchStatus = getBatchSchemeGenerationStatus(activeMode);
+  const generationCancel = getActiveGenerationCancelStatus(activeMode);
   if (state.leftCollapsed) {
     return `
       <aside class="config-panel collapsed" aria-label="生产配置已收起">
@@ -97,18 +97,19 @@ export function renderConfigPanel(activeMode) {
   const form = getActiveGenerationFormValues();
   const projectBrief = form.projectBrief;
   const direction = getDirectionPayload(activeMode.id);
+  const directionSection = getDirectionSectionMeta(activeMode.id);
+  const referenceInput = getReferenceInputMeta(activeMode.id);
   const outputSizes = getOutputSizes(activeMode.id, activeMode.outputSizes);
   const briefDescription = projectBrief.gameDescription || project.description || copy.description;
-  const liveGate = getLiveGateViewModel(activeMode);
   const generationCapabilityGate = getGenerationCapabilityGate(activeMode.id);
   const capabilityBlocked = !generationCapabilityGate.ok;
-  const liveBlocked = state.apiMode === "http" && !liveGate.allowed;
-  const generationDisabled = batchStatus.active || liveBlocked || capabilityBlocked;
+  const generationDisabled = batchStatus.active || capabilityBlocked;
   const generationTitle = capabilityBlocked
     ? providerCapabilityGateUserMessage(generationCapabilityGate)
-    : liveBlocked
-      ? "先确认真实生成保护，再调用外部模型服务"
-      : "";
+    : "";
+  const cancelTitle = generationCancel.jobId
+    ? "停止当前方案生成任务"
+    : "停止正在准备的方案生成请求";
 
   return `
     <aside class="config-panel" aria-label="生产配置">
@@ -116,7 +117,7 @@ export function renderConfigPanel(activeMode) {
         <span class="brand-mark">PL</span>
         <div>
           <strong>Poster Lab</strong>
-          <small>模型、Key 与真实生成状态在顶部统一查看</small>
+          <small>模型与 Key 在顶部统一配置</small>
         </div>
         <button class="panel-collapse-button" type="button" data-action="toggle-left-panel" aria-label="收起左侧配置">收起</button>
       </div>
@@ -128,10 +129,6 @@ export function renderConfigPanel(activeMode) {
           return `<button class="${mode.id === activeMode.id ? "active" : ""}" type="button" data-mode="${mode.id}" role="tab" aria-selected="${mode.id === activeMode.id}">${itemCopy.label}</button>`;
         }).join("")}
       </div>
-      <button class="manual-live-test" type="button" data-action="run-manual-live-test" title="手动真实生成验证">
-        <span>手动验证</span>
-        <small>MANUAL CHECK</small>
-      </button>
 
       <div class="config-scroll">
         <section class="config-section">
@@ -166,9 +163,9 @@ export function renderConfigPanel(activeMode) {
             data-assets-mode="${activeMode.id}"
             data-asset-slots="${escapeAttribute(JSON.stringify(assetSlots))}"
             data-default-asset-role="${escapeAttribute(defaultAssetRole)}"
-            data-reference-role="${escapeAttribute("compositionReference")}"
-            data-reference-label="${escapeAttribute("构图参考")}"
-            data-reference-helper="${escapeAttribute(activeMode.id === "icon" ? "上传方形构图参考，用于轮循分配。" : "上传构图、版式或裁切参考。")}"
+            data-reference-role="${escapeAttribute(referenceInput.role)}"
+            data-reference-label="${escapeAttribute(referenceInput.label)}"
+            data-reference-helper="${escapeAttribute(referenceInput.helper)}"
             data-asset-operation="${escapeAttribute(JSON.stringify(state.assetOperation || null))}"
           ></div>
           <div data-assets-section-fallback>
@@ -186,13 +183,12 @@ export function renderConfigPanel(activeMode) {
               <small>${activeMode.id === "icon" ? "上传方形构图参考。" : "上传构图或裁切参考。"}</small>
             </button>
           </div>
-          ${renderAssetOperation()}
         </section>
 
         <section class="config-section">
           <div class="section-title">
-            <span>03 画风</span>
-            <button type="button" data-action="rotate-direction-library" data-direction-mode="${activeMode.id}">换一组</button>
+            <span>${escapeHtml(directionSection.label)}</span>
+            ${directionSection.canRotate ? `<button type="button" data-action="rotate-direction-library" data-direction-mode="${activeMode.id}">换一组</button>` : ""}
           </div>
           <div
             data-react-direction-section
@@ -224,7 +220,6 @@ export function renderConfigPanel(activeMode) {
         <section class="config-section">
           <div class="section-title">
             <span>05 模型</span>
-            <button type="button" data-action="open-settings">配置</button>
           </div>
           ${renderModelRoutingSummary()}
         </section>
@@ -240,17 +235,8 @@ export function renderConfigPanel(activeMode) {
         >
           ${batchStatus.active ? `<span class="button-spinner" aria-hidden="true"></span><span>方案生成中</span><strong>${batchStatus.completed}/${batchStatus.total}</strong>` : copy.cta}
         </button>
+        ${batchStatus.active ? `<button class="cancel-generation-button compact" type="button" data-action="cancel-generation" title="${escapeAttribute(cancelTitle)}" aria-label="${escapeAttribute(cancelTitle)}">停止</button>` : ""}
         ${capabilityBlocked ? `<p class="config-action-note">${escapeHtml(providerCapabilityGateUserMessage(generationCapabilityGate))}</p>` : ""}
-        ${liveBlocked ? `<p class="config-action-note">先在顶部确认真实生成保护，再调用外部模型服务。</p>` : ""}
-        ${batchStatus.active ? `
-          <div class="batch-progress" role="status" aria-live="polite">
-            <div>
-              <span>生成方案批次</span>
-              <strong>${batchStatus.completed}/${batchStatus.total}</strong>
-            </div>
-            <i style="--progress: ${batchStatus.progress}%"></i>
-          </div>
-        ` : ""}
       </div>
     </aside>
   `;
@@ -266,6 +252,50 @@ function getDirectionPayload(modeId) {
     styles: copy.styles,
     title: copy.directionTitle,
     helper: copy.directionHelper,
+  };
+}
+
+function getDirectionSectionMeta(modeId) {
+  return {
+    poster: { label: "03 画风", canRotate: true },
+    collab: { label: "03 联名", canRotate: false },
+    announcement: { label: "03 公告", canRotate: false },
+    logo: { label: "03 Logo", canRotate: true },
+    icon: { label: "03 Icon", canRotate: true },
+  }[modeId] || { label: "03 画风", canRotate: true };
+}
+
+function getReferenceInputMeta(modeId) {
+  return {
+    poster: {
+      role: "compositionReference",
+      label: "构图参考",
+      helper: "上传构图、版式或裁切参考。",
+    },
+    collab: {
+      role: "compositionReference",
+      label: "联名构图参考",
+      helper: "上传双主体关系、品牌露出或活动视觉参考。",
+    },
+    announcement: {
+      role: "compositionReference",
+      label: "公告版式参考",
+      helper: "上传公告面板、社区图或信息层级参考。",
+    },
+    logo: {
+      role: "compositionReference",
+      label: "Logo 结构参考",
+      helper: "上传字标、徽章、材质或轮廓参考。",
+    },
+    icon: {
+      role: "compositionReference",
+      label: "图标构图参考",
+      helper: "上传方形构图参考，用于轮循分配。",
+    },
+  }[modeId] || {
+    role: "compositionReference",
+    label: "构图参考",
+    helper: "上传构图、版式或裁切参考。",
   };
 }
 
@@ -305,6 +335,22 @@ function getOutputNote(modeId, fallback) {
 
 function renderModelRoutingSummary() {
   const providers = getProviderRows();
+  const snapshot = state.workspaceSnapshot || {};
+  const providerConfigs = Object.values(snapshot.providerConfigs || {});
+  const hasConfiguredProvider = providerConfigs.some((config) =>
+    Boolean(config?.hasApiKey || config?.status === "success" || config?.configured),
+  ) || Boolean(state.providerCredential?.configured);
+  if (!hasConfiguredProvider) {
+    return `
+      <div class="engine-card engine-card-compact model-plan-card unconfigured">
+        <div>
+          <strong>模型</strong>
+          <small>未配置</small>
+        </div>
+        <button class="mini-ghost-button" type="button" data-action="open-settings">配置</button>
+      </div>
+    `;
+  }
   const providerNameById = Object.fromEntries(providers.map((provider) => [provider.id, provider.name || provider.id]));
   const currentPlan = state.providerRoutePlans.find((plan) => plan.id === state.providerRoutePlan) || state.providerRoutePlans[0];
   const slotLabels = {
@@ -333,35 +379,18 @@ function renderModelRoutingSummary() {
     const tone = issue ? "bad" : warning ? "warn" : "ok";
     return `<span class="${tone}">${escapeHtml(label)} · ${escapeHtml(providerNameById[providerId] || providerId)}</span>`;
   }).join("");
-  const agnesConfigured = Boolean((state.workspaceSnapshot || {}).providerConfigs?.agnes?.hasApiKey);
-  const allAgnesCore = effectiveRoutes.concept === "agnes" && effectiveRoutes.image === "agnes";
-  const planTone = !capabilityGate.ok ? "blocked" : allAgnesCore ? "agnes" : agnesConfigured ? "mixed" : "standard";
-  const planNote = allAgnesCore
-    ? "核心生成已走 Agnes"
-    : agnesConfigured
-      ? "当前不是全 Agnes 路由"
-      : "按已配置供应商自动路由";
-  const agnesKvQualityRisk = allAgnesCore && ["poster", "collab"].includes(state.activeMode || "poster");
-  const capabilityNote = capabilityGate.ok
-    ? capabilityGate.warnings.length > 0
-      ? providerCapabilityGateUserMessage(capabilityGate)
-      : agnesKvQualityRisk
-        ? "核心能力可用；Agnes 多素材 KV/联名质量仍需人工验收"
-        : "当前模型能力满足核心流程"
-    : providerCapabilityGateUserMessage(capabilityGate);
+  const planTone = !capabilityGate.ok ? "blocked" : "standard";
 
   return `
     <div class="engine-card engine-card-compact model-plan-card ${escapeAttribute(planTone)}">
       <div>
-        <strong>当前配置方案</strong>
+        <strong>模型</strong>
         <small>${escapeHtml(currentPlan?.name || "标准方案")}</small>
       </div>
-      <span>${escapeHtml(state.providerRoutePlan === "image-first" ? "图像优先" : "已选择")}</span>
+      <button class="mini-ghost-button" type="button" data-action="open-settings">配置</button>
       <div class="model-plan-routes">
         ${routeItems}
       </div>
-      <small class="model-plan-note">${escapeHtml(planNote)}</small>
-      <small class="model-capability-note">${escapeHtml(capabilityNote)}</small>
     </div>
   `;
 }
@@ -372,14 +401,14 @@ function resolveEffectiveRouteProvider(slot) {
   const candidateIds = {
     concept: ["google", "agnes", "deepseek", "openai", "aigocode", "claude", "qwen"],
     image: ["agnes", "openai", "aigocode", "google", "qwen"],
-    styleReference: ["openai", "aigocode", "google", "claude", "qwen"],
-    compositionReference: ["openai", "aigocode", "google", "claude", "qwen"],
+    styleReference: ["openai", "aigocode", "google", "claude", "qwen", "mimo"],
+    compositionReference: ["openai", "aigocode", "google", "claude", "qwen", "mimo"],
   }[slot] || [state.provider || "openai"];
   const configured = (providerId) => {
     const config = snapshot.providerConfigs?.[providerId];
     return Boolean(config?.hasApiKey || config?.status === "success");
   };
-  const savedProvider = candidateIds.includes(route.providerId) ? route.providerId : "";
+  const savedProvider = route.providerId || "";
   if (savedProvider && configured(savedProvider)) return savedProvider;
   if (
     ["styleReference", "compositionReference"].includes(slot)
@@ -400,7 +429,8 @@ function resolveEffectiveRouteProvider(slot) {
 function resolveEffectiveRouteModel(slot, providerId) {
   const route = state.providerSlotRoutes?.[slot] || {};
   const providerConfig = (state.workspaceSnapshot || {}).providerConfigs?.[providerId] || {};
-  return route.model || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "";
+  const routeModel = providerId === route.providerId ? route.model : "";
+  return routeModel || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "";
 }
 
 function getGenerationCapabilityGate(modeId) {
@@ -449,26 +479,6 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-}
-
-function renderAssetOperation() {
-  const operation = state.assetOperation;
-  if (!operation) return "";
-
-  const status = operation.status === "ready" ? "ready" : operation.status === "error" ? "error" : "planning";
-  const detail = operation.status === "ready"
-      ? `${operation.transport || "静态"} / ${operation.assetCount ?? "本地"} 个素材`
-    : operation.status === "error"
-      ? operation.error || "素材路由失败"
-      : `${operation.transport || "静态"} 路由待处理`;
-
-  return `
-    <div class="asset-route-status ${status}">
-      <span>素材路由</span>
-      <strong>${escapeHtml(operation.label || operation.role || "素材")}</strong>
-      <small>${escapeHtml(detail)}</small>
-    </div>
-  `;
 }
 
 function renderModeBrief(activeMode, form) {
@@ -566,12 +576,12 @@ function renderModeBrief(activeMode, form) {
 
 function renderSloganSettings(form, modeId) {
   const settings = form.sloganSettings || {};
-  const mode = settings.mode || "auto";
+  const mode = settings.mode || "off";
   const globalSlogan = settings.globalSlogan || "";
   const languages = Array.isArray(settings.languages) && settings.languages.length > 0 ? settings.languages : ["en-US"];
   if (modeId === "icon") {
     return renderLockedTextStrategy({
-      title: "文字策略",
+      title: "文本",
       label: "图标模式",
       detail: "图标模式固定无文字。上传的角色、道具或 LOGO 只作为视觉身份参考，不会把宣传词写入图标。",
       chips: ["无宣传词", "无字标", "64px 可读"],
@@ -579,7 +589,7 @@ function renderSloganSettings(form, modeId) {
   }
   if (modeId === "logo") {
     return renderLockedTextStrategy({
-      title: "文字策略",
+      title: "文本",
       label: "标识模式",
       detail: "标识模式只使用下方字标字段和上传 LOGO 参考，不使用海报宣传词，避免生成额外口号或乱码。",
       chips: ["字标优先", "不生成口号", "纯色背景"],
@@ -592,10 +602,29 @@ function renderSloganSettings(form, modeId) {
   ];
   const languageOptions = [
     ["en-US", "英文"],
-    ["zh-CN", "中文"],
+    ["zh-CN", "简体中文"],
+    ["zh-TW", "繁体中文"],
     ["ja-JP", "日文"],
     ["ko-KR", "韩文"],
+    ["fr-FR", "法文"],
+    ["de-DE", "德文"],
+    ["es-ES", "西班牙文"],
+    ["pt-BR", "葡萄牙文"],
+    ["id-ID", "印尼文"],
+    ["th-TH", "泰文"],
+    ["vi-VN", "越南文"],
   ];
+  const selectedLanguage = languages[0] || "en-US";
+  const languageSelect = mode === "off" ? "" : `
+    <label class="slogan-language-field">
+      <span>海报语言</span>
+      <select data-form-field="sloganSettings.languages" aria-label="海报语言">
+        ${languageOptions.map(([value, label]) => `
+          <option value="${escapeAttribute(value)}" ${selectedLanguage === value ? "selected" : ""}>${escapeHtml(label)}</option>
+        `).join("")}
+      </select>
+    </label>
+  `;
 
   return `
     <div class="slogan-settings-card">
@@ -625,28 +654,18 @@ function renderSloganSettings(form, modeId) {
       ` : `
         <small>${mode === "off" ? "生成提示词时不写入宣传词。" : "由模型根据当前方案生成宣传词。"}</small>
       `}
-      <div class="language-chip-row" aria-label="海报语言">
-        ${languageOptions.map(([value, label]) => `
-          <button
-            class="${languages.includes(value) ? "active" : ""}"
-            type="button"
-            data-form-choice="sloganSettings.languages"
-            data-choice-value="${value}"
-          >${label}</button>
-        `).join("")}
-      </div>
+      ${languageSelect}
     </div>
   `;
 }
 
 function renderLockedTextStrategy({ title, label, detail, chips }) {
   return `
-    <div class="slogan-settings-card locked-text-strategy" data-slogan-locked="${escapeAttribute(label)}">
+    <div class="slogan-settings-card locked-text-strategy" data-slogan-locked="${escapeAttribute(label)}" title="${escapeAttribute(detail)}">
       <div class="slogan-settings-head">
         <strong>${escapeHtml(title)}</strong>
         <span>${escapeHtml(label)}</span>
       </div>
-      <small>${escapeHtml(detail)}</small>
       <div class="guardrail-chips">
         ${chips.map((chip) => `<span>${escapeHtml(chip)}</span>`).join("")}
       </div>

@@ -83,8 +83,9 @@ function createProviderSettings() {
   const claude: ProviderConfigForm = createProviderConfigDefaults("claude");
   const qwen: ProviderConfigForm = createProviderConfigDefaults("qwen");
   const agnes: ProviderConfigForm = createProviderConfigDefaults("agnes");
+  const mimo: ProviderConfigForm = createProviderConfigDefaults("mimo");
 
-  return redactProviderConfigs([openai, aigocode, google, deepseek, claude, qwen, agnes], { updatedAt: CREATED_AT });
+  return redactProviderConfigs([openai, aigocode, google, deepseek, claude, qwen, agnes, mimo], { updatedAt: CREATED_AT });
 }
 
 export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {

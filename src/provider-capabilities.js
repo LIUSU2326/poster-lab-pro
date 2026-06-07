@@ -6,6 +6,7 @@ export const providerLabels = {
   claude: "Claude",
   qwen: "Qwen",
   agnes: "Agnes AI",
+  mimo: "小米 MiMo",
 };
 
 export const providerCapabilities = {
@@ -16,6 +17,7 @@ export const providerCapabilities = {
   claude: ["briefGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   qwen: ["briefGeneration", "imageGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   agnes: ["briefGeneration", "imageGeneration", "imageEdit"],
+  mimo: ["briefGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
 };
 
 export const providerModelSlots = {
@@ -58,6 +60,11 @@ export const providerModelSlots = {
     image: ["agnes-image-2.1-flash", "agnes-image-2.0-flash"],
     imageEdit: ["agnes-image-2.1-flash", "agnes-image-2.0-flash"],
   },
+  mimo: {
+    concept: ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-pro", "mimo-v2-omni"],
+    styleReference: ["mimo-v2-omni"],
+    compositionReference: ["mimo-v2-omni"],
+  },
 };
 
 export const providerSupportedModes = {
@@ -68,6 +75,7 @@ export const providerSupportedModes = {
   claude: ["poster", "collab", "announcement", "logo", "icon"],
   qwen: ["poster", "collab", "announcement", "logo", "icon"],
   agnes: ["poster", "collab", "announcement", "logo", "icon"],
+  mimo: ["poster", "collab", "announcement", "logo", "icon"],
 };
 
 const slotRequirements = {

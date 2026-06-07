@@ -101,6 +101,13 @@ const providerDefaults = {
       image: "agnes-image-2.1-flash",
     },
   },
+  mimo: {
+    baseUrl: "https://token-plan-cn.xiaomimimo.com/v1",
+    defaultModel: "mimo-v2.5-pro",
+    modelSlots: {
+      concept: "mimo-v2.5-pro",
+    },
+  },
 };
 
 export function createProjectBriefDefaults(mode = "poster") {
@@ -123,7 +130,7 @@ export function createOutputSettingsDefaults(mode = "poster") {
 
 export function createSloganSettingsDefaults() {
   return {
-    mode: "auto",
+    mode: "off",
     globalSlogan: "",
     languages: ["en-US"],
   };

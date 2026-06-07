@@ -73,6 +73,7 @@ export type WorkspaceQueueWorkerOptions = {
   resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
   useMockCredentials?: boolean;
   requireLiveExecutionGate?: boolean;
+  isCancellationRequested?: (jobId: string) => boolean;
 };
 
 function cloneSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
@@ -115,8 +116,21 @@ function numberField(source: Record<string, unknown> | null, key: string): numbe
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function resultIdForTask(task: QueueTask, index: number): string {
-  return `result-${task.id}-${index + 1}`;
+function resultIdPart(value: string | null | undefined, fallback = "run"): string {
+  const text = String(value || "").trim();
+  const parsed = Date.parse(text);
+  if (Number.isFinite(parsed)) return parsed.toString(36);
+  return text
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24)
+    || fallback;
+}
+
+function resultIdForTask(task: QueueTask, index: number, createdAt: string, providerResultId: string): string {
+  const runPart = resultIdPart(createdAt);
+  const providerPart = resultIdPart(providerResultId, "").slice(0, 18);
+  return ["result", task.id, String(index + 1), runPart, providerPart].filter(Boolean).join("-");
 }
 
 function fileNameForResult(task: QueueTask, index: number, width: number, height: number): string {
@@ -317,7 +331,7 @@ function resultFromTask(
   const { providerAssets: _providerAssets, ...taskMetadata } = task.output.metadata;
 
   return StoredResultAssetSchema.parse({
-    id: resultIdForTask(task, index),
+    id: resultIdForTask(task, index, createdAt, providerResultId),
     projectId: task.jobId.split("-").slice(2).join("-") || "project",
     schemeId: task.input.schemeId || "scheme-unknown",
     jobId: task.jobId,
@@ -424,7 +438,7 @@ async function resultFromTaskWithProject(input: {
     workspaceId: input.workspaceId,
     task: input.task,
     providerAsset,
-    resultId: resultIdForTask(input.task, input.index),
+    resultId: resultIdForTask(input.task, input.index, input.createdAt, input.providerResultId),
     index: input.index,
     width: prepared.width,
     height: prepared.height,
@@ -488,6 +502,38 @@ function mergeQueueSummaries(existing: QueueSummary[], incoming: QueueSummary): 
   return [...merged.values()];
 }
 
+function schemeIdsForPlan(plan: QueuePlan): Set<string> {
+  const ids = new Set<string>();
+  for (const task of plan.tasks) {
+    if (typeof task.input.schemeId === "string" && task.input.schemeId) ids.add(task.input.schemeId);
+    if (Array.isArray(task.input.schemeIds)) {
+      task.input.schemeIds.forEach((schemeId) => {
+        if (typeof schemeId === "string" && schemeId) ids.add(schemeId);
+      });
+    }
+  }
+  return ids;
+}
+
+function mergeTouchedSchemes(existing: WorkspaceSnapshot["schemes"], incoming: WorkspaceSnapshot["schemes"], touchedIds: Set<string>): WorkspaceSnapshot["schemes"] {
+  if (touchedIds.size === 0) return existing;
+  const merged = new Map(existing.map((scheme) => [scheme.id, scheme]));
+  for (const scheme of incoming) {
+    if (touchedIds.has(scheme.id)) merged.set(scheme.id, scheme);
+  }
+  return [...merged.values()];
+}
+
+function mergeTouchedModeState(existing: WorkspaceSnapshot["modeStates"], incoming: WorkspaceSnapshot["modeStates"], mode: QueuePlan["job"]["mode"]): WorkspaceSnapshot["modeStates"] {
+  const incomingState = incoming.find((item) => item.mode === mode);
+  if (!incomingState) return existing;
+  return existing.map((item) => (item.mode === mode ? {
+    ...item,
+    selectedSchemeIds: incomingState.selectedSchemeIds,
+    updatedAt: incomingState.updatedAt || item.updatedAt,
+  } : item));
+}
+
 function credentialRefFromStoredConfig(
   config: StoredProviderConfig | null | undefined,
   workspaceId: string,
@@ -497,7 +543,9 @@ function credentialRefFromStoredConfig(
   return createProviderCredentialRef({
     providerId: config.providerId,
     source,
-    keyRef: source === "secretStore" ? providerCredentialKeyRef({ workspaceId, providerId: config.providerId }) : config.providerId,
+    keyRef: source === "secretStore"
+      ? providerCredentialKeyRef({ workspaceId, providerId: config.providerId, keyRef: config.credentialKeyRef })
+      : config.providerId,
     apiKeyPreview: config.apiKeyMasked,
     configured: config.hasApiKey,
     updatedAt: config.updatedAt,
@@ -529,7 +577,9 @@ function mockCredentialRefFromStoredConfig(
   return createProviderCredentialRef({
     providerId: config.providerId,
     source,
-    keyRef: source === "secretStore" ? providerCredentialKeyRef({ workspaceId, providerId: config.providerId }) : config.providerId,
+    keyRef: source === "secretStore"
+      ? providerCredentialKeyRef({ workspaceId, providerId: config.providerId, keyRef: config.credentialKeyRef })
+      : config.providerId,
     apiKeyPreview: `mock-${config.providerId}-queue-runtime-key`,
     configured: true,
     updatedAt: config.updatedAt,
@@ -630,6 +680,7 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
         credentialRefs,
         ...(credentialResolver ? { credentialResolver } : {}),
         ...(options.providerRegistry ? { registry: options.providerRegistry } : {}),
+        ...(options.isCancellationRequested ? { isCancellationRequested: options.isCancellationRequested } : {}),
       });
       const createdAt = now();
       const baseSnapshot = runResult.workspace || snapshot;
@@ -654,15 +705,21 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
 
       const newArchiveRows = parsed.archiveResults ? newResults.map((result) => archiveRowFromResult(result, createdAt)) : [];
       const safeRunPlan = sanitizeQueuePlanProviderAssets(runResult.plan);
+      const latestLoaded = await repository.loadSnapshot(parsed.workspaceId);
+      const latestSnapshot = latestLoaded.ok ? latestLoaded.snapshot : baseSnapshot;
+      const touchedSchemeIds = schemeIdsForPlan(safeRunPlan);
       const nextSnapshot = WorkspaceSnapshotSchema.parse({
-        ...baseSnapshot,
-        queuePlans: mergeQueuePlans(baseSnapshot.queuePlans, safeRunPlan),
-        queueSummaries: mergeQueueSummaries(baseSnapshot.queueSummaries, summarizeQueue(safeRunPlan)),
-        results: mergeResults(baseSnapshot.results, newResults),
-        archiveRows: mergeArchiveRows(baseSnapshot.archiveRows, newArchiveRows),
+        ...latestSnapshot,
+        activeMode: baseSnapshot.activeMode,
+        schemes: mergeTouchedSchemes(latestSnapshot.schemes, baseSnapshot.schemes, touchedSchemeIds),
+        modeStates: mergeTouchedModeState(latestSnapshot.modeStates, baseSnapshot.modeStates, safeRunPlan.job.mode),
+        queuePlans: mergeQueuePlans(latestSnapshot.queuePlans, safeRunPlan),
+        queueSummaries: mergeQueueSummaries(latestSnapshot.queueSummaries, summarizeQueue(safeRunPlan)),
+        results: mergeResults(latestSnapshot.results, newResults),
+        archiveRows: mergeArchiveRows(latestSnapshot.archiveRows, newArchiveRows),
         metadata: {
-          ...baseSnapshot.metadata,
-          revision: baseSnapshot.metadata.revision + 1,
+          ...latestSnapshot.metadata,
+          revision: latestSnapshot.metadata.revision + 1,
           updatedAt: createdAt,
         },
       });

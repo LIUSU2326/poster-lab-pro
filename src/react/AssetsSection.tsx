@@ -13,6 +13,8 @@ type AssetSlot = {
   tone: string;
   sourceType?: string;
   previewUrl?: string | null;
+  previewUrls?: string[];
+  assetCount?: number;
 };
 
 type VisibleAssetSlot = AssetSlot & {
@@ -41,7 +43,7 @@ type AssetsSectionProps = {
 
 const acceptedImageTypes = ["image/png", "image/jpeg", "image/webp"];
 const customSlotTone = "custom";
-const referenceAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen"]);
+const referenceAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen", "mimo"]);
 
 function normalizeCategoryLabel(value: string): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 24);
@@ -107,8 +109,15 @@ function referenceAnalysisProviderReady(providerId: string): boolean {
   return referenceAnalysisProviderIds.has(providerId);
 }
 
-function dataUrlForKey(key: string): string {
-  return state.referenceUploadDataUrls?.[key] || "";
+function valuesForKeyPrefix(values: Record<string, string> | undefined, key: string): string[] {
+  return Object.entries(values || {})
+    .filter(([itemKey]) => itemKey === key || itemKey.startsWith(`${key}:`))
+    .map(([, value]) => value)
+    .filter(Boolean);
+}
+
+function uniqueUrls(urls: string[]): string[] {
+  return Array.from(new Set(urls.filter(Boolean)));
 }
 
 function latestDataUrlForRole(role: string): string {
@@ -135,12 +144,40 @@ function latestPreviewForRole(slots: AssetSlot[], localPreviews: Record<string, 
   if (local) return local;
   const dataUrl = latestDataUrlForRole(role);
   if (dataUrl) return dataUrl;
-  const previewUrl = [...slots].reverse().find((slot) => slot.role === role && slot.previewUrl)?.previewUrl || "";
+  const slot = [...slots].reverse().find((item) => item.role === role && (item.previewUrl || item.previewUrls?.length));
+  const previewUrl = slot?.previewUrls?.filter(Boolean).at(-1) || slot?.previewUrl || "";
   return normalizeLocalPreviewUrl(previewUrl);
 }
 
+function previewsForRole(slots: AssetSlot[], localPreviews: Record<string, string>, role: string): string[] {
+  return uniqueUrls([
+    ...slots
+      .filter((slot) => slot.role === role)
+      .flatMap((slot) => [
+        ...(Array.isArray(slot.previewUrls) ? slot.previewUrls : []),
+        slot.previewUrl || "",
+      ])
+      .map(normalizeLocalPreviewUrl),
+    ...Object.entries(state.referenceUploadDataUrls || {})
+      .filter(([key]) => key.startsWith(`${role}:`))
+      .map(([, value]) => value),
+    ...Object.entries(localPreviews || {})
+      .filter(([key]) => key.startsWith(`${role}:`))
+      .map(([, value]) => value),
+  ]);
+}
+
+function previewsForAssetSlot(key: string, slot: AssetSlot, localPreviews: Record<string, string>): string[] {
+  return uniqueUrls([
+    ...(Array.isArray(slot.previewUrls) ? slot.previewUrls.map(normalizeLocalPreviewUrl) : []),
+    normalizeLocalPreviewUrl(slot.previewUrl),
+    ...valuesForKeyPrefix(state.referenceUploadDataUrls, key),
+    ...valuesForKeyPrefix(localPreviews, key),
+  ]);
+}
+
 function previewForAssetSlot(key: string, slot: AssetSlot, localPreviews: Record<string, string>): string {
-  return localPreviews[key] || dataUrlForKey(key) || normalizeLocalPreviewUrl(slot.previewUrl);
+  return previewsForAssetSlot(key, slot, localPreviews).at(-1) || "";
 }
 
 function isReferenceOnlySlot(slot: AssetSlot, referenceRole: string): boolean {
@@ -162,6 +199,7 @@ export function AssetsSection({
   const [operation, setOperation] = useState<AssetOperation | null>(initialOperation || null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [categoryDraft, setCategoryDraft] = useState("");
+  const [categoryEditorOpen, setCategoryEditorOpen] = useState(false);
   const [customCategories, setCustomCategories] = useState<string[]>(
     Array.isArray(state.customAssetCategories?.[mode]) ? state.customAssetCategories[mode] : [],
   );
@@ -190,20 +228,26 @@ export function AssetsSection({
       (slot) => !isReferenceOnlySlot(slot, referenceRole) && !hiddenSlotKeys.includes(assetSlotKey(slot, defaultAssetRole)),
     );
   }, [customCategories, defaultAssetRole, hiddenSlotKeys, referenceRole, slots]);
-  const referencePreview = latestPreviewForRole(slots, localPreviews, referenceRole);
+  const referencePreviewUrls = previewsForRole(slots, localPreviews, referenceRole)
+    .filter((url) => !brokenPreviewUrls[url]);
+  const referencePreview = referencePreviewUrls.at(-1) || latestPreviewForRole(slots, localPreviews, referenceRole);
   const displayReferencePreview = referencePreview && !brokenPreviewUrls[referencePreview] ? referencePreview : "";
+  const referencePreviewCount = Math.max(referencePreviewUrls.length, displayReferencePreview ? 1 : 0);
   const referenceProviderId = routeProviderForSlot(referenceRole);
   const providerCanAnalyzeReference = referenceAnalysisProviderReady(referenceProviderId);
   const referenceApiReady = analysisApiReady(referenceProviderId);
   const canExtractReference = Boolean(displayReferencePreview) && providerCanAnalyzeReference && referenceApiReady;
+  const unsupportedReferenceProviderMessage = referenceProviderId === "agnes"
+    ? "Agnes Image 2.1 Flash 支持图生图参考，但构图/画风文字分析需要视觉理解模型，请把识别路由切到 MiMo、Google、OpenAI、AIGoCode、Claude 或 Qwen。"
+    : "当前供应商不支持参考图识别，请切换到 MiMo、Google、OpenAI、AIGoCode、Claude 或 Qwen。";
   const referenceDisabledReason = displayReferencePreview
     ? !providerCanAnalyzeReference
-      ? "当前供应商不支持图片识别，请切换到 OpenAI、AIGoCode、Google、Claude 或 Qwen。"
+      ? unsupportedReferenceProviderMessage
       : !referenceApiReady
         ? "先在「模型与 API Key」里保存并测试可用的构图识别 API。"
         : ""
     : "";
-  const referenceNote = analysisMessage || referenceDisabledReason;
+  const referenceNote = analysisMessage;
 
   const commitCustomCategories = (nextCategories: string[]) => {
     state.customAssetCategories = {
@@ -274,7 +318,7 @@ export function AssetsSection({
   ) => {
     if (files.length === 0) return;
     const selectedFiles = target.multiple ? files : files.slice(0, 1);
-    for (const file of selectedFiles) {
+    for (const [index, file] of selectedFiles.entries()) {
       if (!acceptedImageTypes.includes(file.type)) {
         setOperation({
           status: "error",
@@ -297,28 +341,30 @@ export function AssetsSection({
       }
       const label = target.label;
       const key = `${target.role}:${label}`;
+      const previewKey = `${key}:${Date.now().toString(36)}-${index}-${file.name}`;
       let previewUrl = "";
       try {
         const dataUrl = await fileToDataUrl(file);
         previewUrl = dataUrl;
         state.referenceUploadDataUrls = {
           ...(state.referenceUploadDataUrls || {}),
-          [key]: dataUrl,
+          [previewKey]: dataUrl,
         };
       } catch {
         previewUrl = URL.createObjectURL(file);
       }
-      setLocalPreviews((current) => ({ ...current, [key]: previewUrl }));
+      setLocalPreviews((current) => ({ ...current, [previewKey]: previewUrl }));
       await uploadMetadata(target.role, label, file, previewUrl);
     }
   };
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const target = pickerTargetRef.current;
-    const files = Array.from(event.currentTarget.files || []);
+    const input = event.currentTarget;
+    const files = Array.from(input.files || []);
     if (!target || files.length === 0) return;
     await handleFilesForTarget(target, files);
-    event.currentTarget.value = "";
+    input.value = "";
   };
 
   const handleDragOver = (event: DragEvent<HTMLElement>) => {
@@ -364,7 +410,7 @@ export function AssetsSection({
           throw new Error(result.save?.error?.message || "删除素材后保存工作区失败。");
         }
         setLocalPreviews((current) => Object.fromEntries(
-          Object.entries(current).filter(([itemKey]) => itemKey !== key),
+          Object.entries(current).filter(([itemKey]) => itemKey !== key && !itemKey.startsWith(`${key}:`)),
         ));
         setOperation(null);
       } catch (error) {
@@ -406,7 +452,7 @@ export function AssetsSection({
       return;
     }
     if (!referenceAnalysisProviderReady(referenceProviderId)) {
-      setAnalysisMessage("当前供应商不支持图片识别，请切换到 OpenAI、AIGoCode、Google、Claude 或 Qwen。");
+      setAnalysisMessage(unsupportedReferenceProviderMessage);
       return;
     }
     const imageDataUrl = latestDataUrlForRole(referenceRole);
@@ -489,18 +535,60 @@ export function AssetsSection({
         data-asset-file-input
       />
 
+      {categoryEditorOpen ? (
+        <div className="asset-category-panel asset-category-panel-primary">
+          <button className="asset-category-close mini-ghost-button" type="button" onClick={() => setCategoryEditorOpen(false)} aria-label="关闭新增素材类别">
+            ×
+          </button>
+          <div className="inline-add-row">
+            <input
+              aria-label="新增素材类别"
+              value={categoryDraft}
+              placeholder="新增类别"
+              onChange={(event) => setCategoryDraft(event.currentTarget.value)}
+              onKeyDown={handleCategoryKeyDown}
+            />
+            <button className="mini-solid-button" type="button" disabled={!categoryDraft.trim()} onClick={addCategory}>
+              添加
+            </button>
+          </div>
+          {customCategories.length > 0 ? (
+            <div className="tag-list" aria-label="自定义素材类别">
+              {customCategories.map((label) => (
+                <button
+                  type="button"
+                  key={label}
+                  onClick={() => commitCustomCategories(customCategories.filter((item) => item !== label))}
+                  title="点击移除"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <button className="asset-category-add-trigger asset-category-quick-add" type="button" onClick={() => setCategoryEditorOpen(true)} aria-label="新增素材类别" title="新增素材类别">
+          +
+        </button>
+      )}
+
       <div className={`asset-grid ${visibleSlots.length > 4 ? "asset-grid-dense" : ""}`}>
         {visibleSlots.map((slot) => {
           const role = slot.role || defaultAssetRole;
           const key = `${role}:${slot.label}`;
-          const previewUrl = previewForAssetSlot(key, slot, localPreviews);
-          const displayPreviewUrl = previewUrl && !brokenPreviewUrls[previewUrl] ? previewUrl : "";
+          const previewUrls = previewsForAssetSlot(key, slot, localPreviews)
+            .filter((url) => !brokenPreviewUrls[url]);
+          const displayPreviewUrl = previewUrls.at(-1) || "";
+          const previewCount = Math.max(Number(slot.assetCount || 0), previewUrls.length);
+          const stackUrls = previewUrls.slice(-3);
+          const hasPreview = Boolean(displayPreviewUrl);
           const status = pendingKey === key ? "上传中" : displayPreviewUrl ? "已上传" : "待上传";
 
           return (
-            <article className={`asset-slot-card ${slot.tone}`} key={key}>
+            <article className={`asset-slot-card ${slot.tone} ${hasPreview ? "has-preview" : "is-empty"}`} key={key}>
               <button
-                className="asset-slot-upload"
+                className={`asset-slot-upload ${hasPreview ? "has-preview" : "is-empty"}`}
                 type="button"
                 onClick={() => openFilePicker(role, slot.label, true)}
                 onDragOver={handleDragOver}
@@ -509,17 +597,38 @@ export function AssetsSection({
                 aria-busy={pendingKey === key}
                 aria-label={`${slot.label}：${status}`}
               >
-                <i className={displayPreviewUrl ? "asset-preview" : undefined}>
+                <i className={displayPreviewUrl ? `asset-preview ${previewCount > 1 ? "asset-preview-stack" : ""}` : "asset-empty-thumb"}>
                   {displayPreviewUrl ? (
-                    <img
-                      className="asset-preview-img"
-                      src={displayPreviewUrl}
-                      alt=""
-                      onError={() => setBrokenPreviewUrls((current) => ({ ...current, [displayPreviewUrl]: true }))}
-                    />
-                  ) : null}
+                    <>
+                      <img
+                        className="asset-preview-img asset-preview-main"
+                        src={displayPreviewUrl}
+                        alt=""
+                        onError={() => setBrokenPreviewUrls((current) => ({ ...current, [displayPreviewUrl]: true }))}
+                      />
+                      {previewCount > 1 ? (
+                        <span className="asset-stack-strip" aria-hidden="true">
+                          {stackUrls.map((url) => (
+                            <img
+                              key={url}
+                              src={url}
+                              alt=""
+                              onError={() => setBrokenPreviewUrls((current) => ({ ...current, [url]: true }))}
+                            />
+                          ))}
+                        </span>
+                      ) : null}
+                      {previewCount > 1 ? <em className="asset-count-badge">{previewCount}</em> : null}
+                    </>
+                  ) : (
+                    <span aria-hidden="true">+</span>
+                  )}
                 </i>
-                <strong>{slot.label}</strong>
+                <span className="asset-slot-meta">
+                  <strong>{slot.label}</strong>
+                  {hasPreview && previewCount > 1 ? <small>{previewCount} 个素材</small> : null}
+                  {hasPreview ? <small>已上传</small> : null}
+                </span>
               </button>
               <button
                 className="asset-slot-delete"
@@ -528,7 +637,7 @@ export function AssetsSection({
                 aria-label={`删除${slot.label}素材类别`}
                 title="删除类别"
               >
-                删除
+                ×
               </button>
             </article>
           );
@@ -541,37 +650,7 @@ export function AssetsSection({
         </button>
       ) : null}
 
-      <div className="asset-category-panel asset-category-panel-primary">
-        <strong>新增素材类别</strong>
-        <div className="inline-add-row">
-          <input
-            aria-label="新增素材类别"
-            value={categoryDraft}
-            placeholder="例如武器、道具、怪物"
-            onChange={(event) => setCategoryDraft(event.currentTarget.value)}
-            onKeyDown={handleCategoryKeyDown}
-          />
-          <button className="mini-solid-button" type="button" disabled={!categoryDraft.trim()} onClick={addCategory}>
-            添加
-          </button>
-        </div>
-        {customCategories.length > 0 ? (
-          <div className="tag-list" aria-label="自定义素材类别">
-            {customCategories.map((label) => (
-              <button
-                type="button"
-                key={label}
-                onClick={() => commitCustomCategories(customCategories.filter((item) => item !== label))}
-                title="点击移除"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      <div className={`reference-upload-card ${displayReferencePreview ? "has-preview" : ""}`}>
+      <div className={`reference-upload-card compact-reference-card ${displayReferencePreview ? "has-preview" : "is-empty"}`}>
         <button
           className="reference-upload-main"
           type="button"
@@ -584,44 +663,62 @@ export function AssetsSection({
         >
           <span className="reference-thumb" aria-hidden="true">
             {displayReferencePreview ? (
+              <>
               <img
                 className="reference-preview-image"
                 src={displayReferencePreview}
                 alt=""
                 onError={() => setBrokenPreviewUrls((current) => ({ ...current, [displayReferencePreview]: true }))}
               />
-            ) : null}
+              {referencePreviewCount > 1 ? <em className="asset-count-badge reference-count-badge">{referencePreviewCount}</em> : null}
+              </>
+            ) : (
+              <span className="reference-plus">+</span>
+            )}
           </span>
-          {displayReferencePreview ? null : (
-            <span>
+          <span className="reference-upload-meta">
+            {displayReferencePreview ? <small>{referencePreviewCount > 1 ? `${referencePreviewCount} 个素材` : referenceLabel}</small> : null}
+            {displayReferencePreview ? null : (
+              <>
               <strong>{referenceLabel}</strong>
-              <small>{pendingKey?.startsWith(`${referenceRole}:`) ? "上传中" : "上传构图或风格参考"}</small>
-            </span>
-          )}
+              {pendingKey?.startsWith(`${referenceRole}:`) ? <small>上传中</small> : null}
+              </>
+            )}
+          </span>
         </button>
         {displayReferencePreview ? (
           <>
+            <button className="reference-remove-button reference-corner-remove" type="button" onClick={() => void deleteReferenceUpload()} aria-label="删除构图参考图" title="删除参考图">
+              ×
+            </button>
             <div className="reference-analysis-tools">
               <button
+                className="reference-analysis-button"
                 type="button"
                 onClick={() => runReferenceExtraction("composition")}
                 disabled={!canExtractReference}
                 title={referenceDisabledReason || undefined}
               >
-                识别构图
+                <svg className="reference-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3" />
+                  <path d="M8 12h8M12 8v8" />
+                </svg>
+                <span>解析构图</span>
               </button>
               <button
+                className="reference-analysis-button"
                 type="button"
                 onClick={() => runReferenceExtraction("full")}
                 disabled={!canExtractReference}
                 title={referenceDisabledReason || undefined}
               >
-                完整识别
+                <svg className="reference-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5z" />
+                  <path d="M15 15h4M17 13v4" />
+                </svg>
+                <span>完整解析</span>
               </button>
             </div>
-            <button className="reference-remove-button" type="button" onClick={() => void deleteReferenceUpload()}>
-              删除参考图
-            </button>
           </>
         ) : null}
         {referenceNote ? (

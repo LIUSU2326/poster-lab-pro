@@ -180,7 +180,7 @@ function compressedProviderPriorityInstruction(
       "Follow this short contract before the longer creative prompt below.",
       "AGNES/COMPRESSED POSTER ORDER: first solve required uploaded anchors and story action; only then add background detail. The image is rejected if it becomes a generic pretty scene with small pasted references.",
       providerId === AGNES_PROVIDER_ID
-        ? "AGNES POSTER RAW-IMAGE SAFETY: do not use uploaded subject images as source canvases. Subject references are treated as private identity/model-sheet instructions only; the final canvas must be newly drawn full-bleed artwork, never an img2img expansion of a reference asset."
+        ? "AGNES POSTER REFERENCE INPUT: uploaded images are supplied through extra_body.image as documented image-to-image references. Preserve useful identity, logo, style, and composition anchors while redrawing a new full-bleed poster instead of making a pasted reference panel."
         : "",
       required ? `Poster required anchors: ${required}.` : "",
       protagonistAssets.length === 1
@@ -651,9 +651,6 @@ function referenceImageUrls(
   providerId: OpenAICompatibleImageProviderId,
   request: ImageGenerationRequest,
 ): string[] {
-  if (providerId === AGNES_PROVIDER_ID && request.context.mode === "poster") {
-    return [];
-  }
   return Array.from(new Set(
     request.assets
       .map((asset) => asset.url || "")

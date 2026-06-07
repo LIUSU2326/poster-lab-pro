@@ -1,5 +1,9 @@
 # DESKTOP_TESTING.md
 
+## No User-Facing Live Generation Switch
+
+The desktop workbench should not show `真实生成`, `确认真实生成保护`, `手动验证`, `MANUAL CHECK`, top-bar version/path metadata chips, or the old empty-poster prompt card. Provider setup remains under `模型与 Key`; generation remains under the normal scheme/image actions.
+
 ## Purpose
 
 This is the local desktop test runbook for the current MVP workbench. It verifies the route-backed Next.js app and the safe Poster production chain before any live image provider is enabled.
@@ -66,6 +70,6 @@ Use this after the browser and `desktop:dev` shell are acceptable:
 - Fully productized result history, rerun, and recovery flows.
 - Automated live-provider image tests.
 
-## Live Provider Rule
+## Provider Test Rule
 
-Live provider tests are opt-in only. Do not add credentials, environment-variable loading, real network calls, or quota-consuming smoke tests to the default local command path.
+Default desktop checks must not add credentials, environment-variable loading, real network calls, or quota-consuming smoke tests to the local command path unless a future task explicitly asks for a provider-spend test.

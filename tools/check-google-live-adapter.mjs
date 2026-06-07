@@ -22,7 +22,9 @@ const barrel = read("src/providers/index.ts");
 const manifests = read("src/providers/manifests.ts");
 const diagnostics = read("src/providers/connection-diagnostics.ts");
 const contracts = read("src/api/contracts.ts");
-const manualLive = read("src/api/manual-live-generation.ts");
+const queueIndex = read("src/queue/index.ts");
+const googleLiveQueue = read("src/queue/google-live-queue.ts");
+const providerTransports = read("src/api/provider-image-transports.ts");
 const product = read("PRODUCT.md");
 const roadmap = read("ROADMAP.md");
 const testing = read("TESTING.md");
@@ -101,12 +103,14 @@ for (const token of ["DEFAULT_GOOGLE_BASE_URL", "x-goog-api-key", "models"]) {
   if (!diagnostics.includes(token)) issues.push(`connection-diagnostics.ts: missing Google diagnostic token ${token}`);
 }
 
-for (const token of ["GoogleLiveQueueRunResultSchema", "providerId: z.enum([\"openai\", \"google\", \"agnes\"])"]) {
-  if (!contracts.includes(token)) issues.push(`contracts.ts: missing Google manual live token ${token}`);
+for (const token of ["ProviderIdSchema", "providerId: ProviderIdSchema.default(\"openai\")"]) {
+  if (!contracts.includes(token)) issues.push(`contracts.ts: missing Google provider token ${token}`);
 }
 
-for (const token of ["runGoogleLiveQueue", "googleImageTransport", "createGoogleImageFetchTransport"]) {
-  if (!manualLive.includes(token)) issues.push(`manual-live-generation.ts: missing ${token}`);
+for (const token of ["runGoogleLiveQueue", "transport?: GoogleImageTransport", "createGoogleImageFetchTransport"]) {
+  if (!queueIndex.includes(token) && !googleLiveQueue.includes(token) && !providerTransports.includes(token)) {
+    issues.push(`Google queue/transport wiring: missing ${token}`);
+  }
 }
 
 for (const token of ["createGoogleLiveImageAdapter", "createGoogleImageFetchTransport"]) {

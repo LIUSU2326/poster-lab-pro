@@ -11,7 +11,7 @@ function hasStorage() {
 
 function containsPlainSecret(value) {
   if (typeof value === "string") {
-    const looksSecret = /(sk-|api[_-]?key|secret|token)/i.test(value);
+    const looksSecret = /(sk-[A-Za-z0-9_-]{8,}|AIza[A-Za-z0-9_-]{10,}|gh[pousr]_[A-Za-z0-9_]{16,}|xox[baprs]-[A-Za-z0-9-]{10,}|Bearer\s+[A-Za-z0-9._-]{10,}|(?:api[_-]?key|secret|token)\s*[:=]\s*[A-Za-z0-9._-]{10,})/i.test(value);
     const isMasked = value.includes("****") || value.includes("••••");
     return looksSecret && !isMasked;
   }
@@ -67,10 +67,12 @@ export function hydrateLocalSubmissionDraft(state) {
 function providerPreferencesFromState(state) {
   return {
     provider: state.provider,
+    providerOrder: Array.isArray(state.providerOrder) ? state.providerOrder : [],
     providerModelOverrides: state.providerModelOverrides || {},
     providerCustomModels: state.providerCustomModels || {},
     providerSlotRoutes: state.providerSlotRoutes || {},
     providerRoutePlan: state.providerRoutePlan || "standard",
+    providerRoutingOpen: Boolean(state.providerRoutingOpen),
     providerRoutePlans: Array.isArray(state.providerRoutePlans) ? state.providerRoutePlans : [],
   };
 }
@@ -104,6 +106,7 @@ export function hydrateLocalProviderPreferences(state) {
   if (!preferences || !state) return false;
 
   if (typeof preferences.provider === "string") state.provider = preferences.provider;
+  if (Array.isArray(preferences.providerOrder)) state.providerOrder = preferences.providerOrder;
   if (preferences.providerModelOverrides && typeof preferences.providerModelOverrides === "object") {
     state.providerModelOverrides = preferences.providerModelOverrides;
   }
@@ -115,6 +118,9 @@ export function hydrateLocalProviderPreferences(state) {
   }
   if (typeof preferences.providerRoutePlan === "string") {
     state.providerRoutePlan = preferences.providerRoutePlan;
+  }
+  if (typeof preferences.providerRoutingOpen === "boolean") {
+    state.providerRoutingOpen = preferences.providerRoutingOpen;
   }
   if (Array.isArray(preferences.providerRoutePlans) && preferences.providerRoutePlans.length > 0) {
     state.providerRoutePlans = preferences.providerRoutePlans;

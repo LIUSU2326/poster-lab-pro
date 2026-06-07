@@ -56,7 +56,8 @@ requireIncludes(acceptance, "MULTIMODE_ACCEPTANCE.md", [
   "Logo:",
   "Announcement:",
   "Collab:",
-  "max 1 real generation per mode",
+  "Provider-spend testing remains bounded and intentional",
+  "Run the minimum generation needed per mode",
   "Result Quality Audit",
   "npm run multimode-acceptance:check",
 ]);
@@ -80,7 +81,7 @@ requireIncludes(userTesting, "USER_TESTING.md", [
   "MULTIMODE_ACCEPTANCE.md",
   "public/mock-assets/collab-partner-sundae-ranger.svg",
   "collabCharacter",
-  "max 1 real generation per mode",
+  "Provider-spend testing should stay bounded and intentional",
 ]);
 
 requireIncludes(releaseChecklist, "RELEASE_CHECKLIST.md", [

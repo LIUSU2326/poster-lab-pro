@@ -80,14 +80,9 @@ for (const token of [
   "renderResultQualityPill",
   "renderResultQualityPanel",
   "qualityFindingLabel",
-  "result-quality-audit.v1",
   "Result Quality Audit",
 ]) {
-  if (!centerBoard.includes(token)) issues.push(`center-board.js: missing result quality UI token ${token}`);
-}
-
-for (const token of [".result-quality-pill", ".result-quality-panel"]) {
-  if (!styles.includes(token)) issues.push(`styles.css: missing result quality UI style ${token}`);
+  if (centerBoard.includes(token)) issues.push(`center-board.js: removed result quality UI token should stay absent ${token}`);
 }
 
 for (const [file, source] of [

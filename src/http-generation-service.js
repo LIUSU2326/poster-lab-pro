@@ -34,6 +34,7 @@ async function postJson(path, payload, options = {}) {
       "content-type": "application/json",
     },
     body: JSON.stringify(payload),
+    ...(options.signal ? { signal: options.signal } : {}),
   });
 
   return readEnvelope(response);
@@ -50,6 +51,7 @@ async function getJson(path, options = {}) {
     headers: {
       accept: "application/json",
     },
+    ...(options.signal ? { signal: options.signal } : {}),
   });
 
   return readEnvelope(response);
@@ -77,6 +79,13 @@ export function createHttpGenerationService(options = {}) {
 
     async runQueuePlan(workspaceId, jobId, payload = {}) {
       return postJson(`${basePath}/api/workspaces/${encodeSegment(workspaceId)}/queue-plans/${encodeSegment(jobId)}/run`, payload, options);
+    },
+
+    async cancelQueuePlan(workspaceId, jobId) {
+      return postJson(`${basePath}/api/workspaces/${encodeSegment(workspaceId)}/queue-plans/${encodeSegment(jobId)}/cancel`, {}, {
+        ...options,
+        signal: null,
+      });
     },
 
     async loadWorkspaceSnapshot(workspaceId) {
@@ -112,6 +121,9 @@ export async function runHttpGenerationServiceFlow(submission, options = {}) {
   const queuePlanCreate = providerRequestMap.ok
     ? await service.createQueuePlan(workspaceId, submission.queuePlanCreate.payload)
     : providerRequestMap;
+  if (queuePlanCreate.ok && queuePlanCreate.data?.queuePlan) {
+    options.onQueuePlanCreated?.(queuePlanCreate.data.queuePlan);
+  }
   const queueRun = queuePlanCreate.ok
     ? await service.runQueuePlan(workspaceId, queuePlanCreate.data.queuePlan.job.id, {
       archiveResults: true,
@@ -138,4 +150,23 @@ export async function runHttpGenerationServiceFlow(submission, options = {}) {
     queueRun,
     workspaceReload,
   };
+}
+
+export async function cancelHttpQueuePlan(workspaceId, jobId, options = {}) {
+  if (!workspaceId || !jobId) {
+    return {
+      ok: false,
+      error: {
+        code: "bad_request",
+        message: "Cancel requires a workspace id and queue job id.",
+        fieldErrors: {},
+      },
+      meta: {
+        traceId: `trace-cancel-client-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      },
+    };
+  }
+  const service = createHttpGenerationService(options);
+  return service.cancelQueuePlan(workspaceId, jobId);
 }

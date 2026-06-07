@@ -62,7 +62,12 @@ export async function GET(
       });
     }
 
-    return new Response("Not found", { status: 404 });
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
   } catch {
     return new Response("Bad request", { status: 400 });
   }

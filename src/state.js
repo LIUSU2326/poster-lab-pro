@@ -36,6 +36,7 @@ export const state = {
   settingsWidth: 1060,
   settingsHeight: 820,
   provider: "google",
+  providerOrder: /** @type {string[]} */ ([]),
   providerModelOverrides: /** @type {Record<string, Record<string, string>>} */ ({}),
   providerCustomModels: /** @type {Record<string, string[]>} */ ({}),
   providerSlotRoutes: /** @type {Record<string, { providerId: string, model?: string }>} */ ({
@@ -45,6 +46,7 @@ export const state = {
     compositionReference: { providerId: "google", model: "gemini-2.5-flash" },
   }),
   providerRoutePlan: "standard",
+  providerRoutingOpen: false,
   providerRoutePlans: /** @type {Array<{ id: string, name: string }>} */ ([
     { id: "standard", name: "标准方案" },
     { id: "image-first", name: "图像优先" },
@@ -89,19 +91,6 @@ export const state = {
     defaultModelAvailable: /** @type {boolean | null} */ (null),
     sampledModels: [],
   },
-  manualLiveTest: {
-    phase: "idle",
-    status: "not_started",
-    error: /** @type {string | null} */ (null),
-    message: "尚未执行手动验证。",
-    jobId: /** @type {string | null} */ (null),
-    traceId: /** @type {string | null} */ (null),
-    resultCount: 0,
-    persistedFileCount: 0,
-    connectionStatus: /** @type {string | null} */ (null),
-    updatedAt: /** @type {string | null} */ (null),
-    envelope: /** @type {null | Record<string, unknown>} */ (null),
-  },
   resultOperation: /** @type {null | Record<string, unknown>} */ (null),
   resultOperations: /** @type {Array<Record<string, unknown>>} */ ([]),
   customAssetCategories: /** @type {Record<string, string[]>} */ ({}),
@@ -110,26 +99,15 @@ export const state = {
   outputSuiteManagerOpen: false,
   outputSelectionMode: "single",
   outputPlanStrategy: "unified",
-  outputCustomSuiteEnabled: true,
-  outputCustomSuiteSizes: /** @type {string[]} */ (["1080x1920", "1200x627"]),
+  outputCustomSuiteEnabled: false,
+  outputCustomSuiteSizes: /** @type {string[]} */ ([]),
+  outputCustomSuites: /** @type {Array<{ id: string, label: string, sizes: string[] }>} */ ([]),
+  outputActiveCustomSuiteId: "",
   referenceAnalysis: /** @type {Record<string, Record<string, unknown>>} */ ({}),
   referenceUploadDataUrls: /** @type {Record<string, string>} */ ({}),
   leftCollapsed: false,
   leftWidth: 320,
   submission: null,
-  liveGate: {
-    enabled: false,
-    maxAcceptedCost: 1,
-    confirmations: {
-      liveRun: false,
-      providerCost: false,
-      externalProvider: false,
-      resultStorage: false,
-    },
-    runtimeCredentialReady: false,
-    transportReady: false,
-    resultStorageReady: true,
-  },
 };
 
 export function applyPrototypeStateFromUrl() {
@@ -141,7 +119,6 @@ export function applyPrototypeStateFromUrl() {
   if (theme === "dark" || theme === "light") state.theme = theme;
   if (view === "archive") state.view = "archive";
   if (view === "project-library") state.view = "project-library";
-  if (view === "results") state.view = "results";
   if (view === "schemes" || view === "text") state.view = "schemes";
   if (view === "text") state.copyVisible = true;
   if (modeSpecs[mode]) state.activeMode = mode;
@@ -492,6 +469,33 @@ function formatImageRenderableSloganPreview(value, language, snapshot) {
   return truncateRenderableSlogan(phrases[0] || directCandidate, language, maxChars) || normalized;
 }
 
+function formatSchemeOutputLabel(activeMode, scheme, modeState) {
+  const outputSettings = modeState?.outputSettings || {};
+  const customSize = outputSettings.customSize;
+  if (customSize?.width && customSize?.height) {
+    return `${customSize.width}x${customSize.height}`;
+  }
+
+  const ratios = Array.isArray(scheme.outputRatios) && scheme.outputRatios.length > 0
+    ? scheme.outputRatios
+    : Array.isArray(outputSettings.aspectRatios)
+      ? outputSettings.aspectRatios
+      : [];
+  if (ratios.length > 0) {
+    return ratios.join(" / ");
+  }
+
+  const presets = Array.isArray(scheme.outputPresets) ? scheme.outputPresets : [];
+  const readablePresets = presets
+    .map((item) => String(item || "").trim())
+    .filter((item) => item && item.toLowerCase() !== "custom");
+  if (readablePresets.length > 0) {
+    return readablePresets.join(" / ");
+  }
+
+  return activeMode.outputSizes?.[0] || "默认尺寸";
+}
+
 function adaptRuntimeScheme(activeMode, scheme, snapshot, index) {
   const modeState = snapshot.modeStates?.find((item) => item.mode === activeMode.id);
   const resultCount = snapshot.results?.filter((result) => result.schemeId === scheme.id).length || 0;
@@ -516,8 +520,8 @@ function adaptRuntimeScheme(activeMode, scheme, snapshot, index) {
     title: scheme.title,
     brief: visualBrief || scheme.brief,
     zh: primarySlogan,
-    en: scheme.outputPresets?.length ? scheme.outputPresets.join(" / ") : activeMode.outputSizes?.[0] || "自定义",
-    platform: scheme.outputPresets?.length ? scheme.outputPresets.join(" / ") : activeMode.outputSizes?.[0] || "自定义",
+    en: formatSchemeOutputLabel(activeMode, scheme, modeState),
+    platform: formatSchemeOutputLabel(activeMode, scheme, modeState),
     locked: scheme.lockedFields?.length ? scheme.lockedFields : activeMode.guardrails.slice(0, 2),
     status,
     progress: `${Math.min(resultCount, targetCount)}/${targetCount}`,

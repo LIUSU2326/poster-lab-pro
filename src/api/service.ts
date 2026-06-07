@@ -27,9 +27,11 @@ import {
   createMemoryDraftRepository,
   type StorageRepository,
   type StorageLoadResult,
+  type StoredProviderConfig,
   type StoredResultAsset,
   type WorkspaceSnapshot,
 } from "../storage";
+import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "../providers/mimo-compat";
 import { providerCredentialKeyRef } from "./provider-credential-refs";
 import {
   ApiEnvelopeMetaSchema,
@@ -44,6 +46,8 @@ import {
   PromptPackageCreateApiResponseSchema,
   ProviderCredentialDeleteApiRequestSchema,
   ProviderCredentialDeleteApiResponseSchema,
+  ProviderCredentialActivateApiRequestSchema,
+  ProviderCredentialActivateApiResponseSchema,
   ProviderCredentialSaveApiRequestSchema,
   ProviderCredentialSaveApiResponseSchema,
   ProviderCredentialStatusApiRequestSchema,
@@ -75,6 +79,8 @@ import {
   type PromptPackageCreateApiResponse,
   type ProviderCredentialDeleteApiRequest,
   type ProviderCredentialDeleteApiResponse,
+  type ProviderCredentialActivateApiRequest,
+  type ProviderCredentialActivateApiResponse,
   type ProviderCredentialSaveApiRequest,
   type ProviderCredentialSaveApiResponse,
   type ProviderCredentialStatusApiRequest,
@@ -101,6 +107,7 @@ export type LocalApiServiceOptions = {
   providerRegistry?: ProviderAdapterRegistry;
   resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl" | "deleteStoredFile"> & Partial<Pick<LocalResultFileStore, "readStoredFile">>;
   requireLiveExecutionGate?: boolean;
+  isQueueCancellationRequested?: (jobId: string) => boolean;
 };
 
 export type LocalApiService = {
@@ -110,6 +117,7 @@ export type LocalApiService = {
   mapProviderRequest(request: ProviderRequestMapApiRequest): Promise<ProviderRequestMapApiResponse>;
   getProviderCredentialStatus(request: ProviderCredentialStatusApiRequest): Promise<ProviderCredentialStatusApiResponse>;
   saveProviderCredential(request: ProviderCredentialSaveApiRequest): Promise<ProviderCredentialSaveApiResponse>;
+  activateProviderCredential(request: ProviderCredentialActivateApiRequest): Promise<ProviderCredentialActivateApiResponse>;
   deleteProviderCredential(request: ProviderCredentialDeleteApiRequest): Promise<ProviderCredentialDeleteApiResponse>;
   createQueuePlan(request: QueuePlanCreateApiRequest): Promise<QueuePlanCreateApiResponse>;
   runQueuePlan(request: QueuePlanRunApiRequest): Promise<QueuePlanRunApiResponse>;
@@ -332,6 +340,50 @@ async function refreshResultQualityAudits(input: {
   };
 }
 
+type StoredCredentialProfile = StoredProviderConfig["credentialProfiles"][number];
+
+function normalizeProviderModelSlots(providerId: string, slots: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(slots)
+      .map(([slot, model]) => [slot, normalizeMimoProviderModel(providerId, model)])
+      .filter(([, model]) => model),
+  );
+}
+
+function defaultCredentialProfileLabel(profiles: StoredCredentialProfile[]): string {
+  if (profiles.length === 0) return "默认 Key";
+  return `Key ${profiles.length + 1}`;
+}
+
+function mergeCredentialProfiles(input: {
+  existing?: StoredProviderConfig | undefined;
+  status: ProviderCredentialVaultStatus;
+  label?: string | undefined;
+  clearKeyRef?: string | undefined;
+}): StoredCredentialProfile[] {
+  const existingProfiles = Array.isArray(input.existing?.credentialProfiles)
+    ? input.existing.credentialProfiles
+    : [];
+  let profiles = input.clearKeyRef
+    ? existingProfiles.filter((profile) => profile.keyRef !== input.clearKeyRef)
+    : [...existingProfiles];
+
+  if (!input.clearKeyRef && input.status.configured) {
+    const index = profiles.findIndex((profile) => profile.keyRef === input.status.keyRef);
+    const previous = index >= 0 ? profiles[index] : null;
+    const nextProfile: StoredCredentialProfile = {
+      keyRef: input.status.keyRef,
+      label: input.label?.trim() || previous?.label || defaultCredentialProfileLabel(profiles),
+      apiKeyMasked: input.status.apiKeyMasked,
+      updatedAt: input.status.updatedAt || new Date().toISOString(),
+    };
+    if (index >= 0) profiles[index] = nextProfile;
+    else profiles = [...profiles, nextProfile];
+  }
+
+  return profiles;
+}
+
 async function updateProviderCredentialMirror(input: {
   repository: StorageRepository;
   workspaceId: string;
@@ -342,8 +394,10 @@ async function updateProviderCredentialMirror(input: {
     enabled?: boolean | undefined;
     modelSlots?: Record<string, string> | undefined;
   };
+  label?: string | undefined;
   enabledFallback?: boolean;
   clear?: boolean;
+  clearKeyRef?: string | undefined;
 }): Promise<{ updated: boolean; revision?: number; failure?: ApiFailureEnvelope }> {
   const loaded = await input.repository.loadSnapshot(input.workspaceId);
   if (!loaded.ok) {
@@ -355,19 +409,53 @@ async function updateProviderCredentialMirror(input: {
 
   const existing = loaded.snapshot.providerConfigs[input.status.providerId];
   const updatedAt = input.status.updatedAt || new Date().toISOString();
-  const modelSlots = {
+  const clearKeyRef = input.clearKeyRef || (input.clear ? input.status.keyRef : undefined);
+  const credentialProfiles = mergeCredentialProfiles({
+    existing,
+    status: input.status,
+    label: input.label,
+    ...(clearKeyRef ? { clearKeyRef } : {}),
+  });
+  const currentActiveKeyRef = existing?.credentialKeyRef || providerCredentialKeyRef({
+    workspaceId: input.workspaceId,
+    providerId: input.status.providerId,
+  });
+  const nextActiveKeyRef = input.status.configured
+    ? input.status.keyRef
+    : clearKeyRef && currentActiveKeyRef === clearKeyRef
+      ? credentialProfiles[0]?.keyRef || undefined
+      : currentActiveKeyRef;
+  const activeProfile = credentialProfiles.find((profile) => profile.keyRef === nextActiveKeyRef);
+  const activeMasked = input.status.configured && input.status.keyRef === nextActiveKeyRef
+    ? input.status.apiKeyMasked
+    : activeProfile?.apiKeyMasked || "";
+  const hasApiKey = Boolean(input.status.configured || activeProfile);
+  const status = !hasApiKey
+    ? "idle" as const
+    : input.status.configured
+      ? "success" as const
+      : "warning" as const;
+  const providerId = input.status.providerId;
+  const modelSlots = normalizeProviderModelSlots(providerId, {
     ...(existing?.modelSlots || {}),
     ...(input.settings?.modelSlots || {}),
-  };
-  const defaultModel = input.settings?.defaultModel || existing?.defaultModel || "";
-  if (defaultModel && !modelSlots.image) modelSlots.image = defaultModel;
+  });
+  const defaultModel = normalizeMimoProviderModel(providerId, input.settings?.defaultModel ?? existing?.defaultModel ?? "");
+  if (providerId === "mimo") {
+    delete modelSlots.image;
+    if (defaultModel && !modelSlots.concept) modelSlots.concept = defaultModel;
+  } else if (defaultModel && !modelSlots.image) {
+    modelSlots.image = defaultModel;
+  }
   const nextConfig = {
-    providerId: input.status.providerId,
-    enabled: input.clear ? false : input.settings?.enabled ?? existing?.enabled ?? input.enabledFallback ?? input.status.configured,
-    status: input.clear ? "idle" as const : input.status.configured ? "success" as const : "idle" as const,
-    hasApiKey: input.clear ? false : input.status.configured,
-    apiKeyMasked: input.clear ? "" : input.status.apiKeyMasked,
-    baseUrl: input.settings?.baseUrl ?? existing?.baseUrl ?? "",
+    providerId,
+    enabled: hasApiKey ? input.settings?.enabled ?? existing?.enabled ?? input.enabledFallback ?? true : false,
+    status,
+    hasApiKey,
+    apiKeyMasked: activeMasked,
+    ...(nextActiveKeyRef ? { credentialKeyRef: nextActiveKeyRef } : {}),
+    credentialProfiles,
+    baseUrl: normalizeMimoProviderBaseUrl(providerId, input.settings?.baseUrl ?? existing?.baseUrl ?? ""),
     defaultModel,
     modelSlots,
     updatedAt,
@@ -432,6 +520,33 @@ async function describeProviderCredentialStatus(input: {
   };
 }
 
+async function providerCredentialKeyRefForRequest(
+  repository: StorageRepository,
+  input: { workspaceId: string; providerId: string; keyRef?: string | undefined },
+): Promise<string> {
+  if (input.keyRef?.trim()) {
+    return providerCredentialKeyRef({
+      workspaceId: input.workspaceId,
+      providerId: input.providerId,
+      keyRef: input.keyRef,
+    });
+  }
+
+  const loaded = await repository.loadSnapshot(input.workspaceId);
+  if (loaded.ok) {
+    const activeKeyRef = loaded.snapshot.providerConfigs[input.providerId as keyof typeof loaded.snapshot.providerConfigs]?.credentialKeyRef;
+    if (activeKeyRef) {
+      return providerCredentialKeyRef({
+        workspaceId: input.workspaceId,
+        providerId: input.providerId,
+        keyRef: activeKeyRef,
+      });
+    }
+  }
+
+  return providerCredentialKeyRef(input);
+}
+
 export function createLocalApiService(options: LocalApiServiceOptions = {}): LocalApiService {
   const repository = options.repository || createMemoryDraftRepository();
   const credentialVault = options.credentialVault || createEncryptedProviderCredentialVault({
@@ -449,6 +564,7 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
     ...(options.providerRegistry ? { providerRegistry: options.providerRegistry } : {}),
     ...(options.resultFileStore ? { resultFileStore: options.resultFileStore } : {}),
     ...(options.requireLiveExecutionGate ? { requireLiveExecutionGate: true } : {}),
+    ...(options.isQueueCancellationRequested ? { isCancellationRequested: options.isQueueCancellationRequested } : {}),
   });
 
   return {
@@ -542,7 +658,7 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
     async getProviderCredentialStatus(request) {
       try {
         const parsed = ProviderCredentialStatusApiRequestSchema.parse(request);
-        const keyRef = providerCredentialKeyRef(parsed);
+        const keyRef = await providerCredentialKeyRefForRequest(repository, parsed);
         const credentialStatus = await describeProviderCredentialStatus({
           credentialVault,
           providerId: parsed.providerId,
@@ -595,15 +711,17 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
     async saveProviderCredential(request) {
       try {
         const parsed = ProviderCredentialSaveApiRequestSchema.parse(request);
+        const keyRef = await providerCredentialKeyRefForRequest(repository, parsed);
         const status = await credentialVault.save({
           providerId: parsed.providerId,
-          keyRef: providerCredentialKeyRef(parsed),
+          keyRef,
           apiKey: parsed.apiKey,
         });
         const mirror = await updateProviderCredentialMirror({
           repository,
           workspaceId: parsed.workspaceId,
           status,
+          label: parsed.label,
           settings: {
             baseUrl: parsed.baseUrl,
             defaultModel: parsed.defaultModel,
@@ -635,23 +753,79 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
       }
     },
 
+    async activateProviderCredential(request) {
+      try {
+        const parsed = ProviderCredentialActivateApiRequestSchema.parse(request);
+        const keyRef = providerCredentialKeyRef({
+          workspaceId: parsed.workspaceId,
+          providerId: parsed.providerId,
+          keyRef: parsed.keyRef,
+        });
+        const credentialStatus = await describeProviderCredentialStatus({
+          credentialVault,
+          providerId: parsed.providerId,
+          keyRef,
+        });
+        const status = credentialStatus.status;
+        const mirror = await updateProviderCredentialMirror({
+          repository,
+          workspaceId: parsed.workspaceId,
+          status,
+          settings: {
+            enabled: status.configured,
+          },
+        });
+        if ("failure" in mirror && mirror.failure) {
+          return ProviderCredentialActivateApiResponseSchema.parse(mirror.failure);
+        }
+
+        return ProviderCredentialActivateApiResponseSchema.parse({
+          ok: true,
+          data: {
+            status,
+            providerConfigUpdated: mirror.updated,
+            recoveredInvalidCredential: credentialStatus.recoveredInvalidCredential,
+          },
+          meta: createApiMeta({
+            workspaceId: parsed.workspaceId,
+            ...(mirror.revision ? { revision: mirror.revision } : {}),
+          }),
+        });
+      } catch (error) {
+        const workspaceId = workspaceIdFromUnknown(request);
+        return ProviderCredentialActivateApiResponseSchema.parse(
+          failureFromError(error, {
+            ...(workspaceId ? { workspaceId } : {}),
+          }),
+        );
+      }
+    },
+
     async deleteProviderCredential(request) {
       try {
         const parsed = ProviderCredentialDeleteApiRequestSchema.parse(request);
-        const keyRef = providerCredentialKeyRef(parsed);
+        const loaded = await repository.loadSnapshot(parsed.workspaceId);
+        const existingConfig = loaded.ok ? loaded.snapshot.providerConfigs[parsed.providerId] : null;
+        const keyRef = await providerCredentialKeyRefForRequest(repository, parsed);
+        const remainingProfiles = (existingConfig?.credentialProfiles || []).filter((profile) => profile.keyRef !== keyRef);
+        const nextActiveKeyRef = existingConfig?.credentialKeyRef === keyRef
+          ? remainingProfiles[0]?.keyRef
+          : existingConfig?.credentialKeyRef;
         const revoked = await credentialVault.revoke({
           providerId: parsed.providerId,
           keyRef,
         });
+        const statusKeyRef = nextActiveKeyRef || keyRef;
         const status = await credentialVault.describe({
           providerId: parsed.providerId,
-          keyRef,
+          keyRef: statusKeyRef,
         });
         const mirror = await updateProviderCredentialMirror({
           repository,
           workspaceId: parsed.workspaceId,
           status,
-          clear: true,
+          clear: !nextActiveKeyRef,
+          clearKeyRef: keyRef,
         });
         if (mirror.failure) return ProviderCredentialDeleteApiResponseSchema.parse(mirror.failure);
 
