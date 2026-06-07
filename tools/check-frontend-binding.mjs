@@ -69,11 +69,12 @@ requireTokens("center-board.js", centerBoard, [
   "renderResultViewer",
   "open-result-viewer",
   "resolveResultOperationRoute",
-  "is-unsupported-route",
+  "二次精修",
 ]);
 
 requireTokens("config-panel.js", configPanel, [
   'data-action="generate-schemes"',
+  'data-action="clear-workbench"',
   "renderModelRoutingSummary",
   "providerCapabilityGateUserMessage",
 ]);

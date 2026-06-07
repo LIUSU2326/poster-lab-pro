@@ -17,7 +17,7 @@ export const providers = [
     status: "idle",
     key: "",
     model: "gpt-5.5",
-    url: "https://api.aigocode.com/v1",
+    url: "https://api.aigocode.app/v1",
     caps: ["OpenAI 兼容", "中转测试", "多模型"],
     note: "适合使用 AIGoCode 中转站 API Key。保存后会用模型列表做轻量连接测试，不触发图片生成。",
   },
@@ -102,7 +102,7 @@ export const modelSlots = [
     name: "图像生成",
     flow: "创意方案 -> 图像输出",
     value: "gemini-2.5-flash-image",
-    options: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro", "agnes-image-2.1-flash", "agnes-image-2.0-flash"],
+    options: ["gpt-image-1", "gpt-image-2", "gpt-image-1.5", "image-2", "image-1", "gemini-3-pro-image-preview", "wan2.7-image-pro", "qwen-image-2.0-pro", "agnes-image-2.1-flash", "agnes-image-2.0-flash"],
   },
   {
     id: "styleReference",

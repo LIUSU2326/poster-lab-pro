@@ -385,6 +385,9 @@ function renderResultViewer() {
   const finalSize = result.width && result.height ? `${result.width}x${result.height}` : "待定尺寸";
   const ratio = result.width && result.height ? simplifyRatio(result.width, result.height) : "自定义";
   const confirmingDelete = state.resultDeleteConfirmId === result.id;
+  const aiActions = [
+    renderResultActionButton(result, "variant", "二次精修"),
+  ].filter(Boolean).join("");
 
   return `
     <div class="result-viewer" role="dialog" aria-modal="true" aria-label="图片大图查看">
@@ -412,11 +415,7 @@ function renderResultViewer() {
           </div>
         </div>
         <div class="result-viewer-actions" aria-label="图片操作">
-          <div class="result-viewer-action-group" aria-label="AI 处理">
-            ${renderResultActionButton(result, "variant", "生成变体")}
-            ${renderResultActionButton(result, "upscale", "高清放大")}
-            ${renderResultActionButton(result, "removeBg", "移除背景")}
-          </div>
+          ${aiActions ? `<div class="result-viewer-action-group" aria-label="AI 处理">${aiActions}</div>` : ""}
           <div class="result-viewer-action-group" aria-label="结果管理">
             <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
             <button type="button" data-action="regenerate-result" data-result-id="${escapeHtml(result.id)}">重生成片</button>
@@ -452,17 +451,17 @@ function getResultDownloadUrlForViewer(result) {
 function renderResultActionButton(result, action, label) {
   const active = isResultOperationActive(action, result.id);
   const route = resolveResultOperationRoute(action, state.provider);
+  if (!route.supported) return "";
   return `
     <button
-      class="${active ? "is-active" : ""} ${route.supported ? "is-native-route" : "is-unsupported-route"}"
+      class="${active ? "is-active" : ""} is-native-route"
       type="button"
       data-result-action="${action}"
       data-result-id="${result.id}"
       data-route-provider="${escapeHtml(route.providerId)}"
       title="${escapeHtml(route.title)}"
       aria-label="${escapeHtml(route.title)}"
-      ${route.supported ? "" : "disabled"}
-    >${active ? "已入队" : route.supported ? label : `${label} · 暂不可用`}</button>
+    >${active ? "已入队" : label}</button>
   `;
 }
 

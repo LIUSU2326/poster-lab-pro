@@ -285,8 +285,8 @@ async function runRuntimeCheck() {
     if (collab.mapped.request.assets.some((asset) => asset.role === "gameLogo")) {
       issues.push("collab provider request without partner brandLogo: should not send raw gameLogo lettering to the image model");
     }
-    if (collab.mapped.request.assets[0]?.role !== "collabCharacter") {
-      issues.push("collab provider request: collabCharacter should be the first raw visual reference to avoid being demoted");
+    if (collab.mapped.request.assets[0]?.role !== "gameCharacter" || collab.mapped.request.assets[1]?.role !== "collabCharacter") {
+      issues.push("collab provider request: gameCharacter and collabCharacter should be the first two raw visual references, in that order, to keep both identities in frame");
     }
     if (!collab.mapped.request.assets.some((asset) => asset.role === "collabCharacter" && /independentCharacterIndex=/.test(asset.description || ""))) {
       issues.push("collab provider request: collabCharacter should carry an independent character index");

@@ -11,9 +11,10 @@ import type { CredentialResolver, ProviderCredentialRef } from "./credentials";
 import type { ProviderErrorCode } from "./contracts";
 import { getProviderManifest } from "./manifests";
 import { MIMO_DEFAULT_BASE_URL, normalizeMimoBaseUrl, normalizeMimoProviderModel } from "./mimo-compat";
+import { AIGOCODE_DEFAULT_BASE_URL, normalizeAigocodeBaseUrl } from "./aigocode-compat";
 
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_AIGOCODE_BASE_URL = "https://api.aigocode.com/v1";
+const DEFAULT_AIGOCODE_BASE_URL = AIGOCODE_DEFAULT_BASE_URL;
 const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 const DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com/v1";
@@ -131,7 +132,7 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
 
 function probeUrl(config: StoredProviderConfig): string {
   if (config.providerId === "openai") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_OPENAI_BASE_URL)}/models`;
-  if (config.providerId === "aigocode") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_AIGOCODE_BASE_URL)}/models`;
+  if (config.providerId === "aigocode") return `${normalizeAigocodeBaseUrl(config.baseUrl)}/models`;
   if (config.providerId === "google") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_GOOGLE_BASE_URL)}/models`;
   if (config.providerId === "deepseek") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_DEEPSEEK_BASE_URL)}/models`;
   if (config.providerId === "claude") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_CLAUDE_BASE_URL)}/models`;
@@ -192,8 +193,18 @@ function modelIds(body: unknown): string[] {
 function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids: string[], strictModel = false): boolean {
   if (ids.length === 0 || ids.includes(defaultModel)) return true;
   if (strictModel) return false;
+  if (
+    providerId === "aigocode"
+    && (defaultModel.startsWith("gpt-image-") || defaultModel.startsWith("image-"))
+    && !ids.some((id) => id.startsWith("gpt-image-") || id.startsWith("image-"))
+  ) {
+    return true;
+  }
   if ((providerId === "openai" || providerId === "aigocode") && defaultModel.startsWith("gpt-image-")) {
-    return ids.some((id) => id.startsWith("gpt-image-"));
+    return ids.some((id) => id.startsWith("gpt-image-") || (providerId === "aigocode" && id.startsWith("image-")));
+  }
+  if (providerId === "aigocode" && defaultModel.startsWith("image-")) {
+    return ids.some((id) => id.startsWith("image-"));
   }
   if (providerId === "agnes" && defaultModel.startsWith("agnes-image-")) {
     return ids.some((id) => id.startsWith("agnes-image-"));

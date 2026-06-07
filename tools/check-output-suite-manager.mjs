@@ -131,7 +131,7 @@ async function runRuntimeCheck() {
       providerId: "aigocode",
       providerRoutes: {
         concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
-        image: { providerId: "aigocode", model: "gpt-image-2" },
+        image: { providerId: "aigocode", model: "gpt-image-1" },
       },
       schemeIds: ["scheme-suite-1"],
       platformPresets: ["custom"],

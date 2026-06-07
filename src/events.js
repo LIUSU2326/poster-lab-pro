@@ -4,6 +4,7 @@ import { runResultOperationForWorkbench } from './result-operation-client.js';
 import { deleteResultForWorkbench } from './result-management-client.js';
 import { simulateWorkbenchAssetUpload } from './asset-library-client.js';
 import { clearGeneratedSchemesForWorkbench, deleteGeneratedSchemeForWorkbench, resetGeneratedSchemeForWorkbench } from './scheme-management-client.js';
+import { clearWorkbenchForWorkbench } from './workbench-reset-client.js';
 import { getArchiveRows } from './data/workspace-adapters.js';
 import { modeSpecs } from './data/modes.js';
 import { getActiveGenerationFormValues, setGenerationFormChoice, updateGenerationFormField } from './generation-form-runtime.js';
@@ -190,6 +191,17 @@ async function handleActionControl(control, event, render) {
   if (action === "toggle-copy") state.copyVisible = !state.copyVisible;
   if (action === "toggle-task-panel") {
     state.taskOpen = !state.taskOpen;
+    render();
+    return;
+  }
+  if (action === "clear-workbench") {
+    const confirmed = globalThis.confirm?.("清空当前工作台的项目内容、素材、方案、结果和队列？API Key 与模型配置会保留。") ?? true;
+    if (!confirmed) return;
+    const envelope = await clearWorkbenchForWorkbench();
+    if (!envelope.ok) {
+      state.submission = createLocalServiceError("clear_workbench_failed", envelope.error?.message || "清空工作台失败。");
+      state.taskOpen = false;
+    }
     render();
     return;
   }
@@ -681,7 +693,6 @@ async function handleActionControl(control, event, render) {
     if (state.resultDeleteConfirmId !== resultId) {
       state.resultDeleteConfirmId = resultId;
       state.schemeDeleteConfirmId = "";
-      state.view = "schemes";
       render();
       return;
     }
@@ -691,7 +702,7 @@ async function handleActionControl(control, event, render) {
       state.taskOpen = false;
     }
     state.resultDeleteConfirmId = "";
-    state.view = "schemes";
+    state.resultViewerOpen = false;
     render();
     return;
   }

@@ -291,7 +291,7 @@ function assetsForPromptMode(snapshot: WorkspaceSnapshot, mode: ProductionMode):
     const leftDemo = isDemoAsset(left) ? 1 : 0;
     const rightDemo = isDemoAsset(right) ? 1 : 0;
     if (leftDemo !== rightDemo) return leftDemo - rightDemo;
-    return dateValue(left.createdAt) - dateValue(right.createdAt);
+    return dateValue(right.updatedAt || right.createdAt) - dateValue(left.updatedAt || left.createdAt);
   });
 }
 

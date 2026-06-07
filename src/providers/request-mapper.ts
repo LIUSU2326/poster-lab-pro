@@ -340,8 +340,8 @@ function filterImageReferenceAssetsForMode(
       const gameLogo = firstAsset(assets, bySourceRole("gameLogo"));
       const partnerLogo = firstAsset(assets, bySourceRole("brandLogo"));
       return partnerLogo
-        ? uniqueAssets([collabCharacter, gameCharacter, gameLogo, partnerLogo])
-        : uniqueAssets([collabCharacter, gameCharacter]);
+        ? uniqueAssets([gameCharacter, collabCharacter, gameLogo, partnerLogo])
+        : uniqueAssets([gameCharacter, collabCharacter]);
     }
     default:
       return assets;
@@ -653,7 +653,10 @@ function collabMandatoryVisualContract(assets: ProviderAssetReference[]): string
   return [
     "## Non-Negotiable Collab Dual-Subject Contract",
     collabPartner && gameCharacter
-      ? "Partner-first co-star lock: design the composition around TWO large readable co-stars before adding backgrounds, props, brand plates, particles, or decorations. [Collab Partner] must receive a clear foreground or strong-midground co-star action moment; [Game Character] must receive comparable scale and clarity."
+      ? "Partner-first co-star lock / dual co-star lock: design the composition around TWO large readable co-stars before adding backgrounds, props, brand plates, particles, or decorations. [Game Character] and [Collab Partner] must both be visible at comparable scale in the same frame, preferably left/right or foreground/midground with a shared handoff, cooking, defense, race, or impact interaction."
+      : "",
+    collabPartner && gameCharacter
+      ? "Image-reference handling: treat every uploaded image as an identity/model-sheet reference only, not as the source canvas, background, or crop to transform. The final frame must be newly composed and must include both referenced characters."
       : "",
     collabPartner
       ? `The uploaded collabCharacter reference (${collabPartner.id}) is [Collab Partner]. It must appear as a separate readable co-star, never as a tiny background mascot, hidden decoration, merged hybrid, or omitted partner.`

@@ -16432,6 +16432,61 @@ select:focus-visible,
   text-overflow: ellipsis;
 }
 
+/* 1.1.0 release polish: compact destructive reset and reliable viewer controls. */
+.brand-actions {
+  display: inline-flex;
+  margin-left: auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.workbench-clear-button {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--panel-lift);
+  color: var(--text-tertiary);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.workbench-clear-button:hover,
+.workbench-clear-button:focus-visible {
+  border-color: color-mix(in srgb, var(--danger) 54%, var(--border-default));
+  color: var(--danger);
+}
+
+.result-viewer {
+  z-index: 120 !important;
+  pointer-events: auto;
+}
+
+.result-viewer-close {
+  z-index: 124 !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.result-viewer-stage,
+.result-viewer-dock {
+  position: relative;
+  z-index: 121;
+}
+
+.result-viewer-dock {
+  z-index: 123;
+}
+
+.result-viewer-action-group:empty {
+  display: none;
+}
+
 @media (max-width: 980px) {
   .result-viewer-dock {
     grid-template-columns: 1fr !important;

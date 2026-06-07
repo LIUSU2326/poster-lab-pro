@@ -19,8 +19,15 @@ import { getProviderManifest } from "./manifests";
 import {
   assetFusionStrategy,
   assetSemanticRole,
+  isIntegratedReferenceAsset,
   modeAssetFusionDirective,
 } from "../assets/semantic-roles";
+import {
+  AIGOCODE_DEFAULT_BASE_URL,
+  AIGOCODE_DEFAULT_IMAGE_MODEL,
+  normalizeAigocodeBaseUrl,
+  normalizeAigocodeImageModel,
+} from "./aigocode-compat";
 import {
   providerCapabilityPromptNote,
   providerUsesExtraBodyImageReferences,
@@ -30,7 +37,7 @@ const OPENAI_PROVIDER_ID = "openai" as const;
 const AIGOCODE_PROVIDER_ID = "aigocode" as const;
 const AGNES_PROVIDER_ID = "agnes" as const;
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_AIGOCODE_BASE_URL = "https://api.aigocode.com/v1";
+const DEFAULT_AIGOCODE_BASE_URL = AIGOCODE_DEFAULT_BASE_URL;
 const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
 type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "aigocode" | "agnes">;
@@ -110,12 +117,18 @@ function providerDisplayName(providerId: OpenAICompatibleImageProviderId): strin
 }
 
 function normalizeBaseUrl(providerId: OpenAICompatibleImageProviderId, config: ProviderConfigForm): string {
+  if (providerId === AIGOCODE_PROVIDER_ID) return normalizeAigocodeBaseUrl(config.baseUrl);
   return (config.baseUrl?.trim() || defaultBaseUrl(providerId)).replace(/\/+$/, "");
 }
 
 function imageModel(providerId: OpenAICompatibleImageProviderId, request: ImageGenerationRequest, config: ProviderConfigForm): string {
-  const fallback = providerId === "agnes" ? "agnes-image-2.1-flash" : "gpt-image-2";
-  return request.model || config.modelSlots.image || config.defaultModel || fallback;
+  const fallback = providerId === "agnes"
+    ? "agnes-image-2.1-flash"
+    : providerId === AIGOCODE_PROVIDER_ID
+      ? AIGOCODE_DEFAULT_IMAGE_MODEL
+      : "gpt-image-2";
+  const model = request.model || config.modelSlots.image || config.defaultModel || fallback;
+  return providerId === AIGOCODE_PROVIDER_ID ? normalizeAigocodeImageModel(model) : model;
 }
 
 function editImageGenerationRequest(request: ImageEditRequest): ImageGenerationRequest {
@@ -235,13 +248,16 @@ function compressedProviderPriorityInstruction(
       "COMPRESSED MODEL PRIORITY CONTRACT:",
       "Follow this short contract before the longer creative prompt below.",
       "COLLAB DUAL-STAR ORDER: first draw two large readable co-stars with equal importance, then add scene, props, blank brand plates, and effects. Do not start from logos or background.",
+      partner && gameCharacter
+        ? "REFERENCE USE LOCK: uploaded images are identity/model-sheet references only, not the source canvas, background, crop, or single image to transform. Newly compose one frame that contains BOTH referenced characters."
+        : "",
       partner ? `Collab partner anchor: ${partner.id} must appear as a separate readable co-star.` : "",
       gameCharacter ? `Game character anchor: ${gameCharacter.id} must appear as a separate readable co-star.` : "",
       partner && gameCharacter
         ? "DUAL-SUBJECT FRAMING LOCK: compose the uploaded collab partner and uploaded game character as the two primary foreground subjects, each occupying meaningful visual weight. A one-character image is invalid even if the environment is polished."
         : "",
       partner && gameCharacter
-        ? "Both co-stars need comparable visual weight, shared lighting, same ground plane, contact shadows, and one clear interaction touchpoint. The image fails if one side disappears, becomes tiny, hides behind a prop/plate, turns into a logo-only presence, or the two identities merge into a hybrid."
+        ? "Both co-stars need comparable visual weight, shared lighting, same ground plane, contact shadows, and one clear interaction touchpoint such as left/right handoff, cooking together, guarding one objective, racing, or reacting to the same impact. The image fails if one side disappears, becomes tiny, hides behind a prop/plate, turns into a logo-only presence, or the two identities merge into a hybrid."
         : "",
       partner && gameCharacter
         ? "Two-character audit: render exactly one uploaded collab partner and exactly one uploaded game character as the primary living characters. No third lead character, no background crowd, no character fusion, no side reduced to decorative mascot."
@@ -678,16 +694,30 @@ function referenceImageUrls(
 ): string[] {
   return Array.from(new Set(
     request.assets
+      .filter(isIntegratedReferenceAsset)
       .map((asset) => asset.url || "")
       .filter((url) => /^(https?:\/\/|data:image\/)/i.test(url)),
   ));
 }
 
-function imageRequestBody(
+async function referenceImageInputs(
+  providerId: OpenAICompatibleImageProviderId,
+  request: ImageGenerationRequest,
+): Promise<string[]> {
+  const urls = referenceImageUrls(providerId, request);
+  const resolved = await Promise.all(urls.map(async (url) => {
+    if (/^data:image\//i.test(url)) return url;
+    if (isLocalReferenceUrl(url)) return await localImageUrlToDataUrl(url, fetch);
+    return url;
+  }));
+  return resolved.filter(Boolean);
+}
+
+async function imageRequestBody(
   providerId: OpenAICompatibleImageProviderId,
   model: string,
   request: ImageGenerationRequest,
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
   const body: Record<string, unknown> = {
     model,
     prompt: imagePrompt(providerId, request),
@@ -696,13 +726,13 @@ function imageRequestBody(
   };
 
   if (providerUsesExtraBodyImageReferences(providerId)) {
-    const imageUrls = referenceImageUrls(providerId, request);
+    const imageUrls = await referenceImageInputs(providerId, request);
     if (imageUrls.length > 0) {
       body.extra_body = {
         image: imageUrls,
         response_format: "url",
       };
-      if (model === "agnes-image-2.0-flash") {
+      if (providerId === AGNES_PROVIDER_ID) {
         body.tags = ["img2img"];
       }
     }
@@ -735,7 +765,7 @@ export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOpti
           Authorization: `Bearer ${parsedConfig.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: imageRequestBody(providerId, model, parsedRequest),
+        body: await imageRequestBody(providerId, model, parsedRequest),
       }),
     );
     const parsedTransportResponse = OpenAIImageTransportResponseSchema.parse(transportResponse);

@@ -46,6 +46,8 @@ const rolePriorityByMode = {
 };
 
 const providerFallbacks = Object.fromEntries(providerFixtures.map((provider) => [provider.id, provider]));
+const aigocodeDefaultBaseUrl = "https://api.aigocode.app/v1";
+const aigocodeImageAliases = new Set(["image-2", "image-1", "dall-e-3"]);
 const mimoDefaultBaseUrl = "https://token-plan-cn.xiaomimimo.com/v1";
 const mimoDefaultModel = "mimo-v2.5-pro";
 const mimoLegacyBaseUrls = new Set(["https://api.xiaomimimo.com/v1"]);
@@ -53,6 +55,13 @@ const mimoLegacyModels = new Set(["mimo-v2.3", "mimo-v2.2", "mimo-v2.1"]);
 
 function normalizeProviderUrl(providerId, value, fallback = "") {
   const normalized = (value || fallback || "").trim().replace(/\/+$/, "");
+  if (providerId === "aigocode") {
+    if (!normalized || normalized === "https://api.aigocode.com" || normalized === "https://api.aigocode.com/v1") {
+      return aigocodeDefaultBaseUrl;
+    }
+    if (normalized === "https://api.aigocode.app") return aigocodeDefaultBaseUrl;
+    return normalized.replace(/^https:\/\/api\.aigocode\.com(?=\/|$)/i, "https://api.aigocode.app");
+  }
   if (providerId !== "mimo") return normalized;
   if (!normalized || mimoLegacyBaseUrls.has(normalized)) return mimoDefaultBaseUrl;
   return normalized;
@@ -60,6 +69,7 @@ function normalizeProviderUrl(providerId, value, fallback = "") {
 
 function normalizeProviderModel(providerId, value, fallback = "") {
   const normalized = (value || fallback || "").trim();
+  if (providerId === "aigocode" && (!normalized || aigocodeImageAliases.has(normalized))) return "gpt-image-1";
   if (providerId !== "mimo") return normalized;
   if (!normalized || mimoLegacyModels.has(normalized)) return mimoDefaultModel;
   return normalized;

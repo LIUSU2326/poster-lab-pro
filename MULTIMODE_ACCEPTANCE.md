@@ -108,6 +108,36 @@ Follow-up changes made from this evidence:
 - Collab compressed-model prompt now explicitly requires two primary foreground co-stars and marks one-character outputs invalid.
 - Icon prompt now explicitly bans pseudo-letters and glyph-like strokes.
 
+## 2026-06-07 Provider Route and Cleanup Retest
+
+Latest local desktop bundle tested: `/Users/liusu/Desktop/Poster Lab Pro.app`.
+
+Provider route fixes:
+
+- AIGoCode was migrated from `https://api.aigocode.com/v1` to `https://api.aigocode.app/v1`.
+- AIGoCode image aliases such as `image-2`, `image-1`, and `dall-e-3` now normalize to `gpt-image-1` for the image slot.
+- AIGoCode connection/model diagnostics passed after the domain/model normalization, but a paid image smoke returned `No available compatible accounts`. Treat this as provider/account availability blocked, not an app queue failure.
+- Agnes `agnes-image-2.1-flash` connection and image queue execution succeeded.
+- OpenAI-compatible image references now resolve local `localhost` asset URLs to inline data URLs before transport, so external providers receive the image bytes instead of inaccessible local URLs.
+
+Reference-image policy:
+
+- `styleReference` and `compositionReference` remain analysis-only inputs. They are not sent as raw image references to the image model and must not be copied as characters, objects, logos, scenery, UI, text, brand content, or project motifs.
+
+Agnes real generation retest:
+
+- Poster, Announcement, Icon, Logo, and Collab all reached real Agnes image generation in the desktop flow.
+- Announcement and Logo followed the current copy-safe strategy: blank editable panels/plates instead of forced garbled text.
+- Collab improved from one-character omission to two visible subjects after request-order and prompt changes, but still failed stable quality for Agnes because the uploaded game character identity drifted and the partner reference dominated the composition. Agnes Collab should remain `review` quality until a stronger multi-reference provider or a dedicated composite-reference flow is used.
+
+UI/UX cleanup retest:
+
+- A one-click `清空工作台` action was added. It clears project content, assets, schemes, queue, results, archive rows, and reference analyses while preserving provider API Key/model configuration.
+- Clean workspace verification after reset: project `新项目`, description `请输入项目描述`, assets `0`, schemes `0`, results `0`, queue plans `0`, archive rows `0`; AIGoCode, Agnes, and MiMo API Key mirrors remained configured.
+- Large-result viewer close button was verified from the desktop browser: closing the viewer no longer changes mode, URL, or scroll position.
+- Unsupported large-viewer actions `高清放大` and `移除背景` were removed from the viewer. The remaining AI action is the existing `二次精修`/image edit entry point.
+- Mode-tab switching across Poster, Collab, Announcement, Logo, and Icon was verified without URL changes, scroll jumps, or unintended viewer state.
+
 ## Required Local Gates
 
 - `npm run multimode-regression:check`

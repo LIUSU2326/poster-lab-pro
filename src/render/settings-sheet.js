@@ -9,9 +9,9 @@ const providerModelCatalog = {
     vision: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1"],
   },
   aigocode: {
-    default: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1", "gpt-image-2", "gpt-image-1.5"],
+    default: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1", "gpt-image-1", "gpt-image-2", "image-2", "image-1"],
     plan: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1"],
-    image: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "dall-e-3"],
+    image: ["gpt-image-1", "gpt-image-2", "gpt-image-1.5", "image-2", "image-1", "dall-e-3"],
     vision: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1"],
   },
   google: {

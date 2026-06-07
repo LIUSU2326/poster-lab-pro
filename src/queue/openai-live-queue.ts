@@ -26,6 +26,12 @@ import {
   type StoredResultAsset,
 } from "../storage/contracts";
 import type { ProviderId } from "../schema/zod";
+import {
+  AIGOCODE_DEFAULT_BASE_URL,
+  AIGOCODE_DEFAULT_IMAGE_MODEL,
+  normalizeAigocodeBaseUrl,
+  normalizeAigocodeImageModel,
+} from "../providers/aigocode-compat";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
 const AIGOCODE_PROVIDER_ID = "aigocode" as const;
@@ -147,11 +153,11 @@ async function prepareOpenAILiveProviderConfig(input: {
     ? current?.modelSlots?.image || current?.defaultModel || manifest.modelSlots.image?.[0] || "agnes-image-2.1-flash"
     : input.providerId === OPENAI_PROVIDER_ID
     ? "gpt-image-1"
-    : current?.modelSlots?.image || current?.defaultModel || manifest.modelSlots.image?.[0] || "gpt-image-2";
+    : normalizeAigocodeImageModel(current?.modelSlots?.image || current?.defaultModel || manifest.modelSlots.image?.[0] || AIGOCODE_DEFAULT_IMAGE_MODEL);
   const defaultBaseUrl = input.providerId === AGNES_PROVIDER_ID
     ? "https://apihub.agnes-ai.com/v1"
     : input.providerId === AIGOCODE_PROVIDER_ID
-      ? "https://api.aigocode.com/v1"
+      ? AIGOCODE_DEFAULT_BASE_URL
       : "";
   const nextSnapshot = {
     ...loaded.snapshot,
@@ -163,7 +169,9 @@ async function prepareOpenAILiveProviderConfig(input: {
         status: "success" as const,
         hasApiKey: true,
         apiKeyMasked: input.apiKeyMasked,
-        baseUrl: current?.baseUrl || defaultBaseUrl,
+        baseUrl: input.providerId === AIGOCODE_PROVIDER_ID
+          ? normalizeAigocodeBaseUrl(current?.baseUrl || defaultBaseUrl)
+          : current?.baseUrl || defaultBaseUrl,
         defaultModel: imageModel,
         modelSlots: {
           ...(current?.modelSlots || {}),

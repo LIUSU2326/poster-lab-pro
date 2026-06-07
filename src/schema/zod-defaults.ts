@@ -71,11 +71,11 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
     defaultModel: "gpt-image-2",
   },
   aigocode: {
-    baseUrl: "https://api.aigocode.com/v1",
+    baseUrl: "https://api.aigocode.app/v1",
     defaultModel: "gpt-5.5",
     modelSlots: {
       concept: "gpt-5.5",
-      image: "gpt-image-2",
+      image: "gpt-image-1",
       styleReference: "gpt-5.5",
       compositionReference: "gpt-5.5",
     },

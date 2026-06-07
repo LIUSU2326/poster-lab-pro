@@ -270,7 +270,7 @@ async function runRuntimeCheck() {
       ...defaults.createProviderConfigDefaults("aigocode"),
       enabled: true,
       apiKey: "AIGOCODE_ADAPTER_KEY_TEST_PLACEHOLDER",
-      defaultModel: "gpt-image-2",
+      defaultModel: "gpt-image-1",
     };
     const aigocodeRequest = providers.ImageGenerationRequestSchema.parse({
       ...imageRequest,
@@ -279,13 +279,13 @@ async function runRuntimeCheck() {
         providerId: "aigocode",
         traceId: "trace-aigocode-live-adapter-check",
       },
-      model: "gpt-image-2",
+      model: "gpt-image-1",
     });
     const aigocodeResult = await aigocodeAdapter.generateImage(aigocodeRequest, aigocodeConfig);
     if (!aigocodeResult.ok) {
       issues.push(`AIGoCode image response should succeed: ${aigocodeResult.error.code}`);
     }
-    if (!capturedAigocodeRequest?.url.startsWith("https://api.aigocode.com/v1/")) {
+    if (!capturedAigocodeRequest?.url.startsWith("https://api.aigocode.app/v1/")) {
       issues.push("AIGoCode image adapter should use the AIGoCode OpenAI-compatible base URL");
     }
 

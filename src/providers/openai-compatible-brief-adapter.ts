@@ -33,12 +33,13 @@ import {
 import { sanitizePosterSchemeText } from "./poster-scheme-sanitizer";
 import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "../prompts/slogan-policy";
 import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "./mimo-compat";
+import { AIGOCODE_DEFAULT_BASE_URL, normalizeAigocodeBaseUrl } from "./aigocode-compat";
 
 const CHAT_COMPLETIONS_PATH = "/chat/completions";
 
 const defaultBaseUrls: Partial<Record<ProviderId, string>> = {
   openai: "https://api.openai.com/v1",
-  aigocode: "https://api.aigocode.com/v1",
+  aigocode: AIGOCODE_DEFAULT_BASE_URL,
   deepseek: "https://api.deepseek.com",
   qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
   agnes: "https://apihub.agnes-ai.com/v1",
@@ -181,6 +182,7 @@ function validateConfig(providerId: ProviderId, config: ProviderConfigForm): Pro
 }
 
 function normalizeBaseUrl(providerId: ProviderId, config: ProviderConfigForm): string {
+  if (providerId === "aigocode") return normalizeAigocodeBaseUrl(config.baseUrl);
   return normalizeMimoProviderBaseUrl(providerId, config.baseUrl?.trim() || defaultBaseUrls[providerId] || "");
 }
 

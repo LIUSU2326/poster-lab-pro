@@ -119,7 +119,10 @@ export function renderConfigPanel(activeMode) {
           <strong>Poster Lab</strong>
           <small>模型与 Key 在顶部统一配置</small>
         </div>
-        <button class="panel-collapse-button" type="button" data-action="toggle-left-panel" aria-label="收起左侧配置">收起</button>
+        <div class="brand-actions" aria-label="工作台操作">
+          <button class="workbench-clear-button" type="button" data-action="clear-workbench" aria-label="清空工作台" title="清空工作台内容，保留 API Key 与模型配置">⌫</button>
+          <button class="panel-collapse-button" type="button" data-action="toggle-left-panel" aria-label="收起左侧配置">收起</button>
+        </div>
       </div>
 
       <div class="mode-tabs" role="tablist" aria-label="生产模式">
