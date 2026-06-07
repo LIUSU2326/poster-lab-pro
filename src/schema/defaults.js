@@ -8,30 +8,40 @@ export const modeDefaultOutput = {
     aspectRatios: ["16:9"],
     schemeCount: 16,
     imagesPerScheme: 1,
+    selectionMode: "single",
+    planStrategy: "unified",
   },
   collab: {
     platformPresets: ["custom"],
     aspectRatios: ["16:9"],
     schemeCount: 12,
     imagesPerScheme: 1,
+    selectionMode: "single",
+    planStrategy: "unified",
   },
   announcement: {
     platformPresets: ["custom"],
     aspectRatios: ["16:9"],
     schemeCount: 8,
     imagesPerScheme: 1,
+    selectionMode: "single",
+    planStrategy: "unified",
   },
   logo: {
     platformPresets: ["custom"],
     aspectRatios: ["1:1", "4:3"],
     schemeCount: 6,
     imagesPerScheme: 1,
+    selectionMode: "suite",
+    planStrategy: "unified",
   },
   icon: {
     platformPresets: ["appStore", "googlePlay"],
     aspectRatios: ["1:1"],
     schemeCount: 6,
     imagesPerScheme: 1,
+    selectionMode: "suite",
+    planStrategy: "unified",
   },
 };
 
@@ -125,6 +135,8 @@ export function createOutputSettingsDefaults(mode = "poster") {
   return {
     ...defaults,
     customSize: null,
+    selectionMode: defaults.selectionMode || "single",
+    planStrategy: defaults.planStrategy || "unified",
   };
 }
 

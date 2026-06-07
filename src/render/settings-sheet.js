@@ -224,9 +224,20 @@ function formatModelOptionLabel(provider, model) {
 }
 
 function getRoutePlans() {
-  const plans = Array.isArray(state.providerRoutePlans) && state.providerRoutePlans.length > 0
+  const defaultPlans = [
+    { id: "standard", name: "标准方案" },
+    { id: "image-first", name: "图像优先" },
+    { id: "mimo-agnes", name: "MiMo + Agnes 测试" },
+  ];
+  const savedPlans = Array.isArray(state.providerRoutePlans) && state.providerRoutePlans.length > 0
     ? state.providerRoutePlans
-    : [{ id: "standard", name: "标准方案" }];
+    : defaultPlans;
+  const plans = [
+    ...savedPlans.filter((plan) => plan?.id !== "agnes-core"),
+    ...defaultPlans.filter((plan) => !savedPlans.some((candidate) => candidate?.id === plan.id)),
+  ];
+  state.providerRoutePlans = plans;
+  if (state.providerRoutePlan === "agnes-core") state.providerRoutePlan = "mimo-agnes";
   if (!plans.some((plan) => plan.id === state.providerRoutePlan)) {
     state.providerRoutePlan = plans[0].id;
   }
@@ -301,28 +312,33 @@ function providerConfigured(provider, credential = null) {
 
 function isAgnesCoreRoute() {
   const routes = state.providerSlotRoutes || {};
-  return routes.concept?.providerId === "agnes" && routes.image?.providerId === "agnes";
+  return routes.concept?.providerId === "mimo"
+    && routes.image?.providerId === "agnes"
+    && routes.styleReference?.providerId === "mimo"
+    && routes.compositionReference?.providerId === "mimo";
 }
 
 function renderAgnesRouteAssist(providers) {
   const agnesProvider = providers.find((provider) => provider.id === "agnes");
+  const mimoProvider = providers.find((provider) => provider.id === "mimo");
   const agnesCredential = selectedCredentialState("agnes");
-  const configured = providerConfigured(agnesProvider, agnesCredential);
+  const mimoCredential = selectedCredentialState("mimo");
+  const configured = providerConfigured(agnesProvider, agnesCredential) && providerConfigured(mimoProvider, mimoCredential);
   const coreRoute = isAgnesCoreRoute();
   const referenceRoutes = ["styleReference", "compositionReference"].map((slot) => state.providerSlotRoutes?.[slot]?.providerId || "");
   const referenceCovered = referenceRoutes.some((providerId) => providerId && providerId !== "agnes");
-  const buttonLabel = coreRoute ? "已使用 Agnes 核心生成" : "切到 Agnes 核心生成";
+  const buttonLabel = coreRoute ? "已使用 MiMo + Agnes" : "切到 MiMo + Agnes";
 
   return `
-    <div class="agnes-route-assist ${coreRoute ? "active" : ""} ${configured ? "" : "disabled"}" aria-label="Agnes 核心生成路线">
+    <div class="agnes-route-assist ${coreRoute ? "active" : ""} ${configured ? "" : "disabled"}" aria-label="MiMo + Agnes 生成路线">
       <div>
-        <strong>Agnes 免费实测路线</strong>
+        <strong>MiMo + Agnes 免费实测路线</strong>
         <small>${configured
-          ? "一键把方案生成和图像生成切到 Agnes。画风/构图参考分析仍按模型能力闸门处理。"
-          : "保存 Agnes API Key 后，可一键切到 Agnes 方案生成 + 图像生成路线；画风/构图参考分析仍按模型能力闸门处理。"}</small>
+          ? "方案生成、画风和构图解析走 MiMo；图片渲染走 Agnes，避免参考图污染和 Agnes 文本限流。"
+          : "保存 MiMo 和 Agnes API Key 后，可一键切到 MiMo 方案/参考分析 + Agnes 图像渲染路线。"}</small>
       </div>
       <div class="agnes-route-chips">
-        <span class="${coreRoute ? "ok" : "warn"}">方案 / 图像 · ${coreRoute ? "Agnes" : "未全走 Agnes"}</span>
+        <span class="${coreRoute ? "ok" : "warn"}">方案 · MiMo / 图像 · Agnes</span>
         <span class="${referenceCovered ? "ok" : "warn"}">参考分析 · ${referenceCovered ? "视觉模型" : "需能力支持"}</span>
       </div>
       <button type="button" data-action="apply-agnes-core-route" ${configured && !coreRoute ? "" : "disabled"}>${escapeHtml(buttonLabel)}</button>

@@ -5,6 +5,7 @@ import {
   assetFusionStrategy,
   assetSemanticInventory,
   assetSemanticRole,
+  isIntegratedReferenceAsset,
   isPosterIntegratedReferenceAsset,
   posterAssetReferenceName,
   modeAssetFusionDirective,
@@ -306,9 +307,10 @@ function filterImageReferenceAssetsForMode(
   options: ProviderAssetReferenceOptions,
 ): PromptAssetBinding[] {
   if (!options.imageGeneration || promptPackage.target !== "image") return promptPackage.assets;
-  if (promptPackage.mode === "poster") return promptPackage.assets;
 
-  const assets = promptPackage.assets;
+  const assets = promptPackage.assets.filter(isIntegratedReferenceAsset);
+  if (promptPackage.mode === "poster") return assets;
+
   const bySemanticRole = (role: AssetSemanticRole) => (asset: PromptAssetBinding) =>
     assetSemanticRole(asset) === role;
   const bySourceRole = (...roles: string[]) => (asset: PromptAssetBinding) => roles.includes(asset.role);
@@ -355,9 +357,15 @@ function imageReferencePolicyPromptBlock(
   const included = imageAssets.length
     ? imageAssets.map((asset) => `${asset.role}/semanticRole=${assetSemanticRole(asset)}`).join(", ")
     : "none";
+  const analysisOnly = promptPackage.assets
+    .filter((asset) => !isIntegratedReferenceAsset(asset))
+    .map((asset) => `${asset.role}/semanticRole=${assetSemanticRole(asset)}`)
+    .join(", ");
   const shared = [
     "## Mode-Specific Visual Reference Intake",
     `Raw image references sent to the image model for this mode: ${included}.`,
+    analysisOnly ? `Analysis-only references not sent as raw images: ${analysisOnly}.` : "",
+    "Style and composition reference images are analysis inputs only. Use their extracted style, camera, layout, safe-area, and visual-flow notes; do not copy their characters, objects, logos, scenery, UI, text, brand content, or project-specific motifs into the generated image.",
     "Uploaded assets that are not sent as raw images are still represented by the prompt, reference analysis, semantic role map, and mode rules. Do not copy a full poster/layout/text-heavy reference image unless the current mode explicitly asks for that format.",
   ];
   const modeRule: Record<ProductionMode, string> = {
@@ -726,12 +734,21 @@ function posterIntegratedKvPromptFromPromptPackage(
     .map((item) => `${item.severity.toUpperCase()}: ${item.rule}`)
     .join("\n");
   const hasStyleReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "styleReference");
+  const hasCompositionReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "compositionReference");
   const hasCharacterReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "protagonist");
   const styleRule = hasStyleReference
-    ? "Visual style lock: match the uploaded styleReference image for rendering, palette, lighting, line quality, and material finish. Do not drift into photorealistic food photography unless the styleReference itself is photorealistic."
+    ? "Visual style lock: follow the extracted styleReference analysis for rendering, palette, lighting, line quality, and material finish. Do not copy the style reference image's characters, objects, logos, scenery, layout, text, brand content, or project-specific motifs."
     : hasCharacterReference
       ? "Visual style lock: match the uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, bright appetizing colors, and premium mobile-game key-art polish. Do not use photorealistic food photography, realistic 3D product render, camera macro food shot, or stock-photo background."
       : "Visual style lock: use a stylized game campaign illustration style, not photorealistic food photography, unless the user explicitly selected a realistic style.";
+  const analysisOnlyRule = [
+    hasStyleReference
+      ? "Style reference handling: the uploaded styleReference is analysis-only. Apply only its extracted rendering language, palette, lighting, materials, line quality, and finish; never reproduce its source content."
+      : "",
+    hasCompositionReference
+      ? "Composition reference handling: the uploaded compositionReference is analysis-only. Apply only its extracted camera, layout, subject scale, negative space, safe-area, and visual-flow notes; never reproduce its source content, style, brands, characters, UI, scene, or text."
+      : "",
+  ].filter(Boolean).join(" ");
   const semanticGroups = promptPackage.assets.reduce((groups, asset) => {
     const semanticRole = assetSemanticRole(asset);
     groups.set(semanticRole, [...(groups.get(semanticRole) || []), asset]);
@@ -771,11 +788,12 @@ function posterIntegratedKvPromptFromPromptPackage(
     criticalBlocks: [
     "## Integrated Game Campaign KV Task",
     "Generate the final unified premium game campaign key visual as one coherent illustration.",
-    "Default pipeline: AI integrated redraw. Use uploaded image references as identity, semantic, style, composition, and brand anchors inside the model generation. Do not plan a separate background plate for local sticker compositing.",
+    "Default pipeline: AI integrated redraw. Use uploaded raw image references only as identity, subject, prop, environment, and brand anchors inside the model generation. StyleReference and compositionReference assets are analysis-only and must not be sent or treated as visual content to fuse. Do not plan a separate background plate for local sticker compositing.",
+    analysisOnlyRule,
     schemeAnchor,
     visualContract,
     "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
-    "REFERENCE PANEL BAN: reference images are private model sheets, not picture-in-picture content. Do not place a copied reference image, black-background cutout, side-by-side comparison panel, model-sheet panel, empty black block, or sticker pasted from an uploaded asset anywhere on the final canvas.",
+    "REFERENCE PANEL BAN: reference images are private model sheets or analysis documents, not picture-in-picture content. Do not place a copied reference image, black-background cutout, side-by-side comparison panel, model-sheet panel, empty black block, or sticker pasted from an uploaded asset anywhere on the final canvas.",
     "Use uploaded image references as binding visual anchors, not as static stickers. Subject assets may change pose, expression, action, camera angle, lighting, scale, and perspective to become vivid in-world actors or objects while preserving their recognizable identity.",
     assetRoleInventory ? "## Uploaded Asset Role Semantics and Fusion Strategies\nUse each uploaded asset according to its semantic duty and fusion strategy; these duties override loose scheme wording." : "",
     "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
@@ -804,7 +822,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     "Allocate one readable campaign-safe logo treatment when uploaded logo/brand assets are present. Render the exact uploaded logo only when the letterforms can stay accurate; otherwise create a polished blank logo-safe sign/title plate using brand colors and shape language; do not invent look-alike words, substitute letters, or create an alternate fake logo. Integrate the slogan as custom game-poster lettering or an in-world sign/ribbon, with correct spelling when possible; if spelling cannot be guaranteed, leave a natural blank sign/ribbon/title plate rather than generating garbled text.",
     posterLogoSingleUseLock(),
     "Use each uploaded protagonist, antagonist, key subject, brand logo, and prop according to its semantic duty. Do not create duplicate large/small copies, alternate replacement characters, or extra generic chef heroes.",
-    "Hard exclusion summary: No duplicate uploaded asset. No generic replacement hero. No extra random chef protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper.",
+    "Hard exclusion summary: No duplicate uploaded asset. No style/composition reference content copied into the scene. No generic replacement hero. No extra random chef protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper.",
     ],
     flexibleBlocks: [
       { text: architectureBlock, maxChars: 3200, minChars: 900 },
@@ -832,7 +850,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     "Show the story through character action and environment response: impact glow, sauce splash arcs, cheese stretch trails, dust, flying ingredients, motion trails, atmospheric haze, rim-light pockets, foreground framing, and scale cues.",
     "World-building direction: turn the food theme into a fantasy adventure battlefield or giant edible landscape with illustrated terrain, not a flat pizza surface or close-up product photo.",
     "## Hard KV Exclusions",
-    "No duplicate uploaded asset. No copied reference image. No black-background cutout. No side-by-side comparison panel. No model-sheet panel. No empty black block. No generic replacement hero. No extra random chef protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic pizza macro photography. No realistic food commercial render. No black bars. No letterbox. No border frame.",
+    "No duplicate uploaded asset. No copied reference image. No copied styleReference or compositionReference content. No black-background cutout. No side-by-side comparison panel. No model-sheet panel. No empty black block. No generic replacement hero. No extra random chef protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic pizza macro photography. No realistic food commercial render. No black bars. No letterbox. No border frame.",
     "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override the assigned KV architecture, uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant pizza/giant food/micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat pizza-floor scene.",
     "## Mode Guardrails",
     guardrails,
@@ -873,7 +891,7 @@ function posterIdentitySafePlatePromptFromPromptPackage(
     .map((item) => `${item.severity.toUpperCase()}: ${item.rule}`)
     .join("\n");
   const styleRule = promptPackage.assets.some((asset) => asset.role === "styleReference")
-    ? "Style source: use the uploaded styleReference for rendering, palette, lighting, line quality, and finish."
+    ? "Style source: use only the extracted styleReference analysis for rendering, palette, lighting, line quality, and finish. Do not copy source-image content, subjects, logos, scenes, UI, or text from the style reference."
     : "Style source: create a premium stylized 2D cartoon mobile-game KV scene with rounded readable shapes, clean silhouettes, lively line-art feeling, soft cel/painterly shading, appetizing colors, and polished campaign lighting.";
 
   return [

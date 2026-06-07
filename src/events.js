@@ -811,19 +811,25 @@ function readCurrentProviderRoutePlanSlots(root = document) {
 
 function applyAgnesCoreRoute() {
   state.provider = "agnes";
-  state.providerRoutePlan = ensureProviderRoutePlan("agnes-core", "Agnes 核心测试");
+  state.providerRoutePlan = ensureProviderRoutePlan("mimo-agnes", "MiMo + Agnes 测试");
   state.providerSlotRoutes = {
     ...(state.providerSlotRoutes || {}),
     concept: {
-      providerId: "agnes",
-      model: "agnes-2.0-flash",
+      providerId: "mimo",
+      model: "mimo-v2.5-pro",
     },
     image: {
       providerId: "agnes",
       model: "agnes-image-2.1-flash",
     },
-    styleReference: resolveReferenceAnalysisRoute("styleReference"),
-    compositionReference: resolveReferenceAnalysisRoute("compositionReference"),
+    styleReference: {
+      providerId: "mimo",
+      model: "mimo-v2-omni",
+    },
+    compositionReference: {
+      providerId: "mimo",
+      model: "mimo-v2-omni",
+    },
   };
 }
 
@@ -854,7 +860,7 @@ function findConfiguredReferenceAnalysisProvider() {
       || (state.providerCredential.providerId === providerId && state.providerCredential.configured)
       || (state.providerConnection.providerId === providerId && state.providerConnection.ok);
   };
-  return ["google", "openai", "aigocode", "claude", "qwen", "mimo"].find(configured) || "";
+  return ["mimo", "google", "openai", "aigocode", "claude", "qwen"].find(configured) || "";
 }
 
 function defaultReferenceAnalysisModel(providerId, slot) {

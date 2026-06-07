@@ -150,6 +150,8 @@ export const OutputSettingsFormSchema = z
       })
       .nullable()
       .optional(),
+    selectionMode: z.enum(["single", "suite", "custom-size"]).default("single"),
+    planStrategy: z.enum(["unified", "independent"]).default("unified"),
     schemeCount: z.number().int().min(1).max(20).default(4),
     imagesPerScheme: z.number().int().min(1).max(8).default(1),
   })

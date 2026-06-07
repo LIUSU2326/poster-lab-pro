@@ -62,6 +62,8 @@ export function validateOutputSettingsForm(mode, data) {
   assertStringArray(data?.aspectRatios, "aspectRatios", issues, { minItems: 1 });
   assertNumberRange(data?.schemeCount, "schemeCount", issues, { min: 1, max: 20 });
   assertNumberRange(data?.imagesPerScheme, "imagesPerScheme", issues, { min: 1, max: 8 });
+  if (data?.selectionMode) assertEnum(data.selectionMode, ["single", "suite", "custom-size"], "selectionMode", issues);
+  if (data?.planStrategy) assertEnum(data.planStrategy, ["unified", "independent"], "planStrategy", issues);
 
   if (mode === "icon" && !data?.aspectRatios?.every((ratio) => ratio === "1:1")) {
     issues.push(issue("aspectRatios", "Icon mode only supports 1:1."));

@@ -376,6 +376,39 @@ function createSnapshotMappedRequestForTask(
     });
   }
 
+  if (task.kind === "imageEdit") {
+    const promptPackage = createImagePromptPackage({
+      snapshot,
+      mode: initialPlan.job.mode,
+      schemeId: task.input.schemeId,
+      ...(task.input.platformPreset ? { platformPreset: task.input.platformPreset } : {}),
+      ...(task.input.aspectRatio ? { aspectRatio: task.input.aspectRatio } : {}),
+      ...(task.input.width ? { width: task.input.width } : {}),
+      ...(task.input.height ? { height: task.input.height } : {}),
+    });
+    const imageMapped = mapPromptPackageToProviderRequest({
+      promptPackage,
+      snapshot,
+      providerId,
+      kind: "imageGeneration",
+      model,
+      count: 1,
+      jobId: initialPlan.job.id,
+    });
+    if (imageMapped.kind !== "imageGeneration") return null;
+    return ProviderMappedRequestSchema.parse({
+      kind: "imageEdit",
+      providerId,
+      model,
+      promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
+      request: ImageEditRequestSchema.parse({
+        ...imageMapped.request,
+        sourceResultId: task.input.sourceResultId || "mock-result",
+        editInstruction: "Create a useful alternate version of the selected result. Keep the same scheme and asset identity, but vary camera energy, effects, finish, and minor composition details.",
+      }),
+    });
+  }
+
   return createMappedRequestForTask(initialPlan, task, model);
 }
 

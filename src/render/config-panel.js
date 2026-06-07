@@ -399,10 +399,10 @@ function resolveEffectiveRouteProvider(slot) {
   const route = state.providerSlotRoutes?.[slot] || {};
   const snapshot = state.workspaceSnapshot || {};
   const candidateIds = {
-    concept: ["google", "agnes", "deepseek", "openai", "aigocode", "claude", "qwen"],
+    concept: ["mimo", "agnes", "google", "deepseek", "openai", "aigocode", "claude", "qwen"],
     image: ["agnes", "openai", "aigocode", "google", "qwen"],
-    styleReference: ["openai", "aigocode", "google", "claude", "qwen", "mimo"],
-    compositionReference: ["openai", "aigocode", "google", "claude", "qwen", "mimo"],
+    styleReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
+    compositionReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
   }[slot] || [state.provider || "openai"];
   const configured = (providerId) => {
     const config = snapshot.providerConfigs?.[providerId];

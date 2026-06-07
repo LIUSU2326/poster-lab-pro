@@ -108,6 +108,39 @@ function routeForSlot(parsed: QueuePlannerResolvedInput, slot: string): { provid
   };
 }
 
+function outputTargetsForPlan(parsed: QueuePlannerResolvedInput): Array<{
+  schemeId: string;
+  schemeIndex: number;
+  outputIndex: number;
+  aspectRatio: string;
+  platformPreset: z.infer<typeof PlatformPresetSchema>;
+}> {
+  const output = createOutputSettingsDefaults(parsed.mode);
+  const aspectRatios = parsed.aspectRatios?.length ? parsed.aspectRatios : output.aspectRatios;
+  const platformPresets = parsed.platformPresets?.length ? parsed.platformPresets : output.platformPresets;
+  const singleSchemeSuite = parsed.schemeIds.length === 1 && aspectRatios.length > 1;
+
+  if (singleSchemeSuite) {
+    const schemeId = parsed.schemeIds[0];
+    if (!schemeId) return [];
+    return aspectRatios.map((aspectRatio, outputIndex) => ({
+      schemeId,
+      schemeIndex: 0,
+      outputIndex,
+      aspectRatio,
+      platformPreset: platformPresets[outputIndex % platformPresets.length] || "custom",
+    }));
+  }
+
+  return parsed.schemeIds.map((schemeId, schemeIndex) => ({
+    schemeId,
+    schemeIndex,
+    outputIndex: schemeIndex,
+    aspectRatio: aspectRatios[schemeIndex % aspectRatios.length] || "1:1",
+    platformPreset: platformPresets[schemeIndex % platformPresets.length] || "custom",
+  }));
+}
+
 function createTask(params: {
   id: string;
   jobId: string;
@@ -159,7 +192,6 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
   const parsed = QueuePlannerInputSchema.parse(input);
   const conceptRoute = routeForSlot(parsed, "concept");
   const imageRoute = routeForSlot(parsed, "image");
-  const output = createOutputSettingsDefaults(parsed.mode);
   const postProcessFlags: [QueueTaskKind, boolean][] = [
     ["imageEdit", parsed.includeImageEdit],
     ["upscale", parsed.includeUpscale],
@@ -176,8 +208,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
   const createdAt = nowIso();
   const tasks: QueueTask[] = [];
   const events = [createEvent(jobId, "jobCreated", `Created ${parsed.mode} batch queue.`)];
-  const aspectRatios = parsed.aspectRatios?.length ? parsed.aspectRatios : output.aspectRatios;
-  const platformPresets = parsed.platformPresets?.length ? parsed.platformPresets : output.platformPresets;
+  const outputTargets = outputTargetsForPlan(parsed);
 
   const job = QueueJobSchema.parse({
     id: jobId,
@@ -206,14 +237,12 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
     events.push(createEvent(jobId, "taskQueued", "Queued brief generation.", briefTask.id));
   }
 
-  parsed.schemeIds.forEach((schemeId, schemeIndex) => {
-    const ratio = aspectRatios[schemeIndex % aspectRatios.length] || "1:1";
-    const target = inferDimensions(ratio, parsed.customSize);
-    const platformPreset = platformPresets[schemeIndex % platformPresets.length] || "custom";
+  outputTargets.forEach(({ schemeId, schemeIndex, outputIndex, aspectRatio, platformPreset }) => {
+    const target = inferDimensions(aspectRatio, parsed.customSize);
     const imageTask = operationOnly || !parsed.includeImageGeneration
       ? null
       : createTask({
-          id: `${jobId}-image-${schemeIndex + 1}`,
+          id: `${jobId}-image-${outputIndex + 1}`,
           jobId,
           mode: parsed.mode,
           providerId: imageRoute.providerId,
@@ -236,7 +265,7 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
       if (!enabled) return;
       const postProcessRoute = routeForSlot(parsed, kind);
       const task = createTask({
-        id: `${jobId}-${kind}-${schemeIndex + 1}`,
+        id: `${jobId}-${kind}-${outputIndex + 1}`,
         jobId,
         mode: parsed.mode,
         providerId: postProcessRoute.providerId,

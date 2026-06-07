@@ -235,3 +235,13 @@ export async function loadWorkspaceSnapshotForWorkbench(options = {}) {
 
   return envelope;
 }
+
+export async function saveWorkspaceSnapshotForWorkbench(options = {}) {
+  const workspaceId = options.workspaceId || state.workspaceId;
+  const snapshot = options.snapshot || state.workspaceSnapshot;
+  if (!snapshot?.metadata?.workspaceId) {
+    throw new Error("Workspace snapshot save requires an active workspace snapshot.");
+  }
+  const service = createHttpWorkspaceDataService(options);
+  return service.saveWorkspaceSnapshot(workspaceId, { snapshot });
+}

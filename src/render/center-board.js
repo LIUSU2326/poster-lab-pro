@@ -382,7 +382,7 @@ function renderResultViewer() {
   const display = scheme ? getSchemeDisplay({ id: result.mode }, scheme) : null;
   const previewUrl = getResultPreviewUrl(result);
   const downloadUrl = getResultDownloadUrlForViewer(result);
-  const finalSize = `${result.width}x${result.height}`;
+  const finalSize = result.width && result.height ? `${result.width}x${result.height}` : "待定尺寸";
   const ratio = result.width && result.height ? simplifyRatio(result.width, result.height) : "自定义";
   const confirmingDelete = state.resultDeleteConfirmId === result.id;
 
@@ -395,21 +395,35 @@ function renderResultViewer() {
           : `<div class="result-viewer-placeholder">本地预览暂不可用</div>`}
       </div>
       <div class="result-viewer-dock">
-        <div class="result-viewer-count">
-          <span>${escapeHtml(display?.code || scheme?.code || "RESULT")}</span>
-          <strong>${escapeHtml(display?.title || scheme?.title || "生成图片")}</strong>
+        <div class="result-viewer-meta">
+          <div class="result-viewer-count">
+            <span>${escapeHtml(display?.code || scheme?.code || "RESULT")}</span>
+            <strong>${escapeHtml(display?.title || scheme?.title || "生成图片")}</strong>
+          </div>
+          <div class="result-viewer-specs" aria-label="输出规格">
+            <span class="result-viewer-spec">
+              <small>尺寸</small>
+              <strong class="mono">${escapeHtml(finalSize)}</strong>
+            </span>
+            <span class="result-viewer-spec">
+              <small>比例</small>
+              <strong class="mono">${escapeHtml(ratio)}</strong>
+            </span>
+          </div>
         </div>
-        <div class="result-viewer-specs">
-          <span class="mono">${escapeHtml(finalSize)}</span>
-          <span class="mono">${escapeHtml(ratio)}</span>
+        <div class="result-viewer-actions" aria-label="图片操作">
+          <div class="result-viewer-action-group" aria-label="AI 处理">
+            ${renderResultActionButton(result, "variant", "生成变体")}
+            ${renderResultActionButton(result, "upscale", "高清放大")}
+            ${renderResultActionButton(result, "removeBg", "移除背景")}
+          </div>
+          <div class="result-viewer-action-group" aria-label="结果管理">
+            <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
+            <button type="button" data-action="regenerate-result" data-result-id="${escapeHtml(result.id)}">重生成片</button>
+            <button class="danger ${confirmingDelete ? "confirming" : ""}" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">${confirmingDelete ? "确认删除" : "删除结果"}</button>
+            ${downloadUrl ? `<a href="${downloadUrl}" download>下载结果</a>` : `<button type="button" disabled>下载结果</button>`}
+          </div>
         </div>
-        ${renderResultActionButton(result, "variant", "生成变体")}
-        ${renderResultActionButton(result, "upscale", "高清放大")}
-        ${renderResultActionButton(result, "removeBg", "移除背景")}
-        <button type="button" data-action="goto-result-scheme" data-scheme-id="${escapeHtml(result.schemeId)}">回到方案</button>
-        <button type="button" data-action="regenerate-result" data-result-id="${escapeHtml(result.id)}">重生成片</button>
-        <button class="danger ${confirmingDelete ? "confirming" : ""}" type="button" data-action="delete-result" data-result-id="${escapeHtml(result.id)}">${confirmingDelete ? "确认删除" : "删除结果"}</button>
-        ${downloadUrl ? `<a href="${downloadUrl}" download>下载结果</a>` : `<button type="button" disabled>下载结果</button>`}
       </div>
     </div>
   `;
@@ -448,7 +462,7 @@ function renderResultActionButton(result, action, label) {
       title="${escapeHtml(route.title)}"
       aria-label="${escapeHtml(route.title)}"
       ${route.supported ? "" : "disabled"}
-    >${active ? "已入队" : label}</button>
+    >${active ? "已入队" : route.supported ? label : `${label} · 暂不可用`}</button>
   `;
 }
 

@@ -3,6 +3,17 @@ import { getRuntimeWorkspaceSnapshot, state } from '../state.js';
 const activeQueueStatuses = new Set(["queued", "running", "blocked"]);
 const terminalJobStatuses = new Set(["completed", "failed", "cancelled", "partial"]);
 const generationTaskKinds = new Set(["briefGeneration", "conceptGeneration", "imageGeneration"]);
+const staleQueuedPlanMs = 10 * 60 * 1000;
+
+function isStaleQueuedPlan(plan) {
+  const generationTasks = (plan.tasks || []).filter((task) => generationTaskKinds.has(task.kind));
+  if (generationTasks.length === 0) return false;
+  if (generationTasks.some((task) => task.status === "running")) return false;
+  if (!generationTasks.some((task) => activeQueueStatuses.has(task.status))) return false;
+  const updatedAt = Date.parse(plan.job?.updatedAt || plan.job?.createdAt || "");
+  if (!Number.isFinite(updatedAt)) return false;
+  return Date.now() - updatedAt > staleQueuedPlanMs;
+}
 
 function activeSubmissionForMode(activeMode) {
   const submission = state.submission || null;
@@ -15,6 +26,7 @@ function activeSubmissionForMode(activeMode) {
 function isTerminalQueueSubmission(activeMode, submission) {
   const plan = latestQueuePlanForSubmission(activeMode, submission);
   if (!plan) return false;
+  if (isStaleQueuedPlan(plan)) return true;
   if (terminalJobStatuses.has(plan.job?.status)) return true;
   const generationTasks = (plan.tasks || []).filter((task) => generationTaskKinds.has(task.kind));
   if (generationTasks.length === 0) return false;
@@ -27,6 +39,7 @@ function activeQueuePlansForMode(activeMode) {
   return (Array.isArray(snapshot.queuePlans) ? snapshot.queuePlans : []).filter((plan) => {
     if (plan.job?.mode !== modeId) return false;
     if (terminalJobStatuses.has(plan.job?.status)) return false;
+    if (isStaleQueuedPlan(plan)) return false;
     const generationTasks = (plan.tasks || []).filter((task) => generationTaskKinds.has(task.kind));
     return generationTasks.some((task) => activeQueueStatuses.has(task.status));
   });

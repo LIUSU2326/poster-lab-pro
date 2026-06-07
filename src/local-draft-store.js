@@ -1,5 +1,6 @@
 const SUBMISSION_KEY = "poster-lab-pro:latest-submission";
 const PROVIDER_PREFERENCES_KEY = "poster-lab-pro:provider-preferences";
+const OUTPUT_PREFERENCES_KEY = "poster-lab-pro:output-preferences";
 
 function hasStorage() {
   try {
@@ -77,6 +78,23 @@ function providerPreferencesFromState(state) {
   };
 }
 
+function outputPreferencesFromState(state) {
+  const modeOutputSettings = Object.fromEntries(
+    (state.workspaceSnapshot?.modeStates || [])
+      .filter((modeState) => modeState?.mode && modeState?.outputSettings)
+      .map((modeState) => [modeState.mode, modeState.outputSettings]),
+  );
+  return {
+    outputSelectionMode: state.outputSelectionMode || "single",
+    outputPlanStrategy: state.outputPlanStrategy || "unified",
+    outputCustomSuiteEnabled: Boolean(state.outputCustomSuiteEnabled),
+    outputCustomSuiteSizes: Array.isArray(state.outputCustomSuiteSizes) ? state.outputCustomSuiteSizes : [],
+    outputCustomSuites: Array.isArray(state.outputCustomSuites) ? state.outputCustomSuites : [],
+    outputActiveCustomSuiteId: state.outputActiveCustomSuiteId || "",
+    modeOutputSettings,
+  };
+}
+
 export function saveLocalProviderPreferences(state) {
   if (!hasStorage() || !state) return false;
   const preferences = providerPreferencesFromState(state);
@@ -104,6 +122,7 @@ export function loadLocalProviderPreferences() {
 export function hydrateLocalProviderPreferences(state) {
   const preferences = loadLocalProviderPreferences();
   if (!preferences || !state) return false;
+  const migrateAgnesCoreRoute = preferences.providerRoutePlan === "agnes-core";
 
   if (typeof preferences.provider === "string") state.provider = preferences.provider;
   if (Array.isArray(preferences.providerOrder)) state.providerOrder = preferences.providerOrder;
@@ -117,13 +136,89 @@ export function hydrateLocalProviderPreferences(state) {
     state.providerSlotRoutes = preferences.providerSlotRoutes;
   }
   if (typeof preferences.providerRoutePlan === "string") {
-    state.providerRoutePlan = preferences.providerRoutePlan;
+    state.providerRoutePlan = migrateAgnesCoreRoute ? "mimo-agnes" : preferences.providerRoutePlan;
   }
   if (typeof preferences.providerRoutingOpen === "boolean") {
     state.providerRoutingOpen = preferences.providerRoutingOpen;
   }
   if (Array.isArray(preferences.providerRoutePlans) && preferences.providerRoutePlans.length > 0) {
-    state.providerRoutePlans = preferences.providerRoutePlans;
+    state.providerRoutePlans = [
+      ...preferences.providerRoutePlans.filter((plan) => plan?.id !== "agnes-core"),
+      ...(!preferences.providerRoutePlans.some((plan) => plan?.id === "mimo-agnes")
+        ? [{ id: "mimo-agnes", name: "MiMo + Agnes 测试" }]
+        : []),
+    ];
   }
+  if (migrateAgnesCoreRoute) {
+    state.provider = "agnes";
+    state.providerSlotRoutes = {
+      ...(state.providerSlotRoutes || {}),
+      concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
+      image: { providerId: "agnes", model: "agnes-image-2.1-flash" },
+      styleReference: { providerId: "mimo", model: "mimo-v2-omni" },
+      compositionReference: { providerId: "mimo", model: "mimo-v2-omni" },
+    };
+  }
+  return true;
+}
+
+export function saveLocalOutputPreferences(state) {
+  if (!hasStorage() || !state) return false;
+  const preferences = outputPreferencesFromState(state);
+  if (containsPlainSecret(preferences)) {
+    throw new Error("Refusing to persist output preferences with unredacted secrets.");
+  }
+
+  window.localStorage.setItem(OUTPUT_PREFERENCES_KEY, JSON.stringify(preferences));
+  return true;
+}
+
+export function loadLocalOutputPreferences() {
+  if (!hasStorage()) return null;
+  const raw = window.localStorage.getItem(OUTPUT_PREFERENCES_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return containsPlainSecret(parsed) ? null : parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function hydrateLocalOutputPreferences(state) {
+  const preferences = loadLocalOutputPreferences();
+  if (!preferences || !state) return false;
+
+  if (typeof preferences.outputSelectionMode === "string") state.outputSelectionMode = preferences.outputSelectionMode;
+  if (typeof preferences.outputPlanStrategy === "string") state.outputPlanStrategy = preferences.outputPlanStrategy;
+  if (typeof preferences.outputCustomSuiteEnabled === "boolean") {
+    state.outputCustomSuiteEnabled = preferences.outputCustomSuiteEnabled;
+  }
+  if (Array.isArray(preferences.outputCustomSuiteSizes)) {
+    state.outputCustomSuiteSizes = preferences.outputCustomSuiteSizes;
+  }
+  if (Array.isArray(preferences.outputCustomSuites)) {
+    state.outputCustomSuites = preferences.outputCustomSuites;
+  }
+  if (typeof preferences.outputActiveCustomSuiteId === "string") {
+    state.outputActiveCustomSuiteId = preferences.outputActiveCustomSuiteId;
+  }
+
+  const savedByMode = preferences.modeOutputSettings && typeof preferences.modeOutputSettings === "object"
+    ? preferences.modeOutputSettings
+    : {};
+  if (state.workspaceSnapshot && Array.isArray(state.workspaceSnapshot.modeStates)) {
+    state.workspaceSnapshot = {
+      ...state.workspaceSnapshot,
+      modeStates: state.workspaceSnapshot.modeStates.map((modeState) => {
+        const saved = savedByMode[modeState.mode];
+        return saved && typeof saved === "object"
+          ? { ...modeState, outputSettings: { ...modeState.outputSettings, ...saved } }
+          : modeState;
+      }),
+    };
+  }
+
   return true;
 }

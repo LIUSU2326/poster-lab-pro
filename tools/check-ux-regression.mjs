@@ -1,5 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
 
 const issues = [];
 const root = process.cwd();
@@ -108,6 +109,9 @@ function resetState({
 }
 
 async function run() {
+  const resultOperationClient = readFileSync(path.join(root, "src/result-operation-client.js"), "utf8");
+  excludes(resultOperationClient, 'state.view = "results"', "result operation client");
+
   const modulePath = (filePath) => pathToFileURL(path.join(root, filePath)).href;
   const { workspaceSnapshot } = await import(modulePath("src/data/workspace-snapshot.js"));
   const { modeSpecs } = await import(modulePath("src/data/modes.js"));

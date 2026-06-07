@@ -108,7 +108,7 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
         : `${route.taskKind} result created via ${route.providerLabel} and added to Results.`,
     });
 
-    state.view = "results";
+    state.view = "schemes";
     state.taskOpen = true;
     state.resultViewerOpen = true;
     return queueRun;

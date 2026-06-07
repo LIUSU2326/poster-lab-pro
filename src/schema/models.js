@@ -157,6 +157,8 @@ export const formSchemas = {
       },
       nullable: true,
     },
+    selectionMode: { enum: ["single", "suite", "custom-size"], default: "single" },
+    planStrategy: { enum: ["unified", "independent"], default: "unified" },
     schemeCount: { type: "number", min: 1, max: 20, default: 4 },
     imagesPerScheme: { type: "number", min: 1, max: 8, default: 1 },
   },

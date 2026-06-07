@@ -20,6 +20,7 @@ const generatedBatchSchemePrefix = "generated-poster";
 const activeQueueStatuses = new Set(["queued", "running", "blocked"]);
 const terminalJobStatuses = new Set(["completed", "failed", "cancelled", "partial"]);
 const generationTaskKinds = new Set(["briefGeneration", "conceptGeneration", "imageGeneration"]);
+const staleQueuedPlanMs = 10 * 60 * 1000;
 let activeGenerationController = null;
 let activeGenerationJobId = "";
 let activeGenerationTraceId = "";
@@ -68,12 +69,23 @@ function getSubmissionJobId(submission = state.submission) {
     || "";
 }
 
+function isStaleQueuedPlan(plan) {
+  const generationTasks = (plan.tasks || []).filter((task) => generationTaskKinds.has(task.kind));
+  if (generationTasks.length === 0) return false;
+  if (generationTasks.some((task) => task.status === "running")) return false;
+  if (!generationTasks.some((task) => activeQueueStatuses.has(task.status))) return false;
+  const updatedAt = Date.parse(plan.job?.updatedAt || plan.job?.createdAt || "");
+  if (!Number.isFinite(updatedAt)) return false;
+  return Date.now() - updatedAt > staleQueuedPlanMs;
+}
+
 function findActiveGenerationPlan() {
   const snapshot = getRuntimeWorkspaceSnapshot();
   const modeId = state.activeMode;
   return [...(snapshot.queuePlans || [])].reverse().find((plan) => {
     if (plan.job?.mode !== modeId) return false;
     if (terminalJobStatuses.has(plan.job?.status)) return false;
+    if (isStaleQueuedPlan(plan)) return false;
     return (plan.tasks || [])
       .filter((task) => generationTaskKinds.has(task.kind))
       .some((task) => activeQueueStatuses.has(task.status));
@@ -627,10 +639,10 @@ function providerRouteForSlot(slot) {
   const route = state.providerSlotRoutes?.[slot] || {};
   const snapshot = getRuntimeWorkspaceSnapshot();
   const candidateIds = {
-    concept: ["google", "agnes", "deepseek", "openai", "aigocode", "claude", "qwen"],
+    concept: ["mimo", "agnes", "google", "deepseek", "openai", "aigocode", "claude", "qwen"],
     image: ["agnes", "openai", "aigocode", "google", "qwen"],
-    styleReference: ["openai", "aigocode", "google", "claude", "qwen"],
-    compositionReference: ["openai", "aigocode", "google", "claude", "qwen"],
+    styleReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
+    compositionReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
   }[slot] || [state.provider];
   const configured = (providerId) => {
     const config = snapshot.providerConfigs?.[providerId];

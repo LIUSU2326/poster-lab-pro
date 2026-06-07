@@ -123,16 +123,27 @@ export function getActiveGenerationFormValues(modeIdOverride = "") {
 function normalizeRuntimeOutputSettings(modeId, outputSettings) {
   const aspectRatios = Array.isArray(outputSettings?.aspectRatios) ? outputSettings.aspectRatios : [];
   const platformPresets = Array.isArray(outputSettings?.platformPresets) ? outputSettings.platformPresets : [];
+  const selectionMode = ["single", "suite", "custom-size"].includes(outputSettings?.selectionMode)
+    ? outputSettings.selectionMode
+    : outputSettings?.customSize
+      ? "custom-size"
+      : "single";
+  const planStrategy = ["unified", "independent"].includes(outputSettings?.planStrategy)
+    ? outputSettings.planStrategy
+    : "unified";
   const oldSuitePresetIds = new Set(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
   const carriesOldSuitePreset = platformPresets.some((preset) => oldSuitePresetIds.has(preset));
   const carriesCustomSuiteState = platformPresets.includes("custom") && aspectRatios.length > 1 && !outputSettings?.customSize;
+  const markedSuite = selectionMode === "suite";
 
-  if (["poster", "collab", "announcement"].includes(modeId) && (carriesOldSuitePreset || carriesCustomSuiteState)) {
+  if (["poster", "collab", "announcement"].includes(modeId) && (carriesOldSuitePreset || (carriesCustomSuiteState && !markedSuite))) {
     return {
       ...outputSettings,
       platformPresets: ["custom"],
       aspectRatios: ["16:9"],
       customSize: null,
+      selectionMode: "single",
+      planStrategy,
     };
   }
 
@@ -140,6 +151,8 @@ function normalizeRuntimeOutputSettings(modeId, outputSettings) {
     ...outputSettings,
     platformPresets,
     aspectRatios: modeId === "icon" ? ["1:1"] : (aspectRatios.length > 0 ? aspectRatios : ["16:9"]),
+    selectionMode: modeId === "icon" ? "suite" : selectionMode,
+    planStrategy,
   };
 }
 

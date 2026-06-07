@@ -252,6 +252,71 @@ async function runRuntimeCheck() {
       issues.push("OpenAI adapter should append negative prompt guidance to text prompt");
     }
 
+    let capturedAigocodeRequest;
+    const aigocodeAdapter = providers.createOpenAILiveImageAdapter({
+      providerId: "aigocode",
+      transport: async (request) => {
+        capturedAigocodeRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            data: [{ b64_json: Buffer.from("aigocode-image").toString("base64") }],
+          },
+        };
+      },
+    });
+    const aigocodeConfig = {
+      ...defaults.createProviderConfigDefaults("aigocode"),
+      enabled: true,
+      apiKey: "AIGOCODE_ADAPTER_KEY_TEST_PLACEHOLDER",
+      defaultModel: "gpt-image-2",
+    };
+    const aigocodeRequest = providers.ImageGenerationRequestSchema.parse({
+      ...imageRequest,
+      context: {
+        ...imageRequest.context,
+        providerId: "aigocode",
+        traceId: "trace-aigocode-live-adapter-check",
+      },
+      model: "gpt-image-2",
+    });
+    const aigocodeResult = await aigocodeAdapter.generateImage(aigocodeRequest, aigocodeConfig);
+    if (!aigocodeResult.ok) {
+      issues.push(`AIGoCode image response should succeed: ${aigocodeResult.error.code}`);
+    }
+    if (!capturedAigocodeRequest?.url.startsWith("https://api.aigocode.com/v1/")) {
+      issues.push("AIGoCode image adapter should use the AIGoCode OpenAI-compatible base URL");
+    }
+
+    let capturedEditRequest;
+    const editAdapter = providers.createOpenAILiveImageAdapter({
+      transport: async (request) => {
+        capturedEditRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            data: [{ b64_json: Buffer.from("edited-image").toString("base64") }],
+          },
+        };
+      },
+    });
+    const editResult = await editAdapter.editImage(
+      providers.ImageEditRequestSchema.parse({
+        ...imageRequest,
+        sourceResultId: "result-openai-live-adapter-check",
+        editInstruction: "Make a cleaner alternate composition.",
+      }),
+      baseConfig,
+    );
+    if (!editResult.ok) {
+      issues.push(`OpenAI-compatible editImage fallback should succeed: ${editResult.error.code}`);
+    }
+    if (!String(capturedEditRequest?.body?.prompt || "").includes("Result operation: create a polished variation")) {
+      issues.push("OpenAI-compatible editImage fallback should include the variation operation instruction");
+    }
+
     const imageUrlBytes = Buffer.from("fake-provider-url-image-bytes");
     const httpTransport = providers.createOpenAIHttpTransport(async (url, init) => {
       if (String(url).includes("/images/generations")) {
@@ -371,6 +436,8 @@ async function runRuntimeCheck() {
       || !agnesPrompt.includes("AGNES POSTER REFERENCE INPUT")
       || !agnesPrompt.includes("KV ACTION MINI-BRIEF")
       || !agnesPrompt.includes("REFERENCE PANEL BAN")
+      || !agnesPrompt.includes("EMPTY BACKGROUND BAN")
+      || !agnesPrompt.includes("MINIMUM ENVIRONMENT CHECKLIST")
     ) {
       issues.push("Agnes image prompt should front-load compressed-provider Poster priority anchors");
     }
@@ -427,9 +494,11 @@ async function runRuntimeCheck() {
     if (
       !agnesCollabResult.ok
       || !agnesCollabPrompt.includes("Collab partner anchor")
+      || !agnesCollabPrompt.includes("DUAL-SUBJECT FRAMING LOCK")
       || !agnesCollabPrompt.includes("Both co-stars need comparable visual weight")
       || !agnesCollabPrompt.includes("COLLAB DUAL-STAR ORDER")
       || !agnesCollabPrompt.includes("Two-character audit")
+      || !agnesCollabPrompt.includes("EMPTY COLLAB BACKGROUND BAN")
     ) {
       issues.push("Agnes collab prompt should front-load dual-subject co-star priority anchors");
     }

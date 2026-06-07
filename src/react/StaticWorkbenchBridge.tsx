@@ -10,7 +10,7 @@ import {
 } from "../state.js";
 import { renderShell } from "../render/shell.js";
 import { bindEvents } from "../events.js";
-import { hydrateLocalProviderPreferences, hydrateLocalSubmissionDraft } from "../local-draft-store.js";
+import { hydrateLocalOutputPreferences, hydrateLocalProviderPreferences, hydrateLocalSubmissionDraft } from "../local-draft-store.js";
 import { loadWorkspaceSnapshotForWorkbench } from "../workspace-data-service.js";
 import { mountWorkbenchSections, type MountedWorkbenchSections } from "./mount-workbench-sections";
 
@@ -25,6 +25,7 @@ export function StaticWorkbenchBridge() {
     applyPrototypeStateFromUrl();
     hydrateLocalSubmissionDraft(state);
     hydrateLocalProviderPreferences(state);
+    hydrateLocalOutputPreferences(state);
     state.apiMode = state.apiMode === "static" && window.location.search.includes("api=static") ? "static" : "http";
     ensureSelectedScheme();
 
@@ -46,7 +47,10 @@ export function StaticWorkbenchBridge() {
           state.workspaceLoadStatus = "error";
           state.workspaceLoadError = error instanceof Error ? error.message : "Failed to load workspace snapshot.";
         })
-        .finally(render);
+        .finally(() => {
+          hydrateLocalOutputPreferences(state);
+          render();
+        });
     }
 
     return () => {

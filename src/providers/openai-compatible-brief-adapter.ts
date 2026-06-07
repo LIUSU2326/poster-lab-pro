@@ -111,7 +111,10 @@ export type OpenAICompatibleBriefAdapterOptions = {
   now?: () => number;
 };
 
-const OPENAI_COMPATIBLE_CHAT_TIMEOUT_MS = 60000;
+const OPENAI_COMPATIBLE_CHAT_TIMEOUT_MS = Math.max(
+  60_000,
+  Math.min(300_000, Number(process.env.POSTER_LAB_CHAT_TIMEOUT_MS || 180_000) || 180_000),
+);
 
 export function createOpenAICompatibleChatFetchTransport(fetchImpl: typeof fetch): OpenAICompatibleChatTransport {
   return async (request) => {
@@ -131,6 +134,20 @@ export function createOpenAICompatibleChatFetchTransport(fetchImpl: typeof fetch
         ok: response.ok,
         status: response.status,
         body,
+      });
+    } catch (error) {
+      const aborted = error instanceof Error && error.name === "AbortError";
+      return OpenAICompatibleChatTransportResponseSchema.parse({
+        ok: false,
+        status: 0,
+        body: {
+          error: {
+            code: aborted ? "timeout" : "network_error",
+            message: aborted
+              ? `Chat provider request timed out after ${OPENAI_COMPATIBLE_CHAT_TIMEOUT_MS}ms.`
+              : error instanceof Error ? error.message : "Chat provider network request failed.",
+          },
+        },
       });
     } finally {
       clearTimeout(timeout);
@@ -205,11 +222,21 @@ function statusError<T>(providerId: ProviderId, status: number, body: unknown): 
     : body && typeof body === "object" && "error" in body
       ? JSON.stringify((body as Record<string, unknown>).error)
       : JSON.stringify(body);
+  const isTransportTimeout = status === 0 && /timeout|timed out|abort/i.test(message);
   return {
     ok: false,
-    error: createProviderError(providerId, status === 401 || status === 403 ? "auth_failed" : "unknown", message, {
-      userMessage: status === 401 || status === 403 ? "API Key 校验失败，请检查供应商和模型。" : "供应商返回错误，方案生成失败。",
-    }),
+    error: createProviderError(
+      providerId,
+      status === 401 || status === 403 ? "auth_failed" : isTransportTimeout ? "provider_unavailable" : "unknown",
+      message,
+      {
+        userMessage: status === 401 || status === 403
+          ? "API Key 校验失败，请检查供应商和模型。"
+          : isTransportTimeout
+            ? "供应商方案生成响应超时，请稍后重试或切换更快的方案模型。"
+            : "供应商返回错误，方案生成失败。",
+      },
+    ),
   };
 }
 

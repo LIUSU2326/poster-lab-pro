@@ -28,8 +28,9 @@ import {
 import type { ProviderId } from "../schema/zod";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
+const AIGOCODE_PROVIDER_ID = "aigocode" as const;
 const AGNES_PROVIDER_ID = "agnes" as const;
-const OPENAI_COMPATIBLE_LIVE_PROVIDER_IDS = [OPENAI_PROVIDER_ID, AGNES_PROVIDER_ID] as const;
+const OPENAI_COMPATIBLE_LIVE_PROVIDER_IDS = [OPENAI_PROVIDER_ID, AIGOCODE_PROVIDER_ID, AGNES_PROVIDER_ID] as const;
 type OpenAICompatibleLiveProviderId = Extract<ProviderId, typeof OPENAI_COMPATIBLE_LIVE_PROVIDER_IDS[number]>;
 
 export const OpenAILiveQueueRunInputSchema = z.object({
@@ -120,6 +121,7 @@ function openAIQueueRegistry(
 
   if (mockAdapter.generateBrief) adapter.generateBrief = mockAdapter.generateBrief.bind(mockAdapter);
   if (liveImageAdapter.generateImage) adapter.generateImage = liveImageAdapter.generateImage.bind(liveImageAdapter);
+  if (liveImageAdapter.editImage) adapter.editImage = liveImageAdapter.editImage.bind(liveImageAdapter);
 
   return { [providerId]: adapter };
 }
@@ -141,9 +143,16 @@ async function prepareOpenAILiveProviderConfig(input: {
 
   const current = loaded.snapshot.providerConfigs[input.providerId];
   const manifest = getProviderManifest(input.providerId);
-  const imageModel = input.providerId === OPENAI_PROVIDER_ID
+  const imageModel = input.providerId === AGNES_PROVIDER_ID
+    ? current?.modelSlots?.image || current?.defaultModel || manifest.modelSlots.image?.[0] || "agnes-image-2.1-flash"
+    : input.providerId === OPENAI_PROVIDER_ID
     ? "gpt-image-1"
-    : current?.modelSlots?.image || current?.defaultModel || manifest.modelSlots.image?.[0] || "agnes-image-2.1-flash";
+    : current?.modelSlots?.image || current?.defaultModel || manifest.modelSlots.image?.[0] || "gpt-image-2";
+  const defaultBaseUrl = input.providerId === AGNES_PROVIDER_ID
+    ? "https://apihub.agnes-ai.com/v1"
+    : input.providerId === AIGOCODE_PROVIDER_ID
+      ? "https://api.aigocode.com/v1"
+      : "";
   const nextSnapshot = {
     ...loaded.snapshot,
     providerConfigs: {
@@ -154,7 +163,7 @@ async function prepareOpenAILiveProviderConfig(input: {
         status: "success" as const,
         hasApiKey: true,
         apiKeyMasked: input.apiKeyMasked,
-        baseUrl: current?.baseUrl || (input.providerId === AGNES_PROVIDER_ID ? "https://apihub.agnes-ai.com/v1" : ""),
+        baseUrl: current?.baseUrl || defaultBaseUrl,
         defaultModel: imageModel,
         modelSlots: {
           ...(current?.modelSlots || {}),

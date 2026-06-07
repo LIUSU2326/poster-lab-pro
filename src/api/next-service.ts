@@ -88,6 +88,10 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
   const openAIImageAdapter = createOpenAILiveImageAdapter({
     transport: createOpenAIImageFetchTransport(fetchImpl),
   });
+  const aigocodeImageAdapter = createOpenAILiveImageAdapter({
+    providerId: "aigocode",
+    transport: createOpenAIImageFetchTransport(fetchImpl),
+  });
   const agnesImageAdapter = createOpenAILiveImageAdapter({
     providerId: "agnes",
     transport: createOpenAIImageFetchTransport(fetchImpl),
@@ -116,6 +120,16 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     healthCheck: openAIImageAdapter.healthCheck,
     ...(registry.openai?.generateBrief ? { generateBrief: registry.openai.generateBrief.bind(registry.openai) } : {}),
     ...(openAIImageAdapter.generateImage ? { generateImage: openAIImageAdapter.generateImage.bind(openAIImageAdapter) } : {}),
+    ...(openAIImageAdapter.editImage ? { editImage: openAIImageAdapter.editImage.bind(openAIImageAdapter) } : {}),
+  };
+  registry.aigocode = {
+    ...registry.aigocode,
+    manifest: aigocodeImageAdapter.manifest,
+    validateConfig: aigocodeImageAdapter.validateConfig,
+    healthCheck: aigocodeImageAdapter.healthCheck,
+    ...(registry.aigocode?.generateBrief ? { generateBrief: registry.aigocode.generateBrief.bind(registry.aigocode) } : {}),
+    ...(aigocodeImageAdapter.generateImage ? { generateImage: aigocodeImageAdapter.generateImage.bind(aigocodeImageAdapter) } : {}),
+    ...(aigocodeImageAdapter.editImage ? { editImage: aigocodeImageAdapter.editImage.bind(aigocodeImageAdapter) } : {}),
   };
   registry.agnes = {
     ...registry.agnes,
@@ -124,6 +138,7 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     healthCheck: agnesImageAdapter.healthCheck,
     ...(registry.agnes?.generateBrief ? { generateBrief: registry.agnes.generateBrief.bind(registry.agnes) } : {}),
     ...(agnesImageAdapter.generateImage ? { generateImage: agnesImageAdapter.generateImage.bind(agnesImageAdapter) } : {}),
+    ...(agnesImageAdapter.editImage ? { editImage: agnesImageAdapter.editImage.bind(agnesImageAdapter) } : {}),
   };
   registry.google = {
     ...registry.google,

@@ -5,7 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
+import { saveLocalOutputPreferences } from "../local-draft-store.js";
 import { state } from "../state.js";
+import { saveWorkspaceSnapshotForWorkbench } from "../workspace-data-service.js";
 import { OutputSettingsFormSchema, type OutputSettingsForm, type ProductionMode } from "../schema/zod";
 
 type PlatformPreset = OutputSettingsForm["platformPresets"][number];
@@ -64,18 +66,21 @@ function normalizeInitialValues(mode: ProductionMode, values: OutputSettingsForm
   const oldSuitePresetIds = new Set<PlatformPreset>(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
   const carriesOldSuitePreset = parsed.platformPresets.some((preset) => oldSuitePresetIds.has(preset));
   const carriesCustomSuiteState = parsed.platformPresets.includes("custom") && parsed.aspectRatios.length > 1 && !parsed.customSize;
-  if (singleDefaultModes.has(mode) && (carriesOldSuitePreset || carriesCustomSuiteState)) {
+  if (singleDefaultModes.has(mode) && (carriesOldSuitePreset || (carriesCustomSuiteState && parsed.selectionMode !== "suite"))) {
     return {
       ...parsed,
       platformPresets: ["custom"],
       aspectRatios: ["16:9"],
       customSize: null,
+      selectionMode: "single",
     };
   }
   return parsed;
 }
 
 function selectionModeForValues(values: OutputSettingsForm): "suite" | "single" | "custom-size" {
+  if (values.selectionMode === "suite" && !values.customSize) return "suite";
+  if (values.selectionMode === "custom-size") return "custom-size";
   if (values.customSize) return "custom-size";
   const suitePresetIds = new Set<PlatformPreset>(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
   return values.platformPresets.some((preset) => suitePresetIds.has(preset)) || values.aspectRatios.length > 1
@@ -173,7 +178,9 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
   );
   const [sizeDrafts, setSizeDrafts] = useState<Record<string, { width: string; height: string }>>({});
   const [selectionMode, setSelectionMode] = useState(initialSelectionMode);
-  const [planStrategy, setPlanStrategy] = useState(state.outputPlanStrategy || "unified");
+  const [planStrategy, setPlanStrategy] = useState<"unified" | "independent">(
+    state.outputPlanStrategy === "independent" ? "independent" : "unified",
+  );
 
   useEffect(() => {
     const fingerprint = JSON.stringify(defaults);
@@ -188,6 +195,12 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
     const parsed = OutputSettingsFormSchema.safeParse(nextValues);
     if (!parsed.success) return;
     replaceGenerationFormField("outputSettings", parsed.data);
+    saveLocalOutputPreferences(state);
+    if (state.apiMode === "http") {
+      void saveWorkspaceSnapshotForWorkbench().catch((error) => {
+        console.warn("Failed to persist output settings.", error);
+      });
+    }
   };
 
   const update = async <TKey extends keyof OutputSettingsForm>(key: TKey, value: OutputSettingsForm[TKey]) => {
@@ -231,6 +244,8 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       platformPresets: [suite.preset],
       aspectRatios: sizes.length > 0 ? sizes : [mode === "icon" ? "1:1" : "16:9"],
       customSize: null,
+      selectionMode: "suite",
+      planStrategy,
     });
   };
 
@@ -247,6 +262,8 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       platformPresets: ["custom"],
       aspectRatios: [ratio],
       customSize: null,
+      selectionMode: "single",
+      planStrategy,
     });
   };
 
@@ -261,6 +278,8 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       platformPresets: ["custom"],
       aspectRatios: [`${width}x${height}`],
       customSize: { width, height },
+      selectionMode: "custom-size",
+      planStrategy,
     });
   };
 
@@ -288,6 +307,8 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       platformPresets: ["custom"],
       aspectRatios: nextSizes,
       customSize: null,
+      selectionMode: "suite",
+      planStrategy,
     });
   };
 
@@ -365,12 +386,15 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       platformPresets: ["custom"],
       aspectRatios: [mode === "icon" ? "1:1" : "16:9"],
       customSize: null,
+      selectionMode: "single",
+      planStrategy,
     });
   };
 
-  const setStrategy = (strategy: "unified" | "independent") => {
+  const setStrategy = async (strategy: "unified" | "independent") => {
     state.outputPlanStrategy = strategy;
     setPlanStrategy(strategy);
+    await update("planStrategy", strategy);
   };
 
   const closeSuiteManager = () => {
@@ -456,7 +480,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
               <button
                 className={planStrategy === "unified" ? "active" : ""}
                 type="button"
-                onClick={() => setStrategy("unified")}
+                onClick={() => void setStrategy("unified")}
               >
                 {mode === "icon" ? "锁定方形" : "统一方案"}
               </button>
@@ -464,7 +488,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
                 className={planStrategy === "independent" ? "active" : ""}
                 type="button"
                 disabled={mode === "icon"}
-                onClick={() => setStrategy("independent")}
+                onClick={() => void setStrategy("independent")}
               >
                 {mode === "icon" ? "不改尺寸" : "独立方案"}
               </button>

@@ -2,11 +2,13 @@ import { z } from "zod";
 import { ProviderConfigFormSchema, type ProviderConfigForm, type ProviderId } from "../schema/zod";
 import {
   ImageGenerationRequestSchema,
+  ImageEditRequestSchema,
   ProviderHealthResponseSchema,
   ProviderImageResponseSchema,
   ProviderResultAssetSchema,
   createProviderError,
   type GenerationProviderAdapter,
+  type ImageEditRequest,
   type ImageGenerationRequest,
   type ProviderConfigValidation,
   type ProviderHealthResponse,
@@ -25,11 +27,13 @@ import {
 } from "./provider-capability-profiles";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
+const AIGOCODE_PROVIDER_ID = "aigocode" as const;
 const AGNES_PROVIDER_ID = "agnes" as const;
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_AIGOCODE_BASE_URL = "https://api.aigocode.com/v1";
 const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
-type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "agnes">;
+type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "aigocode" | "agnes">;
 
 const OpenAIImageDataSchema = z
   .object({
@@ -97,6 +101,7 @@ function validateOpenAICompatibleConfig(providerId: OpenAICompatibleImageProvide
 }
 
 function defaultBaseUrl(providerId: OpenAICompatibleImageProviderId): string {
+  if (providerId === AIGOCODE_PROVIDER_ID) return DEFAULT_AIGOCODE_BASE_URL;
   return providerId === "agnes" ? DEFAULT_AGNES_BASE_URL : DEFAULT_OPENAI_BASE_URL;
 }
 
@@ -113,12 +118,26 @@ function imageModel(providerId: OpenAICompatibleImageProviderId, request: ImageG
   return request.model || config.modelSlots.image || config.defaultModel || fallback;
 }
 
+function editImageGenerationRequest(request: ImageEditRequest): ImageGenerationRequest {
+  return ImageGenerationRequestSchema.parse({
+    ...request,
+    prompt: [
+      request.prompt,
+      "Result operation: create a polished variation of the selected result.",
+      request.editInstruction,
+      "Keep the same production mode, aspect ratio, brand/project identity, main subject readability, and core composition intent. Change staging, micro-composition, effects, color grading, and finishing details enough to make this a useful alternate output.",
+      "Do not add unrelated characters, fake logos, garbled text, or new project content.",
+    ].filter(Boolean).join("\n\n"),
+    count: 1,
+  });
+}
+
 function modeQualityInstruction(request: ImageGenerationRequest): string {
   switch (request.context.mode) {
     case "icon":
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
-        "Composition bar: premium 1:1 square icon artwork with full-bleed clarity, one dominant subject, intentional polished edge treatment, no white border, no accidental corner padding, no separate dark container that shrinks the subject, no text, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory. Rounded corners or badge-like app-icon styling are acceptable when intentional and high quality.",
+        "Composition bar: premium 1:1 square icon artwork with full-bleed clarity, one dominant subject, intentional polished edge treatment, no white border, no accidental corner padding, no separate dark container that shrinks the subject, no text, no pseudo-letters, no glyph-like strokes, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory. Rounded corners or badge-like app-icon styling are acceptable when intentional and high quality.",
       ].join(" ");
     case "logo":
       return [
@@ -201,6 +220,8 @@ function compressedProviderPriorityInstruction(
       "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
       "REFERENCE PANEL BAN: reference images are private model sheets, not picture-in-picture content. Do not place a copied reference image, black-background cutout, side-by-side comparison panel, model-sheet panel, empty black block, or sticker pasted from an uploaded asset anywhere on the final canvas.",
       "STYLE CONSISTENCY LOCK: keep the entire image in one stylized game illustration language. No photorealistic people, no real-world crowd, no spectators, no adult realistic knight, no stock-photo background, no live-action advertising look, and no pasted cartoon stickers over a realistic scene.",
+      "EMPTY BACKGROUND BAN: do not render a plain sky, plain gradient, studio backdrop, isolated mascot pose, icon-like character lineup, or empty two-character cutout. The final image must be a full campaign scene.",
+      "MINIMUM ENVIRONMENT CHECKLIST: include one readable foreground prop or occluder, one shared ground plane, one midground action touchpoint, one background set-piece such as oven portal/restaurant defense/ingredient canyon/kitchen battlefield, plus particles, rim light, and contact shadows.",
       "The poster fails if a required anchor is absent, tiny, hidden, duplicated, or replaced by a generic subject.",
       "Hero and BOSS must share the same camera, perspective, lighting, contact shadows, occlusion, particles/VFX, and story action. Do not make a pretty background with small sticker-like subjects.",
       "Logo/slogan treatment should be integrated as an in-world sign, plaque, banner, steam/sauce stroke, carved/metal relief, or blank copy-safe plate; no fake text, no garbled words, and no floating PPT-style overlay.",
@@ -217,11 +238,15 @@ function compressedProviderPriorityInstruction(
       partner ? `Collab partner anchor: ${partner.id} must appear as a separate readable co-star.` : "",
       gameCharacter ? `Game character anchor: ${gameCharacter.id} must appear as a separate readable co-star.` : "",
       partner && gameCharacter
+        ? "DUAL-SUBJECT FRAMING LOCK: compose the uploaded collab partner and uploaded game character as the two primary foreground subjects, each occupying meaningful visual weight. A one-character image is invalid even if the environment is polished."
+        : "",
+      partner && gameCharacter
         ? "Both co-stars need comparable visual weight, shared lighting, same ground plane, contact shadows, and one clear interaction touchpoint. The image fails if one side disappears, becomes tiny, hides behind a prop/plate, turns into a logo-only presence, or the two identities merge into a hybrid."
         : "",
       partner && gameCharacter
         ? "Two-character audit: render exactly one uploaded collab partner and exactly one uploaded game character as the primary living characters. No third lead character, no background crowd, no character fusion, no side reduced to decorative mascot."
         : "",
+      "EMPTY COLLAB BACKGROUND BAN: do not render a single mascot on a plain sky/gradient, empty beach, or simple fence backdrop. Build a shared campaign moment with both sides visibly interacting.",
       "Use blank non-letter plates or neutral emblems for uncertain brand text. Do not invent partner names, fake sponsor words, or hybrid logo lettering.",
     ].filter(Boolean).join("\n");
   }
@@ -692,6 +717,36 @@ export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOpti
   const now = options.now || Date.now;
   const displayName = manifest.displayName;
 
+  async function generateParsedImage(
+    parsedRequest: ImageGenerationRequest,
+    parsedConfig: ProviderConfigForm,
+  ): Promise<ProviderResult<ProviderImageResponse>> {
+    const validation = validateOpenAICompatibleConfig(providerId, parsedConfig);
+    if (!validation.ok) return missingConfigResult(providerId, parsedConfig);
+    if (!options.transport) return unavailableTransportResult(providerId);
+
+    const model = imageModel(providerId, parsedRequest, parsedConfig);
+    const startedAt = now();
+    const transportResponse = await options.transport(
+      OpenAIImageTransportRequestSchema.parse({
+        url: `${normalizeBaseUrl(providerId, parsedConfig)}${OPENAI_IMAGE_GENERATIONS_PATH}`,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${parsedConfig.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: imageRequestBody(providerId, model, parsedRequest),
+      }),
+    );
+    const parsedTransportResponse = OpenAIImageTransportResponseSchema.parse(transportResponse);
+
+    if (!parsedTransportResponse.ok) {
+      return providerErrorFromStatus(providerId, parsedTransportResponse.status, parsedTransportResponse.body);
+    }
+
+    return parseImageResponse(providerId, parsedRequest, model, parsedTransportResponse.body, Math.max(0, now() - startedAt));
+  }
+
   return {
     manifest,
 
@@ -729,30 +784,13 @@ export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOpti
     async generateImage(request: ImageGenerationRequest, config: ProviderConfigForm): Promise<ProviderResult<ProviderImageResponse>> {
       const parsedRequest = ImageGenerationRequestSchema.parse(request);
       const parsedConfig = ProviderConfigFormSchema.parse(config);
-      const validation = validateOpenAICompatibleConfig(providerId, parsedConfig);
-      if (!validation.ok) return missingConfigResult(providerId, parsedConfig);
-      if (!options.transport) return unavailableTransportResult(providerId);
+      return generateParsedImage(parsedRequest, parsedConfig);
+    },
 
-      const model = imageModel(providerId, parsedRequest, parsedConfig);
-      const startedAt = now();
-      const transportResponse = await options.transport(
-        OpenAIImageTransportRequestSchema.parse({
-          url: `${normalizeBaseUrl(providerId, parsedConfig)}${OPENAI_IMAGE_GENERATIONS_PATH}`,
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${parsedConfig.apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: imageRequestBody(providerId, model, parsedRequest),
-        }),
-      );
-      const parsedTransportResponse = OpenAIImageTransportResponseSchema.parse(transportResponse);
-
-      if (!parsedTransportResponse.ok) {
-        return providerErrorFromStatus(providerId, parsedTransportResponse.status, parsedTransportResponse.body);
-      }
-
-      return parseImageResponse(providerId, parsedRequest, model, parsedTransportResponse.body, Math.max(0, now() - startedAt));
+    async editImage(request: ImageEditRequest, config: ProviderConfigForm): Promise<ProviderResult<ProviderImageResponse>> {
+      const parsedRequest = ImageEditRequestSchema.parse(request);
+      const parsedConfig = ProviderConfigFormSchema.parse(config);
+      return generateParsedImage(editImageGenerationRequest(parsedRequest), parsedConfig);
     },
   };
 }
