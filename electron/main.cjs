@@ -10,9 +10,14 @@ const DEFAULT_PORT = 3000;
 const WORKSPACE_HEALTH_PATH = "/api/workspaces/workspace-pizza-kitchen";
 const SHELL_HEALTH_PATH = "/";
 const PACKAGED_ICON_PATH = path.join(process.resourcesPath || "", "poster-lab-pro.png");
+const DESKTOP_SESSION_PARTITION = "persist:poster-lab-pro-desktop";
 
 let mainWindow = null;
 let nextProcess = null;
+
+function desktopSession() {
+  return session.fromPartition(DESKTOP_SESSION_PARTITION);
+}
 
 function projectRoot() {
   return path.resolve(__dirname, "..");
@@ -104,7 +109,7 @@ async function resolveDesktopProxyEnvironment() {
 
   try {
     const resolvedProxy = await withTimeout(
-      session.defaultSession.resolveProxy("https://generativelanguage.googleapis.com/v1beta/models"),
+      desktopSession().resolveProxy("https://generativelanguage.googleapis.com/v1beta/models"),
       1500,
       "",
     );
@@ -284,12 +289,31 @@ async function waitForNext(url) {
 
 async function configureLocalSessionProxy() {
   try {
-    await session.defaultSession.setProxy({
+    await desktopSession().setProxy({
       proxyBypassRules: "<local>;127.0.0.1;localhost;::1",
     });
   } catch (error) {
     console.warn(`[desktop] Failed to configure local proxy bypass: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+async function clearLocalWebInterceptionData(url) {
+  const origin = new URL(url).origin;
+  try {
+    await desktopSession().clearStorageData({
+      origin,
+      storages: ["serviceworkers", "cachestorage"],
+    });
+    await desktopSession().clearCache();
+  } catch (error) {
+    console.warn(`[desktop] Failed to clear local web cache for ${origin}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function desktopEntryUrl(url) {
+  const entry = new URL(url);
+  entry.searchParams.set("posterLabDesktop", `${app.getVersion()}-${Date.now().toString(36)}`);
+  return entry.toString();
 }
 
 function createWindow(url) {
@@ -305,12 +329,14 @@ function createWindow(url) {
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
+      partition: DESKTOP_SESSION_PARTITION,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
     },
   });
 
+  let shellRecoveryCount = 0;
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
   });
@@ -334,16 +360,28 @@ function createWindow(url) {
     const retryDelayMs = 350 * loadRetryCount;
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.loadURL(url);
+        mainWindow.loadURL(desktopEntryUrl(url));
       }
     }, retryDelayMs);
   });
 
   mainWindow.webContents.on("did-finish-load", () => {
     loadRetryCount = 0;
+    mainWindow.webContents.executeJavaScript(`
+      (() => {
+        const titleOk = document.title.includes("Poster Lab Pro");
+        const text = document.body?.innerText || "";
+        const app = document.querySelector("#app");
+        return titleOk && (text.includes("Poster Lab") || text.includes("Pizza Kitchen") || Boolean(app && app.children.length > 0));
+      })()
+    `).then((isPosterLab) => {
+      if (isPosterLab || shellRecoveryCount >= 3 || !mainWindow || mainWindow.isDestroyed()) return;
+      shellRecoveryCount += 1;
+      mainWindow.loadURL(desktopEntryUrl(url));
+    }).catch(() => {});
   });
 
-  mainWindow.loadURL(url);
+  mainWindow.loadURL(desktopEntryUrl(url));
 }
 
 function installApplicationMenu() {
@@ -413,6 +451,7 @@ async function startDesktop() {
   if (target.shouldSpawn) spawnNextService(target.port, proxyEnv);
   await waitForNext(target.url);
   await configureLocalSessionProxy();
+  await clearLocalWebInterceptionData(target.url);
   createWindow(target.url);
 }
 
