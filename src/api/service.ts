@@ -32,6 +32,7 @@ import {
   type WorkspaceSnapshot,
 } from "../storage";
 import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "../providers/mimo-compat";
+import { normalizeOpenAIBaseUrl } from "../providers/openai-compat";
 import { providerCredentialKeyRef } from "./provider-credential-refs";
 import {
   ApiEnvelopeMetaSchema,
@@ -356,6 +357,11 @@ function normalizeProviderModelSlots(providerId: string, slots: Record<string, s
   );
 }
 
+function normalizeProviderBaseUrl(providerId: string, value: string | null | undefined): string {
+  if (providerId === "openai") return normalizeOpenAIBaseUrl(value);
+  return normalizeMimoProviderBaseUrl(providerId, value);
+}
+
 function defaultCredentialProfileLabel(profiles: StoredCredentialProfile[]): string {
   if (profiles.length === 0) return "默认 Key";
   return `Key ${profiles.length + 1}`;
@@ -461,7 +467,7 @@ async function updateProviderCredentialMirror(input: {
     apiKeyMasked: activeMasked,
     ...(nextActiveKeyRef ? { credentialKeyRef: nextActiveKeyRef } : {}),
     credentialProfiles,
-    baseUrl: normalizeMimoProviderBaseUrl(providerId, input.settings?.baseUrl ?? existing?.baseUrl ?? ""),
+    baseUrl: normalizeProviderBaseUrl(providerId, input.settings?.baseUrl ?? existing?.baseUrl ?? ""),
     defaultModel,
     modelSlots,
     updatedAt,

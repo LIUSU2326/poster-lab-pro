@@ -32,6 +32,7 @@ import {
   normalizeAigocodeBaseUrl,
   normalizeAigocodeImageModel,
 } from "../providers/aigocode-compat";
+import { normalizeOpenAIBaseUrl } from "../providers/openai-compat";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
 const AIGOCODE_PROVIDER_ID = "aigocode" as const;
@@ -171,7 +172,9 @@ async function prepareOpenAILiveProviderConfig(input: {
         apiKeyMasked: input.apiKeyMasked,
         baseUrl: input.providerId === AIGOCODE_PROVIDER_ID
           ? normalizeAigocodeBaseUrl(current?.baseUrl || defaultBaseUrl)
-          : current?.baseUrl || defaultBaseUrl,
+          : input.providerId === OPENAI_PROVIDER_ID
+            ? normalizeOpenAIBaseUrl(current?.baseUrl || defaultBaseUrl)
+            : current?.baseUrl || defaultBaseUrl,
         defaultModel: imageModel,
         modelSlots: {
           ...(current?.modelSlots || {}),

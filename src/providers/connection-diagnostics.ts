@@ -12,8 +12,9 @@ import type { ProviderErrorCode } from "./contracts";
 import { getProviderManifest } from "./manifests";
 import { MIMO_DEFAULT_BASE_URL, normalizeMimoBaseUrl, normalizeMimoProviderModel } from "./mimo-compat";
 import { AIGOCODE_DEFAULT_BASE_URL, normalizeAigocodeBaseUrl } from "./aigocode-compat";
+import { OPENAI_DEFAULT_BASE_URL, normalizeOpenAIBaseUrl } from "./openai-compat";
 
-const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_OPENAI_BASE_URL = OPENAI_DEFAULT_BASE_URL;
 const DEFAULT_AIGOCODE_BASE_URL = AIGOCODE_DEFAULT_BASE_URL;
 const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
@@ -131,7 +132,7 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
 }
 
 function probeUrl(config: StoredProviderConfig): string {
-  if (config.providerId === "openai") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_OPENAI_BASE_URL)}/models`;
+  if (config.providerId === "openai") return `${normalizeOpenAIBaseUrl(config.baseUrl || DEFAULT_OPENAI_BASE_URL)}/models`;
   if (config.providerId === "aigocode") return `${normalizeAigocodeBaseUrl(config.baseUrl)}/models`;
   if (config.providerId === "google") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_GOOGLE_BASE_URL)}/models`;
   if (config.providerId === "deepseek") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_DEEPSEEK_BASE_URL)}/models`;

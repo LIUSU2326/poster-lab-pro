@@ -316,8 +316,29 @@ async function runRuntimeCheck() {
     if (!editResult.ok) {
       issues.push(`OpenAI-compatible editImage fallback should succeed: ${editResult.error.code}`);
     }
-    if (!String(capturedEditRequest?.body?.prompt || "").includes("Result operation: create a polished variation")) {
+    if (!String(capturedEditRequest?.body?.prompt || "").includes("Result operation: visual reconstruction / image-to-image refinement")) {
       issues.push("OpenAI-compatible editImage fallback should include the variation operation instruction");
+    }
+
+    let capturedLocalPortRequest;
+    const localPortAdapter = providers.createOpenAILiveImageAdapter({
+      transport: async (request) => {
+        capturedLocalPortRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            data: [{ b64_json: Buffer.from("local-port-normalized").toString("base64") }],
+          },
+        };
+      },
+    });
+    await localPortAdapter.generateImage(imageRequest, {
+      ...baseConfig,
+      baseUrl: "http://localhost:3000",
+    });
+    if (!String(capturedLocalPortRequest?.url || "").startsWith("https://api.openai.com/v1/")) {
+      issues.push("OpenAI adapter should normalize the shared localhost:3000 dev port to the official OpenAI base URL");
     }
 
     const imageUrlBytes = Buffer.from("fake-provider-url-image-bytes");

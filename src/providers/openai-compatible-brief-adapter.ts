@@ -33,6 +33,7 @@ import { sanitizePosterSchemeText } from "./poster-scheme-sanitizer";
 import { imageRenderableSloganRule, integratedSloganTreatmentRule, normalizeImageRenderableSlogan } from "../prompts/slogan-policy";
 import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "./mimo-compat";
 import { AIGOCODE_DEFAULT_BASE_URL, normalizeAigocodeBaseUrl } from "./aigocode-compat";
+import { normalizeOpenAIBaseUrl } from "./openai-compat";
 
 const CHAT_COMPLETIONS_PATH = "/chat/completions";
 
@@ -182,6 +183,7 @@ function validateConfig(providerId: ProviderId, config: ProviderConfigForm): Pro
 
 function normalizeBaseUrl(providerId: ProviderId, config: ProviderConfigForm): string {
   if (providerId === "aigocode") return normalizeAigocodeBaseUrl(config.baseUrl);
+  if (providerId === "openai") return normalizeOpenAIBaseUrl(config.baseUrl || defaultBaseUrls[providerId] || "");
   return normalizeMimoProviderBaseUrl(providerId, config.baseUrl?.trim() || defaultBaseUrls[providerId] || "");
 }
 

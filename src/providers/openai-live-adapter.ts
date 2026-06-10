@@ -28,6 +28,7 @@ import {
   normalizeAigocodeBaseUrl,
   normalizeAigocodeImageModel,
 } from "./aigocode-compat";
+import { OPENAI_DEFAULT_BASE_URL, normalizeOpenAIBaseUrl } from "./openai-compat";
 import {
   providerCapabilityPromptNote,
   providerUsesExtraBodyImageReferences,
@@ -36,7 +37,7 @@ import {
 const OPENAI_PROVIDER_ID = "openai" as const;
 const AIGOCODE_PROVIDER_ID = "aigocode" as const;
 const AGNES_PROVIDER_ID = "agnes" as const;
-const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_OPENAI_BASE_URL = OPENAI_DEFAULT_BASE_URL;
 const DEFAULT_AIGOCODE_BASE_URL = AIGOCODE_DEFAULT_BASE_URL;
 const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
@@ -118,6 +119,7 @@ function providerDisplayName(providerId: OpenAICompatibleImageProviderId): strin
 
 function normalizeBaseUrl(providerId: OpenAICompatibleImageProviderId, config: ProviderConfigForm): string {
   if (providerId === AIGOCODE_PROVIDER_ID) return normalizeAigocodeBaseUrl(config.baseUrl);
+  if (providerId === OPENAI_PROVIDER_ID) return normalizeOpenAIBaseUrl(config.baseUrl);
   return (config.baseUrl?.trim() || defaultBaseUrl(providerId)).replace(/\/+$/, "");
 }
 

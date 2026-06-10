@@ -5,6 +5,7 @@ import type { EncryptedProviderCredentialVault } from "../providers/encrypted-cr
 import type { StorageRepository, StoredProviderConfig } from "../storage";
 import { ProviderIdSchema } from "../schema/zod";
 import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "../providers/mimo-compat";
+import { normalizeOpenAIBaseUrl } from "../providers/openai-compat";
 import {
   ApiFailureEnvelopeSchema,
   ProviderConnectionTestApiRequestSchema,
@@ -88,6 +89,11 @@ function normalizeProviderModelSlots(providerId: string, slots: Record<string, s
   );
 }
 
+function normalizeProviderBaseUrl(providerId: string, value: string | null | undefined): string {
+  if (providerId === "openai") return normalizeOpenAIBaseUrl(value);
+  return normalizeMimoProviderBaseUrl(providerId, value);
+}
+
 async function mirrorProviderDiagnostic(input: {
   repository: StorageRepository;
   workspaceId: string;
@@ -108,7 +114,7 @@ async function mirrorProviderDiagnostic(input: {
     ...input.config,
     enabled: input.result.ok ? true : input.config.enabled,
     status: providerStatusFromConnection(input.result.status),
-    baseUrl: normalizeMimoProviderBaseUrl(input.config.providerId, input.config.baseUrl),
+    baseUrl: normalizeProviderBaseUrl(input.config.providerId, input.config.baseUrl),
     defaultModel,
     modelSlots,
     updatedAt,
