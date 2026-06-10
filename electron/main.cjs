@@ -6,7 +6,7 @@ const net = require("node:net");
 const path = require("node:path");
 
 const APP_NAME = "Poster Lab Pro";
-const DEFAULT_PORT = 3000;
+const DEFAULT_PORT = 43117;
 const WORKSPACE_HEALTH_PATH = "/api/workspaces/workspace-pizza-kitchen";
 const SHELL_HEALTH_PATH = "/";
 const PACKAGED_ICON_PATH = path.join(process.resourcesPath || "", "poster-lab-pro.png");
