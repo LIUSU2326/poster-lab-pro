@@ -136,7 +136,7 @@ export const BriefGenerationRequestSchema = z.object({
 export const ImageGenerationRequestSchema = z.object({
   context: ProviderRequestContextSchema,
   schemeId: z.string().min(1),
-  prompt: z.string().min(1).max(12000),
+  prompt: z.string().min(1).max(18000),
   negativePrompt: z.string().max(3000).optional(),
   assets: z.array(ProviderAssetReferenceSchema).default([]),
   platformPreset: PlatformPresetSchema,

@@ -12,6 +12,8 @@ import { state } from '../state.js';
 import {
   evaluateQueuePlanCapabilityGate,
   evaluateProviderRouteCapabilityGate,
+  isKnownUnsupportedProviderSlotModel,
+  providerModelSlots,
   providerCapabilityGateUserMessage,
 } from '../provider-capabilities.js';
 
@@ -403,7 +405,7 @@ function resolveEffectiveRouteProvider(slot) {
   const snapshot = state.workspaceSnapshot || {};
   const candidateIds = {
     concept: ["mimo", "agnes", "google", "deepseek", "openai", "aigocode", "claude", "qwen"],
-    image: ["agnes", "openai", "aigocode", "google", "qwen"],
+    image: ["google", "aigocode", "openai", "agnes", "qwen"],
     styleReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
     compositionReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
   }[slot] || [state.provider || "openai"];
@@ -433,7 +435,12 @@ function resolveEffectiveRouteModel(slot, providerId) {
   const route = state.providerSlotRoutes?.[slot] || {};
   const providerConfig = (state.workspaceSnapshot || {}).providerConfigs?.[providerId] || {};
   const routeModel = providerId === route.providerId ? route.model : "";
-  return routeModel || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "";
+  const slotModels = providerModelSlots[providerId]?.[slot] || [];
+  const configuredSlotModel = providerConfig.modelSlots?.[slot] || "";
+  const preferredModel = routeModel || configuredSlotModel || (slot === "concept" ? providerConfig.defaultModel : "") || slotModels[0] || providerConfig.defaultModel || "";
+  if (!isKnownUnsupportedProviderSlotModel(providerId, slot, preferredModel)) return preferredModel;
+  if (configuredSlotModel && slotModels.includes(configuredSlotModel)) return configuredSlotModel;
+  return slotModels[0] || "";
 }
 
 function getGenerationCapabilityGate(modeId) {

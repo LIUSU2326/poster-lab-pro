@@ -7,6 +7,12 @@ import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { removeWorkbenchAssetsByRoleLabel, uploadWorkbenchAssetFile } from "../asset-library-client.js";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
 import { analyzeReferenceImageForWorkbench } from "../reference-analysis-client.js";
+import { latestReferenceAnalysisSummary, summarizeReferenceAnalysisText } from "../reference-analysis-state.js";
+import {
+  isKnownUnsupportedProviderSlotModel,
+  providerModelSlots,
+  providerSupportsSlot,
+} from "../provider-capabilities.js";
 import { getRuntimeWorkspaceSnapshot, state } from "../state.js";
 import { ModeFormSchema, type ModeForm, type ProductionMode } from "../schema/zod";
 
@@ -153,6 +159,25 @@ function styleAnalysisProviderReady(providerId: string): boolean {
   return styleAnalysisProviderIds.has(providerId);
 }
 
+function styleAnalysisModelForSlot(providerId: string, slot: string): string {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const route = (state.providerSlotRoutes?.[slot] || {}) as { providerId?: string; model?: string };
+  const provider = (snapshot.providerConfigs?.[providerId] || {}) as { modelSlots?: Record<string, string>; defaultModel?: string };
+  const modelSlots = providerModelSlots as Record<string, Record<string, string[]>>;
+  const slotModels = modelSlots[providerId]?.[slot] || [];
+  const configuredSlotModel = provider.modelSlots?.[slot] || "";
+  const routeModel = providerId === route.providerId ? route.model || "" : "";
+  const preferredModel = routeModel || configuredSlotModel || slotModels[0] || provider.defaultModel || "";
+  if (!isKnownUnsupportedProviderSlotModel(providerId, slot, preferredModel)) return preferredModel;
+  if (configuredSlotModel && slotModels.includes(configuredSlotModel)) return configuredSlotModel;
+  return slotModels[0] || "";
+}
+
+function styleAnalysisRouteReady(providerId: string, slot: string, model: string): boolean {
+  if (!styleAnalysisProviderReady(providerId) || !providerSupportsSlot(providerId, slot)) return false;
+  return !isKnownUnsupportedProviderSlotModel(providerId, slot, model);
+}
+
 function latestStylePreview(): string {
   const localDataUrl = Object.entries(state.referenceUploadDataUrls || {})
     .filter(([key]) => key.startsWith("styleReference:"))
@@ -219,7 +244,9 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   const [styleUploadStatus, setStyleUploadStatus] = useState("");
   const [stylePreview, setStylePreview] = useState(latestStylePreview());
   const [stylePreviewBroken, setStylePreviewBroken] = useState(false);
-  const [styleAnalysisMessage, setStyleAnalysisMessage] = useState("");
+  const [styleAnalysisMessage, setStyleAnalysisMessage] = useState(() =>
+    latestReferenceAnalysisSummary({ role: "styleReference", kinds: ["style"], maxLength: 120 }),
+  );
   const customStyles = Array.isArray(state.customStyleTags?.[mode]) ? state.customStyleTags[mode] : [];
 
   const commit = async (nextValues: ModeForm) => {
@@ -236,13 +263,15 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   const filteredStyles = styleLibrary.filter((style) => style.toLowerCase().includes(search.trim().toLowerCase()));
   const activeTags = supportsStyleTags(currentValues) ? uniqueStrings(currentValues.styleTags).slice(0, 1) : [];
   const styleProviderId = routeProviderForSlot("styleReference");
+  const styleModel = styleAnalysisModelForSlot(styleProviderId, "styleReference");
   const displayStylePreview = stylePreview && !stylePreviewBroken ? stylePreview : "";
-  const canExtractStyle = Boolean(displayStylePreview) && analysisApiReady(styleProviderId) && styleAnalysisProviderReady(styleProviderId);
+  const styleRouteReady = styleAnalysisRouteReady(styleProviderId, "styleReference", styleModel);
+  const canExtractStyle = Boolean(displayStylePreview) && analysisApiReady(styleProviderId) && styleRouteReady;
   const unsupportedStyleProviderMessage = styleProviderId === "agnes"
     ? "Agnes Image 2.1 Flash 支持图生图参考，但画风文字分析需要视觉理解模型，请把画风识别路由切到 MiMo、Google、OpenAI、AIGoCode、Claude 或 Qwen。"
     : "当前供应商不支持画风识别，请切换到 MiMo、Google、OpenAI、AIGoCode、Claude 或 Qwen。";
   const styleDisabledReason = displayStylePreview
-    ? !styleAnalysisProviderReady(styleProviderId)
+    ? !styleRouteReady
       ? unsupportedStyleProviderMessage
       : !analysisApiReady(styleProviderId)
         ? "先配置可用的识别 API"
@@ -318,7 +347,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
       setStyleAnalysisMessage("请先上传一张画风参考图。");
       return;
     }
-    if (!styleAnalysisProviderReady(styleProviderId)) {
+    if (!styleRouteReady) {
       setStyleAnalysisMessage(unsupportedStyleProviderMessage);
       return;
     }
@@ -337,6 +366,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
         kind: "style",
         role: "styleReference",
         providerId: styleProviderId,
+        model: styleModel,
         label: "画风参考",
         imageDataUrl,
         key: "styleReference:style",
@@ -346,7 +376,7 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
         return;
       }
       const text = String(result.data?.text || "").trim();
-      const summary = text.length > 120 ? `${text.slice(0, 120)}...` : text;
+      const summary = summarizeReferenceAnalysisText(text, 120);
       setStyleAnalysisMessage(summary || "画风提取完成，但供应商没有返回文本。");
     } catch (error) {
       setStyleAnalysisMessage(error instanceof Error ? error.message : "画风提取失败，请稍后重试。");

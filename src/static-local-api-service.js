@@ -237,7 +237,7 @@ function creativeDirectionFromPromptPackage(promptPackage) {
 
 function posterCinematicKvQualityDirective() {
   return [
-    "## AAAAAAAAAAA Cinematic Game KV Quality Override",
+	    "## Cinematic Game KV Quality Override",
     "Target the feel of a top-tier cinematic game announcement key visual, adapted to the uploaded art style. This means movie-poster staging and lighting quality, not photorealism unless the active style reference is photorealistic.",
     "Cinematography: choose deliberate camera language such as low-angle hero shot, 24-35mm wide cinematic lens feel, forced perspective, over-the-shoulder danger reveal, foreground occlusion, diagonal motion path, or portal/window frame-within-frame. Avoid neutral side-view staging.",
     "Lighting: design a clear key light, colored fill, hard rim/back light, motivated practical light source such as oven glow/portal glow/fire/sauce energy, volumetric beams, glow bloom, bounced color, and deep value contrast around silhouettes.",
@@ -266,13 +266,27 @@ function posterSubjectAccessoryStrictnessLock() {
   return "Uploaded subject accessory lock: do not give protagonists or BOSS new shields, weapons, armor, tools, facial features, costume parts, horns, crowns, or props just because a scheme mentions them. If that object is not visibly present in the uploaded reference, reinterpret the action through body movement, camera, environment, particles, or existing visible uploaded props only.";
 }
 
-const providerPromptMaxChars = 12000;
+const providerPromptMaxChars = 18000;
 
 function compactPromptBlock(text, maxChars) {
   const normalized = String(text || "").replace(/\n{3,}/g, "\n\n").trim();
   if (!normalized || normalized.length <= maxChars) return normalized;
   const suffix = "\n[Block compacted to preserve higher-priority identity, integration, logo, typography, and guardrail rules.]";
-  return `${normalized.slice(0, Math.max(0, maxChars - suffix.length)).trimEnd()}${suffix}`;
+  return `${trimPromptAtBoundary(normalized, Math.max(0, maxChars - suffix.length))}${suffix}`;
+}
+
+function trimPromptAtBoundary(text, maxChars) {
+  if (text.length <= maxChars) return text;
+  const clipped = text.slice(0, maxChars).trimEnd();
+  const boundary = Math.max(
+    clipped.lastIndexOf("\n\n"),
+    clipped.lastIndexOf(". "),
+    clipped.lastIndexOf("。"),
+    clipped.lastIndexOf("; "),
+    clipped.lastIndexOf("；"),
+    clipped.lastIndexOf(" "),
+  );
+  return (boundary > maxChars * 0.72 ? clipped.slice(0, boundary + 1) : clipped).trimEnd();
 }
 
 function joinPromptBlocks(blocks) {
@@ -559,9 +573,11 @@ function createQueueTask({
   platformPreset = null,
   aspectRatio = null,
   width = null,
-  height = null,
-  schemeIds = null,
-}) {
+	  height = null,
+	  schemeIds = null,
+	  sourceResultId = null,
+	  editInstruction = null,
+	}) {
   const providerCapability = ["briefGeneration", "imageGeneration", "imageEdit", "upscale", "backgroundRemoval"].includes(kind)
     ? kind
     : null;
@@ -585,9 +601,11 @@ function createQueueTask({
       ...(platformPreset ? { platformPreset } : {}),
       ...(aspectRatio ? { aspectRatio } : {}),
       ...(width ? { width } : {}),
-      ...(height ? { height } : {}),
-      ...(model ? { model } : {}),
-      count,
+	      ...(height ? { height } : {}),
+	      ...(sourceResultId ? { sourceResultId } : {}),
+	      ...(editInstruction ? { editInstruction } : {}),
+	      ...(model ? { model } : {}),
+	      count,
     },
     output: { providerResultIds: [], metadata: {} },
     error: null,
@@ -644,12 +662,13 @@ function createQueuePlanPayload(payload) {
   const modeState = payload.snapshot?.modeStates?.find((item) => item.mode === payload.mode);
   const fallbackRatios = modeState?.outputSettings?.aspectRatios || ["1:1"];
   const fallbackPresets = modeState?.outputSettings?.platformPresets || ["custom"];
-  const aspectRatios = payload.aspectRatios?.length ? payload.aspectRatios : fallbackRatios;
-  const platformPresets = payload.platformPresets?.length ? payload.platformPresets : fallbackPresets;
-  const customSize = payload.customSize || modeState?.outputSettings?.customSize || null;
+	  const aspectRatios = payload.aspectRatios?.length ? payload.aspectRatios : fallbackRatios;
+	  const platformPresets = payload.platformPresets?.length ? payload.platformPresets : fallbackPresets;
+	  const customSize = payload.customSize || modeState?.outputSettings?.customSize || null;
+	  const operationOnly = Boolean(payload.sourceResultId && (payload.includeImageEdit || payload.includeUpscale || payload.includeBackgroundRemoval));
 
-  const briefTask = payload.regenerateSchemes === false
-    ? null
+	  const briefTask = operationOnly || payload.regenerateSchemes === false
+	    ? null
     : createQueueTask({
         id: `${jobId}-brief`,
         jobId,
@@ -666,8 +685,8 @@ function createQueuePlanPayload(payload) {
     const size = customSize || inferSize(rawRatio);
     const aspectRatio = customSize ? `${customSize.width}x${customSize.height}` : rawRatio;
     const platformPreset = platformPresets[index % platformPresets.length] || "custom";
-    const imageTask = payload.includeImageGeneration === false
-      ? null
+	    const imageTask = operationOnly || payload.includeImageGeneration === false
+	      ? null
       : createQueueTask({
       id: `${jobId}-image-${index + 1}`,
       jobId,
@@ -701,10 +720,12 @@ function createQueuePlanPayload(payload) {
         dependsOn: imageTask ? [imageTask.id] : [],
         platformPreset,
         aspectRatio,
-        width: size.width,
-        height: size.height,
-        model: providerRouteForPayload(payload, kind).model || kind,
-      }));
+	        width: size.width,
+	        height: size.height,
+	        sourceResultId: payload.sourceResultId || `result-${schemeId}`,
+	        editInstruction: kind === "imageEdit" ? payload.editInstruction : null,
+	        model: providerRouteForPayload(payload, kind).model || kind,
+	      }));
     });
   });
 

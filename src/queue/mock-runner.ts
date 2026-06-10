@@ -274,11 +274,11 @@ function createImageEditMappedRequest(initialPlan: QueuePlan, task: QueueTask, m
     model,
     promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
     request: ImageEditRequestSchema.parse({
-      ...base.request,
-      sourceResultId: task.input.sourceResultId || "mock-result",
-      editInstruction: "Mock edit",
-    }),
-  });
+	      ...base.request,
+	      sourceResultId: task.input.sourceResultId || "mock-result",
+	      editInstruction: task.input.editInstruction || "Mock edit",
+	    }),
+	  });
 }
 
 function createUpscaleMappedRequest(initialPlan: QueuePlan, task: QueueTask, model: string): ProviderMappedRequest {
@@ -402,11 +402,11 @@ function createSnapshotMappedRequestForTask(
       model,
       promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
       request: ImageEditRequestSchema.parse({
-        ...imageMapped.request,
-        sourceResultId: task.input.sourceResultId || "mock-result",
-        editInstruction: "Create a useful alternate version of the selected result. Keep the same scheme and asset identity, but vary camera energy, effects, finish, and minor composition details.",
-      }),
-    });
+	        ...imageMapped.request,
+	        sourceResultId: task.input.sourceResultId || "mock-result",
+	        editInstruction: task.input.editInstruction || "Create a useful alternate version of the selected result. Keep the same scheme and asset identity, but vary camera energy, effects, finish, and minor composition details.",
+	      }),
+	    });
   }
 
   return createMappedRequestForTask(initialPlan, task, model);
@@ -500,13 +500,27 @@ function imageSchemeIds(plan: QueuePlan): string[] {
 }
 
 function promptBlock(title: string, text: unknown) {
-  const value = typeof text === "string" ? text.trim().slice(0, 1200) : "";
+  const value = typeof text === "string" ? trimAtBoundary(text.trim(), 1200) : "";
   return value ? { title, text: value } : null;
 }
 
 function stringValue(value: unknown, fallback: string, maxLength: number): string {
   const text = typeof value === "string" ? value.trim() : "";
-  return (text || fallback).slice(0, maxLength);
+  return trimAtBoundary(text || fallback, maxLength);
+}
+
+function trimAtBoundary(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  const clipped = text.slice(0, maxLength).trimEnd();
+  const boundary = Math.max(
+    clipped.lastIndexOf("\n\n"),
+    clipped.lastIndexOf(". "),
+    clipped.lastIndexOf("。"),
+    clipped.lastIndexOf("; "),
+    clipped.lastIndexOf("；"),
+    clipped.lastIndexOf(" "),
+  );
+  return (boundary > maxLength * 0.72 ? clipped.slice(0, boundary + 1) : clipped).trimEnd();
 }
 
 function sloganValue(value: unknown): string | undefined {

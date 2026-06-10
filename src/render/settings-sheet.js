@@ -227,17 +227,21 @@ function getRoutePlans() {
   const defaultPlans = [
     { id: "standard", name: "标准方案" },
     { id: "image-first", name: "图像优先" },
+    { id: "mimo-google-kv", name: "MiMo + Google KV" },
     { id: "mimo-agnes", name: "MiMo + Agnes 测试" },
   ];
+  const deletedPlanIds = new Set(Array.isArray(state.providerRouteDeletedPlanIds) ? state.providerRouteDeletedPlanIds : []);
   const savedPlans = Array.isArray(state.providerRoutePlans) && state.providerRoutePlans.length > 0
     ? state.providerRoutePlans
     : defaultPlans;
   const plans = [
-    ...savedPlans.filter((plan) => plan?.id !== "agnes-core"),
-    ...defaultPlans.filter((plan) => !savedPlans.some((candidate) => candidate?.id === plan.id)),
+    ...savedPlans.filter((plan) => plan?.id !== "agnes-core" && !deletedPlanIds.has(plan.id)),
+    ...defaultPlans.filter((plan) =>
+      !deletedPlanIds.has(plan.id) && !savedPlans.some((candidate) => candidate?.id === plan.id),
+    ),
   ];
   state.providerRoutePlans = plans;
-  if (state.providerRoutePlan === "agnes-core") state.providerRoutePlan = "mimo-agnes";
+  if (state.providerRoutePlan === "agnes-core") state.providerRoutePlan = "mimo-google-kv";
   if (!plans.some((plan) => plan.id === state.providerRoutePlan)) {
     state.providerRoutePlan = plans[0].id;
   }
@@ -334,12 +338,12 @@ function renderAgnesRouteAssist(providers) {
       <div>
         <strong>MiMo + Agnes 免费实测路线</strong>
         <small>${configured
-          ? "方案生成、画风和构图解析走 MiMo；图片渲染走 Agnes，避免参考图污染和 Agnes 文本限流。"
-          : "保存 MiMo 和 Agnes API Key 后，可一键切到 MiMo 方案/参考分析 + Agnes 图像渲染路线。"}</small>
+          ? "方案生成走 MiMo 2.5 Pro；画风和构图解析只走支持视觉的模型（默认 MiMo Omni）；图片渲染走 Agnes。"
+          : "保存 MiMo 和 Agnes API Key 后，可一键切到 MiMo 方案 + 视觉参考分析 + Agnes 图像渲染路线。"}</small>
       </div>
       <div class="agnes-route-chips">
         <span class="${coreRoute ? "ok" : "warn"}">方案 · MiMo / 图像 · Agnes</span>
-        <span class="${referenceCovered ? "ok" : "warn"}">参考分析 · ${referenceCovered ? "视觉模型" : "需能力支持"}</span>
+        <span class="${referenceCovered ? "ok" : "warn"}">参考分析 · ${referenceCovered ? "视觉模型槽" : "需能力支持"}</span>
       </div>
       <button type="button" data-action="apply-agnes-core-route" ${configured && !coreRoute ? "" : "disabled"}>${escapeHtml(buttonLabel)}</button>
     </div>

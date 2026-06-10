@@ -9,6 +9,7 @@ const ReferenceAnalysisRequestSchema = z.object({
   kind: z.enum(["composition", "full", "style"]),
   role: z.string().min(1).max(80).default("compositionReference"),
   label: z.string().min(1).max(120).default("Reference image"),
+  model: z.string().trim().min(1).max(120).optional(),
   imageDataUrl: z.string().min(32).max(18_000_000),
 });
 
@@ -174,6 +175,22 @@ function normalizeReferenceModel(providerId: z.infer<typeof ProviderIdSchema>, m
   return normalizeMimoProviderModel(providerId, model);
 }
 
+function knownManifestModels(manifest: ReturnType<typeof getProviderManifest>): string[] {
+  return Array.from(new Set(Object.values(manifest.modelSlots).flat().filter(Boolean)));
+}
+
+function isKnownWrongSlotModel(
+  manifest: ReturnType<typeof getProviderManifest>,
+  slot: "styleReference" | "compositionReference",
+  model: string | undefined,
+): boolean {
+  const normalized = model?.trim();
+  if (!normalized) return false;
+  const slotModels = manifest.modelSlots[slot] || [];
+  if (slotModels.includes(normalized)) return false;
+  return knownManifestModels(manifest).includes(normalized);
+}
+
 async function runOpenAICompatible(input: {
   providerId: z.infer<typeof ProviderIdSchema>;
   baseUrl: string;
@@ -318,9 +335,28 @@ export async function POST(
     }
 
     const slot = body.kind === "style" ? "styleReference" : "compositionReference";
-    const model = providerId === "mimo"
-      ? "mimo-v2-omni"
-      : normalizeReferenceModel(providerId, config.modelSlots?.[slot] || config.defaultModel || "gpt-5.2");
+    const slotModels = manifest.modelSlots[slot] || [];
+    if (body.model && isKnownWrongSlotModel(manifest, slot, body.model)) {
+      return json({
+        ok: false,
+        error: {
+          code: "unsupported_model_slot",
+          message: `${manifest.displayName} 的 ${body.kind === "style" ? "画风参考分析" : "构图参考分析"}不能使用 ${body.model}，请切换到 ${slotModels.join(" / ")}。`,
+        },
+      }, { status: 400 });
+    }
+    const configuredSlotModel = config.modelSlots?.[slot] || "";
+    const candidateModel = body.model
+      || configuredSlotModel
+      || slotModels[0]
+      || config.defaultModel
+      || "gpt-5.2";
+    const safeModel = isKnownWrongSlotModel(manifest, slot, candidateModel)
+      ? configuredSlotModel && slotModels.includes(configuredSlotModel)
+        ? configuredSlotModel
+        : slotModels[0] || candidateModel
+      : candidateModel;
+    const model = normalizeReferenceModel(providerId, safeModel);
     const baseUrl = normalizeBaseUrl(config.baseUrl, providerId);
     const image = parseImageDataUrl(body.imageDataUrl);
     const prompt = promptFor(body.kind, body.label);

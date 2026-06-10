@@ -67,16 +67,16 @@ function dateValue(value) {
 }
 
 function assetDedupeKey(asset) {
+  const fileFingerprint = asset.checksum || asset.metadata?.originalFileName || "";
+  const byteSize = asset.byteSize ?? "";
+  if (!fileFingerprint && byteSize === "") return `id|${asset.id}`;
   return [
     asset.role,
-    asset.checksum || asset.metadata?.originalFileName || asset.storageKey || asset.id,
-    asset.byteSize ?? "",
+    String(asset.label || "").trim(),
+    fileFingerprint,
+    asset.mimeType || "",
+    byteSize,
   ].join("|");
-}
-
-function assetSlotKey(asset) {
-  const label = String(asset.label || "").trim();
-  return label ? `${asset.role}|${label}` : `${asset.role}|${asset.id}`;
 }
 
 function isExampleAsset(asset) {
@@ -99,15 +99,7 @@ function dedupeFreshSessionAssets(assets = []) {
       byKey.set(key, asset);
     }
   }
-  const bySlot = new Map();
-  for (const asset of byKey.values()) {
-    const key = assetSlotKey(asset);
-    const existing = bySlot.get(key);
-    if (!existing || dateValue(asset.updatedAt || asset.createdAt) >= dateValue(existing.updatedAt || existing.createdAt)) {
-      bySlot.set(key, asset);
-    }
-  }
-  return [...bySlot.values()].sort((left, right) => dateValue(left.createdAt) - dateValue(right.createdAt));
+  return [...byKey.values()].sort((left, right) => dateValue(left.createdAt) - dateValue(right.createdAt));
 }
 
 function normalizeLoadedWorkspaceState(snapshot) {

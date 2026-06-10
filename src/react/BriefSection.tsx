@@ -6,6 +6,7 @@ import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { replaceGenerationFormField } from "../generation-form-runtime.js";
 import { getRuntimeWorkspaceSnapshot, state } from "../state.js";
 import { ProjectBriefFormSchema, type ProductionMode, type ProjectBriefForm } from "../schema/zod";
+import type { WorkbenchRenderOptions } from "./mount-workbench-sections";
 
 type BriefSectionProps = {
   mode: ProductionMode;
@@ -13,7 +14,7 @@ type BriefSectionProps = {
   revision: number;
   assetCount: number;
   initialValues: ProjectBriefForm;
-  onRequestRender?: (() => void) | undefined;
+  onRequestRender?: ((options?: WorkbenchRenderOptions) => void) | undefined;
 };
 
 function normalizeInitialValues(values: ProjectBriefForm): ProjectBriefForm {

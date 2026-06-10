@@ -239,6 +239,29 @@ async function runRuntimeCheck() {
     });
     if (committed.summary.assetCount !== snapshot.assets.length + 1) issues.push("committing asset should update snapshot asset count");
 
+    const duplicatePlan = await serviceModule.createUploadPlan({
+      workspaceId: snapshot.metadata.workspaceId,
+      projectId: snapshot.project.id,
+      role: "subjectReference",
+      label: "Icon hero",
+      fileName: "icon-hero.png",
+      mimeType: "image/png",
+      byteSize: 1024,
+      checksum: "sha256-icon-hero",
+      usage: ["input", "reference"],
+      clientAssetId: "asset-icon-hero-retry",
+    });
+    const duplicateCommit = await serviceModule.commitAsset({
+      workspaceId: snapshot.metadata.workspaceId,
+      asset: duplicatePlan.assetDraft,
+    });
+    if (duplicateCommit.summary.assetCount !== snapshot.assets.length + 1) {
+      issues.push("recommitting the same uploaded file should be idempotent even with a new client asset id");
+    }
+    if (duplicateCommit.asset.id !== "asset-icon-hero") {
+      issues.push("duplicate file commit should preserve the first asset id for existing references");
+    }
+
     const listed = await serviceModule.listAssets({
       workspaceId: snapshot.metadata.workspaceId,
       role: "subjectReference",
@@ -246,6 +269,26 @@ async function runRuntimeCheck() {
     });
     if (listed.assets.length !== 1 || listed.assets[0].id !== "asset-icon-hero") {
       issues.push("asset list should filter by role and usage");
+    }
+
+    const distinctPlan = await serviceModule.createUploadPlan({
+      workspaceId: snapshot.metadata.workspaceId,
+      projectId: snapshot.project.id,
+      role: "subjectReference",
+      label: "Icon hero",
+      fileName: "icon-hero-alt.png",
+      mimeType: "image/png",
+      byteSize: 2048,
+      checksum: "sha256-icon-hero-alt",
+      usage: ["input", "reference"],
+      clientAssetId: "asset-icon-hero-alt",
+    });
+    const distinctCommit = await serviceModule.commitAsset({
+      workspaceId: snapshot.metadata.workspaceId,
+      asset: distinctPlan.assetDraft,
+    });
+    if (distinctCommit.summary.assetCount !== snapshot.assets.length + 2) {
+      issues.push("committing a distinct file in the same slot should still append");
     }
 
     const binaryResult = await localBinaryModule.writeLocalAssetBinary({

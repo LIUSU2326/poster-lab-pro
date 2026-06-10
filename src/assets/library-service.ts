@@ -69,26 +69,109 @@ async function loadWorkspace(repository: StorageRepository, workspaceId: string)
   return cloneSnapshot(loaded.snapshot);
 }
 
-function upsertAsset(snapshot: WorkspaceSnapshot, asset: StoredAssetRecord, replaceExisting: boolean, updatedAt: string): WorkspaceSnapshot {
+function assetUploadFingerprint(asset: StoredAssetRecord): string {
+  const fileName = typeof asset.metadata?.originalFileName === "string" ? asset.metadata.originalFileName : "";
+  const checksum = asset.checksum || "";
+  const byteSize = asset.byteSize ?? "";
+  if (!checksum && !fileName && byteSize === "") return "";
+  return [
+    asset.role,
+    asset.label,
+    checksum || fileName,
+    asset.mimeType || "",
+    byteSize,
+  ].join("|");
+}
+
+function isSameUploadedAsset(left: StoredAssetRecord, right: StoredAssetRecord): boolean {
+  if (left.id === right.id) return true;
+  const leftKey = assetUploadFingerprint(left);
+  return Boolean(leftKey && leftKey === assetUploadFingerprint(right));
+}
+
+function mergeUploadedAsset(existing: StoredAssetRecord, incoming: StoredAssetRecord, updatedAt: string): StoredAssetRecord {
+  return {
+    ...existing,
+    ...incoming,
+    id: existing.id,
+    createdAt: existing.createdAt || incoming.createdAt,
+    updatedAt,
+    metadata: {
+      ...(existing.metadata || {}),
+      ...(incoming.metadata || {}),
+    },
+  };
+}
+
+function upsertAsset(
+  snapshot: WorkspaceSnapshot,
+  asset: StoredAssetRecord,
+  replaceExisting: boolean,
+  updatedAt: string,
+): { snapshot: WorkspaceSnapshot; asset: StoredAssetRecord } {
   const existingIndex = snapshot.assets.findIndex((item) => item.id === asset.id);
   if (existingIndex >= 0 && !replaceExisting) {
-    throw new Error(`Asset ${asset.id} already exists in this workspace.`);
+    const existingAsset = snapshot.assets[existingIndex];
+    if (!existingAsset) throw new Error(`Asset ${asset.id} already exists but could not be loaded.`);
+    const committedAsset = mergeUploadedAsset(existingAsset, asset, updatedAt);
+    return {
+      asset: committedAsset,
+      snapshot: WorkspaceSnapshotSchema.parse({
+        ...snapshot,
+        assets: snapshot.assets
+          .filter((item) => !isSameUploadedAsset(item, committedAsset))
+          .concat(committedAsset),
+        metadata: {
+          ...snapshot.metadata,
+          revision: snapshot.metadata.revision + 1,
+          updatedAt,
+        },
+      }),
+    };
   }
 
-  const nextAssets = replaceExisting
-    ? snapshot.assets.filter((item) => item.id !== asset.id && !(item.role === asset.role && item.label === asset.label))
-    : [...snapshot.assets];
-  nextAssets.push(asset);
+  if (!replaceExisting) {
+    const existingDuplicate = snapshot.assets.find((item) => isSameUploadedAsset(item, asset));
+    if (existingDuplicate) {
+      const committedAsset = mergeUploadedAsset(existingDuplicate, asset, updatedAt);
+      return {
+        asset: committedAsset,
+        snapshot: WorkspaceSnapshotSchema.parse({
+          ...snapshot,
+          assets: snapshot.assets
+            .filter((item) => !isSameUploadedAsset(item, committedAsset))
+            .concat(committedAsset),
+          metadata: {
+            ...snapshot.metadata,
+            revision: snapshot.metadata.revision + 1,
+            updatedAt,
+          },
+        }),
+      };
+    }
+  }
 
-  return WorkspaceSnapshotSchema.parse({
-    ...snapshot,
-    assets: nextAssets,
-    metadata: {
-      ...snapshot.metadata,
-      revision: snapshot.metadata.revision + 1,
-      updatedAt,
-    },
-  });
+  const committedAsset = {
+    ...asset,
+    updatedAt,
+  };
+  const nextAssets = replaceExisting
+    ? snapshot.assets.filter((item) => item.id !== committedAsset.id && !(item.role === committedAsset.role && item.label === committedAsset.label))
+    : [...snapshot.assets];
+  nextAssets.push(committedAsset);
+
+  return {
+    asset: committedAsset,
+    snapshot: WorkspaceSnapshotSchema.parse({
+      ...snapshot,
+      assets: nextAssets,
+      metadata: {
+        ...snapshot.metadata,
+        revision: snapshot.metadata.revision + 1,
+        updatedAt,
+      },
+    }),
+  };
 }
 
 export function createAssetLibraryService(options: AssetLibraryServiceOptions): AssetLibraryService {
@@ -150,11 +233,12 @@ export function createAssetLibraryService(options: AssetLibraryServiceOptions): 
         ...parsed.asset,
         updatedAt,
       };
-      const nextSnapshot = upsertAsset(snapshot, asset, parsed.replaceExisting, updatedAt);
+      const committed = upsertAsset(snapshot, asset, parsed.replaceExisting, updatedAt);
+      const nextSnapshot = committed.snapshot;
       const saved = await repository.saveSnapshot(nextSnapshot);
 
       return AssetCommitResultSchema.parse({
-        asset,
+        asset: committed.asset,
         summary: saved.snapshot,
       });
     },

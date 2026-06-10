@@ -78,12 +78,13 @@ export const QueueTaskInputSchema = z.object({
   sourceResultId: z.string().min(1).optional(),
   platformPreset: PlatformPresetSchema.optional(),
   aspectRatio: z.string().min(1).optional(),
-  width: z.number().int().min(1).optional(),
-  height: z.number().int().min(1).optional(),
-  prompt: z.string().min(1).optional(),
-  model: z.string().min(1).optional(),
-  count: z.number().int().min(1).max(8).optional(),
-});
+	  width: z.number().int().min(1).optional(),
+	  height: z.number().int().min(1).optional(),
+	  prompt: z.string().min(1).optional(),
+	  editInstruction: z.string().min(1).max(2000).optional(),
+	  model: z.string().min(1).optional(),
+	  count: z.number().int().min(1).max(8).optional(),
+	});
 
 export const QueueTaskOutputSchema = z.object({
   providerResultIds: z.array(z.string().min(1)).default([]),

@@ -1135,7 +1135,7 @@ export async function applyPosterAssetOverlays(input: {
 }): Promise<PosterAssetOverlayResult> {
   const attemptedAssetIds = input.assets.map((asset) => asset.id);
   const base = input.dataUrl ? decodeDataUrl(input.dataUrl) : null;
-  if (!base || input.assets.length === 0) {
+  if (!base || (input.assets.length === 0 && !input.slogan)) {
     return {
       dataUrl: input.dataUrl,
       overlays: [],

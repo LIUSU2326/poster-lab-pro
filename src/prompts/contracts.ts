@@ -89,7 +89,7 @@ export const PromptPackageSchema = z.object({
   slogans: z.partialRecord(SloganLanguageSchema, z.string().min(1)).default({}),
   guardrails: z.array(PromptGuardrailRuleSchema).min(1),
   negativePrompt: z.string().max(4000).default(""),
-  finalPrompt: z.string().min(1).max(12000),
+  finalPrompt: z.string().min(1).max(18000),
   validation: PromptValidationSchema,
 });
 

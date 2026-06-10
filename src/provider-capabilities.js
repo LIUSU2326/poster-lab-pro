@@ -125,6 +125,19 @@ export function providerSupportsSlot(providerId, slot) {
   );
 }
 
+export function knownProviderModels(providerId) {
+  const slots = providerModelSlots[providerId] || {};
+  return Array.from(new Set(Object.values(slots).flat().filter(Boolean)));
+}
+
+export function isKnownUnsupportedProviderSlotModel(providerId, slot, model) {
+  const normalized = String(model || "").trim();
+  if (!normalized) return false;
+  const supportedModels = providerModelSlots[providerId]?.[slot] || [];
+  if (supportedModels.includes(normalized)) return false;
+  return knownProviderModels(providerId).includes(normalized);
+}
+
 function providerName(providerId) {
   return providerLabels[providerId] || providerId || "未知供应商";
 }
@@ -203,6 +216,13 @@ export function evaluateProviderRouteCapabilityGate(input = {}) {
       }));
       continue;
     }
+    if (isKnownUnsupportedProviderSlotModel(requirement.providerId, requirement.slot, requirement.model)) {
+      errors.push(createGateIssue({
+        ...requirement,
+        message: `${providerName(requirement.providerId)} 的 ${requirement.label} 模型 ${requirement.model} 属于其他槽位，不能用于当前流程。请切换到 ${models.join(" / ")}。`,
+      }));
+      continue;
+    }
     if (requirement.model && !models.includes(requirement.model)) {
       warnings.push(createGateIssue({
         ...requirement,
@@ -234,7 +254,18 @@ export function providerCapabilityGateUserMessage(gate) {
   return gate?.errors?.[0]?.message || gate?.warnings?.[0]?.message || "当前模型配置满足这个生成流程。";
 }
 
-export function resolveResultOperationRoute(action, currentProvider = "openai") {
+function uniqueProviderIds(providerIds = []) {
+  return Array.from(new Set(providerIds.filter(Boolean)));
+}
+
+function firstModelForCapability(providerId, capability) {
+  if (capability === "imageEdit") return providerModelSlots[providerId]?.imageEdit?.[0] || "";
+  if (capability === "upscale") return providerModelSlots[providerId]?.upscale?.[0] || "";
+  if (capability === "backgroundRemoval") return providerModelSlots[providerId]?.backgroundRemoval?.[0] || "";
+  return "";
+}
+
+export function resolveResultOperationRoute(action, currentProvider = "openai", options = {}) {
   const config = resultOperationRouting[action];
   const currentProviderLabel = providerLabels[currentProvider] || currentProvider || "当前供应商";
   if (!config) {
@@ -250,9 +281,21 @@ export function resolveResultOperationRoute(action, currentProvider = "openai") 
     };
   }
 
-  const supported = providerSupports(currentProvider, config.capability);
-  const providerId = supported ? currentProvider : "";
+  const configuredProviders = Array.isArray(options.configuredProviders)
+    ? uniqueProviderIds(options.configuredProviders)
+    : null;
+  const currentSupported = providerSupports(currentProvider, config.capability);
+  const alternateProviderId = currentSupported || !configuredProviders
+    ? ""
+    : uniqueProviderIds([...(options.preferredProviders || []), ...config.providers])
+        .find((candidate) =>
+          providerSupports(candidate, config.capability)
+          && (!configuredProviders || configuredProviders.includes(candidate)),
+        ) || "";
+  const providerId = currentSupported ? currentProvider : alternateProviderId;
+  const supported = Boolean(providerId);
   const providerLabel = providerLabels[providerId] || providerId || "不可用";
+  const model = firstModelForCapability(providerId, config.capability);
   const supportingProviders = config.providers
     .filter((candidate) => providerSupports(candidate, config.capability))
     .map((candidate) => providerLabels[candidate] || candidate);
@@ -263,14 +306,17 @@ export function resolveResultOperationRoute(action, currentProvider = "openai") 
     action,
     providerId: providerId || "",
     providerLabel,
-    native: supported,
+    native: currentSupported,
+    model,
     taskKind: config.taskKind,
     flags: config.flags,
     requiredCapability: config.capability,
     supportedProviders: supportingProviders,
     supportingProvidersLabel,
-    title: supported
+    title: currentSupported
       ? `${config.label} 将由当前供应商执行：${providerLabel}。`
+      : alternateProviderId
+        ? `${currentProviderLabel} 不支持${config.label}；将改由已配置的 ${providerLabel} 执行。`
       : supportingProviders.length
         ? `${currentProviderLabel} 不支持${config.label}；请切换到支持 ${config.capability} 的配置方案：${supportingProvidersLabel}。`
         : `${config.label} 不可用：当前没有供应商声明支持 ${config.capability}。`,

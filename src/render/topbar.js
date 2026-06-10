@@ -67,7 +67,7 @@ export function renderTopbar(activeMode) {
             data-scheme-id="${escapeHtml(selectedScheme.id)}"
             title="只基于当前选中的方案出图"
             ${selectedSchemeRenderDisabled ? "disabled" : ""}
-          >当前方案出图</button>
+          >只出当前方案</button>
         ` : ""}
         <button
           class="primary-button generate-primary ${generatingImages ? "loading" : ""}"

@@ -16432,6 +16432,109 @@ select:focus-visible,
   text-overflow: ellipsis;
 }
 
+.result-viewer-message {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: rgba(255,255,255,0.66);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-refinement-panel {
+  position: fixed;
+  right: 32px;
+  bottom: 126px;
+  z-index: 123;
+  display: grid;
+  width: min(420px, calc(100vw - 64px));
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 16px;
+  background: color-mix(in srgb, #242836 94%, transparent);
+  color: rgba(255,255,255,0.92);
+  box-shadow: 0 24px 70px rgba(22, 26, 34, 0.26);
+}
+
+.result-refinement-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.result-refinement-head strong {
+  font-size: 14px;
+  font-weight: 860;
+}
+
+.result-refinement-head button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.88);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.result-refinement-field {
+  display: grid;
+  gap: 7px;
+}
+
+.result-refinement-field span {
+  color: rgba(255,255,255,0.62);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.result-refinement-field textarea {
+  min-height: 118px;
+  resize: vertical;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.92);
+  font: 12px/1.55 var(--font-ui);
+  padding: 10px 12px;
+  outline: none;
+}
+
+.result-refinement-field textarea:focus {
+  border-color: rgba(158, 188, 255, 0.62);
+  box-shadow: 0 0 0 3px rgba(124, 164, 255, 0.16);
+}
+
+.result-refinement-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.result-refinement-actions button {
+  min-height: 34px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  font-size: 12px;
+  font-weight: 780;
+  padding: 0 13px;
+}
+
+.result-refinement-actions button:last-child {
+  border-color: rgba(158, 188, 255, 0.38);
+  background: rgba(116, 154, 255, 0.22);
+}
+
 /* 1.1.0 release polish: compact destructive reset and reliable viewer controls. */
 .brand-actions {
   display: inline-flex;
@@ -16506,6 +16609,12 @@ select:focus-visible,
   .result-viewer-action-group {
     flex: 1 1 280px;
     justify-content: flex-start;
+  }
+
+  .result-refinement-panel {
+    right: 20px;
+    bottom: 168px;
+    width: calc(100vw - 40px);
   }
 }
 

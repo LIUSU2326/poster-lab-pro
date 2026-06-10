@@ -82,7 +82,10 @@ for (const [fileName, source] of [
   ["events.js", read("src/events.js")],
   ["static-local-api-service.js", read("src/static-local-api-service.js")],
 ]) {
-  if (source.includes("fetch(")) {
+  const allowedViewerClipboardFetch = fileName === "events.js"
+    && source.includes("data-copy-result-image")
+    && source.includes("navigator.clipboard");
+  if (source.includes("fetch(") && !allowedViewerClipboardFetch) {
     issues.push(`${fileName}: fetch must stay outside form/event/static service binding`);
   }
 }
@@ -103,12 +106,12 @@ async function runRuntimeCheck() {
       label: "Duplicate Hero",
       sourceType: "uploaded",
       previewUrl: "http://localhost:3000/uploads/workspaces/check/old-duplicate-hero.png",
-      metadata: { originalFileName: "old-duplicate-hero.png" },
+      metadata: { originalFileName: "duplicate-hero.png" },
       usage: ["input", "reference"],
       storageKey: "projects/project-pizza-kitchen/assets/gameCharacter/asset-old-duplicate-hero.png",
       mimeType: "image/png",
       byteSize: 1200,
-      checksum: "sha256-old-duplicate-hero",
+      checksum: "sha256-duplicate-hero",
       createdAt: "2026-05-20T00:00:00.000Z",
       updatedAt: "2026-05-20T00:00:00.000Z",
     },
@@ -119,14 +122,30 @@ async function runRuntimeCheck() {
       label: "Duplicate Hero",
       sourceType: "uploaded",
       previewUrl: "http://localhost:3000/uploads/workspaces/check/new-duplicate-hero.png",
-      metadata: { originalFileName: "new-duplicate-hero.png" },
+      metadata: { originalFileName: "duplicate-hero.png" },
       usage: ["input", "reference"],
       storageKey: "projects/project-pizza-kitchen/assets/gameCharacter/asset-new-duplicate-hero.png",
       mimeType: "image/png",
-      byteSize: 1400,
-      checksum: "sha256-new-duplicate-hero",
+      byteSize: 1200,
+      checksum: "sha256-duplicate-hero",
       createdAt: "2026-05-21T00:00:00.000Z",
       updatedAt: "2026-05-21T00:00:00.000Z",
+    },
+    {
+      id: "asset-distinct-hero",
+      projectId: snapshot.project.id,
+      role: "gameCharacter",
+      label: "Duplicate Hero",
+      sourceType: "uploaded",
+      previewUrl: "http://localhost:3000/uploads/workspaces/check/distinct-hero.png",
+      metadata: { originalFileName: "distinct-hero.png" },
+      usage: ["input", "reference"],
+      storageKey: "projects/project-pizza-kitchen/assets/gameCharacter/asset-distinct-hero.png",
+      mimeType: "image/png",
+      byteSize: 1400,
+      checksum: "sha256-distinct-hero",
+      createdAt: "2026-05-21T01:00:00.000Z",
+      updatedAt: "2026-05-21T01:00:00.000Z",
     },
   );
 
@@ -190,10 +209,13 @@ async function runRuntimeCheck() {
   }
   const cleanedAssets = calls[1]?.body?.snapshot?.assets || [];
   if (cleanedAssets.some((asset) => asset.id === "asset-old-duplicate-hero")) {
-    issues.push("workspace data service should drop stale same role+label asset records during workspace normalization");
+    issues.push("workspace data service should drop stale duplicate file records during workspace normalization");
   }
   if (!cleanedAssets.some((asset) => asset.id === "asset-new-duplicate-hero")) {
-    issues.push("workspace data service should keep the latest same role+label asset record during workspace normalization");
+    issues.push("workspace data service should keep the latest duplicate file record during workspace normalization");
+  }
+  if (!cleanedAssets.some((asset) => asset.id === "asset-distinct-hero")) {
+    issues.push("workspace data service should preserve distinct files in the same role and label");
   }
   if (state.workspaceLoadStatus !== "http") issues.push("runtime workspace state should be marked as http after load");
   if (getRuntimeWorkspaceSnapshot().project.name !== "HTTP Bound Project") {

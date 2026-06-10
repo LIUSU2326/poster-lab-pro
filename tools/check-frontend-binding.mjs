@@ -68,9 +68,12 @@ requireTokens("center-board.js", centerBoard, [
   "renderSchemeBoardEmpty",
   "renderResultViewer",
   "open-result-viewer",
-  "resolveResultOperationRoute",
-  "二次精修",
-]);
+	  "resolveResultOperationRoute",
+	  "二次精修",
+	  "data-copy-result-image",
+	  "data-result-refinement-prompt",
+	  'data-action="confirm-result-refinement"',
+	]);
 
 requireTokens("config-panel.js", configPanel, [
   'data-action="generate-schemes"',
@@ -94,6 +97,8 @@ requireTokens("settings-sheet.js", settingsSheet, [
 requireTokens("state.js", stateSource, [
   "resultViewerOpen",
   "resultDeleteConfirmId",
+  "resultRefinementOpen",
+  "resultViewerMessage",
 ]);
 
 requireTokens("styles.css", styles, [
@@ -101,6 +106,11 @@ requireTokens("styles.css", styles, [
   ".result-viewer",
   ".preview-icon-action",
   ".result-operation-context",
+  ".result-refinement-panel",
+]);
+
+requireTokens("result-operation-client.js", resultOperationClient, [
+  "editInstruction",
 ]);
 
 if (resultOperationClient.includes("fallback")) {

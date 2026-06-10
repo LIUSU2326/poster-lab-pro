@@ -48,7 +48,7 @@ import {
   posterSubjectAccessoryStrictnessLock,
 } from "./poster-kv-architectures";
 
-const PROVIDER_PROMPT_MAX_CHARS = 12000;
+const PROVIDER_PROMPT_MAX_CHARS = 18000;
 
 export const ProviderMappedRequestKindSchema = z.enum([
   "briefGeneration",
@@ -309,7 +309,11 @@ function filterImageReferenceAssetsForMode(
   if (!options.imageGeneration || promptPackage.target !== "image") return promptPackage.assets;
 
   const assets = promptPackage.assets.filter(isIntegratedReferenceAsset);
-  if (promptPackage.mode === "poster") return assets;
+  if (promptPackage.mode === "poster") {
+    const styleGuide = firstAsset(promptPackage.assets, (asset) => assetSemanticRole(asset) === "styleReference");
+    const compositionGuide = firstAsset(promptPackage.assets, (asset) => assetSemanticRole(asset) === "compositionReference");
+    return uniqueAssets([...assets, compositionGuide, styleGuide]);
+  }
 
   const bySemanticRole = (role: AssetSemanticRole) => (asset: PromptAssetBinding) =>
     assetSemanticRole(asset) === role;
@@ -535,7 +539,21 @@ function compactPromptBlock(text: string, maxChars: number): string {
   const normalized = text.replace(/\n{3,}/g, "\n\n").trim();
   if (!normalized || normalized.length <= maxChars) return normalized;
   const suffix = "\n[Block compacted to preserve higher-priority identity, integration, logo, typography, and guardrail rules.]";
-  return `${normalized.slice(0, Math.max(0, maxChars - suffix.length)).trimEnd()}${suffix}`;
+  return `${trimPromptAtBoundary(normalized, Math.max(0, maxChars - suffix.length))}${suffix}`;
+}
+
+function trimPromptAtBoundary(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const clipped = text.slice(0, maxChars).trimEnd();
+  const boundary = Math.max(
+    clipped.lastIndexOf("\n\n"),
+    clipped.lastIndexOf(". "),
+    clipped.lastIndexOf("。"),
+    clipped.lastIndexOf("; "),
+    clipped.lastIndexOf("；"),
+    clipped.lastIndexOf(" "),
+  );
+  return (boundary > maxChars * 0.72 ? clipped.slice(0, boundary + 1) : clipped).trimEnd();
 }
 
 function joinPromptBlocks(blocks: string[]): string {
@@ -740,16 +758,16 @@ function posterIntegratedKvPromptFromPromptPackage(
   const hasCompositionReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "compositionReference");
   const hasCharacterReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "protagonist");
   const styleRule = hasStyleReference
-    ? "Visual style lock: follow the extracted styleReference analysis for rendering, palette, lighting, line quality, and material finish. Do not copy the style reference image's characters, objects, logos, scenery, layout, text, brand content, or project-specific motifs."
+      ? "Visual style lock: follow the styleReference visual guide and any extracted style analysis for rendering, palette, lighting, line quality, and material finish. Do not copy the style reference image's characters, objects, logos, scenery, layout, text, brand content, or project-specific motifs."
     : hasCharacterReference
       ? "Visual style lock: match the uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, bright appetizing colors, and premium mobile-game key-art polish. Do not use photorealistic food photography, realistic 3D product render, camera macro food shot, or stock-photo background."
       : "Visual style lock: use a stylized game campaign illustration style, not photorealistic food photography, unless the user explicitly selected a realistic style.";
   const analysisOnlyRule = [
     hasStyleReference
-      ? "Style reference handling: the uploaded styleReference is analysis-only. Apply only its extracted rendering language, palette, lighting, materials, line quality, and finish; never reproduce its source content."
+      ? "Style reference handling: the uploaded styleReference is a visual guide only. Apply only its rendering language, palette, lighting, materials, line quality, and finish; never reproduce its source content."
       : "",
     hasCompositionReference
-      ? "Composition reference handling: the uploaded compositionReference is analysis-only. Apply only its extracted camera, layout, subject scale, negative space, safe-area, and visual-flow notes; never reproduce its source content, style, brands, characters, UI, scene, or text."
+      ? "Composition reference handling: the uploaded compositionReference is a visual guide only. Extract camera, layout, subject scale, diagonal/foreground structure, negative space, safe-area, visual flow, and focal hierarchy; never reproduce its source content, brands, characters, UI, scene, title text, slogan text, logo, monster, food items, or decorative words."
       : "",
   ].filter(Boolean).join(" ");
   const semanticGroups = promptPackage.assets.reduce((groups, asset) => {
@@ -791,7 +809,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     criticalBlocks: [
     "## Integrated Game Campaign KV Task",
     "Generate the final unified premium game campaign key visual as one coherent illustration.",
-    "Default pipeline: AI integrated redraw. Use uploaded raw image references only as identity, subject, prop, environment, and brand anchors inside the model generation. StyleReference and compositionReference assets are analysis-only and must not be sent or treated as visual content to fuse. Do not plan a separate background plate for local sticker compositing.",
+    "Default pipeline: AI integrated redraw. Use uploaded raw image references as identity, subject, prop, environment, brand anchors, and visual guide references inside the model generation. StyleReference and compositionReference are guide-only inputs: extract their style/camera/layout logic but never copy their content, words, logos, characters, monsters, food items, or scene. Do not plan a separate background plate for local sticker compositing.",
     analysisOnlyRule,
     schemeAnchor,
     visualContract,
@@ -834,6 +852,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     ],
     closingBlocks: [
     "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
+    "Selected-scheme architecture lock: each image must visibly follow its own selected scheme architecture and story beat. A shared compositionReference may guide camera rhythm only; it must not cause multiple schemes to reuse the same background, pose arrangement, set piece, or scene.",
     sloganPriorityBlock,
     "Allocate one readable campaign-safe logo treatment when uploaded logo/brand assets are present.",
     posterLogoSingleUseLock(),
@@ -1015,10 +1034,11 @@ function redactLogoCopySafeWordmarkPrompt(input: {
       translatedText.replace(new RegExp(escapeRegExp(source), "g"), target), tokenRedacted);
   }, fullyRedacted);
   const redacted = redactLogoCopySafePhrases(componentRedacted);
-  return [
+  const combined = [
     "COPY-SAFE BLANK WORDMARK ENFORCEMENT: the configured brand text and its word fragments are intentionally redacted from this image prompt. Treat redacted project/category wording only as non-text visual motifs. Do not render readable letters, words, uploaded-logo text, project-title fragments, category labels, partial words, pseudo-letters, subtitles, slogans, or decorative fake typography. Produce a polished blank wordmark plate, emblem, badge, or mark system only.",
     redacted,
-  ].join("\n\n").slice(0, PROVIDER_PROMPT_MAX_CHARS);
+  ].join("\n\n");
+  return trimPromptAtBoundary(combined, PROVIDER_PROMPT_MAX_CHARS);
 }
 
 function createRequestContext(input: {

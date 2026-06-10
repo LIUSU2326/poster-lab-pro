@@ -394,14 +394,16 @@ function renderResultViewer() {
       <button class="result-viewer-close" type="button" data-action="close-result-viewer" aria-label="关闭">×</button>
       <div class="result-viewer-stage">
         ${previewUrl
-          ? `<img src="${previewUrl}" alt="${escapeHtml(display?.title || scheme?.title || result.id)}" width="1280" height="720">`
+          ? `<img src="${escapeAttribute(previewUrl)}" data-copy-result-image="${escapeAttribute(previewUrl)}" title="右键复制图片" alt="${escapeHtml(display?.title || scheme?.title || result.id)}" width="1280" height="720">`
           : `<div class="result-viewer-placeholder">本地预览暂不可用</div>`}
       </div>
+      ${state.resultRefinementOpen ? renderResultRefinementPanel(result, display, scheme) : ""}
       <div class="result-viewer-dock">
         <div class="result-viewer-meta">
           <div class="result-viewer-count">
             <span>${escapeHtml(display?.code || scheme?.code || "RESULT")}</span>
             <strong>${escapeHtml(display?.title || scheme?.title || "生成图片")}</strong>
+            ${state.resultViewerMessage ? `<em class="result-viewer-message">${escapeHtml(state.resultViewerMessage)}</em>` : ""}
           </div>
           <div class="result-viewer-specs" aria-label="输出规格">
             <span class="result-viewer-spec">
@@ -428,6 +430,31 @@ function renderResultViewer() {
   `;
 }
 
+function defaultResultRefinementPrompt(result, display, scheme) {
+  const title = display?.title || scheme?.title || result?.id || "当前图片";
+  return `基于「${title}」做二次精修：保留原有角色、LOGO、构图主关系和画风，提高 KV 级海报质感；加强主光、轮廓光、景深、粒子/VFX、材质细节与前中后景层次；修正文字/伪字、变形、低清、拼贴感和主体比例问题。`;
+}
+
+function renderResultRefinementPanel(result, display, scheme) {
+  const prompt = state.resultRefinementPrompt || defaultResultRefinementPrompt(result, display, scheme);
+  return `
+    <aside class="result-refinement-panel" role="dialog" aria-label="二次精修设置">
+      <div class="result-refinement-head">
+        <strong>二次精修</strong>
+        <button type="button" data-action="cancel-result-refinement" aria-label="关闭二次精修">×</button>
+      </div>
+      <label class="result-refinement-field">
+        <span>精修方向</span>
+        <textarea data-result-refinement-prompt rows="5">${escapeHtml(prompt)}</textarea>
+      </label>
+      <div class="result-refinement-actions">
+        <button type="button" data-action="cancel-result-refinement">取消</button>
+        <button type="button" data-action="confirm-result-refinement" data-result-id="${escapeAttribute(result.id)}">开始精修</button>
+      </div>
+    </aside>
+  `;
+}
+
 function getResultPreviewUrl(result) {
   const mockPreviewUrl = typeof result?.metadata?.mockPreviewUrl === "string" ? result.metadata.mockPreviewUrl : "";
   if (mockPreviewUrl) return mockPreviewUrl;
@@ -448,9 +475,25 @@ function getResultDownloadUrlForViewer(result) {
   return "";
 }
 
+function configuredResultOperationProviderIds() {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const configs = snapshot.providerConfigs || {};
+  const providerIds = Object.keys(configs);
+  const orderedProviderIds = [
+    ...(Array.isArray(state.providerOrder) ? state.providerOrder.filter((providerId) => providerIds.includes(providerId)) : []),
+    ...providerIds.filter((providerId) => !state.providerOrder?.includes(providerId)),
+  ];
+  return orderedProviderIds.filter((providerId) => {
+    const config = configs[providerId] || {};
+    return Boolean(config.hasApiKey || config.status === "success" || config.configured);
+  });
+}
+
 function renderResultActionButton(result, action, label) {
   const active = isResultOperationActive(action, result.id);
-  const route = resolveResultOperationRoute(action, state.provider);
+  const route = resolveResultOperationRoute(action, state.provider, {
+    configuredProviders: configuredResultOperationProviderIds(),
+  });
   if (!route.supported) return "";
   return `
     <button

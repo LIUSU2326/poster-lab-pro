@@ -30,6 +30,10 @@ const configPanel = read("src/render/config-panel.js");
 const apiContracts = read("src/api/contracts.ts");
 const nextResponse = read("src/api/next-response.ts");
 const providerIndex = read("src/providers/index.ts");
+const referenceClient = read("src/reference-analysis-client.js");
+const referenceRoute = read("app/api/workspaces/[workspaceId]/provider-credentials/[providerId]/reference-analysis/route.ts");
+const assetsSection = read("src/react/AssetsSection.tsx");
+const directionSection = read("src/react/DirectionSection.tsx");
 
 for (const token of [
   "evaluateQueuePlanCapabilityGate",
@@ -58,6 +62,10 @@ assert(!configPanel.includes("model-capability-note"), "config-panel.js: model c
 assert(apiContracts.includes("unsupported_capability"), "contracts.ts: API error code must include unsupported_capability");
 assert(nextResponse.includes("unsupported_capability: 422"), "next-response.ts: unsupported_capability must map to 422");
 assert(providerIndex.includes("evaluateQueuePlanCapabilityGate"), "providers/index.ts: capability gate must be exported");
+assert(referenceClient.includes("input.model"), "reference-analysis-client.js: reference analysis requests must send the selected slot model");
+assert(referenceRoute.includes("unsupported_model_slot"), "reference-analysis route must reject known wrong-slot models");
+assert(assetsSection.includes("referenceAnalysisModelForSlot"), "AssetsSection.tsx: composition reference analysis must resolve a slot-safe model");
+assert(directionSection.includes("styleAnalysisModelForSlot"), "DirectionSection.tsx: style reference analysis must resolve a slot-safe model");
 
 const agnesAllCore = evaluateQueuePlanCapabilityGate({
   mode: "poster",
@@ -105,6 +113,30 @@ assert(
   "Agnes reference analysis gate should report missing compositionReferenceAnalysis",
 );
 
+const mimoTextModelReferenceAnalysis = evaluateProviderRouteCapabilityGate({
+  mode: "poster",
+  routes: {
+    styleReference: { providerId: "mimo", model: "mimo-v2.5-pro" },
+    compositionReference: { providerId: "mimo", model: "mimo-v2.5-pro" },
+  },
+  requiredSlots: ["styleReference", "compositionReference"],
+});
+assert(!mimoTextModelReferenceAnalysis.ok, "MiMo 2.5 Pro must be blocked for visual reference analysis");
+assert(
+  mimoTextModelReferenceAnalysis.errors.some((issue) => issue.message.includes("mimo-v2-omni")),
+  "MiMo wrong-slot error should point users to mimo-v2-omni",
+);
+
+const mimoOmniReferenceAnalysis = evaluateProviderRouteCapabilityGate({
+  mode: "poster",
+  routes: {
+    styleReference: { providerId: "mimo", model: "mimo-v2-omni" },
+    compositionReference: { providerId: "mimo", model: "mimo-v2-omni" },
+  },
+  requiredSlots: ["styleReference", "compositionReference"],
+});
+assert(mimoOmniReferenceAnalysis.ok, "MiMo Omni should remain valid for visual reference analysis");
+
 const customOpenAIModel = evaluateQueuePlanCapabilityGate({
   mode: "icon",
   providerId: "openai",
@@ -123,6 +155,17 @@ assert(!googleVariantRoute.supported, "Google result variant route must not sile
 assert(
   googleVariantRoute.title.includes("Google AI Studio 不支持变体") && googleVariantRoute.title.includes("请切换"),
   "Google unsupported result operation should explain the provider switch instead of fallback routing",
+);
+
+const googleVariantConfiguredRoute = resolveResultOperationRoute("variant", "google", {
+  configuredProviders: ["google", "mimo", "agnes"],
+});
+assert(googleVariantConfiguredRoute.supported, "Google result variant route should use an explicitly configured imageEdit provider");
+assert(googleVariantConfiguredRoute.providerId === "agnes", "Configured Google variant route should select Agnes for imageEdit");
+assert(googleVariantConfiguredRoute.native === false, "Configured Google variant route should mark non-native result operations");
+assert(
+  googleVariantConfiguredRoute.title.includes("将改由已配置的 Agnes AI 执行"),
+  "Configured Google variant route should explain the selected imageEdit provider",
 );
 
 const agnesVariantRoute = resolveResultOperationRoute("variant", "agnes");

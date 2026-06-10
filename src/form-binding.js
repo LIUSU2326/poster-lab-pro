@@ -13,6 +13,8 @@ import { cancelHttpQueuePlan, runHttpGenerationServiceFlow } from './http-genera
 import { applyGenerationFormValuesToSnapshot, getActiveGenerationFormValues } from './generation-form-runtime.js';
 import {
   evaluateQueuePlanCapabilityGate,
+  isKnownUnsupportedProviderSlotModel,
+  providerModelSlots,
   providerCapabilityGateUserMessage,
 } from './provider-capabilities.js';
 
@@ -587,7 +589,11 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
   const selected = getSelectedScheme();
   const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
   const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
-  const selectedBatchIds = Array.isArray(modeState?.selectedSchemeIds) ? modeState.selectedSchemeIds : [];
+  const selectedBatchIds = activeMode.id === "poster"
+    ? normalizedOptions.schemeStrategy === "continue"
+      ? getCurrentPosterSchemeIds(snapshot, activeMode, outputSettings, normalizedOptions)
+      : Array.isArray(modeState?.selectedSchemeIds) ? modeState.selectedSchemeIds : []
+    : Array.isArray(modeState?.selectedSchemeIds) ? modeState.selectedSchemeIds : [];
   const batchSchemeIds = activeMode.id === "poster" && selectedBatchIds.length > 0
     ? selectedBatchIds
     : getModeSchemes()
@@ -640,7 +646,7 @@ function providerRouteForSlot(slot) {
   const snapshot = getRuntimeWorkspaceSnapshot();
   const candidateIds = {
     concept: ["mimo", "agnes", "google", "deepseek", "openai", "aigocode", "claude", "qwen"],
-    image: ["agnes", "openai", "aigocode", "google", "qwen"],
+    image: ["google", "aigocode", "openai", "agnes", "qwen"],
     styleReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
     compositionReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
   }[slot] || [state.provider];
@@ -662,7 +668,15 @@ function providerRouteForSlot(slot) {
     : configuredProvider || supportedCurrentProvider || unsupportedConfiguredCurrentProvider || savedProvider || candidateIds[0] || state.provider;
   const providerConfig = snapshot.providerConfigs?.[providerId] || {};
   const routeModel = providerId === route.providerId ? route.model : "";
-  const model = normalizeRouteModel(providerId, routeModel || providerConfig.modelSlots?.[slot] || providerConfig.defaultModel || "");
+  const slotModels = providerModelSlots[providerId]?.[slot] || [];
+  const configuredSlotModel = providerConfig.modelSlots?.[slot] || "";
+  const preferredModel = routeModel || configuredSlotModel || (slot === "concept" ? providerConfig.defaultModel : "") || slotModels[0] || providerConfig.defaultModel || "";
+  const safeModel = isKnownUnsupportedProviderSlotModel(providerId, slot, preferredModel)
+    ? configuredSlotModel && slotModels.includes(configuredSlotModel)
+      ? configuredSlotModel
+      : slotModels[0] || ""
+    : preferredModel;
+  const model = normalizeRouteModel(providerId, safeModel);
   return {
     providerId,
     ...(model ? { model } : {}),

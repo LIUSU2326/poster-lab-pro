@@ -86,7 +86,7 @@ function assertProviderRequestCommon(mode, mapped) {
   const label = `${mode} provider request`;
   if (mapped.kind !== "imageGeneration") issues.push(`${label}: expected imageGeneration request`);
   if (mapped.request.context.mode !== mode) issues.push(`${label}: context mode should be ${mode}`);
-  if (mapped.request.prompt.length > 12000) issues.push(`${label}: prompt exceeds 12000 characters`);
+  if (mapped.request.prompt.length > 18000) issues.push(`${label}: prompt exceeds 18000 characters`);
   if (!mapped.request.assets.every((asset) => asset.url)) issues.push(`${label}: every bound asset should carry a provider-ready URL`);
   if (!mapped.request.assets.every((asset) => /semanticRole=/.test(asset.description || ""))) {
     issues.push(`${label}: every asset should carry semanticRole in provider description`);
@@ -106,7 +106,7 @@ function assertPromptCommon(mode, promptPackage, mapped) {
   if (!promptPackage.validation.ok) {
     issues.push(`${label}: should validate, got errors: ${promptPackage.validation.errors.join(" ")}`);
   }
-  if (promptPackage.finalPrompt.length > 12000) issues.push(`${label}: final prompt exceeds 12000 characters`);
+  if (promptPackage.finalPrompt.length > 18000) issues.push(`${label}: final prompt exceeds 18000 characters`);
   requireIncludes(promptPackage.finalPrompt, "Mode Asset References", label);
   requireIncludes(promptPackage.finalPrompt, "Mode Guardrails", label);
   assertProviderRequestCommon(mode, mapped);

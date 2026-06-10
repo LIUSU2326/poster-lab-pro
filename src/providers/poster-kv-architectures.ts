@@ -251,7 +251,7 @@ export function posterKvArchitectureDiversityRequirement(): string {
 
 export function posterCinematicKvQualityDirective(): string {
   return [
-    "## AAAAAAAAAAA Cinematic Game KV Quality Override",
+	    "## Cinematic Game KV Quality Override",
     "Target the feel of a top-tier cinematic game announcement key visual, adapted to the uploaded art style. This means movie-poster staging and lighting quality, not photorealism unless the active style reference is photorealistic.",
     "Cinematography: choose a deliberate camera language such as low-angle hero shot, 24-35mm wide cinematic lens feel, forced perspective, over-the-shoulder danger reveal, foreground occlusion, diagonal motion path, or portal/window frame-within-frame. Avoid neutral side-view staging.",
     "Lighting: design a clear key light, colored fill, hard rim/back light, motivated practical light source such as oven glow/portal glow/fire/sauce energy, volumetric beams, glow bloom, bounced color, and deep value contrast around silhouettes.",
@@ -293,6 +293,8 @@ export function posterKvArchitectureDirective(input: {
   return [
     "## Mandatory KV Composition Architecture Override",
     `Architecture: ${architecture.titleZh} / ${architecture.titleEn}.`,
+    `Selected-scheme architecture lock: this render must visibly use ${architecture.titleZh} as its primary scene structure. Do not fall back to a generic mascot lineup, side-view food field, or the same composition used by another scheme in the batch.`,
+    "Composition reference priority rule: uploaded compositionReference images are guide-only for camera energy, layout rhythm, safe-area hierarchy, subject scale, and depth. They must never override this selected-scheme architecture, and they must not make every scheme share the same scene, background, pose arrangement, or action beat.",
     architecture.directive,
     posterCinematicKvQualityDirective(),
     "Internal blueprint requirement: before rendering, design the poster as a finished campaign key visual with five clear layers, but do not print layer labels. Layer 1: oversized foreground framing element or weapon/food prop with perspective. Layer 2: uploaded hero performance with readable faces, expressive action, and signature props. Layer 3: uploaded BOSS/key threat with scale pressure and visible intent. Layer 4: world context that tells the kitchen-to-wildlands game loop. Layer 5: clean logo/copy safe area integrated into the art.",

@@ -12,7 +12,13 @@ import { renderShell } from "../render/shell.js";
 import { bindEvents } from "../events.js";
 import { hydrateLocalOutputPreferences, hydrateLocalProviderPreferences, hydrateLocalSubmissionDraft } from "../local-draft-store.js";
 import { loadWorkspaceSnapshotForWorkbench } from "../workspace-data-service.js";
-import { mountWorkbenchSections, type MountedWorkbenchSections } from "./mount-workbench-sections";
+import { mountWorkbenchSections, type MountedWorkbenchSections, type WorkbenchRenderOptions } from "./mount-workbench-sections";
+import {
+  configScrollTopForElement,
+  consumePreservedWorkbenchConfigScrollTop,
+  preserveWorkbenchConfigScrollTop,
+  restoreWorkbenchConfigScrollTop,
+} from "./workbench-scroll-preservation";
 
 export function StaticWorkbenchBridge() {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -29,7 +35,23 @@ export function StaticWorkbenchBridge() {
     state.apiMode = state.apiMode === "static" && window.location.search.includes("api=static") ? "static" : "http";
     ensureSelectedScheme();
 
-    const render = () => {
+    const preserveConfigScrollFromEvent = (event: Event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest("[data-rhf-assets-section]")) return;
+      const configScrollTop = configScrollTopForElement(target);
+      if (configScrollTop !== null) preserveWorkbenchConfigScrollTop(configScrollTop);
+    };
+
+    host.addEventListener("pointerdown", preserveConfigScrollFromEvent, true);
+    host.addEventListener("click", preserveConfigScrollFromEvent, true);
+    host.addEventListener("drop", preserveConfigScrollFromEvent, true);
+
+    const render = (options?: WorkbenchRenderOptions) => {
+      const requestedConfigScrollTop = Number(options?.configScrollTop);
+      const preservedConfigScrollTop = consumePreservedWorkbenchConfigScrollTop();
+      const configScrollTop = Number.isFinite(requestedConfigScrollTop)
+        ? requestedConfigScrollTop
+        : preservedConfigScrollTop ?? host.querySelector<HTMLElement>(".config-scroll")?.scrollTop ?? 0;
       ensureSelectedScheme();
       document.documentElement.dataset.theme = state.theme;
       mountedSectionsRef.current?.unmount();
@@ -37,6 +59,7 @@ export function StaticWorkbenchBridge() {
       host.innerHTML = renderShell(getActiveMode(), getSelectedScheme());
       bindEvents(render);
       mountedSectionsRef.current = mountWorkbenchSections(host, { onRequestRender: render });
+      restoreWorkbenchConfigScrollTop(host, configScrollTop);
     };
 
     render();
@@ -54,6 +77,9 @@ export function StaticWorkbenchBridge() {
     }
 
     return () => {
+      host.removeEventListener("pointerdown", preserveConfigScrollFromEvent, true);
+      host.removeEventListener("click", preserveConfigScrollFromEvent, true);
+      host.removeEventListener("drop", preserveConfigScrollFromEvent, true);
       mountedSectionsRef.current?.unmount();
       mountedSectionsRef.current = null;
     };

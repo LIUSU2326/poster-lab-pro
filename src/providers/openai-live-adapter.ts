@@ -185,16 +185,20 @@ function compressedProviderPriorityInstruction(
   providerId: OpenAICompatibleImageProviderId,
   request: ImageGenerationRequest,
 ): string {
-  const profile = getProviderManifest(providerId).imageGeneration;
+    const profile = getProviderManifest(providerId).imageGeneration;
   if (profile.promptProfile !== "compressed") return "";
 
   if (request.context.mode === "poster") {
+    const architectureSummary = posterArchitectureSummaryFromPrompt(request.prompt);
+    const sceneContract = posterCompressedSceneContract(request.prompt, architectureSummary);
     const protagonistAssets = request.assets.filter((asset) => assetSemanticRole(asset) === "protagonist");
     const bossAssets = request.assets.filter((asset) => {
       const role = assetSemanticRole(asset);
       return role === "antagonist" || role === "keySubject";
     });
     const logoAssets = request.assets.filter((asset) => assetSemanticRole(asset) === "brandLogo");
+    const compositionGuides = request.assets.filter((asset) => assetSemanticRole(asset) === "compositionReference");
+    const styleGuides = request.assets.filter((asset) => assetSemanticRole(asset) === "styleReference");
     const hasHero = hasSemanticRole(request, "protagonist");
     const hasBoss = hasSemanticRole(request, "antagonist") || hasSemanticRole(request, "keySubject");
     const hasLogo = hasSemanticRole(request, "brandLogo");
@@ -212,7 +216,17 @@ function compressedProviderPriorityInstruction(
       "Follow this short contract before the longer creative prompt below.",
       "AGNES/COMPRESSED POSTER ORDER: first solve required uploaded anchors and story action; only then add background detail. The image is rejected if it becomes a generic pretty scene with small pasted references.",
       providerId === AGNES_PROVIDER_ID
-        ? "AGNES POSTER REFERENCE INPUT: uploaded images are supplied through extra_body.image as documented image-to-image references. Preserve useful identity, logo, style, and composition anchors while redrawing a new full-bleed poster instead of making a pasted reference panel."
+        ? "AGNES POSTER REFERENCE INPUT: identity, BOSS/key-subject, logo, and prop images are supplied through extra_body.image as image-to-image references. StyleReference and compositionReference are handled through text/analysis and the selected scheme architecture only, so they must not collapse every scheme into the same scene."
+        : "",
+      architectureSummary
+        ? `SELECTED SCHEME ARCHITECTURE LOCK: ${architectureSummary}. This architecture is the primary structure for this image; do not reuse the same scene, pose arrangement, or background composition from another scheme in the batch.`
+        : "SELECTED SCHEME ARCHITECTURE LOCK: follow the selected scheme's own scene structure and story beat. Do not reuse the same scene, pose arrangement, or background composition from another scheme in the batch.",
+      sceneContract,
+      compositionGuides.length > 0
+        ? `COMPOSITION GUIDE LOCK: use ${compositionGuides.map((asset) => asset.id).join(", ")} only for camera/layout/diagonal structure/foreground-midground-background scale/safe-area hierarchy. Do not copy its text, logo, characters, monsters, food objects, UI, or scene content, and do not let this guide make every scheme share the same scene.`
+        : "",
+      styleGuides.length > 0
+        ? `STYLE GUIDE LOCK: use ${styleGuides.map((asset) => asset.id).join(", ")} only for rendering language, palette, line quality, lighting, material finish, and polish. Do not copy its subjects, logo, layout, text, or scene content.`
         : "",
       required ? `Poster required anchors: ${required}.` : "",
       protagonistAssets.length === 1
@@ -270,6 +284,53 @@ function compressedProviderPriorityInstruction(
   return "";
 }
 
+function posterArchitectureSummaryFromPrompt(prompt: string): string {
+  const architectureLine = prompt.match(/Architecture:\s*([^\n]+)/i)?.[1]
+    || prompt.match(/KV构图母版[:：]\s*([^\n。]+(?:。[^。\n]+)?)/)?.[1]
+    || "";
+  return architectureLine.replace(/\s+/g, " ").trim().slice(0, 240);
+}
+
+function posterSelectedSchemeExcerpt(prompt: string): string {
+  const match = prompt.match(/## Selected Scheme\s+([\s\S]*?)(?:\n\n## |\n## |$)/i);
+  return (match?.[1] || "").replace(/\s+/g, " ").trim().slice(0, 1400);
+}
+
+function posterCompressedSceneContract(prompt: string, architectureSummary = ""): string {
+  const text = (architectureSummary || posterSelectedSchemeExcerpt(prompt) || prompt.slice(0, 1800)).toLowerCase();
+  const contracts: string[] = [];
+  const hasPortal = /传送门|portal|烤箱|oven|doorway|入口|golden light|金光/.test(text);
+  const hasGiant = /巨物|微缩|giant|macro|miniature|微距|披萨山|cheese mountain|olive cliff|巨大披萨|巨型披萨/.test(text);
+  const hasOrderKitchen = /订单|order|vip|厨房|kitchen|计时器|timer|menu|菜单/.test(text);
+
+  if (hasPortal) {
+    contracts.push(
+      "glowing oven-portal discovery scene, not a normal field: show an oven, kitchen wall, menu board, or restaurant doorway becoming a bright portal, golden volumetric light, swirling flour/ingredient particles, and the uploaded BOSS/key threat visible or reaching from the other side",
+    );
+  } else if (hasGiant) {
+    contracts.push(
+      "macro miniature adventure on a giant pizza or edible landscape: huge crust foreground, cheese mountains, olive cliffs or giant utensils, forced perspective scale drama, the uploaded hero small-but-readable in the foreground, and the uploaded BOSS/key threat as the oversized obstacle",
+    );
+  } else if (hasOrderKitchen) {
+    contracts.push(
+      "explosive kitchen or restaurant-defense battlefield, not an outdoor meadow: show VIP order pressure, a kitchen timer or menu/order board, oven glow, flour/steam/ingredients flying, and the uploaded BOSS/key threat breaking into or attacking the kitchen set",
+    );
+  }
+  if (/荒野|hunt|hunting|ingredient canyon|食材荒野|battlefield|战场|boss/.test(text) && contracts.length === 0) {
+    contracts.push(
+      "wild ingredient-adventure battlefield with edible terrain, foreground action, visible BOSS pressure, environmental reaction, and a campaign key-visual set piece instead of a simple mascot lineup",
+    );
+  }
+
+  if (contracts.length === 0) return "";
+
+  return [
+    "SCHEME-SPECIFIC MANDATORY SCENE:",
+    ...contracts.slice(0, 2).map((contract) => `- ${contract}.`),
+    "This short English scene contract overrides generic reference-image similarity. A blue-sky grassy hero lineup, repeated pastoral field, or unchanged asset group pose is invalid for this scheme.",
+  ].join("\n");
+}
+
 function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: ImageGenerationRequest): string {
   const compressedPriorityInstruction = compressedProviderPriorityInstruction(providerId, request);
   const hasPosterMode = request.context.mode === "poster";
@@ -287,6 +348,9 @@ function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: Image
         hasPosterMode
           ? "Characters and BOSS may change pose, expression, action, camera angle, lighting, and perspective, but must preserve recognizable identity. Use each uploaded character, BOSS/key subject, and logo once; no duplicate large/small copies."
           : referenceInstruction,
+        hasPosterMode
+          ? "StyleReference and compositionReference assets are guide-only inputs: extract rendering/camera/layout/focal hierarchy, but never copy their text, logos, characters, monsters, props, food objects, UI, or full scene."
+          : "",
         subjectAccessoryInstruction,
         fusionDirective,
         request.assets.some((asset) => asset.role === "styleReference")
@@ -694,10 +758,23 @@ function referenceImageUrls(
 ): string[] {
   return Array.from(new Set(
     request.assets
-      .filter(isIntegratedReferenceAsset)
+      .filter((asset) => shouldSendRawReferenceAsset(providerId, request, asset))
       .map((asset) => asset.url || "")
       .filter((url) => /^(https?:\/\/|data:image\/)/i.test(url)),
   ));
+}
+
+function shouldSendRawReferenceAsset(
+  providerId: OpenAICompatibleImageProviderId,
+  request: ImageGenerationRequest,
+  asset: ImageGenerationRequest["assets"][number],
+): boolean {
+  if (!isIntegratedReferenceAsset(asset)) return false;
+  if (providerId === AGNES_PROVIDER_ID && request.context.mode === "poster") {
+    const semanticRole = assetSemanticRole(asset);
+    if (semanticRole === "compositionReference" || semanticRole === "styleReference") return false;
+  }
+  return true;
 }
 
 async function referenceImageInputs(

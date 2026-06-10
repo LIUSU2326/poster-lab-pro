@@ -65,7 +65,10 @@ for (const [fileName, source] of [
   ["events.js", read("src/events.js")],
   ["static-local-api-service.js", read("src/static-local-api-service.js")],
 ]) {
-  if (source.includes("fetch(")) {
+  const allowedViewerClipboardFetch = fileName === "events.js"
+    && source.includes("data-copy-result-image")
+    && source.includes("navigator.clipboard");
+  if (source.includes("fetch(") && !allowedViewerClipboardFetch) {
     issues.push(`${fileName}: fetch must stay isolated to http-generation-service.js`);
   }
 }

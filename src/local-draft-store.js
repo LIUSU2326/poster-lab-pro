@@ -1,6 +1,32 @@
 const SUBMISSION_KEY = "poster-lab-pro:latest-submission";
 const PROVIDER_PREFERENCES_KEY = "poster-lab-pro:provider-preferences";
 const OUTPUT_PREFERENCES_KEY = "poster-lab-pro:output-preferences";
+const PROVIDER_ROUTE_MIGRATION_VERSION = 2;
+const MIMO_GOOGLE_KV_ROUTE_PLAN = { id: "mimo-google-kv", name: "MiMo + Google KV" };
+const MIMO_AGNES_ROUTE_PLAN = { id: "mimo-agnes", name: "MiMo + Agnes 测试" };
+
+function createMimoGoogleKvRoutes(baseRoutes = {}) {
+  return {
+    ...(baseRoutes || {}),
+    concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
+    image: { providerId: "google", model: "gemini-3-pro-image-preview" },
+    styleReference: { providerId: "mimo", model: "mimo-v2-omni" },
+    compositionReference: { providerId: "mimo", model: "mimo-v2-omni" },
+  };
+}
+
+function ensureDefaultRoutePlans(plans = [], deletedPlanIds = []) {
+  const deleted = new Set(Array.isArray(deletedPlanIds) ? deletedPlanIds.filter(Boolean) : []);
+  const normalized = Array.isArray(plans)
+    ? plans.filter((plan) => plan?.id && plan.id !== "agnes-core")
+    : [];
+  const hasPlan = (planId) => normalized.some((plan) => plan?.id === planId);
+  return [
+    ...normalized.filter((plan) => !deleted.has(plan.id)),
+    ...(!deleted.has(MIMO_GOOGLE_KV_ROUTE_PLAN.id) && !hasPlan(MIMO_GOOGLE_KV_ROUTE_PLAN.id) ? [MIMO_GOOGLE_KV_ROUTE_PLAN] : []),
+    ...(!deleted.has(MIMO_AGNES_ROUTE_PLAN.id) && !hasPlan(MIMO_AGNES_ROUTE_PLAN.id) ? [MIMO_AGNES_ROUTE_PLAN] : []),
+  ];
+}
 
 function hasStorage() {
   try {
@@ -75,6 +101,8 @@ function providerPreferencesFromState(state) {
     providerRoutePlan: state.providerRoutePlan || "standard",
     providerRoutingOpen: Boolean(state.providerRoutingOpen),
     providerRoutePlans: Array.isArray(state.providerRoutePlans) ? state.providerRoutePlans : [],
+    providerRouteDeletedPlanIds: Array.isArray(state.providerRouteDeletedPlanIds) ? state.providerRouteDeletedPlanIds : [],
+    providerRouteMigrationVersion: PROVIDER_ROUTE_MIGRATION_VERSION,
   };
 }
 
@@ -123,6 +151,14 @@ export function hydrateLocalProviderPreferences(state) {
   const preferences = loadLocalProviderPreferences();
   if (!preferences || !state) return false;
   const migrateAgnesCoreRoute = preferences.providerRoutePlan === "agnes-core";
+  const migrationVersion = Number(preferences.providerRouteMigrationVersion || 0);
+  const savedImageProvider = preferences.providerSlotRoutes?.image?.providerId || "";
+  const routePlanId = preferences.providerRoutePlan || "standard";
+  const migrateDefaultAgnesRoute =
+    migrationVersion < PROVIDER_ROUTE_MIGRATION_VERSION
+    && savedImageProvider === "agnes"
+    && ["standard", "image-first", "mimo-agnes"].includes(routePlanId);
+  const shouldMigrateToGoogleKvRoute = migrateAgnesCoreRoute || migrateDefaultAgnesRoute;
 
   if (typeof preferences.provider === "string") state.provider = preferences.provider;
   if (Array.isArray(preferences.providerOrder)) state.providerOrder = preferences.providerOrder;
@@ -136,28 +172,21 @@ export function hydrateLocalProviderPreferences(state) {
     state.providerSlotRoutes = preferences.providerSlotRoutes;
   }
   if (typeof preferences.providerRoutePlan === "string") {
-    state.providerRoutePlan = migrateAgnesCoreRoute ? "mimo-agnes" : preferences.providerRoutePlan;
+    state.providerRoutePlan = shouldMigrateToGoogleKvRoute ? MIMO_GOOGLE_KV_ROUTE_PLAN.id : preferences.providerRoutePlan;
   }
   if (typeof preferences.providerRoutingOpen === "boolean") {
     state.providerRoutingOpen = preferences.providerRoutingOpen;
   }
-  if (Array.isArray(preferences.providerRoutePlans) && preferences.providerRoutePlans.length > 0) {
-    state.providerRoutePlans = [
-      ...preferences.providerRoutePlans.filter((plan) => plan?.id !== "agnes-core"),
-      ...(!preferences.providerRoutePlans.some((plan) => plan?.id === "mimo-agnes")
-        ? [{ id: "mimo-agnes", name: "MiMo + Agnes 测试" }]
-        : []),
-    ];
+  if (Array.isArray(preferences.providerRouteDeletedPlanIds)) {
+    state.providerRouteDeletedPlanIds = preferences.providerRouteDeletedPlanIds.filter(Boolean);
   }
-  if (migrateAgnesCoreRoute) {
-    state.provider = "agnes";
-    state.providerSlotRoutes = {
-      ...(state.providerSlotRoutes || {}),
-      concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
-      image: { providerId: "agnes", model: "agnes-image-2.1-flash" },
-      styleReference: { providerId: "mimo", model: "mimo-v2-omni" },
-      compositionReference: { providerId: "mimo", model: "mimo-v2-omni" },
-    };
+  if (Array.isArray(preferences.providerRoutePlans) && preferences.providerRoutePlans.length > 0) {
+    state.providerRoutePlans = ensureDefaultRoutePlans(preferences.providerRoutePlans, state.providerRouteDeletedPlanIds);
+  }
+  if (shouldMigrateToGoogleKvRoute) {
+    state.provider = "google";
+    state.providerSlotRoutes = createMimoGoogleKvRoutes(state.providerSlotRoutes);
+    saveLocalProviderPreferences(state);
   }
   return true;
 }

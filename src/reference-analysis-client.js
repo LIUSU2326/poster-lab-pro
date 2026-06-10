@@ -1,4 +1,5 @@
 import { getRuntimeWorkspaceSnapshot, setRuntimeWorkspaceSnapshot, state } from "./state.js";
+import { saveWorkspaceSnapshotForWorkbench } from "./workspace-data-service.js";
 
 function encodeSegment(value) {
   return encodeURIComponent(String(value));
@@ -31,9 +32,9 @@ function nowIso() {
 }
 
 function commitReferenceAnalysisToWorkspace(key, input, envelope) {
-  if (!envelope?.ok) return;
+  if (!envelope?.ok) return null;
   const text = String(envelope.data?.text || "").trim();
-  if (!text) return;
+  if (!text) return null;
 
   const updatedAt = nowIso();
   const snapshot = clone(getRuntimeWorkspaceSnapshot());
@@ -60,6 +61,7 @@ function commitReferenceAnalysisToWorkspace(key, input, envelope) {
     updatedAt,
   };
   setRuntimeWorkspaceSnapshot(snapshot, "reference-analysis");
+  return snapshot;
 }
 
 export async function analyzeReferenceImageForWorkbench(input = {}, options = {}) {
@@ -99,11 +101,28 @@ export async function analyzeReferenceImageForWorkbench(input = {}, options = {}
       kind: input.kind || "composition",
       role: input.role || "compositionReference",
       label: input.label || "Reference image",
+      ...(input.model ? { model: input.model } : {}),
       imageDataUrl,
     }),
   });
   const envelope = await readEnvelope(response);
-  commitReferenceAnalysisToWorkspace(key, input, envelope);
+  const committedSnapshot = commitReferenceAnalysisToWorkspace(key, input, envelope);
+  if (committedSnapshot?.metadata?.workspaceId) {
+    try {
+      const saveEnvelope = await saveWorkspaceSnapshotForWorkbench({
+        workspaceId,
+        snapshot: committedSnapshot,
+        fetchImpl,
+      });
+      if (!saveEnvelope.ok) {
+        state.workspaceLoadError = saveEnvelope.error?.message || "Reference analysis saved in memory, but workspace persistence failed.";
+      }
+    } catch (error) {
+      state.workspaceLoadError = error instanceof Error
+        ? error.message
+        : "Reference analysis saved in memory, but workspace persistence failed.";
+    }
+  }
 
   state.referenceAnalysis = {
     ...(state.referenceAnalysis || {}),

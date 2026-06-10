@@ -64,6 +64,9 @@ for (const token of [
   "Provider Capability Adapter Contract",
   "compressedProviderPriorityInstruction",
   "COMPRESSED MODEL PRIORITY CONTRACT",
+  "posterCompressedSceneContract",
+  "SCHEME-SPECIFIC MANDATORY SCENE",
+  "blue-sky grassy hero lineup",
   "Poster required anchors",
   "LOW TEXT RELIABILITY LOCK",
   "EXACT HERO ROSTER LOCK",
@@ -434,6 +437,7 @@ async function runRuntimeCheck() {
       || !agnesPrompt.includes("STYLE CONSISTENCY LOCK")
       || !agnesPrompt.includes("AGNES/COMPRESSED POSTER ORDER")
       || !agnesPrompt.includes("AGNES POSTER REFERENCE INPUT")
+      || !agnesPrompt.includes("SELECTED SCHEME ARCHITECTURE LOCK")
       || !agnesPrompt.includes("KV ACTION MINI-BRIEF")
       || !agnesPrompt.includes("REFERENCE PANEL BAN")
       || !agnesPrompt.includes("EMPTY BACKGROUND BAN")
@@ -443,7 +447,7 @@ async function runRuntimeCheck() {
     }
     const agnesImages = capturedAgnesRequest?.body?.extra_body?.image || [];
     if (!Array.isArray(agnesImages) || agnesImages.length < 3) {
-      issues.push("Agnes poster image request should pass uploaded visual references through extra_body.image");
+      issues.push("Agnes poster image request should pass uploaded identity visual references through extra_body.image");
     }
 
     let capturedAgnesCollabRequest;

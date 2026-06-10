@@ -3,8 +3,20 @@
 import { useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from "react";
 import { removeWorkbenchAssetsByRoleLabel, uploadWorkbenchAssetFile } from "../asset-library-client.js";
 import { analyzeReferenceImageForWorkbench } from "../reference-analysis-client.js";
+import { latestReferenceAnalysisSummary, summarizeReferenceAnalysisText } from "../reference-analysis-state.js";
+import {
+  isKnownUnsupportedProviderSlotModel,
+  providerModelSlots,
+  providerSupportsSlot,
+} from "../provider-capabilities.js";
 import { getRuntimeWorkspaceSnapshot, state } from "../state.js";
 import type { ProductionMode } from "../schema/zod";
+import type { WorkbenchRenderOptions } from "./mount-workbench-sections";
+import {
+  configScrollTopForElement,
+  preserveWorkbenchConfigScrollTop,
+  readPreservedWorkbenchConfigScrollTop,
+} from "./workbench-scroll-preservation";
 
 type AssetSlot = {
   role?: string;
@@ -38,7 +50,7 @@ type AssetsSectionProps = {
   referenceLabel: string;
   referenceHelper: string;
   initialOperation?: AssetOperation | null | undefined;
-  onRequestRender?: (() => void) | undefined;
+  onRequestRender?: ((options?: WorkbenchRenderOptions) => void) | undefined;
 };
 
 const acceptedImageTypes = ["image/png", "image/jpeg", "image/webp"];
@@ -67,6 +79,17 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error || new Error("Failed to read image."));
     reader.readAsDataURL(file);
   });
+}
+
+function uploadFingerprint(target: { role: string; label: string }, file: File): string {
+  return [
+    target.role,
+    target.label,
+    file.name,
+    file.type,
+    file.size,
+    file.lastModified,
+  ].join("|");
 }
 
 function routeProviderForSlot(slot: string): string {
@@ -109,6 +132,25 @@ function referenceAnalysisProviderReady(providerId: string): boolean {
   return referenceAnalysisProviderIds.has(providerId);
 }
 
+function referenceAnalysisModelForSlot(providerId: string, slot: string): string {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const route = (state.providerSlotRoutes?.[slot] || {}) as { providerId?: string; model?: string };
+  const provider = (snapshot.providerConfigs?.[providerId] || {}) as { modelSlots?: Record<string, string>; defaultModel?: string };
+  const modelSlots = providerModelSlots as Record<string, Record<string, string[]>>;
+  const slotModels = modelSlots[providerId]?.[slot] || [];
+  const configuredSlotModel = provider.modelSlots?.[slot] || "";
+  const routeModel = providerId === route.providerId ? route.model || "" : "";
+  const preferredModel = routeModel || configuredSlotModel || slotModels[0] || provider.defaultModel || "";
+  if (!isKnownUnsupportedProviderSlotModel(providerId, slot, preferredModel)) return preferredModel;
+  if (configuredSlotModel && slotModels.includes(configuredSlotModel)) return configuredSlotModel;
+  return slotModels[0] || "";
+}
+
+function referenceAnalysisRouteReady(providerId: string, slot: string, model: string): boolean {
+  if (!referenceAnalysisProviderReady(providerId) || !providerSupportsSlot(providerId, slot)) return false;
+  return !isKnownUnsupportedProviderSlotModel(providerId, slot, model);
+}
+
 function valuesForKeyPrefix(values: Record<string, string> | undefined, key: string): string[] {
   return Object.entries(values || {})
     .filter(([itemKey]) => itemKey === key || itemKey.startsWith(`${key}:`))
@@ -135,6 +177,43 @@ function normalizeLocalPreviewUrl(value: string | null | undefined): string {
   return localUpload?.[1] || url;
 }
 
+function persistedPreviewsForRole(slots: AssetSlot[], role: string): string[] {
+  return uniqueUrls(
+    slots
+      .filter((slot) => slot.role === role)
+      .flatMap((slot) => [
+        ...(Array.isArray(slot.previewUrls) ? slot.previewUrls : []),
+        slot.previewUrl || "",
+      ])
+      .map(normalizeLocalPreviewUrl),
+  );
+}
+
+function localPreviewsForRole(localPreviews: Record<string, string>, role: string): string[] {
+  return uniqueUrls([
+    ...Object.entries(state.referenceUploadDataUrls || {})
+      .filter(([key]) => key.startsWith(`${role}:`))
+      .map(([, value]) => value),
+    ...Object.entries(localPreviews || {})
+      .filter(([key]) => key.startsWith(`${role}:`))
+      .map(([, value]) => value),
+  ]);
+}
+
+function persistedPreviewsForAssetSlot(slot: AssetSlot): string[] {
+  return uniqueUrls([
+    ...(Array.isArray(slot.previewUrls) ? slot.previewUrls.map(normalizeLocalPreviewUrl) : []),
+    normalizeLocalPreviewUrl(slot.previewUrl),
+  ]);
+}
+
+function localPreviewsForAssetSlot(key: string, localPreviews: Record<string, string>): string[] {
+  return uniqueUrls([
+    ...valuesForKeyPrefix(state.referenceUploadDataUrls, key),
+    ...valuesForKeyPrefix(localPreviews, key),
+  ]);
+}
+
 function latestPreviewForRole(slots: AssetSlot[], localPreviews: Record<string, string>, role: string): string {
   const local = Object.entries(localPreviews)
     .filter(([key]) => key.startsWith(`${role}:`))
@@ -149,30 +228,27 @@ function latestPreviewForRole(slots: AssetSlot[], localPreviews: Record<string, 
   return normalizeLocalPreviewUrl(previewUrl);
 }
 
-function previewsForRole(slots: AssetSlot[], localPreviews: Record<string, string>, role: string): string[] {
+function previewsForRole(
+  slots: AssetSlot[],
+  localPreviews: Record<string, string>,
+  role: string,
+  options: { includeLocal?: boolean } = {},
+): string[] {
   return uniqueUrls([
-    ...slots
-      .filter((slot) => slot.role === role)
-      .flatMap((slot) => [
-        ...(Array.isArray(slot.previewUrls) ? slot.previewUrls : []),
-        slot.previewUrl || "",
-      ])
-      .map(normalizeLocalPreviewUrl),
-    ...Object.entries(state.referenceUploadDataUrls || {})
-      .filter(([key]) => key.startsWith(`${role}:`))
-      .map(([, value]) => value),
-    ...Object.entries(localPreviews || {})
-      .filter(([key]) => key.startsWith(`${role}:`))
-      .map(([, value]) => value),
+    ...persistedPreviewsForRole(slots, role),
+    ...(options.includeLocal === false ? [] : localPreviewsForRole(localPreviews, role)),
   ]);
 }
 
-function previewsForAssetSlot(key: string, slot: AssetSlot, localPreviews: Record<string, string>): string[] {
+function previewsForAssetSlot(
+  key: string,
+  slot: AssetSlot,
+  localPreviews: Record<string, string>,
+  options: { includeLocal?: boolean } = {},
+): string[] {
   return uniqueUrls([
-    ...(Array.isArray(slot.previewUrls) ? slot.previewUrls.map(normalizeLocalPreviewUrl) : []),
-    normalizeLocalPreviewUrl(slot.previewUrl),
-    ...valuesForKeyPrefix(state.referenceUploadDataUrls, key),
-    ...valuesForKeyPrefix(localPreviews, key),
+    ...persistedPreviewsForAssetSlot(slot),
+    ...(options.includeLocal === false ? [] : localPreviewsForAssetSlot(key, localPreviews)),
   ]);
 }
 
@@ -196,6 +272,8 @@ export function AssetsSection({
 }: AssetsSectionProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pickerTargetRef = useRef<{ role: string; label: string; multiple: boolean } | null>(null);
+  const activeUploadFingerprintsRef = useRef<Set<string>>(new Set());
+  const preservedConfigScrollTopRef = useRef<number | null>(null);
   const [operation, setOperation] = useState<AssetOperation | null>(initialOperation || null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [categoryDraft, setCategoryDraft] = useState("");
@@ -208,7 +286,9 @@ export function AssetsSection({
   );
   const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
   const [brokenPreviewUrls, setBrokenPreviewUrls] = useState<Record<string, true>>({});
-  const [analysisMessage, setAnalysisMessage] = useState("");
+  const [analysisMessage, setAnalysisMessage] = useState(() =>
+    latestReferenceAnalysisSummary({ role: referenceRole, kinds: ["composition", "full"], maxLength: 120 }),
+  );
 
   const isPending = operation?.status === "planning";
   const visibleSlots = useMemo<VisibleAssetSlot[]>(() => {
@@ -228,13 +308,22 @@ export function AssetsSection({
       (slot) => !isReferenceOnlySlot(slot, referenceRole) && !hiddenSlotKeys.includes(assetSlotKey(slot, defaultAssetRole)),
     );
   }, [customCategories, defaultAssetRole, hiddenSlotKeys, referenceRole, slots]);
-  const referencePreviewUrls = previewsForRole(slots, localPreviews, referenceRole)
+  const persistedReferencePreviewUrls = persistedPreviewsForRole(slots, referenceRole)
+    .filter((url) => !brokenPreviewUrls[url]);
+  const includeReferenceLocalPreviews = Boolean(
+    pendingKey?.startsWith(`${referenceRole}:`) || persistedReferencePreviewUrls.length === 0,
+  );
+  const referencePreviewUrls = previewsForRole(slots, localPreviews, referenceRole, { includeLocal: includeReferenceLocalPreviews })
     .filter((url) => !brokenPreviewUrls[url]);
   const referencePreview = referencePreviewUrls.at(-1) || latestPreviewForRole(slots, localPreviews, referenceRole);
   const displayReferencePreview = referencePreview && !brokenPreviewUrls[referencePreview] ? referencePreview : "";
-  const referencePreviewCount = Math.max(referencePreviewUrls.length, displayReferencePreview ? 1 : 0);
+  const persistedReferenceCount = slots
+    .filter((slot) => slot.role === referenceRole)
+    .reduce((sum, slot) => sum + Math.max(0, Number(slot.assetCount || 0)), 0);
+  const referencePreviewCount = Math.max(persistedReferenceCount, referencePreviewUrls.length, displayReferencePreview ? 1 : 0);
   const referenceProviderId = routeProviderForSlot(referenceRole);
-  const providerCanAnalyzeReference = referenceAnalysisProviderReady(referenceProviderId);
+  const referenceModel = referenceAnalysisModelForSlot(referenceProviderId, referenceRole);
+  const providerCanAnalyzeReference = referenceAnalysisRouteReady(referenceProviderId, referenceRole, referenceModel);
   const referenceApiReady = analysisApiReady(referenceProviderId);
   const canExtractReference = Boolean(displayReferencePreview) && providerCanAnalyzeReference && referenceApiReady;
   const unsupportedReferenceProviderMessage = referenceProviderId === "agnes"
@@ -248,6 +337,24 @@ export function AssetsSection({
         : ""
     : "";
   const referenceNote = analysisMessage;
+
+  const rememberConfigScrollTop = (element: Element | null | undefined = fileInputRef.current) => {
+    const configScrollTop = configScrollTopForElement(element);
+    preservedConfigScrollTopRef.current = configScrollTop;
+    if (configScrollTop !== null) preserveWorkbenchConfigScrollTop(configScrollTop);
+  };
+
+  const requestRenderWithPreservedScroll = () => {
+    const configScrollTop = preservedConfigScrollTopRef.current
+      ?? readPreservedWorkbenchConfigScrollTop()
+      ?? configScrollTopForElement(fileInputRef.current);
+    preservedConfigScrollTopRef.current = null;
+    if (configScrollTop !== null) {
+      onRequestRender?.({ configScrollTop });
+      return;
+    }
+    onRequestRender?.();
+  };
 
   const commitCustomCategories = (nextCategories: string[]) => {
     state.customAssetCategories = {
@@ -266,6 +373,7 @@ export function AssetsSection({
   };
 
   const openFilePicker = (role: string, label: string, multiple = false) => {
+    rememberConfigScrollTop();
     pickerTargetRef.current = { role, label, multiple };
     if (!fileInputRef.current) return;
     fileInputRef.current.value = "";
@@ -308,7 +416,7 @@ export function AssetsSection({
       });
     } finally {
       setPendingKey(null);
-      onRequestRender?.();
+      requestRenderWithPreservedScroll();
     }
   };
 
@@ -319,6 +427,9 @@ export function AssetsSection({
     if (files.length === 0) return;
     const selectedFiles = target.multiple ? files : files.slice(0, 1);
     for (const [index, file] of selectedFiles.entries()) {
+      const fingerprint = uploadFingerprint(target, file);
+      if (activeUploadFingerprintsRef.current.has(fingerprint)) continue;
+      activeUploadFingerprintsRef.current.add(fingerprint);
       if (!acceptedImageTypes.includes(file.type)) {
         setOperation({
           status: "error",
@@ -327,6 +438,7 @@ export function AssetsSection({
           transport: "local",
           error: "仅支持 PNG、JPG、WebP 图片。",
         });
+        activeUploadFingerprintsRef.current.delete(fingerprint);
         continue;
       }
       if (file.size <= 0) {
@@ -337,6 +449,7 @@ export function AssetsSection({
           transport: "local",
           error: "选择的文件为空。",
         });
+        activeUploadFingerprintsRef.current.delete(fingerprint);
         continue;
       }
       const label = target.label;
@@ -354,7 +467,11 @@ export function AssetsSection({
         previewUrl = URL.createObjectURL(file);
       }
       setLocalPreviews((current) => ({ ...current, [previewKey]: previewUrl }));
-      await uploadMetadata(target.role, label, file, previewUrl);
+      try {
+        await uploadMetadata(target.role, label, file, previewUrl);
+      } finally {
+        activeUploadFingerprintsRef.current.delete(fingerprint);
+      }
     }
   };
 
@@ -381,6 +498,7 @@ export function AssetsSection({
   ) => {
     event.preventDefault();
     event.stopPropagation();
+    rememberConfigScrollTop(event.currentTarget);
     if (isPending) return;
     await handleFilesForTarget({ role, label, multiple }, Array.from(event.dataTransfer.files || []));
   };
@@ -393,6 +511,7 @@ export function AssetsSection({
   };
 
   const deleteSlot = async (slot: VisibleAssetSlot) => {
+    rememberConfigScrollTop();
     const role = slot.role || defaultAssetRole;
     const key = `${role}:${slot.label}`;
     const hasUpload = Boolean(previewForAssetSlot(key, slot, localPreviews));
@@ -423,7 +542,7 @@ export function AssetsSection({
         });
       } finally {
         setPendingKey(null);
-        onRequestRender?.();
+        requestRenderWithPreservedScroll();
       }
       return;
     }
@@ -451,7 +570,7 @@ export function AssetsSection({
       setAnalysisMessage("请先上传一张构图参考图。");
       return;
     }
-    if (!referenceAnalysisProviderReady(referenceProviderId)) {
+    if (!providerCanAnalyzeReference) {
       setAnalysisMessage(unsupportedReferenceProviderMessage);
       return;
     }
@@ -473,6 +592,7 @@ export function AssetsSection({
         role: referenceRole,
         label: referenceLabel,
         providerId: referenceProviderId,
+        model: referenceModel,
         imageDataUrl,
         key: `${referenceRole}:${kind}`,
       });
@@ -481,7 +601,7 @@ export function AssetsSection({
         return;
       }
       const text = String(result.data?.text || "").trim();
-      const summary = text.length > 120 ? `${text.slice(0, 120)}...` : text;
+      const summary = summarizeReferenceAnalysisText(text, 120);
       setAnalysisMessage(summary || `${label}完成，但供应商没有返回文本。`);
     } catch (error) {
       setAnalysisMessage(error instanceof Error ? error.message : `${label}失败，请稍后重试。`);
@@ -489,6 +609,7 @@ export function AssetsSection({
   };
 
   const deleteReferenceUpload = async () => {
+    rememberConfigScrollTop();
     setOperation({
       status: "planning",
       role: referenceRole,
@@ -514,7 +635,7 @@ export function AssetsSection({
         error: error instanceof Error ? error.message : "删除参考图失败。",
       });
     } finally {
-      onRequestRender?.();
+      requestRenderWithPreservedScroll();
     }
   };
 
@@ -577,7 +698,10 @@ export function AssetsSection({
         {visibleSlots.map((slot) => {
           const role = slot.role || defaultAssetRole;
           const key = `${role}:${slot.label}`;
-          const previewUrls = previewsForAssetSlot(key, slot, localPreviews)
+          const persistedPreviewUrls = persistedPreviewsForAssetSlot(slot)
+            .filter((url) => !brokenPreviewUrls[url]);
+          const includeLocalPreviews = pendingKey === key || persistedPreviewUrls.length === 0;
+          const previewUrls = previewsForAssetSlot(key, slot, localPreviews, { includeLocal: includeLocalPreviews })
             .filter((url) => !brokenPreviewUrls[url]);
           const displayPreviewUrl = previewUrls.at(-1) || "";
           const previewCount = Math.max(Number(slot.assetCount || 0), previewUrls.length);

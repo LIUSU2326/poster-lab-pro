@@ -30,28 +30,33 @@ export const state = {
   projectLibraryActiveEntryId: "",
   projectLibraryEntries: /** @type {Array<{ id: string, name: string, description: string, updatedAt: string }>} */ ([]),
   resultViewerOpen: false,
+  resultViewerMessage: "",
+  resultRefinementOpen: false,
+  resultRefinementPrompt: "",
   taskOpen: false,
   settingsOpen: false,
   generationChoiceOpen: false,
   settingsWidth: 1060,
   settingsHeight: 820,
-  provider: "agnes",
+  provider: "google",
   providerOrder: /** @type {string[]} */ ([]),
   providerModelOverrides: /** @type {Record<string, Record<string, string>>} */ ({}),
   providerCustomModels: /** @type {Record<string, string[]>} */ ({}),
   providerSlotRoutes: /** @type {Record<string, { providerId: string, model?: string }>} */ ({
     concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
-    image: { providerId: "agnes", model: "agnes-image-2.1-flash" },
+    image: { providerId: "google", model: "gemini-3-pro-image-preview" },
     styleReference: { providerId: "mimo", model: "mimo-v2-omni" },
     compositionReference: { providerId: "mimo", model: "mimo-v2-omni" },
   }),
-  providerRoutePlan: "mimo-agnes",
+  providerRoutePlan: "mimo-google-kv",
   providerRoutingOpen: false,
   providerRoutePlans: /** @type {Array<{ id: string, name: string }>} */ ([
     { id: "standard", name: "标准方案" },
     { id: "image-first", name: "图像优先" },
+    { id: "mimo-google-kv", name: "MiMo + Google KV" },
     { id: "mimo-agnes", name: "MiMo + Agnes 测试" },
   ]),
+  providerRouteDeletedPlanIds: /** @type {string[]} */ ([]),
   providerRoutePlanTest: {
     phase: "idle",
     planId: "standard",
@@ -301,7 +306,7 @@ export function getResultOperationLabel(action) {
   return resultOperationLabels[action] || "结果操作";
 }
 
-export function queueResultOperation(action, resultId) {
+export function queueResultOperation(action, resultId, options = {}) {
   const result = getModeResults().find((item) => item.id === resultId);
   if (!result) return null;
 
@@ -318,6 +323,7 @@ export function queueResultOperation(action, resultId) {
     cost: "待估算",
     elapsed: "00:00",
     message: `${label} 已加入本地队列。`,
+    editInstruction: typeof options.editInstruction === "string" ? options.editInstruction.trim().slice(0, 2000) : "",
     createdAt,
   };
 
@@ -364,6 +370,16 @@ function findSchemePromptBlock(promptBlocks, labels) {
     return normalizedLabels.some((label) => title.includes(label));
   });
   return typeof match?.text === "string" ? match.text : "";
+}
+
+function sanitizeSchemePromptForDisplay(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const cleaned = text
+    .replace(/##\s*A+\s*Cinematic Game KV Quality Override/gi, "## Cinematic Game KV Quality Override")
+    .replace(/\n*##\s*(?:Mandatory KV Composition Architecture Override|Cinematic Game KV Quality Override)[\s\S]*$/gi, "")
+    .trim();
+  return cleaned || text;
 }
 
 function cleanSloganText(value) {
@@ -501,10 +517,10 @@ function adaptRuntimeScheme(activeMode, scheme, snapshot, index) {
   const resultCount = snapshot.results?.filter((result) => result.schemeId === scheme.id).length || 0;
   const targetCount = Math.max(1, modeState?.outputSettings?.imagesPerScheme || 1);
   const status = scheme.status === "rendering" ? "loading" : scheme.status === "archived" ? "ready" : scheme.status;
-  const promptZh = findSchemePromptBlock(scheme.promptBlocks, ["中文提示词", "chinese prompt", "prompt zh"]);
-  const promptEn = findSchemePromptBlock(scheme.promptBlocks, ["english prompt", "英文提示词", "prompt en"]);
+  const promptZh = sanitizeSchemePromptForDisplay(findSchemePromptBlock(scheme.promptBlocks, ["中文提示词", "chinese prompt", "prompt zh"]));
+  const promptEn = sanitizeSchemePromptForDisplay(findSchemePromptBlock(scheme.promptBlocks, ["english prompt", "英文提示词", "prompt en"]));
   const visualBrief = findSchemePromptBlock(scheme.promptBlocks, ["视觉方向", "visual direction"]);
-  const promptText = promptZh || promptEn || scheme.promptBlocks?.map((block) => `${block.title}: ${block.text}`).join("\n") || scheme.brief;
+  const promptText = promptZh || promptEn || scheme.promptBlocks?.map((block) => `${block.title}: ${sanitizeSchemePromptForDisplay(block.text)}`).join("\n") || scheme.brief;
   const selectedLanguage = Array.isArray(modeState?.sloganSettings?.languages) && modeState.sloganSettings.languages.length > 0
     ? modeState.sloganSettings.languages[0]
     : "en-US";

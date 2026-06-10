@@ -33,6 +33,19 @@ function formatCost(value) {
   return typeof value === "number" ? `$${value.toFixed(2)}` : "真实成本未返回";
 }
 
+function configuredOperationProviderIds(snapshot = getRuntimeWorkspaceSnapshot()) {
+  const configs = snapshot.providerConfigs || {};
+  const providerIds = Object.keys(configs);
+  const orderedProviderIds = [
+    ...(Array.isArray(state.providerOrder) ? state.providerOrder.filter((providerId) => providerIds.includes(providerId)) : []),
+    ...providerIds.filter((providerId) => !state.providerOrder?.includes(providerId)),
+  ];
+  return orderedProviderIds.filter((providerId) => {
+    const config = configs[providerId] || {};
+    return Boolean(config.hasApiKey || config.status === "success" || config.configured);
+  });
+}
+
 export async function runResultOperationForWorkbench(operation, options = {}) {
   const config = resultOperationRouting[operation?.action];
   const sourceResult = findResult(operation?.resultId);
@@ -42,7 +55,9 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
   const service = createHttpGenerationService(options);
   const workspaceId = state.workspaceId;
   const snapshot = getRuntimeWorkspaceSnapshot();
-  const route = resolveResultOperationRoute(operation.action, state.provider);
+  const route = resolveResultOperationRoute(operation.action, state.provider, {
+    configuredProviders: configuredOperationProviderIds(snapshot),
+  });
 
   if (!route.supported) {
     updateResultOperation(operation.id, {
@@ -67,9 +82,18 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
       projectId: snapshot.project.id,
       mode: sourceResult.mode,
       providerId: route.providerId,
+      providerRoutes: {
+        imageEdit: {
+          providerId: route.providerId,
+          ...(route.model ? { model: route.model } : {}),
+        },
+      },
       schemeIds: [sourceResult.schemeId],
       imagesPerScheme: 1,
+      regenerateSchemes: false,
+      includeImageGeneration: false,
       sourceResultId: sourceResult.id,
+      ...(operation.editInstruction ? { editInstruction: operation.editInstruction } : {}),
       ...route.flags,
     });
 

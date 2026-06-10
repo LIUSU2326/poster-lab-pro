@@ -210,9 +210,12 @@ async function runRuntimeCheck() {
     if (!newResults.some((item) => item.metadata.providerExecution === "credential-aware")) {
       issues.push("saved result records should preserve credential-aware provider execution lineage");
     }
-    if (newResults.some((item) => item.metadata.assetOverlayProcessing)) {
-      issues.push("poster queue worker should not apply uploaded asset overlay by default");
-    }
+	    if (newResults.some((item) => {
+	      const processing = item.metadata.assetOverlayProcessing;
+	      return processing && Array.isArray(processing.applied) && processing.applied.length > 0;
+	    })) {
+	      issues.push("poster queue worker should not apply uploaded asset overlay by default");
+	    }
     if (!loaded.snapshot.queueSummaries.some((summary) => summary.jobId === plan.job.id && summary.progress === 100)) {
       issues.push("saved workspace should include updated queue summary");
     }

@@ -258,7 +258,13 @@ function posterSloganForScheme(snapshot: WorkspaceSnapshot | undefined, schemeId
   if (!snapshot || !schemeId) return null;
   const scheme = snapshot.schemes.find((item) => item.id === schemeId);
   const slogans = scheme?.slogans || {};
-  return slogans["en-US"] || slogans["zh-CN"] || slogans["ja-JP"] || slogans["ko-KR"] || null;
+  const language = snapshot.modeStates.find((item) => item.mode === scheme?.mode)?.sloganSettings.languages[0];
+  return (language ? slogans[language] : null)
+    || slogans["en-US"]
+    || slogans["zh-CN"]
+    || slogans["ja-JP"]
+    || slogans["ko-KR"]
+    || null;
 }
 
 function sanitizeProviderAssetForQueue(providerAsset: unknown): unknown {
@@ -383,18 +389,21 @@ async function resultFromTaskWithProject(input: {
     targetWidth: input.task.input.width || null,
     targetHeight: input.task.input.height || null,
   });
-  const overlayAssets = shouldApplyPosterAssetOverlay(input.task) && input.task.mode === "poster" && input.snapshot
-    ? selectPosterOverlayAssets(input.snapshot)
-    : [];
-  const overlayed = overlayAssets.length > 0
-    ? await applyPosterAssetOverlays({
-        dataUrl: prepared.dataUrl,
-        width: prepared.width,
-        height: prepared.height,
-        assets: overlayAssets,
-        slogan: posterSloganForScheme(input.snapshot, input.task.input.schemeId),
-      })
-    : null;
+	  const overlayAssets = shouldApplyPosterAssetOverlay(input.task) && input.task.mode === "poster" && input.snapshot
+	    ? selectPosterOverlayAssets(input.snapshot)
+	    : [];
+	  const posterSlogan = input.task.mode === "poster" && input.snapshot
+	    ? posterSloganForScheme(input.snapshot, input.task.input.schemeId)
+	    : null;
+	  const overlayed = overlayAssets.length > 0 || posterSlogan
+	    ? await applyPosterAssetOverlays({
+	        dataUrl: prepared.dataUrl,
+	        width: prepared.width,
+	        height: prepared.height,
+	        assets: overlayAssets,
+	        slogan: posterSlogan,
+	      })
+	    : null;
   const initialDataUrl = overlayed?.dataUrl || prepared.dataUrl;
   const initialQualityAudit = await auditResultQuality({
     mode: input.task.mode,

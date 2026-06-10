@@ -214,7 +214,7 @@ export function getAssetSlotsForMode(modeId, fallbackAssets = []) {
   const fallbackRoles = new Set(fallbackSlots.map((slot) => slot.role));
   const uploadedByRole = new Map();
 
-  snapshot.assets
+  dedupeUploadedAssetsForDisplay(snapshot.assets)
     .map((asset) => ({
       ...asset,
       role: normalizeAssetRole(asset),
@@ -292,4 +292,40 @@ function normalizeAssetRole(asset) {
     return "gameLogo";
   }
   return role;
+}
+
+function dateValue(value) {
+  const parsed = Date.parse(value || "");
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function uploadFingerprint(asset) {
+  const fileName = asset?.metadata?.originalFileName || "";
+  const checksum = asset?.checksum || "";
+  const byteSize = asset?.byteSize ?? "";
+  if (!checksum && !fileName && byteSize === "") return "";
+  return [
+    normalizeAssetRole(asset),
+    asset?.label || "",
+    checksum || fileName,
+    asset?.mimeType || "",
+    byteSize,
+  ].join("|");
+}
+
+function dedupeUploadedAssetsForDisplay(assets = []) {
+  const byFingerprint = new Map();
+  const passthrough = [];
+  for (const asset of assets) {
+    const key = uploadFingerprint(asset);
+    if (!key) {
+      passthrough.push(asset);
+      continue;
+    }
+    const existing = byFingerprint.get(key);
+    if (!existing || dateValue(asset.updatedAt || asset.createdAt) >= dateValue(existing.updatedAt || existing.createdAt)) {
+      byFingerprint.set(key, asset);
+    }
+  }
+  return [...passthrough, ...byFingerprint.values()];
 }

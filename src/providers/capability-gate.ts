@@ -113,6 +113,24 @@ function requiredQueueSlots(input: QueuePlanCapabilityGateInput): ProviderModelS
   return slots;
 }
 
+function knownProviderModels(providerId: ProviderId): string[] {
+  const manifest = getProviderManifest(providerId);
+  return Array.from(new Set(Object.values(manifest.modelSlots).flat().filter(Boolean)));
+}
+
+function isKnownUnsupportedProviderSlotModel(
+  providerId: ProviderId,
+  slot: ProviderModelSlot,
+  model?: string,
+): boolean {
+  const normalized = model?.trim();
+  if (!normalized) return false;
+  const manifest = getProviderManifest(providerId);
+  const supportedModels = manifest.modelSlots[slot] || [];
+  if (supportedModels.includes(normalized)) return false;
+  return knownProviderModels(providerId).includes(normalized);
+}
+
 function modelWarning(input: {
   slot: ProviderModelSlot;
   label: string;
@@ -196,6 +214,20 @@ export function evaluateProviderRouteCapabilityGate(input: {
         capability: requirement.capability,
         ...(requirement.model ? { model: requirement.model } : {}),
         message: `${manifest.displayName} 没有可用于 ${requirement.label} 的模型槽。`,
+      });
+      continue;
+    }
+
+    if (isKnownUnsupportedProviderSlotModel(requirement.providerId, requirement.slot, requirement.model)) {
+      errors.push({
+        severity: "error",
+        slot: requirement.slot,
+        label: requirement.label,
+        providerId: requirement.providerId,
+        providerName: manifest.displayName,
+        capability: requirement.capability,
+        ...(requirement.model ? { model: requirement.model } : {}),
+        message: `${manifest.displayName} 的 ${requirement.label} 模型 ${requirement.model} 属于其他槽位，不能用于当前流程。请切换到 ${(manifest.modelSlots[requirement.slot] || []).join(" / ")}。`,
       });
       continue;
     }

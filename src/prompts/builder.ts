@@ -53,7 +53,7 @@ export const PromptBuilderInputSchema = z.object({
 
 export type PromptBuilderInput = z.infer<typeof PromptBuilderInputSchema>;
 type SloganLanguage = z.infer<typeof SloganLanguageSchema>;
-const FINAL_PROMPT_MAX_CHARS = 12000;
+const FINAL_PROMPT_MAX_CHARS = 18000;
 const ICON_PRIMARY_ASSET_ROLES = new Set(["subjectReference", "gameCharacter", "prop", "gameLogo"]);
 const SECTION_CONTENT_MAX_CHARS = 4000;
 
@@ -529,7 +529,7 @@ function formatPosterQualityDirection(modeState: WorkspaceModeState, assets: Pro
     "One-appearance rule: use each uploaded protagonist, antagonist, key subject, brand logo, and prop once according to semantic duty. Do not duplicate them as both large and small copies, do not add replacement chef heroes, and do not paste unchanged sticker cutouts unless a fallback compositor is explicitly requested.",
     "Focus guidance hierarchy: any user focus guidance is a creative lens only. It is lower priority than uploaded identity references, the chosen KV architecture, coherent story composition, and market-ready image quality.",
     "Composition target: one clear hero focal point, strong foreground-midground-background depth, dynamic camera angle, readable silhouette hierarchy, environmental storytelling, character-vs-BOSS conflict, and enough negative space for logo and slogan.",
-    "AAAAAAAAAAA cinematic target: borrow the language of high-end film/game announcement posters within the uploaded art style: decisive trailer-moment storytelling, low-angle or forced-perspective camera, strong backlight/rim light, volumetric beams, colored fill, particles/VFX following action direction, and dramatic value contrast.",
+    "Cinematic KV target: borrow the language of high-end film/game announcement posters within the uploaded art style: decisive trailer-moment storytelling, low-angle or forced-perspective camera, strong backlight/rim light, volumetric beams, colored fill, particles/VFX following action direction, and dramatic value contrast.",
     "KV architecture target: prefer a designed campaign structure rather than a simple horizontal battlefield. Strong options include diagonal kitchen-vs-wildlands split, restaurant-window/portal breach, foreground weapon/utensil divider, BOSS reveal through a doorway/canyon, comic-panel mission montage, tiny heroes against giant edible terrain, or a trophy shot after defeating the BOSS.",
     "Blueprint target: every poster should be planned as five visual layers: oversized foreground framing, uploaded hero performance with readable faces, uploaded BOSS pressure, world/game-loop context, and integrated logo/copy safe area.",
     "Production design checklist: specify camera height/lens feel/perspective, foreground framing, midground action, background reveal, key-fill-rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and a typography/logo integration plan.",
@@ -773,7 +773,17 @@ function formatReferenceAnalyses(snapshot: WorkspaceSnapshot): string {
         text,
       ].join("\n");
     })
-    .join("\n\n");
+	    .join("\n\n");
+}
+
+function sanitizeSchemePromptBlockText(text: string): string {
+  const normalized = text.trim();
+  if (!normalized) return "";
+  const cleaned = normalized
+    .replace(/##\s*A+\s*Cinematic Game KV Quality Override/gi, "## Cinematic Game KV Quality Override")
+    .replace(/\n*##\s*(?:Mandatory KV Composition Architecture Override|Cinematic Game KV Quality Override)[\s\S]*$/gi, "")
+    .trim();
+  return cleaned || normalized;
 }
 
 function buildSections(input: {
@@ -891,13 +901,22 @@ function buildSections(input: {
     sections.push(
       section({
         id: "scheme",
-        title: "Selected Scheme",
-        source: "scheme",
-        priority: 85,
-        content: [`${scheme.code}: ${scheme.title}`, scheme.brief, ...scheme.promptBlocks.map((block) => `${block.title}: ${block.text}`)].join("\n"),
-      }),
-    );
-  }
+	        title: "Selected Scheme",
+	        source: "scheme",
+	        priority: 85,
+	        content: [
+	          `${scheme.code}: ${scheme.title}`,
+	          scheme.brief,
+	          ...scheme.promptBlocks
+	            .map((block) => {
+	              const text = sanitizeSchemePromptBlockText(block.text);
+	              return text ? `${block.title}: ${text}` : "";
+	            })
+	            .filter(Boolean),
+	        ].join("\n"),
+	      }),
+	    );
+	  }
 
   const sloganText = Object.entries(input.slogans)
     .map(([language, slogan]) => `${language}: ${slogan}`)
@@ -948,10 +967,24 @@ function buildFinalPrompt(sections: PromptSection[], guardrails: PromptGuardrail
   });
 }
 
+function trimPromptAtBoundary(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const clipped = text.slice(0, maxChars).trimEnd();
+  const boundary = Math.max(
+    clipped.lastIndexOf("\n\n"),
+    clipped.lastIndexOf(". "),
+    clipped.lastIndexOf("。"),
+    clipped.lastIndexOf("; "),
+    clipped.lastIndexOf("；"),
+    clipped.lastIndexOf(" "),
+  );
+  return (boundary > maxChars * 0.72 ? clipped.slice(0, boundary + 1) : clipped).trimEnd();
+}
+
 function clampPromptLength(prompt: string): string {
   if (prompt.length <= FINAL_PROMPT_MAX_CHARS) return prompt;
   const suffix = "\n\n## Prompt Trim Notice\nPrompt was compacted to fit the provider request limit. Keep the highest-priority sections and asset constraints above authoritative.";
-  return `${prompt.slice(0, FINAL_PROMPT_MAX_CHARS - suffix.length)}${suffix}`;
+  return `${trimPromptAtBoundary(prompt, FINAL_PROMPT_MAX_CHARS - suffix.length)}${suffix}`;
 }
 
 function clampPromptLengthWithRequiredClosingBlock(input: {
@@ -965,7 +998,7 @@ function clampPromptLengthWithRequiredClosingBlock(input: {
   const closing = `\n\n${input.closingBlock}`;
   const bodyBudget = FINAL_PROMPT_MAX_CHARS - notice.length - closing.length;
   if (bodyBudget <= 0) return clampPromptLength(prompt);
-  return `${input.body.slice(0, bodyBudget).trimEnd()}${notice}${closing}`;
+  return `${trimPromptAtBoundary(input.body, bodyBudget)}${notice}${closing}`;
 }
 
 function validatePromptPackage(params: {

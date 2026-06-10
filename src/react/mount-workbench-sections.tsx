@@ -12,8 +12,12 @@ export type MountedWorkbenchSections = {
   unmount: () => void;
 };
 
+export type WorkbenchRenderOptions = {
+  configScrollTop?: number;
+};
+
 export type WorkbenchSectionMountOptions = {
-  onRequestRender?: () => void;
+  onRequestRender?: (options?: WorkbenchRenderOptions) => void;
 };
 
 export function mountWorkbenchSections(host: HTMLElement, options: WorkbenchSectionMountOptions = {}): MountedWorkbenchSections {

@@ -18,6 +18,11 @@ import {
 } from './provider-credential-client.js';
 import { renderSettingsSheet } from './render/settings-sheet.js';
 import { saveLocalProviderPreferences } from './local-draft-store.js';
+import {
+  isKnownUnsupportedProviderSlotModel,
+  providerModelSlots,
+  providerSupportsSlot,
+} from './provider-capabilities.js';
 
 const LEFT_PANEL_MIN = 280;
 const LEFT_PANEL_MAX = 520;
@@ -96,15 +101,27 @@ export function bindEvents(render) {
     });
   });
 
-  document.querySelectorAll("[data-result-action]").forEach((button) => {
-    button.addEventListener("click", async (event) => {
-      const operation = queueResultOperation(button.dataset.resultAction, button.dataset.resultId || state.selectedResult);
-      event.preventDefault();
-      event.stopPropagation();
-      render();
-      if (operation) {
-        await runResultOperationForWorkbench(operation);
-        render();
+	  document.querySelectorAll("[data-result-action]").forEach((button) => {
+	    button.addEventListener("click", async (event) => {
+	      const action = button.dataset.resultAction;
+	      const resultId = button.dataset.resultId || state.selectedResult;
+	      event.preventDefault();
+	      event.stopPropagation();
+	      if (action === "variant") {
+	        state.selectedResult = resultId;
+	        state.selectedResultUserSet = true;
+	        state.resultViewerOpen = true;
+	        state.resultRefinementOpen = true;
+	        state.resultViewerMessage = "";
+	        state.resultRefinementPrompt = "";
+	        render();
+	        return;
+	      }
+	      const operation = queueResultOperation(action, resultId);
+	      render();
+	      if (operation) {
+	        await runResultOperationForWorkbench(operation);
+	        render();
       }
     });
   });
@@ -125,8 +142,9 @@ export function bindEvents(render) {
     });
   });
 
-  bindActionControls(render);
-  bindKeyRevealControls();
+	  bindActionControls(render);
+	  bindResultViewerImageCopy(render);
+	  bindKeyRevealControls();
 
   bindProviderControls(render);
   bindProviderModelControls(render);
@@ -155,6 +173,42 @@ function bindActionControls(render, root = document) {
 function bindProviderKeyForms(root = document) {
   root.querySelectorAll("[data-provider-key-form]").forEach((form) => {
     form.addEventListener("submit", (event) => event.preventDefault());
+  });
+}
+
+function bindResultViewerImageCopy(render) {
+  document.querySelectorAll("[data-copy-result-image]").forEach((image) => {
+    image.addEventListener("contextmenu", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const rawUrl = image.dataset.copyResultImage || image.getAttribute("src") || "";
+      if (!rawUrl) return;
+
+      state.resultViewerMessage = "正在复制图片...";
+      render();
+
+      try {
+        const url = new URL(rawUrl, window.location.href).toString();
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const mimeType = blob.type || "image/png";
+        if (navigator.clipboard?.write && globalThis.ClipboardItem && mimeType.startsWith("image/")) {
+          await navigator.clipboard.write([new ClipboardItem({ [mimeType]: blob })]);
+          state.resultViewerMessage = "图片已复制到剪贴板。";
+        } else if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url);
+          state.resultViewerMessage = "当前环境不支持复制图片，已复制图片链接。";
+        } else {
+          throw new Error("系统剪贴板不可用");
+        }
+      } catch (error) {
+        state.resultViewerMessage = error instanceof Error
+          ? `复制失败：${error.message}`
+          : "复制失败，请使用下载结果。";
+      }
+      render();
+    });
   });
 }
 
@@ -478,13 +532,17 @@ async function handleActionControl(control, event, render) {
           renderImages: true,
         };
       } else if (state.activeMode === "poster") {
+        const batchSchemeIds = getCurrentRenderableBatchSchemeIds(state.activeMode);
         generationOptions = {
           schemeStrategy: "continue",
+          ...(batchSchemeIds.length > 0 ? { schemeIds: batchSchemeIds } : {}),
           renderImages: true,
         };
       } else {
+        const batchSchemeIds = getCurrentRenderableBatchSchemeIds(state.activeMode);
         generationOptions = {
           schemeStrategy: "continue",
+          ...(batchSchemeIds.length > 0 ? { schemeIds: batchSchemeIds } : {}),
           renderImages: true,
         };
       }
@@ -526,12 +584,40 @@ async function handleActionControl(control, event, render) {
     render();
     return;
   }
-  if (action === "cancel-generation-choice") {
-    state.generationChoiceOpen = false;
-    render();
-    return;
-  }
-  if (action === "test-provider-route-plan") {
+	  if (action === "cancel-generation-choice") {
+	    state.generationChoiceOpen = false;
+	    render();
+	    return;
+	  }
+	  if (action === "cancel-result-refinement") {
+	    state.resultRefinementOpen = false;
+	    state.resultRefinementPrompt = "";
+	    state.resultViewerMessage = "";
+	    render();
+	    return;
+	  }
+	  if (action === "confirm-result-refinement") {
+	    const resultId = control.dataset.resultId || state.selectedResult || "";
+	    const input = document.querySelector("[data-result-refinement-prompt]");
+	    const editInstruction = input?.value?.trim() || "";
+	    if (!resultId) return;
+	    if (!editInstruction) {
+	      state.resultViewerMessage = "先填写二次精修方向。";
+	      render();
+	      return;
+	    }
+	    state.resultRefinementOpen = false;
+	    state.resultRefinementPrompt = editInstruction;
+	    state.resultViewerMessage = "二次精修已入队。";
+	    const operation = queueResultOperation("variant", resultId, { editInstruction });
+	    render();
+	    if (operation) {
+	      await runResultOperationForWorkbench(operation);
+	      render();
+	    }
+	    return;
+	  }
+	  if (action === "test-provider-route-plan") {
     await testCurrentProviderRoutePlan(render);
     return;
   }
@@ -595,7 +681,12 @@ async function handleActionControl(control, event, render) {
   if (action === "delete-provider-route-plan") {
     const plans = Array.isArray(state.providerRoutePlans) ? [...state.providerRoutePlans] : [];
     if (plans.length > 1) {
-      state.providerRoutePlans = plans.filter((plan) => plan.id !== state.providerRoutePlan);
+      const deletedPlanId = state.providerRoutePlan;
+      state.providerRouteDeletedPlanIds = Array.from(new Set([
+        ...(Array.isArray(state.providerRouteDeletedPlanIds) ? state.providerRouteDeletedPlanIds : []),
+        deletedPlanId,
+      ].filter(Boolean)));
+      state.providerRoutePlans = plans.filter((plan) => plan.id !== deletedPlanId);
       state.providerRoutePlan = state.providerRoutePlans[0]?.id || "standard";
       state.providerRoutingOpen = true;
       persistProviderPreferences();
@@ -670,13 +761,15 @@ async function handleActionControl(control, event, render) {
     render();
     return;
   }
-  if (action === "open-result-viewer") {
-    if (control.dataset.resultId) {
-      state.selectedResult = control.dataset.resultId;
-      state.selectedResultUserSet = true;
-    }
-    state.resultViewerOpen = true;
-  }
+	  if (action === "open-result-viewer") {
+	    if (control.dataset.resultId) {
+	      state.selectedResult = control.dataset.resultId;
+	      state.selectedResultUserSet = true;
+	    }
+	    state.resultViewerOpen = true;
+	    state.resultViewerMessage = "";
+	    state.resultRefinementOpen = false;
+	  }
   if (action === "goto-result-scheme") {
     const schemeId = control.dataset.schemeId || "";
     if (!schemeId) return;
@@ -686,7 +779,11 @@ async function handleActionControl(control, event, render) {
     render();
     return;
   }
-  if (action === "close-result-viewer") state.resultViewerOpen = false;
+	  if (action === "close-result-viewer") {
+	    state.resultViewerOpen = false;
+	    state.resultRefinementOpen = false;
+	    state.resultViewerMessage = "";
+	  }
   if (action === "delete-result") {
     const resultId = control.dataset.resultId || state.selectedResult || "";
     if (!resultId) return;
@@ -723,6 +820,26 @@ function hasExistingPosterProduction() {
   );
   const hasPosterResult = (snapshot.results || []).some((result) => result.mode === "poster");
   return hasGeneratedScheme || hasPosterResult;
+}
+
+function getCurrentRenderableBatchSchemeIds(modeId) {
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const generatedSchemes = (snapshot.schemes || [])
+    .filter((scheme) => isBatchRenderableScheme(modeId, scheme) && String(scheme.id || "").startsWith("generated-"));
+  const fallbackSchemes = (snapshot.schemes || [])
+    .filter((scheme) => isBatchRenderableScheme(modeId, scheme));
+  return (generatedSchemes.length > 0 ? generatedSchemes : fallbackSchemes)
+    .map((scheme) => scheme.id)
+    .filter(Boolean);
+}
+
+function isBatchRenderableScheme(modeId, scheme) {
+  const id = String(scheme?.id || "");
+  return scheme?.mode === modeId
+    && scheme.status !== "pending"
+    && !id.startsWith(`${modeId}-`)
+    && !id.startsWith(`scheme-${modeId}-`)
+    && !id.startsWith("poster-");
 }
 
 function findRuntimeResult(resultId) {
@@ -854,9 +971,15 @@ function ensureProviderRoutePlan(planId, name) {
 
 function resolveReferenceAnalysisRoute(slot) {
   const current = state.providerSlotRoutes?.[slot] || {};
-  if (current.providerId && current.providerId !== "agnes") return current;
+  if (current.providerId && providerSupportsSlot(current.providerId, slot)) {
+    const model = defaultReferenceAnalysisModel(current.providerId, slot, current.model);
+    return {
+      providerId: current.providerId,
+      ...(model ? { model } : {}),
+    };
+  }
   const providerId = findConfiguredReferenceAnalysisProvider();
-  if (!providerId) return { providerId: "agnes" };
+  if (!providerId) return { providerId: "" };
   return {
     providerId,
     model: defaultReferenceAnalysisModel(providerId, slot),
@@ -871,13 +994,19 @@ function findConfiguredReferenceAnalysisProvider() {
       || (state.providerCredential.providerId === providerId && state.providerCredential.configured)
       || (state.providerConnection.providerId === providerId && state.providerConnection.ok);
   };
-  return ["mimo", "google", "openai", "aigocode", "claude", "qwen"].find(configured) || "";
+  return ["mimo", "google", "openai", "aigocode", "claude", "qwen"]
+    .find((providerId) => configured(providerId) && providerSupportsSlot(providerId, "styleReference") && providerSupportsSlot(providerId, "compositionReference")) || "";
 }
 
-function defaultReferenceAnalysisModel(providerId, slot) {
+function defaultReferenceAnalysisModel(providerId, slot, preferredModel = "") {
   const snapshot = getRuntimeWorkspaceSnapshot();
   const config = snapshot.providerConfigs?.[providerId] || {};
-  if (config.modelSlots?.[slot]) return config.modelSlots[slot];
+  const slotModels = providerModelSlots[providerId]?.[slot] || [];
+  const configuredSlotModel = config.modelSlots?.[slot] || "";
+  const candidate = preferredModel || configuredSlotModel || slotModels[0] || "";
+  if (candidate && !isKnownUnsupportedProviderSlotModel(providerId, slot, candidate)) return candidate;
+  if (configuredSlotModel && slotModels.includes(configuredSlotModel)) return configuredSlotModel;
+  if (slotModels[0]) return slotModels[0];
   if (providerId === "google") return "gemini-2.5-flash";
   if (providerId === "claude") return "claude-sonnet-4-6";
   if (providerId === "qwen") return "qwen3.6-plus";

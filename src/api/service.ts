@@ -248,7 +248,13 @@ function projectAssetRoles(snapshot: WorkspaceSnapshot, projectId: string): stri
 function posterSloganForResult(snapshot: WorkspaceSnapshot, result: StoredResultAsset): string | null {
   const scheme = snapshot.schemes.find((item) => item.id === result.schemeId);
   const slogans = scheme?.slogans || {};
-  return slogans["en-US"] || slogans["zh-CN"] || slogans["ja-JP"] || slogans["ko-KR"] || null;
+  const language = snapshot.modeStates.find((item) => item.mode === result.mode)?.sloganSettings.languages[0];
+  return (language ? slogans[language] : null)
+    || slogans["en-US"]
+    || slogans["zh-CN"]
+    || slogans["ja-JP"]
+    || slogans["ko-KR"]
+    || null;
 }
 
 function qualityAuditTextTargets(snapshot: WorkspaceSnapshot, result: StoredResultAsset): string[] {
@@ -886,10 +892,11 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
           includeImageEdit: parsed.includeImageEdit,
           includeUpscale: parsed.includeUpscale,
           includeBackgroundRemoval: parsed.includeBackgroundRemoval,
-          regenerateSchemes: parsed.regenerateSchemes,
-          ...(parsed.batchId ? { batchId: parsed.batchId } : {}),
-          ...(parsed.sourceResultId ? { sourceResultId: parsed.sourceResultId } : {}),
-        });
+	          regenerateSchemes: parsed.regenerateSchemes,
+	          ...(parsed.batchId ? { batchId: parsed.batchId } : {}),
+	          ...(parsed.sourceResultId ? { sourceResultId: parsed.sourceResultId } : {}),
+	          ...(parsed.editInstruction ? { editInstruction: parsed.editInstruction } : {}),
+	        });
         const summary = summarizeQueue(queuePlan);
 
         if (parsed.workspaceId) {

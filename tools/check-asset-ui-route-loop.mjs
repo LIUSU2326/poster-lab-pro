@@ -18,6 +18,7 @@ const assetClient = read("src/asset-library-client.js");
 const configPanel = read("src/render/config-panel.js");
 const events = read("src/events.js");
 const stateSource = read("src/state.js");
+const referenceAnalysisClient = read("src/reference-analysis-client.js");
 const pkg = read("package.json");
 
 for (const token of [
@@ -53,6 +54,12 @@ if (!stateSource.includes("assetOperation")) {
   issues.push("state.js: missing assetOperation state");
 }
 
+for (const token of ["saveWorkspaceSnapshotForWorkbench", "commitReferenceAnalysisToWorkspace", "referenceAnalyses"]) {
+  if (!referenceAnalysisClient.includes(token)) {
+    issues.push(`reference-analysis-client.js: missing persisted analysis token ${token}`);
+  }
+}
+
 if (!pkg.includes("asset-ui:check")) {
   issues.push("package.json: missing asset-ui:check script");
 }
@@ -62,7 +69,10 @@ for (const [fileName, source] of [
   ["config-panel.js", configPanel],
   ["state.js", stateSource],
 ]) {
-  if (source.includes("fetch(")) {
+  const allowedViewerClipboardFetch = fileName === "events.js"
+    && source.includes("data-copy-result-image")
+    && source.includes("navigator.clipboard");
+  if (source.includes("fetch(") && !allowedViewerClipboardFetch) {
     issues.push(`${fileName}: fetch must stay isolated to client/data services`);
   }
 }

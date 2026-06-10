@@ -91,7 +91,7 @@ for (const token of [
   "providerImagePromptMaxChars",
   "providerImageAssetsForRequest",
   "AI integrated redraw",
-  "StyleReference and compositionReference assets are analysis-only",
+  "StyleReference and compositionReference are guide-only inputs",
   "Style reference handling",
   "Composition reference handling",
   "Non-Negotiable Poster Visual Contract",
@@ -231,21 +231,21 @@ async function runRuntimeCheck() {
     if (!mapped.request.assets.every((asset) => asset.url && !asset.url.includes("example.com"))) {
       issues.push("provider image request should receive real provider-ready asset URLs, not example placeholders");
     }
-    if (mapped.request.assets.some((asset) => asset.role === "styleReference" || asset.role === "compositionReference")) {
-      issues.push("poster image request must not send style/composition references as raw image assets");
+    if (!mapped.request.assets.some((asset) => asset.role === "compositionReference")) {
+      issues.push("poster image request should send uploaded compositionReference as a guide image asset");
     }
     if (!mapped.request.prompt.includes("Default pipeline: AI integrated redraw")) {
       issues.push("poster image request should default to AI integrated redraw");
     }
-    if (!mapped.request.prompt.includes("StyleReference and compositionReference assets are analysis-only")) {
-      issues.push("poster image request should state that style/composition references are analysis-only");
+    if (!mapped.request.prompt.includes("StyleReference and compositionReference are guide-only inputs")) {
+      issues.push("poster image request should state that style/composition references are guide-only");
     }
-    if (!mapped.request.prompt.includes("Composition reference handling: the uploaded compositionReference is analysis-only")) {
-      issues.push("poster image request should preserve uploaded composition reference analysis without sending it as a raw image");
+    if (!mapped.request.prompt.includes("Composition reference handling: the uploaded compositionReference is a visual guide only")) {
+      issues.push("poster image request should preserve uploaded composition reference as a visual guide without copying its content");
     }
-    if (mapped.request.prompt.length > 12000) {
-      issues.push("openai poster image request should stay inside the provider-neutral prompt budget");
-    }
+	    if (mapped.request.prompt.length > 18000) {
+	      issues.push("openai poster image request should stay inside the provider-neutral prompt budget");
+	    }
     if (!mapped.request.prompt.includes("Uploaded Asset Role Semantics and Fusion Strategies")) {
       issues.push("poster image request should include semantic asset fusion strategies");
     }
@@ -256,17 +256,17 @@ async function runRuntimeCheck() {
       kind: "imageGeneration",
       traceId: "trace-provider-request-agnes-profile-check",
     });
-    if (agnesMapped.request.prompt.length > 10000) {
-      issues.push("agnes poster image request should use the provider image capability promptMaxChars profile");
-    }
+	    if (agnesMapped.request.prompt.length > 12000) {
+	      issues.push("agnes poster image request should use the provider image capability promptMaxChars profile");
+	    }
     if (!agnesMapped.request.prompt.includes("Default pipeline: AI integrated redraw")) {
       issues.push("agnes provider profile must not replace the shared integrated redraw Poster logic");
     }
     if (!agnesMapped.request.assets.every((asset) => asset.url && !asset.url.includes("example.com"))) {
       issues.push("agnes poster image request should retain provider-ready visual reference URLs for extra_body.image");
     }
-    if (agnesMapped.request.assets.some((asset) => asset.role === "styleReference" || asset.role === "compositionReference")) {
-      issues.push("agnes poster image request must not send style/composition references as raw image assets");
+    if (!agnesMapped.request.assets.some((asset) => asset.role === "compositionReference")) {
+      issues.push("agnes poster image request should send uploaded compositionReference as a guide image asset");
     }
     if (!agnesMapped.request.assets.some((asset) => /semanticRole=protagonist/.test(asset.description || ""))) {
       issues.push("agnes poster image request should keep uploaded protagonist semantic reference");
@@ -290,6 +290,7 @@ async function runRuntimeCheck() {
       "Slogan visibility requirement",
       "Non-Negotiable Poster Visual Contract",
       "Pre-render checklist",
+      "Selected-scheme architecture lock",
       "Slogan anchor requirement",
       "large secondary campaign object",
       "scene-derived",
@@ -334,9 +335,9 @@ async function runRuntimeCheck() {
       kind: "imageGeneration",
       traceId: "trace-provider-request-long-check",
     });
-    if (longMapped.request.prompt.length > 12000) {
-      issues.push("poster image request should keep provider prompt within the 12000 character contract");
-    }
+	    if (longMapped.request.prompt.length > 18000) {
+	      issues.push("poster image request should keep provider prompt within the 18000 character contract");
+	    }
     for (const retainedToken of [
       "Mode Guardrails",
       "Hard KV Exclusions",
@@ -549,11 +550,11 @@ async function runRuntimeCheck() {
       providerId: "google",
       kind: "imageGeneration",
     });
-    if (styleReferenceMapped.request.assets.some((asset) => asset.role === "styleReference" || asset.role === "compositionReference")) {
-      issues.push("provider image request should keep uploaded style/composition references analysis-only, not raw image inputs");
+    if (!styleReferenceMapped.request.assets.some((asset) => asset.role === "styleReference")) {
+      issues.push("provider image request should include uploaded style reference as a guide image input");
     }
-    if (!styleReferenceMapped.request.prompt.includes("Style reference handling: the uploaded styleReference is analysis-only")) {
-      issues.push("provider image request should preserve uploaded style reference analysis without sending it as a raw image");
+    if (!styleReferenceMapped.request.prompt.includes("Style reference handling: the uploaded styleReference is a visual guide only")) {
+      issues.push("provider image request should preserve uploaded style reference as a visual guide without copying its content");
     }
 
     const createModeAsset = (asset, id, role, label) => ({

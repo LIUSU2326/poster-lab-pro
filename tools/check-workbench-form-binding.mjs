@@ -159,7 +159,11 @@ for (const [fileName, source] of [
   ["form-binding.js", binding],
 ]) {
   for (const forbidden of ["fetch(", "XMLHttpRequest", "axios", "localStorage", "sessionStorage", "generateImage(", "healthCheck("]) {
-    if (source.includes(forbidden)) {
+    const allowedViewerClipboardFetch = fileName === "events.js"
+      && forbidden === "fetch("
+      && source.includes("data-copy-result-image")
+      && source.includes("navigator.clipboard");
+    if (source.includes(forbidden) && !allowedViewerClipboardFetch) {
       issues.push(`${fileName}: form binding must not perform network, browser storage, or provider side effects (${forbidden})`);
     }
   }
@@ -235,6 +239,44 @@ async function runRuntimeCheck() {
   if (queueSubmission.payload.imagesPerScheme !== 3) {
     issues.push("queue plan payload should read imagesPerScheme from bound form state");
   }
+  state.providerSlotRoutes = {
+    ...(state.providerSlotRoutes || {}),
+    concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
+    image: { providerId: "google", model: "gemini-2.5-flash-image" },
+    styleReference: { providerId: "mimo", model: "mimo-v2.5-pro" },
+    compositionReference: { providerId: "mimo", model: "mimo-v2.5-pro" },
+  };
+  const configuredRouteSnapshot = JSON.parse(JSON.stringify(bound));
+  configuredRouteSnapshot.providerConfigs.mimo = {
+    ...(configuredRouteSnapshot.providerConfigs.mimo || {}),
+    enabled: true,
+    status: "success",
+    hasApiKey: true,
+    defaultModel: "mimo-v2.5-pro",
+    modelSlots: {
+      ...(configuredRouteSnapshot.providerConfigs.mimo?.modelSlots || {}),
+      concept: "mimo-v2.5-pro",
+    },
+  };
+  configuredRouteSnapshot.providerConfigs.google = {
+    ...(configuredRouteSnapshot.providerConfigs.google || {}),
+    enabled: true,
+    status: "success",
+    hasApiKey: true,
+    defaultModel: "gemini-2.5-flash-image",
+    modelSlots: {
+      ...(configuredRouteSnapshot.providerConfigs.google?.modelSlots || {}),
+      image: "gemini-2.5-flash-image",
+    },
+  };
+  setRuntimeWorkspaceSnapshot(configuredRouteSnapshot, "static");
+  const safeRouteQueue = buildQueuePlanCreateSubmission(bound);
+  if (safeRouteQueue.payload.providerRoutes?.styleReference?.model !== "mimo-v2-omni") {
+    issues.push("style reference route should auto-correct known wrong MiMo text models to mimo-v2-omni");
+  }
+  if (safeRouteQueue.payload.providerRoutes?.compositionReference?.model !== "mimo-v2-omni") {
+    issues.push("composition reference route should auto-correct known wrong MiMo text models to mimo-v2-omni");
+  }
   const schemeOnlyPrompt = buildPromptPackageCreateSubmission(bound, { renderImages: false });
   const schemeOnlyQueue = buildQueuePlanCreateSubmission(bound, { renderImages: false });
   if (schemeOnlyPrompt.payload.target !== "brief") {
@@ -246,6 +288,22 @@ async function runRuntimeCheck() {
   const renderQueue = buildQueuePlanCreateSubmission(bound, { schemeStrategy: "continue" });
   if (renderQueue.payload.includeImageGeneration !== true) {
     issues.push("render generation should queue image generation by default");
+  }
+  const batchBound = JSON.parse(JSON.stringify(bound));
+  const batchModeState = batchBound.modeStates.find((item) => item.mode === "poster");
+  const generatedReadySchemeIds = batchBound.schemes
+    .filter((scheme) => scheme.mode === "poster" && String(scheme.id).startsWith("generated-"))
+    .slice(0, 3)
+    .map((scheme) => {
+      scheme.status = "ready";
+      return scheme.id;
+    });
+  if (batchModeState && generatedReadySchemeIds.length >= 3) {
+    batchModeState.selectedSchemeIds = [generatedReadySchemeIds[2]];
+    const batchRenderQueue = buildQueuePlanCreateSubmission(batchBound, { schemeStrategy: "continue" });
+    if (batchRenderQueue.payload.schemeIds.length < 3) {
+      issues.push("batch render should include all generated ready schemes instead of reusing a previous single selected scheme");
+    }
   }
   const regenerateBound = createBoundWorkspaceSnapshot({
     schemeStrategy: "continue",

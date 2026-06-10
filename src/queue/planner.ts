@@ -37,10 +37,11 @@ const QueuePlannerInputSchema = z.object({
   includeImageGeneration: z.boolean().default(true),
   includeImageEdit: z.boolean().default(false),
   includeUpscale: z.boolean().default(false),
-  includeBackgroundRemoval: z.boolean().default(false),
-  sourceResultId: z.string().min(1).optional(),
-  regenerateSchemes: z.boolean().default(true),
-  batchId: z.string().min(1).max(80).optional(),
+	  includeBackgroundRemoval: z.boolean().default(false),
+	  sourceResultId: z.string().min(1).optional(),
+	  editInstruction: z.string().min(1).max(2000).optional(),
+	  regenerateSchemes: z.boolean().default(true),
+	  batchId: z.string().min(1).max(80).optional(),
 });
 
 type QueuePlannerResolvedInput = z.infer<typeof QueuePlannerInputSchema>;
@@ -154,10 +155,11 @@ function createTask(params: {
   height?: number;
   aspectRatio?: string;
   count?: number;
-  model?: string;
-  sourceResultId?: string;
-  schemeIds?: string[];
-}): QueueTask {
+	  model?: string;
+	  sourceResultId?: string;
+	  editInstruction?: string;
+	  schemeIds?: string[];
+	}): QueueTask {
   const providerCapability = providerCapabilityForTask(params.kind);
   return QueueTaskSchema.parse({
     id: params.id,
@@ -171,9 +173,10 @@ function createTask(params: {
     mode: params.mode,
     input: {
       schemeId: params.schemeId,
-      schemeIds: params.schemeIds,
-      sourceResultId: params.sourceResultId,
-      platformPreset: params.platformPreset,
+	      schemeIds: params.schemeIds,
+	      sourceResultId: params.sourceResultId,
+	      ...(params.editInstruction ? { editInstruction: params.editInstruction } : {}),
+	      platformPreset: params.platformPreset,
       width: params.width,
       height: params.height,
       aspectRatio: params.aspectRatio,
@@ -276,10 +279,11 @@ export function createBatchQueuePlan(input: QueuePlannerInput): QueuePlan {
         width: target.width,
         height: target.height,
         aspectRatio: target.aspectRatio,
-        count: 1,
-        sourceResultId: parsed.sourceResultId || `result-${schemeId}`,
-        model: postProcessRoute.model || kind,
-      });
+	        count: 1,
+	        sourceResultId: parsed.sourceResultId || `result-${schemeId}`,
+	        ...(kind === "imageEdit" && parsed.editInstruction ? { editInstruction: parsed.editInstruction } : {}),
+	        model: postProcessRoute.model || kind,
+	      });
       tasks.push(task);
       events.push(createEvent(jobId, "taskQueued", `Queued ${kind} for ${schemeId}.`, task.id));
     });

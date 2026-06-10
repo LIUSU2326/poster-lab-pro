@@ -194,13 +194,49 @@ function createStaticAssetDraft(payload, options = {}) {
   };
 }
 
+function assetUploadFingerprint(asset) {
+  const fileName = asset.metadata?.originalFileName || "";
+  const checksum = asset.checksum || "";
+  const byteSize = asset.byteSize ?? "";
+  if (!checksum && !fileName && byteSize === "") return "";
+  return [
+    asset.role || "",
+    asset.label || "",
+    checksum || fileName,
+    asset.mimeType || "",
+    byteSize,
+  ].join("|");
+}
+
+function isSameUploadedAsset(left, right) {
+  if (left.id === right.id) return true;
+  const leftKey = assetUploadFingerprint(left);
+  return Boolean(leftKey && leftKey === assetUploadFingerprint(right));
+}
+
+function mergeUploadedAsset(existing, incoming, updatedAt) {
+  return {
+    ...existing,
+    ...incoming,
+    id: existing.id,
+    createdAt: existing.createdAt || incoming.createdAt,
+    updatedAt,
+    metadata: {
+      ...(existing.metadata || {}),
+      ...(incoming.metadata || {}),
+    },
+  };
+}
+
 function commitStaticAsset(asset, options = {}) {
   const snapshot = clone(getRuntimeWorkspaceSnapshot());
   const updatedAt = nowIso(options);
-  const assets = snapshot.assets.filter((item) => (
-    item.id !== asset.id
-  ));
-  assets.push({ ...asset, updatedAt });
+  const existing = snapshot.assets.find((item) => isSameUploadedAsset(item, asset));
+  const committedAsset = existing
+    ? mergeUploadedAsset(existing, asset, updatedAt)
+    : { ...asset, updatedAt };
+  const assets = snapshot.assets.filter((item) => !isSameUploadedAsset(item, committedAsset));
+  assets.push(committedAsset);
 
   setRuntimeWorkspaceSnapshot({
     ...snapshot,

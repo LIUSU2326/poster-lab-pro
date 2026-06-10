@@ -19,11 +19,10 @@ import {
   posterCinematicKvQualityDirective,
   posterHeroPerformanceScaleLock,
   posterIdentitySafeMotionRule,
-  posterLogoSingleUseLock,
-  posterKvArchitectureBriefSlots,
-  posterKvArchitectureDiversityRequirement,
-  posterKvArchitectureDirective,
-  posterKvArchitectureSlotSeed,
+	  posterLogoSingleUseLock,
+	  posterKvArchitectureBriefSlots,
+	  posterKvArchitectureDiversityRequirement,
+	  posterKvArchitectureSlotSeed,
   posterKvAssetCountsFromAssets,
   posterKvBriefAugmentation,
   posterSchemeBlueprintRequirement,
@@ -789,11 +788,7 @@ function normalizePosterSchemes(parsed: z.infer<typeof BriefCompletionSchema>, r
     const promptEn = sanitizePosterSchemeText(scheme.promptEn || scheme.prompt) || prompt;
     const architectureSeed = posterKvArchitectureSlotSeed(seed, index);
     const architectureBrief = posterKvBriefAugmentation(architectureSeed);
-    const architecturePrompt = posterKvArchitectureDirective({
-      seed: architectureSeed,
-      assetCounts,
-    });
-    const cinematicBrief = "电影级强化：方案必须具备明确镜头语言、主光/逆光/体积光、粒子/VFX、前中后景纵深、可读角色表演、环境 set-piece 和一个可被理解的故事瞬间。";
+	    const cinematicBrief = "电影级强化：方案必须具备明确镜头语言、主光/逆光/体积光、粒子/VFX、前中后景纵深、可读角色表演、环境 set-piece 和一个可被理解的故事瞬间。";
     const slogans = Object.fromEntries(
       SUPPORTED_SLOGAN_LANGUAGES
         .filter((language) => language === targetLanguage && scheme.slogans[language])
@@ -816,13 +811,13 @@ function normalizePosterSchemes(parsed: z.infer<typeof BriefCompletionSchema>, r
         }),
     );
     return {
-      title,
-      brief: `${architectureBrief}\n${cinematicBrief}\n${brief}`.slice(0, 1800),
-      prompt: `${prompt}\n\n${architecturePrompt}`.slice(0, 12000),
-      promptZh: `${promptZh}\n\n${architecturePrompt}`.slice(0, 12000),
-      promptEn: `${promptEn}\n\n${architecturePrompt}`.slice(0, 12000),
-      slogans,
-    };
+	      title,
+	      brief: `${architectureBrief}\n${cinematicBrief}\n${brief}`.slice(0, 1800),
+	      prompt,
+	      promptZh,
+	      promptEn,
+	      slogans,
+	    };
   });
 }
 
@@ -873,7 +868,21 @@ function sanitizeNonPosterModeText(text: string, mode: BriefGenerationRequest["c
     .replace(/premium game key art poster/gi, replacement)
     .replace(/poster key visual/gi, replacement)
     .replace(/cinematic key visual/gi, replacement)
-    .replace(/\bKV\b/g, replacement);
+	    .replace(/\bKV\b/g, replacement);
+}
+
+function trimBriefTextAtBoundary(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  const clipped = text.slice(0, maxLength).trimEnd();
+  const boundary = Math.max(
+    clipped.lastIndexOf("\n\n"),
+    clipped.lastIndexOf(". "),
+    clipped.lastIndexOf("。"),
+    clipped.lastIndexOf("; "),
+    clipped.lastIndexOf("；"),
+    clipped.lastIndexOf(" "),
+  );
+  return (boundary > maxLength * 0.72 ? clipped.slice(0, boundary + 1) : clipped).trimEnd();
 }
 
 function normalizeModeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, request: BriefGenerationRequest) {
@@ -910,14 +919,14 @@ function normalizeModeSchemes(parsed: z.infer<typeof BriefCompletionSchema>, req
             return normalized ? [[language, normalized] as const] : [];
           }),
       );
-    return {
-      title,
-      brief: `${qualityLock.brief}\n${brief}`.slice(0, 1800),
-      prompt: `${qualityLock.prompt}\n\n${prompt}`.slice(0, 12000),
-      promptZh: `${qualityLock.prompt}\n\n${promptZh}`.slice(0, 12000),
-      promptEn: `${qualityLock.prompt}\n\n${promptEn}`.slice(0, 12000),
-      slogans,
-    };
+	    return {
+	      title,
+	      brief: trimBriefTextAtBoundary(`${qualityLock.brief}\n${brief}`, 1800),
+	      prompt: trimBriefTextAtBoundary(`${qualityLock.prompt}\n\n${prompt}`, 18000),
+	      promptZh: trimBriefTextAtBoundary(`${qualityLock.prompt}\n\n${promptZh}`, 18000),
+	      promptEn: trimBriefTextAtBoundary(`${qualityLock.prompt}\n\n${promptEn}`, 18000),
+	      slogans,
+	    };
   });
 }
 
