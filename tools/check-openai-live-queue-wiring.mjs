@@ -5,6 +5,8 @@ import ts from "typescript";
 
 const issues = [];
 const root = process.cwd();
+const MOCK_REFERENCE_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6Xn9s8AAAAASUVORK5CYII=";
 
 function read(filePath) {
   try {
@@ -91,9 +93,16 @@ function withProviderReadyMockAssets(snapshot) {
     assets: snapshot.assets.map((asset) => ({
       ...asset,
       metadata: { ...(asset.metadata || {}), mockAsset: true },
-      previewUrl: `https://cdn.poster-lab.test/openai-live-queue/${asset.id}.png`,
+      previewUrl: MOCK_REFERENCE_DATA_URL,
     })),
   };
+}
+
+function transportBodyValue(body, key) {
+  if (!body) return undefined;
+  if (typeof body.get === "function") return body.get(key);
+  if (typeof body === "object" && !Array.isArray(body)) return body[key];
+  return undefined;
 }
 
 async function runRuntimeCheck() {
@@ -297,7 +306,7 @@ async function runRuntimeCheck() {
     if (capturedRequest?.headers?.Authorization !== "Bearer OPENAI_QUEUE_KEY_TEST_PLACEHOLDER") {
       issues.push("live queue should pass runtime API key only into the injected transport request");
     }
-    if (capturedRequest?.body?.model !== "gpt-image-1" || capturedRequest?.body?.n !== 2) {
+    if (String(transportBodyValue(capturedRequest?.body, "model") || "") !== "gpt-image-1" || Number(transportBodyValue(capturedRequest?.body, "n")) !== 2) {
       issues.push("live queue should resolve symbolic model slots and preserve requested image count");
     }
     if (success.resultCount !== 2 || success.persistedFileCount !== 2) {

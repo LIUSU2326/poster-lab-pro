@@ -51,6 +51,9 @@ for (const token of [
   "Reference pose release",
   "BOSS performance lock",
   "Static scheme action rewrite",
+  "posterFocalHierarchyLock",
+  "posterTextEconomyLock",
+  "posterInWorldBrandTreatmentLock",
   "posterHeroPerformanceScaleLock",
   "posterLogoSingleUseLock",
   "posterSubjectAccessoryStrictnessLock",
@@ -705,7 +708,6 @@ async function runRuntimeCheck() {
             .filter(Boolean)
             .join("\n");
           for (const token of [
-            "高完成度游戏主视觉海报",
             "荒野食材追击战",
             "Target output: 1920x1080",
             "Provider asset constraints",

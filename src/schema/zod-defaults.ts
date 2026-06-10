@@ -8,7 +8,8 @@ import type {
   ProductionMode,
 } from "./zod";
 
-export const defaultProjectName = "New Game Campaign";
+export const defaultProjectName = "";
+const defaultLogoWordmark = "Untitled Logo";
 
 export const modeDefaultOutput: Record<ProductionMode, Omit<OutputSettingsForm, "mode">> = {
   poster: {
@@ -111,7 +112,6 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
     defaultModel: "qwen3.7-max",
     modelSlots: {
       concept: "qwen3.7-max",
-      image: "wan2.7-image-pro",
       styleReference: "qwen3.6-plus",
       compositionReference: "qwen3.6-plus",
     },
@@ -136,8 +136,7 @@ const providerDefaults: Record<ProviderId, { baseUrl: string; defaultModel: stri
 export function createProjectBriefDefaults(mode: ProductionMode = "poster"): ProjectBriefForm {
   return {
     projectName: defaultProjectName,
-    gameDescription:
-      "A game campaign project. Replace this with the actual game's genre, core loop, characters, enemies, setting, and marketing hook before generating schemes.",
+    gameDescription: "",
     focusGuidanceEnabled: false,
     focusGuidance: "",
   };
@@ -197,7 +196,7 @@ export function createModeFormDefaults(mode: ProductionMode = "poster"): ModeFor
     logo: {
       mode: "logo",
       styleTags: [],
-      wordmark: defaultProjectName,
+      wordmark: defaultLogoWordmark,
       solidBackground: true,
       backgroundColor: "#ffffff",
       wordmarkIsPrimarySubject: true,

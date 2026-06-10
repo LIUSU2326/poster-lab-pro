@@ -52,8 +52,8 @@ export const PromptBlockSchema = z.object({
 
 export const ProjectSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1).max(80),
-  description: z.string().min(1).max(2000),
+  name: z.string().max(80),
+  description: z.string().max(2000),
   genre: z.string().max(80).optional(),
   coreSellingPoints: z.array(z.string().min(1).max(120)).max(8).default([]),
   targetAudience: z.string().max(240).optional(),
@@ -132,9 +132,9 @@ export const ResultAssetSchema = z.object({
 });
 
 export const ProjectBriefFormSchema = z.object({
-  projectName: z.string().min(1).max(80),
-  gameDescription: z.string().min(1).max(2000),
-  focusGuidanceEnabled: z.boolean().default(true),
+  projectName: z.string().max(80),
+  gameDescription: z.string().max(2000),
+  focusGuidanceEnabled: z.boolean().default(false),
   focusGuidance: z.string().max(500).optional(),
 });
 

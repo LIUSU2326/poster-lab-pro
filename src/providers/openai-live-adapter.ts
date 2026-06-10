@@ -33,6 +33,11 @@ import {
   providerCapabilityPromptNote,
   providerUsesExtraBodyImageReferences,
 } from "./provider-capability-profiles";
+import {
+  posterFocalHierarchyLock,
+  posterInWorldBrandTreatmentLock,
+  posterTextEconomyLock,
+} from "./poster-kv-architectures";
 
 const OPENAI_PROVIDER_ID = "openai" as const;
 const AIGOCODE_PROVIDER_ID = "aigocode" as const;
@@ -41,6 +46,7 @@ const DEFAULT_OPENAI_BASE_URL = OPENAI_DEFAULT_BASE_URL;
 const DEFAULT_AIGOCODE_BASE_URL = AIGOCODE_DEFAULT_BASE_URL;
 const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
+export const OPENAI_IMAGE_EDITS_PATH = "/images/edits";
 type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "aigocode" | "agnes">;
 
 const OpenAIImageDataSchema = z
@@ -61,7 +67,10 @@ export const OpenAIImageTransportRequestSchema = z.object({
   url: z.string().url(),
   method: z.literal("POST"),
   headers: z.record(z.string(), z.string()),
-  body: z.record(z.string(), z.unknown()),
+  body: z.union([
+    z.record(z.string(), z.unknown()),
+    z.instanceof(FormData),
+  ]),
 });
 
 export const OpenAIImageTransportResponseSchema = z.object({
@@ -70,12 +79,22 @@ export const OpenAIImageTransportResponseSchema = z.object({
   body: z.unknown(),
 });
 
+const OpenAIReferenceImageInputSchema = z.object({
+  image_url: z.string().min(1),
+});
+
 export type OpenAIImageGenerationResponse = z.infer<typeof OpenAIImageGenerationResponseSchema>;
+export type OpenAIReferenceImageInput = z.infer<typeof OpenAIReferenceImageInputSchema>;
 export type OpenAIImageTransportRequest = z.infer<typeof OpenAIImageTransportRequestSchema>;
 export type OpenAIImageTransportResponse = z.infer<typeof OpenAIImageTransportResponseSchema>;
 export type OpenAIImageTransport = (
   request: OpenAIImageTransportRequest,
 ) => Promise<OpenAIImageTransportResponse>;
+type OpenAIImageRequestPayload = {
+  path: string;
+  headers: Record<string, string>;
+  body: OpenAIImageTransportRequest["body"];
+};
 
 export type OpenAILiveImageAdapterOptions = {
   providerId?: OpenAICompatibleImageProviderId;
@@ -178,9 +197,12 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
     case "poster":
     default:
       return [
-        "Quality bar: premium game campaign key visual polish adapted to the active art style.",
-        "Use cinematic lighting, layered foreground/midground/background depth, refined material detail, crisp focal hierarchy, polished color grading, and campaign-ready logo/slogan safe areas.",
-        "Poster integrated KV style lock: generate a stylized illustrated game world matching the uploaded character art direction by description. Use rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, project-specific terrain, expressive character acting, and a clear hero-vs-BOSS story moment. Use the full requested canvas as artwork. Do not use photorealistic product macro photography, realistic unrelated 3D render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames.",
+      "Quality bar: premium game campaign key visual polish adapted to the active art style.",
+      "Use cinematic lighting, layered foreground/midground/background depth, refined material detail, crisp focal hierarchy, polished color grading, and campaign-ready logo/slogan safe areas.",
+      posterFocalHierarchyLock(),
+      posterTextEconomyLock(),
+      posterInWorldBrandTreatmentLock(),
+      "Poster integrated KV style lock: generate a stylized illustrated game world matching the uploaded character art direction by description. Use rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, project-specific terrain, expressive character acting, and a clear trailer-moment story beat with objective pressure or BOSS threat. Use the full requested canvas as artwork. Do not use photorealistic product macro photography, realistic unrelated 3D render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames.",
       ].join(" ");
   }
 }
@@ -249,13 +271,17 @@ function compressedProviderPriorityInstruction(
         ? "LOW TEXT RELIABILITY LOCK: this provider is not reliable for spelling. Do NOT render readable words, pseudo-letters, warped logo text, title text, slogan text, or glyph-like strokes. Use large polished blank in-world logo/slogan plates only, with clean empty surfaces for later copy."
         : "",
       "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+      posterFocalHierarchyLock(),
+      posterTextEconomyLock(),
+      posterInWorldBrandTreatmentLock(),
+      "STRICT TYPOGRAPHY COUNT LOCK: the entire poster may contain at most one typography-bearing campaign zone after the logo is placed. If a slogan is shown on a sign, banner, ribbon, or plate, do not create any other text plate, lower-left/lower-right label, corner badge, decorative subtitle, secondary plaque, blank caption panel, or repeated translation anywhere else.",
       "REFERENCE PANEL BAN: reference images are private model sheets, not picture-in-picture content. Do not place a copied reference image, black-background cutout, side-by-side comparison panel, model-sheet panel, empty black block, or sticker pasted from an uploaded asset anywhere on the final canvas.",
       "STYLE CONSISTENCY LOCK: keep the entire image in one stylized game illustration language. No photorealistic people, no real-world crowd, no spectators, no adult realistic knight, no stock-photo background, no live-action advertising look, and no pasted cartoon stickers over a realistic scene.",
       "EMPTY BACKGROUND BAN: do not render a plain sky, plain gradient, studio backdrop, isolated mascot pose, icon-like character lineup, or empty two-character cutout. The final image must be a full campaign scene.",
       "MINIMUM ENVIRONMENT CHECKLIST: include one readable foreground prop or occluder, one shared ground plane, one midground action touchpoint, one background set-piece from the current project such as portal, base defense, canyon route, town gate, battlefield lane, machine room, fortress, forest path, or objective zone, plus particles, rim light, and contact shadows.",
       "The poster fails if a required anchor is absent, tiny, hidden, duplicated, or replaced by a generic subject.",
       "Hero and BOSS must share the same camera, perspective, lighting, contact shadows, occlusion, particles/VFX, and story action. Do not make a pretty background with small sticker-like subjects.",
-      "Logo/slogan treatment should be integrated as an in-world sign, plaque, banner, smoke/energy stroke, carved/metal relief, hologram, flag, or blank copy-safe plate; no fake text, no garbled words, and no floating PPT-style overlay.",
+      "Logo/slogan treatment should be integrated as one in-world sign, plaque, banner, smoke/energy stroke, carved/metal relief, hologram, flag, or blank copy-safe plate; no fake text, no garbled words, no floating PPT-style overlay, and no second slogan plaque.",
     ].filter(Boolean).join("\n");
   }
 
@@ -641,6 +667,30 @@ function isLocalReferenceUrl(value: string): boolean {
   }
 }
 
+function parseDataUrl(value: string): { mimeType: string; data: string } | null {
+  const match = value.match(/^data:([^;,]+);base64,(.+)$/i);
+  if (!match) return null;
+  return {
+    mimeType: match[1] || "image/png",
+    data: match[2] || "",
+  };
+}
+
+function extensionForImageMimeType(mimeType: string): string {
+  if (/jpe?g/i.test(mimeType)) return "jpg";
+  if (/webp/i.test(mimeType)) return "webp";
+  if (/gif/i.test(mimeType)) return "gif";
+  return "png";
+}
+
+function dataUrlToFile(value: string, name: string): File | null {
+  const parsed = parseDataUrl(value);
+  if (!parsed?.data) return null;
+  const bytes = Buffer.from(parsed.data, "base64");
+  if (bytes.byteLength === 0) return null;
+  return new File([bytes], name, { type: parsed.mimeType });
+}
+
 async function localImageUrlToDataUrl(url: string, fetchImpl: typeof fetch): Promise<string> {
   const response = await fetchImpl(url);
   if (!response.ok) return url;
@@ -653,10 +703,37 @@ async function localImageUrlToDataUrl(url: string, fetchImpl: typeof fetch): Pro
   return `data:${contentType.split(";")[0]};base64,${bytes.toString("base64")}`;
 }
 
+async function imageUrlToFile(url: string, name: string, fetchImpl: typeof fetch): Promise<File | null> {
+  const dataUrl = parseDataUrl(url);
+  if (dataUrl) {
+    return dataUrlToFile(
+      url,
+      `${name}.${extensionForImageMimeType(dataUrl.mimeType)}`,
+    );
+  }
+
+  try {
+    const response = await fetchImpl(url);
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get("content-type") || "image/png";
+    if (!contentType.startsWith("image/")) return null;
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.byteLength === 0) return null;
+    const mimeType = contentType.split(";")[0] || "image/png";
+    return new File([bytes], `${name}.${extensionForImageMimeType(mimeType)}`, { type: mimeType });
+  } catch {
+    return null;
+  }
+}
+
 async function prepareOpenAIImageBodyForTransport(
-  body: Record<string, unknown>,
+  body: OpenAIImageTransportRequest["body"],
   fetchImpl: typeof fetch,
-): Promise<Record<string, unknown>> {
+): Promise<OpenAIImageTransportRequest["body"]> {
+  if (body instanceof FormData) return body;
+
   const extraBody = body.extra_body;
   if (!extraBody || typeof extraBody !== "object" || Array.isArray(extraBody)) return body;
 
@@ -719,12 +796,15 @@ export function createOpenAIHttpTransport(fetchImpl: typeof fetch): OpenAIImageT
   return async (request) => {
     const parsed = OpenAIImageTransportRequestSchema.parse(request);
     const requestBody = await prepareOpenAIImageBodyForTransport(parsed.body, fetchImpl);
+    const isMultipart = requestBody instanceof FormData;
     let response: Response;
     try {
       response = await fetchImpl(parsed.url, {
         method: parsed.method,
-        headers: parsed.headers,
-        body: JSON.stringify(requestBody),
+        headers: isMultipart
+          ? Object.fromEntries(Object.entries(parsed.headers).filter(([key]) => key.toLowerCase() !== "content-type"))
+          : parsed.headers,
+        body: isMultipart ? requestBody : JSON.stringify(requestBody),
       });
     } catch (error) {
       return OpenAIImageTransportResponseSchema.parse({
@@ -774,6 +854,7 @@ function shouldSendRawReferenceAsset(
   asset: ImageGenerationRequest["assets"][number],
 ): boolean {
   if (asset.role === "sourceResult") return true;
+  if (providerId === OPENAI_PROVIDER_ID) return true;
   if (!isIntegratedReferenceAsset(asset)) return false;
   if (providerId === AGNES_PROVIDER_ID && request.context.mode === "poster") {
     const semanticRole = assetSemanticRole(asset);
@@ -795,11 +876,75 @@ async function referenceImageInputs(
   return resolved.filter(Boolean);
 }
 
-async function imageRequestBody(
+class OpenAIReferenceImageError extends Error {
+  constructor(
+    readonly providerId: OpenAICompatibleImageProviderId,
+    readonly expectedCount: number,
+    readonly preparedCount: number,
+  ) {
+    super(`OpenAI reference image intake prepared ${preparedCount}/${expectedCount} reference images.`);
+  }
+}
+
+function referenceImageErrorResult<T>(error: unknown): ProviderResult<T> | null {
+  if (!(error instanceof OpenAIReferenceImageError)) return null;
+  const displayName = providerDisplayName(error.providerId);
+  return {
+    ok: false,
+    error: createProviderError(error.providerId, "invalid_request", error.message, {
+      userMessage: `${displayName} could not read the uploaded reference image files, so generation was stopped instead of silently ignoring the assets. Please re-upload the missing assets or use a provider that can read them.`,
+    }),
+  };
+}
+
+async function referenceImageFiles(
+  providerId: OpenAICompatibleImageProviderId,
+  request: ImageGenerationRequest,
+): Promise<File[]> {
+  const urls = referenceImageUrls(providerId, request).slice(0, 16);
+  const files = await Promise.all(urls.map(async (url, index) =>
+    imageUrlToFile(url, `reference-${index + 1}`, fetch),
+  ));
+  const prepared = files.filter((file): file is File => file !== null);
+  if (prepared.length !== urls.length) {
+    throw new OpenAIReferenceImageError(providerId, urls.length, prepared.length);
+  }
+  return prepared;
+}
+
+function appendOpenAIEditFormField(form: FormData, key: string, value: unknown): void {
+  if (value === undefined || value === null || value === "") return;
+  form.append(key, String(value));
+}
+
+function openAIModelAllowsInputFidelity(model: string): boolean {
+  return !/^gpt-image-2(?:\b|-)/i.test(model.trim());
+}
+
+async function imageRequestPayload(
   providerId: OpenAICompatibleImageProviderId,
   model: string,
   request: ImageGenerationRequest,
-): Promise<Record<string, unknown>> {
+): Promise<OpenAIImageRequestPayload> {
+  if (providerId === OPENAI_PROVIDER_ID && referenceImageUrls(providerId, request).length > 0) {
+    const formData = new FormData();
+    appendOpenAIEditFormField(formData, "model", model);
+    appendOpenAIEditFormField(formData, "prompt", imagePrompt(providerId, request));
+    appendOpenAIEditFormField(formData, "size", imageSize(request));
+    appendOpenAIEditFormField(formData, "n", request.count);
+    if (openAIModelAllowsInputFidelity(model)) {
+      appendOpenAIEditFormField(formData, "input_fidelity", "high");
+    }
+    for (const file of await referenceImageFiles(providerId, request)) {
+      formData.append("image[]", file);
+    }
+    return {
+      path: OPENAI_IMAGE_EDITS_PATH,
+      headers: {},
+      body: formData,
+    };
+  }
+
   const body: Record<string, unknown> = {
     model,
     prompt: imagePrompt(providerId, request),
@@ -820,7 +965,13 @@ async function imageRequestBody(
     }
   }
 
-  return body;
+  return {
+    path: OPENAI_IMAGE_GENERATIONS_PATH,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body,
+  };
 }
 
 export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOptions = {}): GenerationProviderAdapter {
@@ -838,16 +989,24 @@ export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOpti
     if (!options.transport) return unavailableTransportResult(providerId);
 
     const model = imageModel(providerId, parsedRequest, parsedConfig);
+    let payload: OpenAIImageRequestPayload;
+    try {
+      payload = await imageRequestPayload(providerId, model, parsedRequest);
+    } catch (error) {
+      const referenceError = referenceImageErrorResult<ProviderImageResponse>(error);
+      if (referenceError) return referenceError;
+      throw error;
+    }
     const startedAt = now();
     const transportResponse = await options.transport(
       OpenAIImageTransportRequestSchema.parse({
-        url: `${normalizeBaseUrl(providerId, parsedConfig)}${OPENAI_IMAGE_GENERATIONS_PATH}`,
+        url: `${normalizeBaseUrl(providerId, parsedConfig)}${payload.path}`,
         method: "POST",
         headers: {
           Authorization: `Bearer ${(parsedConfig.apiKey || "").trim()}`,
-          "Content-Type": "application/json",
+          ...payload.headers,
         },
-        body: await imageRequestBody(providerId, model, parsedRequest),
+        body: payload.body,
       }),
     );
     const parsedTransportResponse = OpenAIImageTransportResponseSchema.parse(transportResponse);

@@ -18,6 +18,10 @@ export function providerUsesExtraBodyImageReferences(providerId: ProviderId): bo
   return getProviderImageCapabilityProfile(providerId).referenceInput === "extraBodyImage";
 }
 
+export function providerUsesMultipartEditImageReferences(providerId: ProviderId): boolean {
+  return getProviderImageCapabilityProfile(providerId).referenceInput === "multipartEditImages";
+}
+
 export function providerRequiresCopySafeTextFallback(providerId: ProviderId): boolean {
   return getProviderImageCapabilityProfile(providerId).textRendering === "low";
 }
@@ -37,6 +41,8 @@ export function providerCapabilityPromptNote(input: {
 
   if (input.hasReferenceAssets && profile.referenceInput === "extraBodyImage") {
     lines.push("Reference images are supplied as provider image inputs; use them as identity/semantic/brand anchors instead of treating prompt text as the only source.");
+  } else if (input.hasReferenceAssets && profile.referenceInput === "multipartEditImages") {
+    lines.push("Reference images are uploaded as multipart image edit inputs; visual references are binding identity/semantic/brand anchors, not prompt-only hints.");
   } else if (input.hasReferenceAssets && profile.referenceInput === "inlineParts") {
     lines.push("Reference images are supplied as inline visual parts; visual references override loose text guesses about identity, logo, prop, style, and composition.");
   } else if (input.hasReferenceAssets) {

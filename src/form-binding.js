@@ -266,8 +266,8 @@ function aspectRatiosForMode(activeMode) {
 function createProjectBriefDraft(activeMode) {
   const workspaceSnapshot = getRuntimeWorkspaceSnapshot();
   return {
-    projectName: workspaceSnapshot.project.name,
-    gameDescription: activeMode.description,
+    projectName: workspaceSnapshot.project.name || "",
+    gameDescription: workspaceSnapshot.project.description || "",
     focusGuidanceEnabled: false,
     focusGuidance: "",
   };
@@ -723,6 +723,29 @@ function mergeQueuePlanIntoRuntimeSnapshot(queuePlan) {
   setRuntimeWorkspaceSnapshot(snapshot, shouldUseHttpServiceFlow() ? "http" : "static");
 }
 
+function mergeSubmittedProjectBrief(targetSnapshot, submittedSnapshot, modeId) {
+  const nextSnapshot = clone(targetSnapshot);
+  const updatedAt = nowIso();
+  const submittedModeState = submittedSnapshot.modeStates?.find((item) => item.mode === modeId);
+  const targetModeState = nextSnapshot.modeStates?.find((item) => item.mode === modeId);
+  if (submittedSnapshot.project) {
+    nextSnapshot.project = {
+      ...nextSnapshot.project,
+      name: submittedSnapshot.project.name,
+      description: submittedSnapshot.project.description,
+    };
+  }
+  if (targetModeState && submittedModeState?.projectBrief) {
+    targetModeState.projectBrief = clone(submittedModeState.projectBrief);
+    targetModeState.updatedAt = updatedAt;
+  }
+  nextSnapshot.metadata = {
+    ...nextSnapshot.metadata,
+    updatedAt,
+  };
+  return nextSnapshot;
+}
+
 export async function submitGenerationDraft(options = {}) {
   const normalizedOptions = normalizeGenerationOptions(options);
   const snapshot = createBoundWorkspaceSnapshot(normalizedOptions);
@@ -782,7 +805,10 @@ export async function submitGenerationDraft(options = {}) {
           })
         : await runStaticGenerationServiceFlow(submission);
       if (serviceFlow.workspaceReload?.ok && serviceFlow.workspaceReload.data?.snapshot) {
-        setRuntimeWorkspaceSnapshot(serviceFlow.workspaceReload.data.snapshot, serviceFlow.transport || "http");
+        setRuntimeWorkspaceSnapshot(
+          mergeSubmittedProjectBrief(serviceFlow.workspaceReload.data.snapshot, snapshot, activeMode.id),
+          serviceFlow.transport || "http",
+        );
       }
       state.submission = {
         ...submission,

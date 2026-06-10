@@ -58,7 +58,6 @@ export type PosterAssetOverlayProcessing = {
   strategy: "uploadedAssetOverlay";
   attemptedAssetIds: string[];
   applied: AppliedPosterAssetOverlay[];
-  sloganApplied?: boolean;
   tokenCost: 0;
 };
 
@@ -1062,85 +1061,21 @@ function createCinematicVfxBridgeOverlay(input: {
   return Buffer.from(svg);
 }
 
-function splitSloganLines(slogan: string): string[] {
-  const normalized = slogan.replace(/\s+/g, " ").trim();
-  if (!normalized) return [];
-  const words = normalized.split(" ");
-  const lines: string[] = [];
-  let current = "";
-  const target = normalized.length > 34 ? 21 : 18;
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length > target && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = next;
-    }
-  }
-  if (current) lines.push(current);
-  return lines.slice(0, 3);
-}
-
-function createSloganBanner(input: {
-  slogan: string;
-  canvasWidth: number;
-  canvasHeight: number;
-}): { input: Buffer; left: number; top: number; width: number; height: number } | null {
-  const lines = splitSloganLines(input.slogan);
-  if (lines.length === 0) return null;
-
-  const width = clampInteger(input.canvasWidth * 0.32, 320, input.canvasWidth * 0.42);
-  const height = clampInteger(input.canvasHeight * (lines.length > 2 ? 0.16 : 0.13), 96, input.canvasHeight * 0.2);
-  const left = clampInteger(input.canvasWidth - width - input.canvasWidth * 0.055, 0, input.canvasWidth - width);
-  const top = clampInteger(input.canvasHeight - height - input.canvasHeight * 0.075, 0, input.canvasHeight - height);
-  const fontSize = clampInteger(height / (lines.length + 1.2), 24, 54);
-  const lineHeight = Math.round(fontSize * 1.05);
-  const textTop = Math.round((height - lineHeight * lines.length) / 2 + fontSize * 0.78);
-  const textSpans = lines.map((line, index) => `
-    <text x="${width / 2}" y="${textTop + index * lineHeight}" text-anchor="middle"
-      font-family="Arial Rounded MT Bold, Avenir Next Heavy, Helvetica, sans-serif"
-      font-size="${fontSize}" font-weight="900" letter-spacing="0"
-      fill="#ffe56d" stroke="#4f2614" stroke-width="${Math.max(4, fontSize * 0.12)}" paint-order="stroke fill">
-      ${escapeSvgText(line)}
-    </text>
-  `).join("");
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="bannerShadow" x="-20%" y="-30%" width="140%" height="170%">
-          <feDropShadow dx="0" dy="${Math.max(8, height * 0.08)}" stdDeviation="${Math.max(5, height * 0.06)}" flood-color="#1b120d" flood-opacity="0.38"/>
-        </filter>
-        <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#fff4c7"/>
-          <stop offset="0.52" stop-color="#ffd980"/>
-          <stop offset="1" stop-color="#e09c48"/>
-        </linearGradient>
-      </defs>
-      <path d="M${width * 0.07} ${height * 0.18} C${width * 0.24} ${height * 0.04},${width * 0.76} ${height * 0.04},${width * 0.93} ${height * 0.18} L${width * 0.88} ${height * 0.86} C${width * 0.7} ${height * 0.96},${width * 0.3} ${height * 0.96},${width * 0.12} ${height * 0.86} Z"
-        fill="url(#paper)" stroke="#6e3519" stroke-width="${Math.max(5, height * 0.045)}" filter="url(#bannerShadow)"/>
-      ${textSpans}
-    </svg>
-  `;
-  return { input: Buffer.from(svg), left, top, width, height };
-}
-
 export async function applyPosterAssetOverlays(input: {
   dataUrl: string | null;
   width: number;
   height: number;
   assets: PosterAssetOverlayInputAsset[];
-  slogan?: string | null;
   fetchImpl?: typeof fetch;
 }): Promise<PosterAssetOverlayResult> {
   const attemptedAssetIds = input.assets.map((asset) => asset.id);
   const base = input.dataUrl ? decodeDataUrl(input.dataUrl) : null;
-  if (!base || (input.assets.length === 0 && !input.slogan)) {
+  if (!base || input.assets.length === 0) {
     return {
       dataUrl: input.dataUrl,
       overlays: [],
       processing: attemptedAssetIds.length > 0
-        ? { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: [], sloganApplied: false, tokenCost: 0 }
+        ? { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: [], tokenCost: 0 }
         : null,
     };
   }
@@ -1329,18 +1264,6 @@ export async function applyPosterAssetOverlays(input: {
     top: 0,
   });
 
-  const sloganBanner = input.slogan ? createSloganBanner({
-    slogan: input.slogan,
-    canvasWidth: input.width,
-    canvasHeight: input.height,
-  }) : null;
-  if (sloganBanner) {
-    composites.push({
-      input: sloganBanner.input,
-      left: sloganBanner.left,
-      top: sloganBanner.top,
-    });
-  }
   composites.push({
     input: createForegroundDepthOverlay({
       canvasWidth: input.width,
@@ -1362,7 +1285,7 @@ export async function applyPosterAssetOverlays(input: {
     return {
       dataUrl: input.dataUrl,
       overlays,
-      processing: { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: overlays, sloganApplied: false, tokenCost: 0 },
+      processing: { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: overlays, tokenCost: 0 },
     };
   }
 
@@ -1387,7 +1310,7 @@ export async function applyPosterAssetOverlays(input: {
     return {
       dataUrl: `data:image/png;base64,${composited.toString("base64")}`,
       overlays,
-      processing: { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: overlays, sloganApplied: Boolean(sloganBanner), tokenCost: 0 },
+      processing: { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: overlays, tokenCost: 0 },
     };
   } catch (error) {
     if (process.env.POSTER_LAB_DEBUG_OVERLAY === "1") {
@@ -1396,7 +1319,7 @@ export async function applyPosterAssetOverlays(input: {
     return {
       dataUrl: input.dataUrl,
       overlays: [],
-      processing: { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: [], sloganApplied: false, tokenCost: 0 },
+      processing: { strategy: "uploadedAssetOverlay", attemptedAssetIds, applied: [], tokenCost: 0 },
     };
   }
 }

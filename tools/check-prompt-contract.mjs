@@ -14,6 +14,7 @@ function read(path) {
 const contracts = read("src/prompts/contracts.ts");
 const guardrails = read("src/prompts/guardrails.ts");
 const builder = read("src/prompts/builder.ts");
+const posterArchitectures = read("src/providers/poster-kv-architectures.ts");
 const logoTextPolicy = read("src/prompts/logo-text-policy.ts");
 const modeSafetyPolicy = read("src/prompts/mode-safety-policy.ts");
 const sloganPolicy = read("src/prompts/slogan-policy.ts");
@@ -72,6 +73,12 @@ for (const token of [
   "Reference pose release",
   "BOSS performance lock",
   "static standee staging",
+  "posterFocalHierarchyLock",
+  "posterTextEconomyLock",
+  "posterInWorldBrandTreatmentLock",
+  "Focal hierarchy lock",
+  "Text economy lock",
+  "In-world brand treatment lock",
   "posterHeroPerformanceScaleLock",
   "posterLogoSingleUseLock",
   "posterSubjectAccessoryStrictnessLock",
@@ -81,6 +88,7 @@ for (const token of [
   "polished blank partner brand plate",
   "look-alike words",
   "Slogan mode is active",
+  "Single-use typography",
   "integratedSloganTreatmentRule",
   "formatModeTypographyDirection",
   "formatModeQualityDirection",
@@ -116,7 +124,7 @@ for (const token of [
   "mode !== \"logo\"",
   "asset.role === \"prop\" && assetSemanticRole(asset) === \"antagonist\"",
 ]) {
-  if (!builder.includes(token) && !sloganPolicy.includes(token) && !logoTextPolicy.includes(token) && !modeSafetyPolicy.includes(token)) {
+  if (!builder.includes(token) && !posterArchitectures.includes(token) && !sloganPolicy.includes(token) && !logoTextPolicy.includes(token) && !modeSafetyPolicy.includes(token)) {
     issues.push(`builder.ts: missing ${token}`);
   }
 }

@@ -1,6 +1,7 @@
 import { enums } from "./models.js";
 
-const defaultProjectName = "New Game Campaign";
+const defaultProjectName = "";
+const defaultLogoWordmark = "Untitled Logo";
 
 export const modeDefaultOutput = {
   poster: {
@@ -98,7 +99,6 @@ const providerDefaults = {
     defaultModel: "qwen3.7-max",
     modelSlots: {
       concept: "qwen3.7-max",
-      image: "wan2.7-image-pro",
       styleReference: "qwen3.6-plus",
       compositionReference: "qwen3.6-plus",
     },
@@ -123,8 +123,7 @@ const providerDefaults = {
 export function createProjectBriefDefaults(mode = "poster") {
   return {
     projectName: defaultProjectName,
-    gameDescription:
-      "A game campaign project. Replace this with the actual game's genre, core loop, characters, enemies, setting, and marketing hook before generating schemes.",
+    gameDescription: "",
     focusGuidanceEnabled: false,
     focusGuidance: "",
   };
@@ -195,7 +194,7 @@ export function createModeFormDefaults(mode = "poster") {
     },
     logo: {
       ...common,
-      wordmark: defaultProjectName,
+      wordmark: defaultLogoWordmark,
       solidBackground: true,
       backgroundColor: "#ffffff",
       wordmarkIsPrimarySubject: true,

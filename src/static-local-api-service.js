@@ -244,6 +244,10 @@ function posterCinematicKvQualityDirective() {
     "VFX and particles: add layered project-specific particles that serve the story: dust, sparks, embers, smoke, debris, magic trails, tech fragments, motion arcs, shockwave rings, weather, atmospheric haze, and depth-of-field separation.",
     "Story beat: capture a decisive second from the current game's trailer: breach, ambush, rescue, counterattack, boss takedown, portal opening, base defense, route push, discovery, upgrade, or objective pressure erupting into action.",
     "Character performance: uploaded heroes must show readable emotion, weight, line of action, gesture, and contact with the scene. At least one hero must interact physically with the BOSS or set piece.",
+    posterFocalHierarchyLock(),
+    posterKvArchitectureDiversityRequirement(),
+    posterTextEconomyLock(),
+    posterInWorldBrandTreatmentLock(),
     posterIdentitySafeMotionRule(),
     posterHeroPerformanceScaleLock(),
     posterSubjectAccessoryStrictnessLock(),
@@ -255,15 +259,31 @@ function posterIdentitySafeMotionRule() {
 }
 
 function posterHeroPerformanceScaleLock() {
-  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 18-32% of canvas height, with readable face, emotion, body language, and signature prop/tool; it must be in the foreground or strong midground, physically interacting with the BOSS or set piece, and must not be tiny, hidden, back-facing, or visually subordinate to the logo, slogan, BOSS, or background.";
+  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 24-38% of canvas height or equivalent foreground/midground visual weight, with readable face, emotion, body language, and signature prop/tool; it must be staged before logo/slogan placement, physically interacting with the BOSS or set piece, and must not be tiny, hidden, back-facing, cropped into insignificance, or visually subordinate to the logo, slogan, BOSS, or background.";
 }
 
 function posterLogoSingleUseLock() {
-  return "Logo single-use lock: when a brandLogo/gameLogo reference is present, render exactly one campaign logo treatment. A storefront sign, title plaque, carved board, neon sign, flag, UI emblem, or corner lockup all count as the one logo treatment; do not repeat the uploaded logo again as a second shop sign, badge, watermark, tiny duplicate, or alternate title.";
+  return "Logo single-use lock: when a brandLogo/gameLogo reference is present, render exactly one campaign logo treatment as an in-world brand object or restrained campaign lockup. A storefront sign, title plaque, carved board, neon sign, fire-lit sign, flag, UI emblem, or corner lockup all count as the one logo treatment; do not repeat the uploaded logo again as a second shop sign, badge, watermark, tiny duplicate, floating sticker, or alternate title.";
 }
 
 function posterSubjectAccessoryStrictnessLock() {
   return "Uploaded subject accessory lock: do not give protagonists or BOSS new shields, weapons, armor, tools, facial features, costume parts, horns, crowns, or props just because a scheme mentions them. If that object is not visibly present in the uploaded reference, reinterpret the action through body movement, camera, environment, particles, or existing visible uploaded props only.";
+}
+
+function posterFocalHierarchyLock() {
+  return "Focal hierarchy lock: design the poster around one readable trailer-moment story beat first, then place brand and copy. The protagonist action, mission objective, environmental pressure, or hero-vs-BOSS beat must own the brightest focal contrast and clearest silhouette path; logo and slogan are supporting campaign elements, never the largest or sharpest subject cluster.";
+}
+
+function posterKvArchitectureDiversityRequirement() {
+  return "KV architecture and scenario diversity requirement: across a batch, do not repeat the same hero-vs-BOSS confrontation, location family, mission objective, camera grammar, emotional beat, diagonal split-world, tunnel breach, or side-view battlefield solution. Give each scheme a different scenario family such as chase/escape, base defense, resource raid, discovery/portal reveal, victory payoff, route escort, objective crisis, market/town chaos, training-to-boss contrast, or wilderness expedition.";
+}
+
+function posterTextEconomyLock() {
+  return "Text economy lock: after the logo treatment is placed, allow at most one slogan/copy-bearing campaign zone in the whole poster. Combine logo and slogan into one compact campaign-safe typography zone whenever possible, leaving the rest of the canvas for action, faces, scale, atmosphere, and story. Do not add a second caption zone, lower-left or lower-right label, corner badge, stacked right-side text wall, UI label strip, bottom plaque, duplicate translation, blank extra title plate, or decorative subtitle that steals attention from the character conflict.";
+}
+
+function posterInWorldBrandTreatmentLock() {
+  return "In-world brand treatment lock: logo and slogan should feel physically present in the scene through perspective, material, light, shadow, occlusion, and atmospheric effects, such as a fire-lit sign, carved plaque, neon board, banner, menu board, hologram, smoke ribbon, or title plate. Do not paste flat sticker typography on top of the artwork.";
 }
 
 const providerPromptMaxChars = 18000;
@@ -328,8 +348,9 @@ function integratedSloganPriorityBlock(sloganTargets) {
     sloganTargets,
     "Render the exact slogan text as integrated game-campaign lettering if clean spelling is possible.",
     "scene-derived requirement: the slogan must be tied to this specific scheme's action, prop, BOSS threat, or set-piece material, not a generic caption that could fit any poster.",
-    "Slogan art direction: treat the slogan as a large secondary campaign object, not a small caption under the logo, but never let it become the main focal subject over the hero-vs-BOSS story.",
+    "Slogan art direction: treat the slogan as a large secondary campaign object, not a small caption under the logo, but never let it become the main focal subject over the trailer-moment story beat.",
     "Target presence: the slogan should be big enough for thumbnail reading, roughly 10-16% of canvas height or 18-30% of canvas width, usually 1-2 lines, while preserving a larger readable protagonist performance area.",
+    "Single-use typography: render the slogan/copy treatment exactly once. Do not add a second small subtitle, lower-left or lower-right plaque, bottom plaque, caption, corner badge, watermark, duplicate translation, blank extra title plate, or repeated slogan block anywhere else in the poster.",
     "Scene integration: anchor the lettering to the poster idea through an in-world material or effect such as fire/energy glow, smoke/steam plume, carved board, battle banner, metal sign, hologram, glowing portal rim, impact burst, or foreground prop surface.",
     "Lighting integration: the slogan must receive the same perspective, shadows, rim light, bounce color, texture, haze, and partial VFX/particle overlap as the rest of the scene.",
     "Composition rule: do not stack the slogan as detached PPT-style text directly below the logo and do not let logo+slogan consume the central action space; connect it to the story beat, action path, or environmental set piece while preserving a readable logo-safe area.",
@@ -416,8 +437,11 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     posterIdentitySafeMotionRule(),
     "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
     "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
+    posterFocalHierarchyLock(),
     posterHeroPerformanceScaleLock(),
     posterSubjectAccessoryStrictnessLock(),
+    posterTextEconomyLock(),
+    posterInWorldBrandTreatmentLock(),
     staticSchemeActionRewriteRule(),
     "Do not give uploaded characters new weapons, armor, swords, shields, adult facial structures, noses, beards, mustaches, or costume variants unless those details are clearly present in the reference image.",
     "If the scheme prompt uses placeholders such as [Game Character 1], [Game Character 2], [Boss], or [Game Logo], replace those placeholders with the corresponding uploaded visual references. Do not describe or invent their physical appearance from text.",
@@ -425,7 +449,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     styleRule,
     "The poster must show a concrete story moment: uploaded heroes in action against the uploaded BOSS/key subject, with readable intent, movement, pressure, and environmental reaction.",
-    "Design with cinematic composition, strong depth, dramatic lighting, polished color grading, foreground/midground/background separation, and a clear hero-vs-BOSS focal hierarchy.",
+    "Design with cinematic composition, strong depth, dramatic lighting, polished color grading, foreground/midground/background separation, and a clear trailer-moment focal hierarchy built around protagonist action, objective pressure, environmental pressure, or BOSS threat.",
     "Art-direction checklist for the final render: visible camera/lens/perspective choice, foreground framing, midground action, background reveal, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and in-world logo/typography integration.",
     "Set-piece and action requirement: build a memorable physical campaign location from the current project and connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or impact. Avoid empty pastel sky, generic backdrops, unrelated sample-project scenes, centered mascot-ad layouts, and symmetrical floating heroes.",
     "Subject scale and weight requirement: the uploaded BOSS/key threat must feel physically planted or forcefully airborne with a clear landing/impact path, not a mascot sticker. The uploaded hero must have a readable support surface, grip, impact point, or motion trail with a cast shadow.",
@@ -442,10 +466,14 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     sloganPriorityBlock,
     "Allocate one readable campaign-safe logo treatment when uploaded logo/brand assets are present.",
     posterLogoSingleUseLock(),
+    posterFocalHierarchyLock(),
+    posterTextEconomyLock(),
+    posterInWorldBrandTreatmentLock(),
     "Logo copy safety lock: do not invent look-alike words, substitute letters, or create alternate fake logo text. Use the uploaded logo exactly only when readable, otherwise reserve a polished blank logo-safe treatment.",
     posterHeroPerformanceScaleLock(),
     "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
     posterSubjectAccessoryStrictnessLock(),
+    "Scenario uniqueness lock: do not collapse this render into the default boss-versus-hero standoff if the selected scheme implies chase, discovery, defense, objective crisis, resource raid, route escort, victory payoff, town chaos, or expedition. The location family, camera grammar, mission objective, BOSS role, and emotional beat must match the selected scheme rather than a reused confrontation template.",
     "Subject scale and weight requirement: the uploaded BOSS/key threat must feel physically planted or forcefully airborne with a clear landing/impact path, not a mascot sticker. The uploaded hero must have a readable support surface, grip, impact point, or motion trail with a cast shadow.",
     "Set-piece and action requirement: connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or visible impact.",
     "Placeholder annotation rule: any written appearance, species, clothing, weapon, logo-lettering, color, or anatomy description attached to a placeholder is non-binding unless it is visibly present in the uploaded reference.",

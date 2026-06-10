@@ -48,7 +48,7 @@ for (const token of ["maskApiKey", "redactProviderConfig", "redactProviderConfig
   if (!redaction.includes(token)) issues.push(`redaction.ts: missing ${token}`);
 }
 
-for (const token of ["createMockWorkspaceSnapshot", "createBatchQueuePlan", "summarizeQueue", "redactProviderConfigs"]) {
+for (const token of ["createMockWorkspaceSnapshot", "createBlankWorkspaceSnapshot", "createBatchQueuePlan", "summarizeQueue", "redactProviderConfigs"]) {
   if (!snapshot.includes(token)) issues.push(`mock-snapshot.ts: missing ${token}`);
 }
 

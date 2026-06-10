@@ -40,7 +40,7 @@ function uploadRoots(): string[] {
 
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ path?: string[] }> | { path?: string[] } },
+  context: { params: Promise<{ path?: string[] }> },
 ): Promise<Response> {
   try {
     const params = await context.params;

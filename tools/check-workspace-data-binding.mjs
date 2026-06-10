@@ -50,12 +50,23 @@ if (!bridge.includes("loadWorkspaceSnapshotForWorkbench")) {
 }
 
 for (const [fileName, source, token] of [
-  ["config-panel.js", configPanel, "getWorkspaceProject"],
+  ["config-panel.js", configPanel, "getActiveGenerationFormValues"],
   ["topbar.js", topbar, "getWorkspaceSnapshotSummary"],
   ["workspace-adapters.js", adapters, "getRuntimeWorkspaceSnapshot"],
   ["form-binding.js", binding, "getRuntimeWorkspaceSnapshot"],
 ]) {
   if (!source.includes(token)) issues.push(`${fileName}: missing runtime data binding token ${token}`);
+}
+
+for (const token of ["projectBrief.projectName ?? \"\"", "projectBrief.gameDescription ?? \"\""]) {
+  if (!configPanel.includes(token)) {
+    issues.push(`config-panel.js: project brief fallback should stay blank when fields are empty (${token})`);
+  }
+}
+for (const forbidden of ["Game launch", "New Game Campaign", "Replace this with"]) {
+  if (configPanel.includes(forbidden)) {
+    issues.push(`config-panel.js: should not render legacy default project text (${forbidden})`);
+  }
 }
 
 if (!pkg.includes("workspace-data:check")) {

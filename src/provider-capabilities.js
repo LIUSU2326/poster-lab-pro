@@ -15,7 +15,7 @@ export const providerCapabilities = {
   google: ["briefGeneration", "imageGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   deepseek: ["briefGeneration"],
   claude: ["briefGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
-  qwen: ["briefGeneration", "imageGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
+  qwen: ["briefGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   agnes: ["briefGeneration", "imageGeneration", "imageEdit"],
   mimo: ["briefGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
 };
@@ -51,7 +51,6 @@ export const providerModelSlots = {
   },
   qwen: {
     concept: ["qwen3.7-max", "qwen3.6-max-preview", "qwen3.6-plus", "qwen3.6-flash"],
-    image: ["wan2.7-image-pro", "wan2.7-image", "qwen-image-2.0-pro", "qwen-image-2.0"],
     styleReference: ["qwen3.6-plus", "qwen3.5-flash", "qwen3.5-plus"],
     compositionReference: ["qwen3.6-plus", "qwen3.5-flash", "qwen3.5-plus"],
   },

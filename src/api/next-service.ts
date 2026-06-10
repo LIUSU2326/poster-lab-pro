@@ -11,7 +11,7 @@ import {
 } from "../providers/encrypted-credential-vault";
 import { createProviderConnectionFetchTransport } from "../providers/connection-diagnostics";
 import { createLocalResultFileStore } from "../results";
-import { createJsonFileWorkspaceRepository, createMockWorkspaceSnapshot } from "../storage";
+import { createBlankWorkspaceSnapshot, createJsonFileWorkspaceRepository } from "../storage";
 import {
   createGoogleLiveImageAdapter,
   createMockProviderRegistry,
@@ -245,7 +245,7 @@ function createNextApiSingleton(): NextApiSingleton {
   const runtimeDir = process.env.POSTER_LAB_RUNTIME_DIR || path.join(process.cwd(), "artifacts", "runtime");
   const repository = createJsonFileWorkspaceRepository({
     filePath: path.join(runtimeDir, "workspace-store.json"),
-    seedSnapshots: [createMockWorkspaceSnapshot()],
+    seedSnapshots: [createBlankWorkspaceSnapshot()],
   });
   const resultFileStore = createLocalResultFileStore({
     rootDir: path.join(runtimeDir, "..", "generated-results"),

@@ -33,9 +33,9 @@ const providerModelCatalog = {
     vision: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5", "claude-haiku-4-5-20251001"],
   },
   qwen: {
-    default: ["qwen3.7-max", "qwen3.6-max-preview", "qwen3.6-plus", "qwen3.6-flash", "qwen-image-2.0-pro", "wan2.7-image-pro"],
+    default: ["qwen3.7-max", "qwen3.6-max-preview", "qwen3.6-plus", "qwen3.6-flash"],
     plan: ["qwen3.7-max", "qwen3.6-max-preview", "qwen3.6-plus", "qwen3.6-flash"],
-    image: ["wan2.7-image-pro", "wan2.7-image", "qwen-image-2.0-pro", "qwen-image-2.0", "z-image-turbo"],
+    image: [],
     vision: ["qwen3.6-plus", "qwen3.5-flash", "qwen3.5-plus"],
   },
   agnes: {

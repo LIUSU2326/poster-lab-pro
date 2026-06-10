@@ -7,9 +7,9 @@ const resultOperationLabels = {
   upscale: "高清放大",
   removeBg: "移除背景",
 };
-const imageRenderableSloganMaxChars = 40;
-const imageRenderableSloganMaxWords = 6;
-const imageRenderableCjkSloganMaxChars = 12;
+const imageRenderableSloganMaxChars = 56;
+const imageRenderableSloganMaxWords = 8;
+const imageRenderableCjkSloganMaxChars = 16;
 const posterKvContaminationPattern = /KV构图母版|Mandatory KV Composition Architecture|Cinematic Game KV|电影级游戏(?:海报|主视觉|关键视觉)|Logo\/文案安全区|Slogan处理|BOSS压迫/i;
 
 export const state = {

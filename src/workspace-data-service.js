@@ -61,6 +61,32 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const legacyProjectNamePlaceholder = "New Game Campaign";
+const legacyProjectDescriptionPlaceholder = "A game campaign project. Replace this with the actual game's genre, core loop, characters, enemies, setting, and marketing hook before generating schemes.";
+
+function clearLegacyProjectPlaceholder(value) {
+  const text = String(value ?? "");
+  return text === legacyProjectNamePlaceholder || text === legacyProjectDescriptionPlaceholder ? "" : text;
+}
+
+function normalizeBlankProjectPlaceholders(snapshot) {
+  const project = {
+    ...snapshot.project,
+    name: clearLegacyProjectPlaceholder(snapshot.project?.name),
+    description: clearLegacyProjectPlaceholder(snapshot.project?.description),
+  };
+  const modeStates = (snapshot.modeStates || []).map((modeState) => ({
+    ...modeState,
+    projectBrief: {
+      ...(modeState.projectBrief || {}),
+      projectName: clearLegacyProjectPlaceholder(modeState.projectBrief?.projectName),
+      gameDescription: clearLegacyProjectPlaceholder(modeState.projectBrief?.gameDescription),
+    },
+  }));
+
+  return { project, modeStates };
+}
+
 function dateValue(value) {
   const parsed = Date.parse(value || "");
   return Number.isFinite(parsed) ? parsed : 0;
@@ -114,6 +140,7 @@ function normalizeLoadedWorkspaceState(snapshot) {
     ? { ...snapshot.metadata, sloganDefaultMigration }
     : snapshot.metadata;
   const assets = dedupeFreshSessionAssets(snapshot.assets || []);
+  const blankProjectPlaceholders = normalizeBlankProjectPlaceholders(snapshot);
   const assetIds = new Set(assets.map((asset) => asset.id));
   const gameLogoIds = assets.filter((asset) => asset.role === "gameLogo").map((asset) => asset.id);
   const schemeIds = new Set((snapshot.schemes || []).map((scheme) => scheme.id));
@@ -131,7 +158,7 @@ function normalizeLoadedWorkspaceState(snapshot) {
           : (snapshot.brandKit.logos || []).filter((assetId) => assetIds.has(assetId)),
       }
     : snapshot.brandKit;
-  const modeStates = (snapshot.modeStates || []).map((modeState) => {
+  const modeStates = blankProjectPlaceholders.modeStates.map((modeState) => {
     const nextModeState = {
       ...modeState,
       selectedSchemeIds: (modeState.selectedSchemeIds || []).filter((schemeId) => schemeIds.has(schemeId)),
@@ -154,12 +181,14 @@ function normalizeLoadedWorkspaceState(snapshot) {
     brandKit,
     modeStates,
     metadata,
+    project: blankProjectPlaceholders.project,
   }) !== JSON.stringify({
     assets: snapshot.assets || [],
     characters: snapshot.characters || [],
     brandKit: snapshot.brandKit,
     modeStates: snapshot.modeStates || [],
     metadata: snapshot.metadata,
+    project: snapshot.project,
   });
 
   if (!changed) return { snapshot, changed: false };
@@ -168,6 +197,7 @@ function normalizeLoadedWorkspaceState(snapshot) {
     snapshot: {
       ...snapshot,
       assets,
+      project: blankProjectPlaceholders.project,
       characters,
       brandKit,
       modeStates: modeStates.map((modeState) => ({

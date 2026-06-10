@@ -32,11 +32,16 @@ for (const token of [
   "createOpenAILiveImageAdapter",
   "createOpenAIHttpTransport",
   "OPENAI_IMAGE_GENERATIONS_PATH",
+  "OPENAI_IMAGE_EDITS_PATH",
   "/images/generations",
+  "/images/edits",
   "Authorization",
   "Bearer",
   "b64_json",
   "data:image/png;base64",
+  "multipartEditImages",
+  "OpenAIReferenceImageError",
+  "input_fidelity",
   "modeQualityInstruction",
   "brand-safe typography",
   "no poster scene complexity",
@@ -64,6 +69,11 @@ for (const token of [
   "Provider Capability Adapter Contract",
   "compressedProviderPriorityInstruction",
   "COMPRESSED MODEL PRIORITY CONTRACT",
+  "posterFocalHierarchyLock",
+  "posterTextEconomyLock",
+  "posterInWorldBrandTreatmentLock",
+  "STRICT TYPOGRAPHY COUNT LOCK",
+  "no second slogan plaque",
   "posterCompressedSceneContract",
   "SCHEME-SPECIFIC MANDATORY SCENE",
   "blue-sky grassy hero lineup",
@@ -255,6 +265,94 @@ async function runRuntimeCheck() {
       issues.push("OpenAI adapter should append negative prompt guidance to text prompt");
     }
 
+    const tinyReferenceDataUrl =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/axw6OQAAAAASUVORK5CYII=";
+    let capturedReferenceRequest;
+    const referenceAdapter = providers.createOpenAILiveImageAdapter({
+      transport: async (request) => {
+        capturedReferenceRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            data: [{ b64_json: Buffer.from("reference-image-output").toString("base64") }],
+          },
+        };
+      },
+    });
+    const referenceRequest = providers.ImageGenerationRequestSchema.parse({
+      ...imageRequest,
+      model: "gpt-image-1",
+      assets: [
+        {
+          id: "asset-uploaded-chef",
+          role: "gameCharacter",
+          description: "semanticRole=protagonist; required; providerReady=true",
+          mimeType: "image/png",
+          url: tinyReferenceDataUrl,
+        },
+        {
+          id: "asset-uploaded-style-guide",
+          role: "styleReference",
+          description: "semanticRole=styleReference; providerReady=true",
+          mimeType: "image/png",
+          url: `data:image/png;base64,${Buffer.from("style-guide-reference").toString("base64")}`,
+        },
+      ],
+    });
+    const referenceResult = await referenceAdapter.generateImage(referenceRequest, baseConfig);
+    if (!referenceResult.ok) {
+      issues.push(`OpenAI reference image request should succeed: ${referenceResult.error.code}`);
+    }
+    if (!capturedReferenceRequest?.url.endsWith("/images/edits")) {
+      issues.push("OpenAI requests with uploaded visual references should use /images/edits, not prompt-only generations");
+    }
+    if (!(capturedReferenceRequest?.body instanceof FormData)) {
+      issues.push("OpenAI reference image request should send multipart FormData");
+    } else {
+      const referenceImages = capturedReferenceRequest.body.getAll("image[]");
+      if (referenceImages.length !== 2 || !referenceImages.every((item) => item instanceof File)) {
+        issues.push("OpenAI reference image request should attach uploaded assets, including guide references, as image[] File entries");
+      }
+      if (capturedReferenceRequest.body.get("input_fidelity") !== "high") {
+        issues.push("OpenAI gpt-image-1 reference request should request high input fidelity");
+      }
+      if (capturedReferenceRequest.body.get("prompt") && !String(capturedReferenceRequest.body.get("prompt")).includes("Reference images are uploaded as multipart image edit inputs")) {
+        issues.push("OpenAI reference prompt should describe multipart edit image reference handling");
+      }
+    }
+    if (capturedReferenceRequest?.headers?.["Content-Type"]) {
+      issues.push("OpenAI multipart reference request must not force application/json Content-Type");
+    }
+
+    let capturedGptImage2ReferenceRequest;
+    const gptImage2ReferenceAdapter = providers.createOpenAILiveImageAdapter({
+      transport: async (request) => {
+        capturedGptImage2ReferenceRequest = request;
+        return {
+          ok: true,
+          status: 200,
+          body: { data: [{ b64_json: Buffer.from("gpt-image-2-output").toString("base64") }] },
+        };
+      },
+    });
+    await gptImage2ReferenceAdapter.generateImage(
+      providers.ImageGenerationRequestSchema.parse({
+        ...referenceRequest,
+        model: "gpt-image-2",
+      }),
+      {
+        ...baseConfig,
+        defaultModel: "gpt-image-2",
+      },
+    );
+    if (
+      capturedGptImage2ReferenceRequest?.body instanceof FormData
+      && capturedGptImage2ReferenceRequest.body.has("input_fidelity")
+    ) {
+      issues.push("OpenAI gpt-image-2 reference request must omit unsupported input_fidelity");
+    }
+
     let capturedAigocodeRequest;
     const aigocodeAdapter = providers.createOpenAILiveImageAdapter({
       providerId: "aigocode",
@@ -317,7 +415,7 @@ async function runRuntimeCheck() {
       issues.push(`OpenAI-compatible editImage fallback should succeed: ${editResult.error.code}`);
     }
     if (!String(capturedEditRequest?.body?.prompt || "").includes("Result operation: visual reconstruction / image-to-image refinement")) {
-      issues.push("OpenAI-compatible editImage fallback should include the variation operation instruction");
+      issues.push("OpenAI-compatible editImage fallback should include the image-to-image refinement operation instruction");
     }
 
     let capturedLocalPortRequest;
@@ -460,6 +558,9 @@ async function runRuntimeCheck() {
       || !agnesPrompt.includes("AGNES POSTER REFERENCE INPUT")
       || !agnesPrompt.includes("SELECTED SCHEME ARCHITECTURE LOCK")
       || !agnesPrompt.includes("KV ACTION MINI-BRIEF")
+      || !agnesPrompt.includes("Text economy lock")
+      || !agnesPrompt.includes("STRICT TYPOGRAPHY COUNT LOCK")
+      || !agnesPrompt.includes("no second slogan plaque")
       || !agnesPrompt.includes("REFERENCE PANEL BAN")
       || !agnesPrompt.includes("EMPTY BACKGROUND BAN")
       || !agnesPrompt.includes("MINIMUM ENVIRONMENT CHECKLIST")

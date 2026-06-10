@@ -403,7 +403,7 @@ export async function auditResultQuality(input: {
         code: "poster-slogan-copy-area-review",
         severity: "info",
         message: "Poster has a campaign copy target and needs visible integrated copy treatment or a blank copy-safe plate.",
-        recommendation: "Review that slogan placement is large enough, scene-related, and not PPT-like; rerun if copy is omitted, garbled, or floating as flat overlay text.",
+        recommendation: "Review that there is only one slogan/copy-bearing zone after the logo treatment. Rerun if copy is omitted, garbled, floating as flat overlay text, repeated in a second corner/bottom plaque, or split into multiple competing signboards.",
       }));
     }
   }

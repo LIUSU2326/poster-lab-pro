@@ -27,6 +27,7 @@ import { containsUnredactedSecret, redactProviderConfigs } from "./redaction";
 
 const PROJECT_ID = "project-pizza-kitchen";
 const WORKSPACE_ID = "workspace-pizza-kitchen";
+const BLANK_PROJECT_ID = "project-default";
 const CREATED_AT = "2026-05-21T00:00:00.000Z";
 
 const modes: ProductionMode[] = ["poster", "collab", "announcement", "logo", "icon"];
@@ -66,6 +67,20 @@ function createModeStates() {
       sloganSettings: createSloganSettingsDefaults(),
       modeForm: createModeFormDefaults(mode),
       selectedSchemeIds: [`scheme-${mode}-01`],
+      updatedAt: CREATED_AT,
+    }),
+  );
+}
+
+function createBlankModeStates() {
+  return modes.map((mode) =>
+    WorkspaceModeStateSchema.parse({
+      mode,
+      projectBrief: createProjectBriefDefaults(mode),
+      outputSettings: createOutputSettingsDefaults(mode),
+      sloganSettings: createSloganSettingsDefaults(),
+      modeForm: createModeFormDefaults(mode),
+      selectedSchemeIds: [],
       updatedAt: CREATED_AT,
     }),
   );
@@ -253,6 +268,49 @@ export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {
 
   if (containsUnredactedSecret(snapshot)) {
     throw new Error("Mock workspace snapshot contains an unredacted secret.");
+  }
+
+  return snapshot;
+}
+
+export function createBlankWorkspaceSnapshot(): WorkspaceSnapshot {
+  const projectBrief = createProjectBriefDefaults("poster");
+  const snapshot = WorkspaceSnapshotSchema.parse({
+    version: "workspace.v1",
+    metadata: {
+      workspaceId: WORKSPACE_ID,
+      ownerId: "local-user",
+      backend: "memory",
+      revision: 1,
+      createdAt: CREATED_AT,
+      updatedAt: CREATED_AT,
+    },
+    activeMode: "poster",
+    project: ProjectSchema.parse({
+      id: BLANK_PROJECT_ID,
+      name: projectBrief.projectName,
+      description: projectBrief.gameDescription,
+      genre: "",
+      coreSellingPoints: [],
+      targetAudience: "",
+      brandKitId: null,
+      defaultMode: "poster",
+    }),
+    brandKit: null,
+    characters: [],
+    assets: [],
+    providerConfigs: createProviderSettings(),
+    modeStates: createBlankModeStates(),
+    schemes: [],
+    queuePlans: [],
+    queueSummaries: [],
+    referenceAnalyses: [],
+    results: [],
+    archiveRows: [],
+  });
+
+  if (containsUnredactedSecret(snapshot)) {
+    throw new Error("Blank workspace snapshot contains an unredacted secret.");
   }
 
   return snapshot;

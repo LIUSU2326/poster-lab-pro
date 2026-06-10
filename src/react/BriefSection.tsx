@@ -162,6 +162,7 @@ export function BriefSection({ initialValues, onRequestRender }: BriefSectionPro
         </span>
         <input
           aria-label="项目名称"
+          data-form-field="projectBrief.projectName"
           value={currentValues.projectName}
           onChange={(event) => void update("projectName", event.currentTarget.value)}
         />
@@ -172,6 +173,7 @@ export function BriefSection({ initialValues, onRequestRender }: BriefSectionPro
         <span>项目描述</span>
         <textarea
           aria-label="项目描述"
+          data-form-field="projectBrief.gameDescription"
           value={currentValues.gameDescription}
           onChange={(event) => void update("gameDescription", event.currentTarget.value)}
         />

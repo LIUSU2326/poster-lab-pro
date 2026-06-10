@@ -17,6 +17,7 @@ function read(filePath) {
 
 const fileStore = read("src/results/file-store.ts");
 const descriptor = read("src/results/download-descriptor.ts");
+const imagePostProcessing = read("src/results/image-post-processing.ts");
 const resultsIndex = read("src/results/index.ts");
 const decisions = read("DECISIONS.md");
 const roadmap = read("ROADMAP.md");
@@ -74,6 +75,12 @@ for (const forbidden of ["fetch(", "XMLHttpRequest", "axios", "localStorage", "s
 for (const forbidden of ["readFile", "writeFile"]) {
   if (descriptor.includes(forbidden)) {
     issues.push(`download descriptor must not read/write binary files (${forbidden})`);
+  }
+}
+
+for (const forbidden of ["createSloganBanner", "splitSloganLines", "sloganApplied", "slogan?: string"]) {
+  if (imagePostProcessing.includes(forbidden)) {
+    issues.push(`poster asset overlay must not generate an automatic local slogan plaque (${forbidden})`);
   }
 }
 

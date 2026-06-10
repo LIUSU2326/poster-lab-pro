@@ -46,6 +46,8 @@ for (const token of [
   "poster-logo-safe-treatment-review",
   "poster-slogan-copy-area-review",
   "poster-reference-integration-review",
+  "second corner/bottom plaque",
+  "multiple competing signboards",
   "posterCanvasMetrics",
   "iconLightCornerDarkEdgeContainerRisk",
   "iconVerticalEdgeDarkMarkRatio",

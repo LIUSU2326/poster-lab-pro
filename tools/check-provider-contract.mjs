@@ -50,6 +50,7 @@ for (const token of [
   "ProviderImageReferenceInputSchema",
   "ProviderModelSlotSchema",
   "ProviderPromptProfileSchema",
+  "multipartEditImages",
   "ProviderManifestSchema",
   "BriefGenerationRequestSchema",
   "ImageGenerationRequestSchema",
@@ -76,6 +77,18 @@ for (const token of [
   "resultDelivery",
 ]) {
   if (!manifests.includes(token)) issues.push(`manifests.ts: missing provider image capability token ${token}`);
+}
+if (!manifests.includes('referenceInput: "multipartEditImages"')) {
+  issues.push("manifests.ts: OpenAI should declare multipart image edit references instead of promptOnly");
+}
+const qwenManifestBlock = manifests.match(/qwen: ProviderManifestSchema\.parse\(\{[\s\S]*?\n  \}\),\n  agnes:/)?.[0] || "";
+if (qwenManifestBlock.includes('"imageGeneration"') || qwenManifestBlock.includes("image: [")) {
+  issues.push("manifests.ts: Qwen imageGeneration must stay disabled until a real image adapter is wired");
+}
+const qwenLegacyCapabilities = legacyCapabilities.match(/qwen: \[[^\]]+\]/)?.[0] || "";
+const qwenLegacyModels = legacyCapabilities.match(/qwen: \{[\s\S]*?\n  \}/)?.[0] || "";
+if (qwenLegacyCapabilities.includes("imageGeneration") || qwenLegacyModels.includes("image: [")) {
+  issues.push("provider-capabilities.js: Qwen imageGeneration must stay disabled until a real image adapter is wired");
 }
 
 for (const providerId of ["openai", "aigocode", "google", "claude", "qwen", "mimo"]) {

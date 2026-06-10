@@ -9,7 +9,6 @@ import {
   enums,
   validateModeForm,
   validateOutputSettingsForm,
-  validateProjectBriefForm,
   validateProviderConfigForm,
   validateSloganSettingsForm,
   validateStaticSchemaIntegrity,
@@ -22,7 +21,14 @@ function addCheck(name, validationResult) {
 }
 
 addCheck("static schema integrity", validateStaticSchemaIntegrity({ modeSpecs, providers }));
-addCheck("project brief defaults", validateProjectBriefForm(createProjectBriefDefaults()));
+const projectBriefDefaults = createProjectBriefDefaults();
+addCheck("project brief defaults are blank placeholders", {
+  ok: projectBriefDefaults.projectName === "" && projectBriefDefaults.gameDescription === "",
+  issues: [
+    ...(projectBriefDefaults.projectName === "" ? [] : [{ path: "projectName", message: "Default project name should be blank." }]),
+    ...(projectBriefDefaults.gameDescription === "" ? [] : [{ path: "gameDescription", message: "Default project description should be blank." }]),
+  ],
+});
 addCheck("slogan defaults", validateSloganSettingsForm(createSloganSettingsDefaults()));
 
 for (const mode of enums.productionMode) {

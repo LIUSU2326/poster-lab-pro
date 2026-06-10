@@ -35,7 +35,9 @@ import {
 } from "./provider-capability-profiles";
 import {
   posterCinematicKvQualityDirective,
+  posterFocalHierarchyLock,
   posterHeroPerformanceScaleLock,
+  posterInWorldBrandTreatmentLock,
   posterIdentitySafeMotionRule,
   posterLogoSingleUseLock,
   posterKvArchitectureBriefSlots,
@@ -46,6 +48,7 @@ import {
   posterKvRenderPromptAugmentation,
   posterSchemeBlueprintRequirement,
   posterStaticSchemeLanguageBan,
+  posterTextEconomyLock,
   posterSubjectAccessoryStrictnessLock,
 } from "./poster-kv-architectures";
 import { sanitizePosterSchemeText } from "./poster-scheme-sanitizer";
@@ -269,8 +272,11 @@ function imagePrompt(request: ImageGenerationRequest): string {
         posterIdentitySafeMotionRule(),
         "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
         "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
+        posterFocalHierarchyLock(),
         posterHeroPerformanceScaleLock(),
         posterSubjectAccessoryStrictnessLock(),
+        posterTextEconomyLock(),
+        posterInWorldBrandTreatmentLock(),
         "Static scheme action rewrite: if selected scheme text says a character/BOSS stands, sits, is placed, is located, faces off, or simply presses in from one side, reinterpret that staging into an active trailer moment: sprint, leap, block, parry, swing, brace, slide, climb, land with dust, burst through a doorway/portal, collide with the set piece, or react to impact. Preserve uploaded identity, but do not preserve static standee staging.",
         "Do not give uploaded characters new weapons, armor, swords, shields, adult facial structures, noses, beards, mustaches, or costume variants unless those details are clearly present in the reference image.",
         "Blend the uploaded identities into the scene: environmental color grading, cinematic rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, VFX overlap, and matching brush/line quality must remove any cutout or collage feeling.",
@@ -278,7 +284,10 @@ function imagePrompt(request: ImageGenerationRequest): string {
         "Style fidelity rule: if no explicit style reference is supplied, match the uploaded character art direction as a stylized 2D cartoon game world with rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish.",
         "Do not generate photorealistic product macro photography, realistic unrelated commercial renders, stock-photo backgrounds, or a realistic unrelated 3D product surface unless the user explicitly selected a realistic style or the project asks for it.",
         "Premium KV production rules:",
-        "The poster must feel designed as a game marketing key visual: dramatic background, strong depth, directional light, expressive character acting, BOSS pressure, atmospheric effects, and a clear hero-vs-BOSS story moment.",
+        posterFocalHierarchyLock(),
+        posterTextEconomyLock(),
+        posterInWorldBrandTreatmentLock(),
+        "The poster must feel designed as a game marketing key visual: dramatic background, strong depth, directional light, expressive character acting, BOSS pressure or objective pressure, atmospheric effects, and a clear trailer-moment story beat.",
         "Breathtaking cinematic campaign brief: complex environmental storytelling, foreground elements framing the shot, dynamic character/BOSS interaction, volumetric haze, sparks, energy/magic/tech trails, project-specific debris, rim-light pockets, and premium color grading.",
         "Cinematic escalation must come from the set piece: asymmetrical low-angle or forced-perspective camera, one dominant diagonal action path, practical light source, rim/back light, volumetric beams, dust, smoke, embers, sparks, magic/tech particles, and visible environmental reaction. Never solve quality by redesigning the uploaded characters into different people.",
         "Use a deliberate campaign composition architecture, not a default side-scrolling scene. Favor one of these KV structures when it fits the scheme: dynamic split-world contrast, portal/breach reveal, foreground hero weapon or prop as divider, boss reveal framed by doorway/canyon, comic-panel mission montage, or triumphant hero-on-defeated-boss trophy shot.",
@@ -495,7 +504,7 @@ function posterReferenceMappingInstruction(request: ImageGenerationRequest): str
   if (logos.length > 0) {
     lines.push(
       `Logo mapping: ${logos.map((asset, index) => posterAssetReferenceName(asset, index + 1)).join(", ")} means uploaded logo/brand image(s). Place each once in a campaign-safe area, without redrawing a different wordmark.`,
-      "Do not wrap the logo in an oversized wooden sign or banner unless the scheme specifically asks for that object; keep the logo readable but secondary to the character-vs-BOSS story moment.",
+      "Do not wrap the logo in an oversized wooden sign or banner unless the scheme specifically asks for that object; keep the logo readable but secondary to the trailer-moment story beat.",
     );
   }
 
@@ -970,6 +979,9 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "Every scheme brief must include a concrete shot blueprint: foreground framing, uploaded hero performance, BOSS pressure, world context, logo/copy safe area, and camera angle.",
         "Every scheme brief must include a production design blueprint: camera height/lens feel/perspective, foreground-midground-background layers, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and typography/logo integration.",
         posterSchemeBlueprintRequirement(),
+        posterFocalHierarchyLock(),
+        posterTextEconomyLock(),
+        posterInWorldBrandTreatmentLock(),
         "For every uploaded asset, infer semantic duty from semanticRole, original role, label, and description. Do not write logic as if only gameCharacter, prop, and gameLogo can matter.",
         "Asset duty examples: protagonist assets carry identity/performance; antagonist assets carry threat/scale; brandLogo assets stay readable and scene-integrated; prop assets become used story objects; environment assets guide world design; styleReference controls rendering; compositionReference controls layout only.",
         posterCinematicKvQualityDirective(),
@@ -983,6 +995,8 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-landscape concept unless the assigned slot itself asks for giant-scale pressure.",
         posterKvArchitectureDiversityRequirement(),
         "Use divergent story-composition archetypes across the batch, such as boss encounter, base siege, resource raid, wilderness chase, town defense, portal discovery, victory payoff, caravan expedition, route push, upgrade crisis, or training-to-boss-fight contrast.",
+        "Batch diversity hard lock: each scheme brief must explicitly name a different scenarioFamily, mission objective, location family, camera grammar, BOSS/threat role, and emotional beat. No two schemes may share the same central set-piece or the same 'hero faces BOSS in a fiery tunnel/arena' template.",
+        "If uploaded BOSS assets are present, they may recur for identity continuity, but their story function must change across schemes: attacker, silhouette beyond a portal, route blocker, objective disruptor, aftermath trophy, base-siege pressure, or environmental hazard. Do not repeat the same centered lunging BOSS composition.",
         "Do not default to a simple horizontal scene with heroes standing left and right on a flat surface. Giant-scale scenery can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
         "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",
         "Do not plan duplicate large/small copies of the same uploaded character, BOSS, or logo. Each uploaded visual identity should appear once unless the brief explicitly asks for repeats.",
@@ -990,6 +1004,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "When protagonist/gameCharacter assets are present, visible hero/player characters must come from those uploaded references only. Do not invent extra heroes or generic human mascots.",
         "If only one protagonist/gameCharacter asset is present, plan exactly one playable hero. Do not write squad, team, allies, or multiple heroes unless multiple protagonist assets are listed.",
         "Do not write a scheme where uploaded playable characters are only back-facing, hidden, tiny, or looking away. Their faces, expressions, body language, and signature props must be readable in front view, 3/4 front view, or strong profile.",
+        posterFocalHierarchyLock(),
         posterHeroPerformanceScaleLock(),
         posterSubjectAccessoryStrictnessLock(),
         posterStaticSchemeLanguageBan(),
@@ -1001,6 +1016,8 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "For every BOSS/key-subject prompt, include that the [Boss] placeholder preserves the uploaded BOSS silhouette and key identity from its reference, but do not redesign it.",
         "For logo, slogan, or headline text, prefer exact uploaded logo letterforms or custom game-campaign lettering integrated into the scene only when clean spelling is possible. If logo or slogan spelling cannot be preserved, require a polished blank logo/copy-safe sign, title plate, or ribbon in the intended area. Never request fake logo text, look-alike words, silent copy omission, or plain overlay/PPT typography.",
         posterLogoSingleUseLock(),
+        posterTextEconomyLock(),
+        posterInWorldBrandTreatmentLock(),
         imageRenderableSloganRule(targetLanguage),
         "The slogan phrase must be derived from the assigned scheme's story beat, action verb, threat, prop, or set-piece material, so it feels written for that exact KV rather than pasted in later. Avoid generic three-part lists; prefer concrete copy such as a weapon/portal/impact/objective/BOSS-action phrase when those elements define the scheme.",
         integratedSloganTreatmentRule(),
@@ -1021,7 +1038,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
               promptZh: "Chinese image-generation prompt",
               promptEn: "English image-generation prompt",
               slogans: {
-                [targetLanguage]: "scene-derived 2-6 word image-renderable slogan",
+                [targetLanguage]: "scene-derived 3-8 word image-renderable slogan",
               },
             },
         ],

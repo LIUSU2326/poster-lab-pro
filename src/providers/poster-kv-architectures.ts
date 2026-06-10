@@ -253,11 +253,11 @@ export function posterIdentitySafeMotionRule(): string {
 }
 
 export function posterHeroPerformanceScaleLock(): string {
-  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 18-32% of canvas height, with readable face, emotion, body language, and signature prop/tool; it must be in the foreground or strong midground, physically interacting with the BOSS or set piece, and must not be tiny, hidden, back-facing, or visually subordinate to the logo, slogan, BOSS, or background.";
+  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 24-38% of canvas height or equivalent foreground/midground visual weight, with readable face, emotion, body language, and signature prop/tool; it must be staged before logo/slogan placement, physically interacting with the BOSS or set piece, and must not be tiny, hidden, back-facing, cropped into insignificance, or visually subordinate to the logo, slogan, BOSS, or background.";
 }
 
 export function posterLogoSingleUseLock(): string {
-  return "Logo single-use lock: when a brandLogo/gameLogo reference is present, render exactly one campaign logo treatment. A storefront sign, title plaque, carved board, neon sign, flag, UI emblem, or corner lockup all count as the one logo treatment; do not repeat the uploaded logo again as a second shop sign, badge, watermark, tiny duplicate, or alternate title.";
+  return "Logo single-use lock: when a brandLogo/gameLogo reference is present, render exactly one campaign logo treatment as an in-world brand object or restrained campaign lockup. A storefront sign, title plaque, carved board, neon sign, fire-lit sign, flag, UI emblem, or corner lockup all count as the one logo treatment; do not repeat the uploaded logo again as a second shop sign, badge, watermark, tiny duplicate, floating sticker, or alternate title.";
 }
 
 export function posterSubjectAccessoryStrictnessLock(): string {
@@ -273,7 +273,19 @@ export function posterSchemeBlueprintRequirement(): string {
 }
 
 export function posterKvArchitectureDiversityRequirement(): string {
-  return "KV architecture diversity requirement: across a batch, do not repeat the same diagonal split-world or side-view battlefield solution. Use the assigned architecture slot as the visible structural idea, and if a diagonal divider appears it must be an active collision/action path rather than a static line with subjects parked on each side.";
+  return "KV architecture and scenario diversity requirement / KV architecture diversity requirement: across a batch, do not repeat the same hero-vs-BOSS confrontation, location family, mission objective, camera grammar, emotional beat, diagonal split-world, tunnel breach, or side-view battlefield solution. Use the assigned architecture slot as the visible structural idea, and give each scheme a different scenario family such as chase/escape, base defense, resource raid, discovery/portal reveal, victory payoff, route escort, objective crisis, market/town chaos, training-to-boss contrast, or wilderness expedition. If a BOSS asset appears in multiple schemes, vary its role: direct attacker, looming silhouette, route blocker, background threat, aftermath trophy, or environmental pressure source instead of the same central lunge every time. If a diagonal divider appears it must be an active collision/action path rather than a static line with subjects parked on each side.";
+}
+
+export function posterFocalHierarchyLock(): string {
+  return "Focal hierarchy lock: design the poster around one readable trailer-moment story beat first, then place brand and copy. The protagonist action, mission objective, environmental pressure, or hero-vs-BOSS beat must own the brightest focal contrast and clearest silhouette path; logo and slogan are supporting campaign elements, never the largest or sharpest subject cluster.";
+}
+
+export function posterTextEconomyLock(): string {
+  return "Text economy lock: after the logo treatment is placed, allow at most one slogan/copy-bearing campaign zone in the whole poster. Combine logo and slogan into one compact campaign-safe typography zone whenever possible, leaving the rest of the canvas for action, faces, scale, atmosphere, and story. Do not add a second caption zone, lower-left or lower-right label, corner badge, stacked right-side text wall, UI label strip, bottom plaque, duplicate translation, blank extra title plate, or decorative subtitle that steals attention from the character conflict.";
+}
+
+export function posterInWorldBrandTreatmentLock(): string {
+  return "In-world brand treatment lock: logo and slogan should feel physically present in the scene through perspective, material, light, shadow, occlusion, and atmospheric effects, such as a fire-lit sign, carved plaque, neon board, banner, menu board, hologram, smoke ribbon, or title plate. Do not paste flat sticker typography on top of the artwork.";
 }
 
 export function posterCinematicKvQualityDirective(): string {
@@ -286,6 +298,9 @@ export function posterCinematicKvQualityDirective(): string {
     "Story beat: make the image capture a decisive second from the current game's trailer: breach, ambush, rescue, counterattack, boss takedown, portal opening, base defense, route push, discovery, upgrade, or objective pressure erupting into action. The viewer should understand what just happened and what will happen next.",
     "Blockbuster escalation: exaggerate the set-piece like launch splash art: giant scale contrast, dramatic foreground prop cropping, visible impact aftermath, environmental damage or transformation, project-specific energy/VFX, and a clear before-after tension inside the same frame.",
     "Character performance: uploaded heroes must show readable emotion, weight, line of action, gesture, and contact with the scene. At least one hero must interact physically with the BOSS or set piece. Avoid floating sticker poses, static front-facing mascot poses, or symmetrical corner jumps.",
+    posterFocalHierarchyLock(),
+    posterTextEconomyLock(),
+    posterInWorldBrandTreatmentLock(),
     "Contact and occlusion audit: every hero/BOSS foot, hand, weapon, or body part that touches a surface must create contact shadow, cast shadow, small occlusion, bounce color, and local material reaction. Avoid clean cutout edges floating over props or terrain.",
     "Asset performance: every uploaded visual reference must be assigned a semantic poster duty before rendering: protagonist, antagonist, brand logo, prop, environment, style reference, composition reference, key subject, or supporting asset. The duty determines how it enters the story; do not treat every upload as a flat sticker.",
     posterIdentitySafeMotionRule(),
@@ -314,7 +329,7 @@ export function posterKvArchitectureDirective(input: {
     ? "Use [Boss] as the single dominant antagonist/key creature from the uploaded BOSS reference. Preserve its identity while giving it believable weight, contact, shadow, and scene interaction."
     : "Use the main threat from the project premise as one dominant antagonist/key obstacle.";
   const logoLine = input.assetCounts.logos > 0
-    ? "Allocate one campaign-safe [Game Logo] treatment, readable but secondary to the character-vs-BOSS story. Use the exact uploaded logo only if lettering can stay accurate; otherwise reserve a polished blank logo-safe plate without fake text."
+    ? "Allocate one campaign-safe [Game Logo] treatment, readable but secondary to the trailer-moment story beat. Use the exact uploaded logo only if lettering can stay accurate; otherwise reserve a polished blank logo-safe plate without fake text."
     : "Reserve a clean campaign-safe logo area without inventing a fake logo.";
 
   return [
@@ -334,6 +349,9 @@ export function posterKvArchitectureDirective(input: {
     posterStaticSchemeLanguageBan(),
     posterSchemeBlueprintRequirement(),
     posterKvArchitectureDiversityRequirement(),
+    posterFocalHierarchyLock(),
+    posterTextEconomyLock(),
+    posterInWorldBrandTreatmentLock(),
     "Semantic asset duty lock: do not hard-code only three asset categories. Protagonists carry performance, antagonists carry pressure, logos carry brand readability, props become story triggers, environments shape the set piece, style references shape rendering, and composition references shape layout only.",
     posterLogoSingleUseLock(),
     posterSubjectAccessoryStrictnessLock(),
@@ -345,6 +363,6 @@ export function posterKvArchitectureDirective(input: {
     bossLine,
     logoLine,
     "Composition ban for this render: do not make a simple horizontal product-landscape battlefield, empty mascot poster, centered BOSS with two heroes flying at the corners, or small heroes standing on the left/right. Do not introduce scenery from an unrelated sample project. Any terrain or prop must support the assigned KV architecture with strong perspective, story pressure, foreground framing, and vertical depth.",
-    "Typography rule: avoid long generated sentences inside the image. Prefer the uploaded logo plus either very short custom campaign lettering of 2-4 words or a polished blank ribbon/title plate that can receive final copy later. Never let text become the main visual solution.",
+    "Typography rule: avoid long generated sentences inside the image. Prefer the uploaded logo plus compact custom campaign lettering of 3-8 words or a polished blank ribbon/title plate that can receive final copy later. Never let text become the main visual solution.",
   ].join("\n");
 }

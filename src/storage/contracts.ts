@@ -132,7 +132,7 @@ export const WorkspaceSnapshotSchema = z.object({
 export const WorkspaceSnapshotSummarySchema = z.object({
   workspaceId: z.string().min(1),
   projectId: z.string().min(1),
-  projectName: z.string().min(1),
+  projectName: z.string().max(80),
   activeMode: ProductionModeSchema,
   revision: z.number().int().min(1),
   assetCount: z.number().int().min(0),

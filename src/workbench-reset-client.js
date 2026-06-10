@@ -49,7 +49,7 @@ function validModeForm(modeId, projectName) {
   const form = createModeFormDefaults(modeId);
   if (modeId === "collab") return { ...form, collabBrandName: "合作伙伴" };
   if (modeId === "announcement") return { ...form, announcementTitle: "公告标题" };
-  if (modeId === "logo") return { ...form, wordmark: projectName };
+  if (modeId === "logo") return { ...form, wordmark: projectName || "Untitled Logo" };
   return form;
 }
 
@@ -138,8 +138,8 @@ function applyClearedUiState() {
 function createClearedSnapshot(snapshot) {
   const updatedAt = nowIso();
   const projectId = snapshot.project?.id || "project-new";
-  const projectName = "新项目";
-  const description = "请输入项目描述";
+  const projectName = "";
+  const description = "";
 
   return {
     ...snapshot,

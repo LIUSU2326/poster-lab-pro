@@ -29,8 +29,11 @@ const routes = {
   resultDownload: read("app/api/workspaces/[workspaceId]/results/[resultId]/download/route.ts"),
 };
 
-for (const token of ["createLocalApiService", "createJsonFileWorkspaceRepository", "createMockWorkspaceSnapshot"]) {
+for (const token of ["createLocalApiService", "createJsonFileWorkspaceRepository", "createBlankWorkspaceSnapshot"]) {
   if (!service.includes(token)) issues.push(`next-service.ts: missing ${token}`);
+}
+if (service.includes("seedSnapshots: [createMockWorkspaceSnapshot()]")) {
+  issues.push("next-service.ts: runtime workspace seed should be blank, not the demo mock snapshot");
 }
 for (const token of ["createOpenAIImageFetchTransport", "createGoogleImageFetchTransport", "provider-image-transports"]) {
   if (!service.includes(token)) issues.push(`next-service.ts: missing ${token}`);

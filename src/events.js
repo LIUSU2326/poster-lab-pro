@@ -27,6 +27,14 @@ import {
 const LEFT_PANEL_MIN = 280;
 const LEFT_PANEL_MAX = 520;
 const LEFT_PANEL_COLLAPSE_AT = 236;
+const generationFormSyncActions = new Set([
+  "generate-schemes",
+  "refresh-scheme",
+  "regenerate-result",
+  "submit-generation",
+  "retry-failed-images",
+  "confirm-generation-choice",
+]);
 let globalKeyboardBound = false;
 
 function persistProviderPreferences() {
@@ -157,7 +165,7 @@ export function bindEvents(render) {
   });
 
 	  bindActionControls(render);
-	  bindResultViewerImageCopy(render);
+	  bindResultViewerImageCopy();
 	  bindKeyRevealControls();
 
   bindProviderControls(render);
@@ -190,7 +198,7 @@ function bindProviderKeyForms(root = document) {
   });
 }
 
-function bindResultViewerImageCopy(render) {
+function bindResultViewerImageCopy() {
   document.querySelectorAll("[data-copy-result-image]").forEach((image) => {
     image.addEventListener("contextmenu", async (event) => {
       event.preventDefault();
@@ -198,8 +206,7 @@ function bindResultViewerImageCopy(render) {
       const rawUrl = image.dataset.copyResultImage || image.getAttribute("src") || "";
       if (!rawUrl) return;
 
-      state.resultViewerMessage = "正在复制图片...";
-      render();
+      setResultViewerMessage("正在复制图片...");
 
       try {
         const url = new URL(rawUrl, window.location.href).toString();
@@ -209,21 +216,37 @@ function bindResultViewerImageCopy(render) {
         const mimeType = blob.type || "image/png";
         if (navigator.clipboard?.write && globalThis.ClipboardItem && mimeType.startsWith("image/")) {
           await navigator.clipboard.write([new ClipboardItem({ [mimeType]: blob })]);
-          state.resultViewerMessage = "图片已复制到剪贴板。";
+          setResultViewerMessage("图片已复制到剪贴板。");
         } else if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(url);
-          state.resultViewerMessage = "当前环境不支持复制图片，已复制图片链接。";
+          setResultViewerMessage("当前环境不支持复制图片，已复制图片链接。");
         } else {
           throw new Error("系统剪贴板不可用");
         }
       } catch (error) {
-        state.resultViewerMessage = error instanceof Error
+        setResultViewerMessage(error instanceof Error
           ? `复制失败：${error.message}`
-          : "复制失败，请使用下载结果。";
+          : "复制失败，请使用下载结果。");
       }
-      render();
     });
   });
+}
+
+function setResultViewerMessage(message) {
+  state.resultViewerMessage = message;
+  const count = document.querySelector(".result-viewer-count");
+  if (!count) return;
+  let messageElement = count.querySelector(".result-viewer-message");
+  if (!message) {
+    messageElement?.remove();
+    return;
+  }
+  if (!messageElement) {
+    messageElement = document.createElement("em");
+    messageElement.className = "result-viewer-message";
+    count.append(messageElement);
+  }
+  messageElement.textContent = message;
 }
 
 function bindGlobalKeyboardShortcuts(render) {
@@ -251,10 +274,33 @@ function bindGlobalKeyboardShortcuts(render) {
   });
 }
 
+function formControlValue(control) {
+  if (control instanceof HTMLInputElement && control.type === "checkbox") return control.checked;
+  return control.value;
+}
+
+function isVisibleFormControl(control) {
+  if (!(control instanceof HTMLElement)) return false;
+  return Boolean(control.offsetParent || control.getClientRects().length > 0);
+}
+
+function syncVisibleGenerationFormControls() {
+  const values = new Map();
+  document.querySelectorAll("[data-form-field]").forEach((control) => {
+    const field = control.dataset.formField;
+    if (!field || !isVisibleFormControl(control)) return;
+    values.set(field, formControlValue(control));
+  });
+  values.forEach((value, field) => updateGenerationFormField(field, value));
+}
+
 async function handleActionControl(control, event, render) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   const action = control.dataset.action;
+  if (generationFormSyncActions.has(action)) {
+    syncVisibleGenerationFormControls();
+  }
   if (action === "toggle-theme") state.theme = state.theme === "light" ? "dark" : "light";
   if (action === "toggle-copy") state.copyVisible = !state.copyVisible;
   if (action === "toggle-task-panel") {

@@ -52,7 +52,15 @@ requireTokens("events.js", events, [
   'action === "generate-schemes"',
   'action === "regenerate-result"',
   "runResultOperationForWorkbench",
+  "setResultViewerMessage",
 ]);
+
+const imageCopyHandler = events.match(/function bindResultViewerImageCopy\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction setResultViewerMessage/);
+if (!imageCopyHandler) {
+  issues.push("events.js: image copy handler should update viewer copy state without rebuilding the workbench");
+} else if (imageCopyHandler[0].includes("render(")) {
+  issues.push("events.js: right-click image copy must not call render(), because it rebuilds the large-image viewer during contextmenu");
+}
 
 requireTokens("topbar.js", topbar, [
   'data-action="submit-generation"',

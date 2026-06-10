@@ -27,9 +27,11 @@ export function renderArchiveBoard() {
             <button type="button" data-archive-bulk="last-hour">近 1 小时</button>
             <button type="button" data-archive-bulk="clear">取消选择</button>
           </div>
-          <button class="archive-export-button" type="button" data-action="export-archive-selection" ${selectedCount > 0 ? "" : "disabled"}>导出选择的图片</button>
+          <div class="archive-selection-actions">
+            ${state.archiveExportMessage ? `<span class="archive-export-note" aria-live="polite">${escapeHtml(state.archiveExportMessage)}</span>` : ""}
+            <button class="archive-export-button" type="button" data-action="export-archive-selection" ${selectedCount > 0 ? "" : "disabled"}>导出选择的图片</button>
+          </div>
         </div>
-        ${state.archiveExportMessage ? `<div class="archive-export-note" aria-live="polite">${escapeHtml(state.archiveExportMessage)}</div>` : ""}
         ${archiveRows.length === 0 ? `
           <div class="archive-empty" role="status">
             <strong>暂无归档图片</strong>

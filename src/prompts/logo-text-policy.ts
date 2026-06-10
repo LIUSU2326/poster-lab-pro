@@ -15,6 +15,7 @@ export function logoWordmarkTextRisk(wordmark: string | null | undefined): LogoT
   const normalized = normalizeWordmark(wordmark);
   const lettersAndNumbers = normalized.replace(/[^A-Za-z0-9]/g, "");
   const wordCount = normalized ? normalized.split(/\s+/).length : 0;
+  const isPlaceholderWordmark = /^(untitled logo|project logo|new logo|logo placeholder)$/i.test(normalized);
   const hasNonLatin = /[^\x00-\x7F]/.test(normalized);
   const hasHeavyPunctuation = /[^A-Za-z0-9\s&'’.-]/.test(normalized);
   const complexityScore =
@@ -27,6 +28,7 @@ export function logoWordmarkTextRisk(wordmark: string | null | undefined): LogoT
     normalized.length <= 14 &&
     wordCount <= 2 &&
     lettersAndNumbers.length >= Math.min(3, normalized.length) &&
+    !isPlaceholderWordmark &&
     !hasNonLatin &&
     !hasHeavyPunctuation;
 

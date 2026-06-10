@@ -66,6 +66,7 @@ export {
   providerRequiresCopySafeTextFallback,
   providerUsesExtraBodyImageReferences,
   providerUsesInlineImageReferences,
+  providerUsesMultipartEditImageReferences,
 } from "./provider-capability-profiles";
 export {
   ProviderCredentialRefSchema,
@@ -141,12 +142,14 @@ export {
 } from "./live-smoke-harness";
 export {
   OPENAI_IMAGE_GENERATIONS_PATH,
+  OPENAI_IMAGE_EDITS_PATH,
   OpenAIImageGenerationResponseSchema,
   OpenAIImageTransportRequestSchema,
   OpenAIImageTransportResponseSchema,
   createOpenAIHttpTransport,
   createOpenAILiveImageAdapter,
   type OpenAIImageGenerationResponse,
+  type OpenAIReferenceImageInput,
   type OpenAIImageTransport,
   type OpenAIImageTransportRequest,
   type OpenAIImageTransportResponse,

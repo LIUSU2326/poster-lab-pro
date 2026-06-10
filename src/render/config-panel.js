@@ -3,7 +3,6 @@ import {
   getAssetSlotsForMode,
   getDefaultAssetRoleForMode,
   getProviderRows,
-  getWorkspaceProject,
   getWorkspaceSnapshotSummary,
 } from '../data/workspace-adapters.js';
 import { getActiveGenerationCancelStatus, getBatchSchemeGenerationStatus } from '../data/generation-activity.js';
@@ -91,7 +90,6 @@ export function renderConfigPanel(activeMode) {
     `;
   }
 
-  const project = getWorkspaceProject();
   const snapshotSummary = getWorkspaceSnapshotSummary();
   const copy = getModeCopy(activeMode.id);
   const defaultAssetRole = getDefaultAssetRoleForMode(activeMode.id);
@@ -102,7 +100,7 @@ export function renderConfigPanel(activeMode) {
   const directionSection = getDirectionSectionMeta(activeMode.id);
   const referenceInput = getReferenceInputMeta(activeMode.id);
   const outputSizes = getOutputSizes(activeMode.id, activeMode.outputSizes);
-  const briefDescription = projectBrief.gameDescription || project.description || copy.description;
+  const briefDescription = projectBrief.gameDescription ?? "";
   const generationCapabilityGate = getGenerationCapabilityGate(activeMode.id);
   const capabilityBlocked = !generationCapabilityGate.ok;
   const generationDisabled = batchStatus.active || capabilityBlocked;
@@ -119,10 +117,18 @@ export function renderConfigPanel(activeMode) {
         <span class="brand-mark">PL</span>
         <div>
           <strong>Poster Lab</strong>
-          <small>模型与 Key 在顶部统一配置</small>
+          <small>从创意方案到批量主视觉</small>
         </div>
         <div class="brand-actions" aria-label="工作台操作">
-          <button class="workbench-clear-button" type="button" data-action="clear-workbench" aria-label="清空工作台" title="清空工作台内容，保留 API Key 与模型配置">⌫</button>
+          <button class="workbench-clear-button" type="button" data-action="clear-workbench" aria-label="清空工作台" title="清空工作台内容，保留 API Key 与模型配置">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 7h16"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+              <path d="M6 7l1 13h10l1-13"></path>
+              <path d="M9 7V4h6v3"></path>
+            </svg>
+          </button>
           <button class="panel-collapse-button" type="button" data-action="toggle-left-panel" aria-label="收起左侧配置">收起</button>
         </div>
       </div>
@@ -150,7 +156,7 @@ export function renderConfigPanel(activeMode) {
           ></div>
           <div data-brief-section-fallback>
             <button class="project-chip" type="button">
-              <span>${escapeHtml(projectBrief.projectName || project.name || "Game launch")}</span>
+              <span>${escapeHtml(projectBrief.projectName ?? "")}</span>
             </button>
             <textarea aria-label="项目描述" data-form-field="projectBrief.gameDescription">${escapeHtml(briefDescription)}</textarea>
             ${renderModeBrief(activeMode, form)}

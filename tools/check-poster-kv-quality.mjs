@@ -45,12 +45,13 @@ if (architectureCount < 12) {
 }
 
 for (const token of [
-  "Restaurant defense siege KV",
-  "Wild ingredient chase KV",
-  "Portal discovery adventure KV",
+  "Base defense siege KV",
+  "High-speed pursuit KV",
+  "Portal or breach reveal KV",
   "Victory trophy payoff KV",
-  "Giant-scale pressure micro-adventure KV",
-  "VIP order pressure eruption KV",
+  "Giant-scale pressure KV",
+  "Objective pressure eruption KV",
+  "KV architecture and scenario diversity requirement",
 ]) {
   if (!architectures.includes(token)) issues.push(`poster-kv-architectures.ts: missing architecture ${token}`);
 }
@@ -59,6 +60,9 @@ for (const token of [
   "posterHeroPerformanceScaleLock",
   "posterLogoSingleUseLock",
   "posterSubjectAccessoryStrictnessLock",
+  "posterFocalHierarchyLock",
+  "posterTextEconomyLock",
+  "posterInWorldBrandTreatmentLock",
   "posterStaticSchemeLanguageBan",
   "posterSchemeBlueprintRequirement",
   "posterKvArchitectureDiversityRequirement",
@@ -79,6 +83,9 @@ for (const token of [
     "posterHeroPerformanceScaleLock",
     "posterLogoSingleUseLock",
     "posterSubjectAccessoryStrictnessLock",
+    "posterFocalHierarchyLock",
+    "posterTextEconomyLock",
+    "posterInWorldBrandTreatmentLock",
   ]) {
     if (!source.includes(token)) issues.push(`${file}: missing brief-stage poster quality rule ${token}`);
   }
@@ -90,6 +97,7 @@ for (const token of [
 	    "Icon mode hard lock",
 	    "slogans must be an empty object for icon mode",
 	    "requiredKvArchitectureSlots",
+	    "Batch diversity hard lock",
 	  ]) {
 	    if (!source.includes(token)) issues.push(`${file}: missing mode-aware brief guard token ${token}`);
 	  }
@@ -117,7 +125,11 @@ for (const token of [
   "posterHeroPerformanceScaleLock",
   "posterLogoSingleUseLock",
   "posterSubjectAccessoryStrictnessLock",
+  "posterFocalHierarchyLock",
+  "posterTextEconomyLock",
+  "posterInWorldBrandTreatmentLock",
   "Static scheme action rewrite",
+  "Scenario uniqueness lock",
   "Placeholder annotation rule",
   "Slogan visibility requirement",
 ]) {
@@ -131,6 +143,9 @@ for (const token of [
   "Static scheme language ban",
   "Scheme blueprint requirement",
   "KV architecture diversity requirement",
+  "Focal hierarchy lock",
+  "Text economy lock",
+  "In-world brand treatment lock",
 ]) {
   if (!promptBuilder.includes(token) && !architectures.includes(token)) {
     issues.push(`prompt/architecture layer missing poster QA token ${token}`);
@@ -154,6 +169,9 @@ for (const [file, source] of [
     ["posterHeroPerformanceScaleLock", "Hero performance scale lock"],
     ["posterLogoSingleUseLock", "Logo single-use lock"],
     ["posterSubjectAccessoryStrictnessLock", "Uploaded subject accessory lock"],
+    ["posterFocalHierarchyLock", "Focal hierarchy lock"],
+    ["posterTextEconomyLock", "Text economy lock"],
+    ["posterInWorldBrandTreatmentLock", "In-world brand treatment lock"],
   ]) {
     if (!source.includes(functionToken) && !source.includes(promptToken)) {
       issues.push(`${file}: missing regression token ${functionToken} / ${promptToken}`);

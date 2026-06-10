@@ -36,6 +36,7 @@ export const ProviderImageReferenceInputSchema = z.enum([
   "promptOnly",
   "inlineParts",
   "extraBodyImage",
+  "multipartEditImages",
 ]);
 
 export const ProviderLocalReferenceHandlingSchema = z.enum([

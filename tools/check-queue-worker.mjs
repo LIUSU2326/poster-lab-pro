@@ -162,7 +162,7 @@ async function runRuntimeCheck() {
     const plan = queue.createBatchQueuePlan({
       projectId: baseSnapshot.project.id,
       mode: "poster",
-      providerId: "qwen",
+      providerId: "google",
       schemeIds: ["scheme-poster-01"],
       imagesPerScheme: 1,
       includeImageEdit: false,

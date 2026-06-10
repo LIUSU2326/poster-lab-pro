@@ -86,7 +86,6 @@ function commitSnapshot(snapshot, source = "form") {
 export function getActiveGenerationFormValues(modeIdOverride = "") {
   const snapshot = getRuntimeWorkspaceSnapshot();
   const modeId = modeSpecs[modeIdOverride] ? modeIdOverride : activeModeId();
-  const modeSpec = modeSpecs[modeId] || getActiveMode();
   const modeState = findModeState(snapshot, modeId);
   const modeForm = normalizeRuntimeModeForm({
     ...createModeFormDefaults(modeId),
@@ -99,13 +98,15 @@ export function getActiveGenerationFormValues(modeIdOverride = "") {
     mode: modeId,
   });
 
+  const rawProjectBrief = modeState?.projectBrief || {};
+
   return {
     mode: modeId,
     projectBrief: {
       ...createProjectBriefDefaults(modeId),
-      ...(modeState?.projectBrief || {}),
-      projectName: snapshot.project.name,
-      gameDescription: modeState?.projectBrief?.gameDescription || snapshot.project.description || modeSpec.description,
+      ...rawProjectBrief,
+      projectName: rawProjectBrief.projectName ?? snapshot.project.name ?? "",
+      gameDescription: rawProjectBrief.gameDescription ?? snapshot.project.description ?? "",
     },
     outputSettings,
     sloganSettings: normalizeRuntimeSloganSettings({
@@ -209,8 +210,8 @@ export function replaceGenerationFormField(path, value) {
   modeState.updatedAt = nowIso();
 
   if (path === "projectBrief" && value && typeof value === "object") {
-    snapshot.project.name = value.projectName || snapshot.project.name;
-    snapshot.project.description = value.gameDescription || snapshot.project.description;
+    if ("projectName" in value) snapshot.project.name = value.projectName;
+    if ("gameDescription" in value) snapshot.project.description = value.gameDescription;
   }
   if (path === "providerId") {
     state.provider = String(value || "openai");

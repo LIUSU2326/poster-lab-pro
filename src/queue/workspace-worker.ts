@@ -389,21 +389,17 @@ async function resultFromTaskWithProject(input: {
     targetWidth: input.task.input.width || null,
     targetHeight: input.task.input.height || null,
   });
-	  const overlayAssets = shouldApplyPosterAssetOverlay(input.task) && input.task.mode === "poster" && input.snapshot
-	    ? selectPosterOverlayAssets(input.snapshot)
-	    : [];
-	  const posterSlogan = input.task.mode === "poster" && input.snapshot
-	    ? posterSloganForScheme(input.snapshot, input.task.input.schemeId)
-	    : null;
-	  const overlayed = overlayAssets.length > 0 || posterSlogan
-	    ? await applyPosterAssetOverlays({
-	        dataUrl: prepared.dataUrl,
-	        width: prepared.width,
-	        height: prepared.height,
-	        assets: overlayAssets,
-	        slogan: posterSlogan,
-	      })
-	    : null;
+  const overlayAssets = shouldApplyPosterAssetOverlay(input.task) && input.task.mode === "poster" && input.snapshot
+    ? selectPosterOverlayAssets(input.snapshot)
+    : [];
+  const overlayed = overlayAssets.length > 0
+    ? await applyPosterAssetOverlays({
+        dataUrl: prepared.dataUrl,
+        width: prepared.width,
+        height: prepared.height,
+        assets: overlayAssets,
+      })
+    : null;
   const initialDataUrl = overlayed?.dataUrl || prepared.dataUrl;
   const initialQualityAudit = await auditResultQuality({
     mode: input.task.mode,

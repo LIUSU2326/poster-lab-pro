@@ -22,7 +22,7 @@ export const DatabaseWorkspaceRowSchema = z.object({
   workspaceId: z.string().min(1),
   ownerId: z.string().min(1).nullable().default(null),
   projectId: z.string().min(1),
-  projectName: z.string().min(1),
+  projectName: z.string().max(80),
   activeMode: ProductionModeSchema,
   revision: z.number().int().min(1),
   snapshotJson: z.string().min(1),
