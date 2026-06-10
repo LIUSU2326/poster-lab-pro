@@ -3,7 +3,7 @@ import { workspaceSnapshot as defaultWorkspaceSnapshot } from './data/workspace-
 
 const schemeToneFallbacks = ["forest", "ember", "storm", "violet", "moon", "ice"];
 const resultOperationLabels = {
-  variant: "生成变体",
+  variant: "视觉重构",
   upscale: "高清放大",
   removeBg: "移除背景",
 };
@@ -517,9 +517,9 @@ function adaptRuntimeScheme(activeMode, scheme, snapshot, index) {
   const resultCount = snapshot.results?.filter((result) => result.schemeId === scheme.id).length || 0;
   const targetCount = Math.max(1, modeState?.outputSettings?.imagesPerScheme || 1);
   const status = scheme.status === "rendering" ? "loading" : scheme.status === "archived" ? "ready" : scheme.status;
-  const promptZh = sanitizeSchemePromptForDisplay(findSchemePromptBlock(scheme.promptBlocks, ["中文提示词", "chinese prompt", "prompt zh"]));
+  const promptZh = sanitizeSchemePromptForDisplay(findSchemePromptBlock(scheme.promptBlocks, ["AI 底层渲染指令", "中文提示词", "chinese prompt", "prompt zh"]));
   const promptEn = sanitizeSchemePromptForDisplay(findSchemePromptBlock(scheme.promptBlocks, ["english prompt", "英文提示词", "prompt en"]));
-  const visualBrief = findSchemePromptBlock(scheme.promptBlocks, ["视觉方向", "visual direction"]);
+  const visualBrief = findSchemePromptBlock(scheme.promptBlocks, ["KV 主视觉详细策划", "视觉方向", "visual direction"]);
   const promptText = promptZh || promptEn || scheme.promptBlocks?.map((block) => `${block.title}: ${sanitizeSchemePromptForDisplay(block.text)}`).join("\n") || scheme.brief;
   const selectedLanguage = Array.isArray(modeState?.sloganSettings?.languages) && modeState.sloganSettings.languages.length > 0
     ? modeState.sloganSettings.languages[0]

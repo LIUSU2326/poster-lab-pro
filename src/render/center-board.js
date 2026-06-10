@@ -386,7 +386,7 @@ function renderResultViewer() {
   const ratio = result.width && result.height ? simplifyRatio(result.width, result.height) : "自定义";
   const confirmingDelete = state.resultDeleteConfirmId === result.id;
   const aiActions = [
-    renderResultActionButton(result, "variant", "二次精修"),
+    renderResultActionButton(result, "variant", "视觉重构"),
   ].filter(Boolean).join("");
 
   return `
@@ -432,24 +432,44 @@ function renderResultViewer() {
 
 function defaultResultRefinementPrompt(result, display, scheme) {
   const title = display?.title || scheme?.title || result?.id || "当前图片";
-  return `基于「${title}」做二次精修：保留原有角色、LOGO、构图主关系和画风，提高 KV 级海报质感；加强主光、轮廓光、景深、粒子/VFX、材质细节与前中后景层次；修正文字/伪字、变形、低清、拼贴感和主体比例问题。`;
+  const promptContext = display?.promptEn || display?.promptZh || display?.prompt || "";
+  return [
+    `视觉重构目标：基于「${title}」进行图生图精修，原图是唯一源画面。`,
+    "必须保留：项目题材、角色身份、BOSS/关键主体身份、LOGO/标题牌位置、画风、主构图关系、主体比例、画面尺寸和故事瞬间。",
+    "重点重构：提高游戏 KV 级完成度，强化镜头张力、主光/轮廓光、景深、粒子/VFX、材质细节、前中后景层次、接触阴影、环境反光和整体调色。",
+    "问题修正：修复文字/伪字、变形、低清、拼贴边缘、主体漂浮、光影割裂、重复素材、廉价贴纸感和不自然的局部细节。",
+    "禁止：不要换项目，不要换角色，不要新增无关人物，不要重写世界观，不要生成新的假 LOGO 或乱码文案。",
+    promptContext ? `原始 AI 渲染指令参考：${promptContext.slice(0, 700)}` : "",
+  ].filter(Boolean).join("\n");
 }
 
 function renderResultRefinementPanel(result, display, scheme) {
   const prompt = state.resultRefinementPrompt || defaultResultRefinementPrompt(result, display, scheme);
+  const presets = [
+    "提升整体电影级光影和空气透视，但保持原画风",
+    "修正角色与背景的拼贴感，补足接触阴影和遮挡关系",
+    "清理乱码文字和伪字，只保留可控的 LOGO/标题牌区域",
+    "强化前景遮挡、动势线、粒子/VFX 与主视觉焦点",
+  ];
   return `
-    <aside class="result-refinement-panel" role="dialog" aria-label="二次精修设置">
+    <aside class="result-refinement-panel" role="dialog" aria-label="视觉重构设置" data-legacy-refinement-label="二次精修">
       <div class="result-refinement-head">
-        <strong>二次精修</strong>
-        <button type="button" data-action="cancel-result-refinement" aria-label="关闭二次精修">×</button>
+        <div>
+          <strong>视觉重构</strong>
+          <small>精准实验室精修版</small>
+        </div>
+        <button type="button" data-action="cancel-result-refinement" aria-label="关闭视觉重构">×</button>
       </div>
       <label class="result-refinement-field">
-        <span>精修方向</span>
+        <span>精准重构语义描述</span>
         <textarea data-result-refinement-prompt rows="5">${escapeHtml(prompt)}</textarea>
       </label>
+      <div class="result-refinement-presets" aria-label="快捷精修指令">
+        ${presets.map((item) => `<button type="button" data-refinement-preset="${escapeAttribute(item)}">${escapeHtml(item)}</button>`).join("")}
+      </div>
       <div class="result-refinement-actions">
         <button type="button" data-action="cancel-result-refinement">取消</button>
-        <button type="button" data-action="confirm-result-refinement" data-result-id="${escapeAttribute(result.id)}">开始精修</button>
+        <button type="button" data-action="confirm-result-refinement" data-result-id="${escapeAttribute(result.id)}">提交重构</button>
       </div>
     </aside>
   `;
@@ -771,8 +791,8 @@ function renderVisualBlocks(activeMode, scheme, display) {
 function renderTextBlocks(display) {
   return `
     <div class="scheme-copy-details">
-      ${renderSchemeCopyField("视觉方向", display.brief)}
-      ${renderSchemeCopyField("生图提示词", display.promptZh || display.promptEn || display.prompt)}
+      ${renderSchemeCopyField("KV 主视觉详细策划", display.brief)}
+      ${renderSchemeCopyField("AI 底层渲染指令", display.promptZh || display.promptEn || display.prompt)}
     </div>
   `;
 }

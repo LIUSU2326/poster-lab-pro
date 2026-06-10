@@ -30,7 +30,7 @@ function unsupported(manifest: ProviderManifest, capability: string) {
       manifest.id,
       "unsupported_capability",
       `${manifest.displayName} mock adapter does not support ${capability}.`,
-      { userMessage: "当前 Provider 不支持该能力。请切换模型或供应商。" },
+      { userMessage: "This mock provider does not support the requested capability." },
     ),
   } as const;
 }
@@ -120,7 +120,7 @@ export function createMockProviderAdapter(manifest: ProviderManifest): Generatio
         return {
           ok: false,
           error: createProviderError(manifest.id, "missing_config", `Missing config: ${validation.missing.join(", ")}`, {
-            userMessage: "Provider 配置不完整，无法生成方案。",
+            userMessage: "Provider config is incomplete, so schemes cannot be generated.",
           }),
         };
       }
@@ -132,19 +132,19 @@ export function createMockProviderAdapter(manifest: ProviderManifest): Generatio
           providerId: manifest.id,
           model: config.modelSlots.concept || config.defaultModel || "mock-concept-model",
           schemes: Array.from({ length: parsed.schemeCount }, (_, index) => ({
-            title: `${parsed.projectName}：荒野料理远征海报 ${index + 1}`,
+            title: `${parsed.projectName}: Campaign KV ${index + 1}`,
             brief: [
-              "以厨师小队、巨型食材和餐厅经营目标为主轴，形成适合广告投放的游戏主视觉。",
-              parsed.focusGuidance ? `侧重点：${parsed.focusGuidance}` : "",
+              "Build a premium campaign key visual from the current project's heroes, threat, setting, and core gameplay objective.",
+              parsed.focusGuidance ? `Focus: ${parsed.focusGuidance}` : "",
             ].filter(Boolean).join(" "),
-            prompt: "幻想料理冒险游戏海报，厨师小队携带锅铲和烹饪道具冲向巨型怪物食材，游戏 LOGO 位于上方安全区，明亮高饱和、可爱但有战斗张力，16:9 构图，主体清晰，留出宣传词空间。",
-            promptZh: "幻想料理冒险游戏海报，厨师小队携带锅铲和烹饪道具冲向巨型怪物食材，游戏 LOGO 位于上方安全区，明亮高饱和、可爱但有战斗张力，主体清晰，留出宣传词空间。",
-            promptEn: "Fantasy cooking adventure game poster, a chef squad carrying spatulas and cooking tools charging toward a giant monster ingredient, game logo in the upper safe area, bright saturated colors, cute but action driven, clear 16:9 composition with room for campaign slogan.",
+            prompt: "Premium game campaign key visual based on the current project description and uploaded assets, readable hero-vs-threat story, project-specific setting, integrated logo-safe area, cinematic lighting, clear 16:9 composition, room for campaign slogan.",
+            promptZh: "Premium game campaign key visual based on the current project description and uploaded assets, readable hero-vs-threat story, project-specific setting, integrated logo-safe area, cinematic lighting, clear composition, room for campaign slogan.",
+            promptEn: "Premium game campaign key visual based on the current project description and uploaded assets, readable hero-vs-threat story, project-specific setting, integrated logo-safe area, cinematic lighting, clear 16:9 composition, room for campaign slogan.",
             slogans: Object.fromEntries(parsed.languageTargets.map((language) => [
               language,
               language === "zh-CN"
-                ? "狩猎巨型食材，端上荒野盛宴。"
-                : "Hunt giant ingredients. Serve the wild feast.",
+                ? "Claim the Objective."
+                : "Claim the Objective.",
             ])),
           })),
           usage: { estimatedCost: 0, elapsedMs: 0 },

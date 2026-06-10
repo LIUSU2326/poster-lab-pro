@@ -24,7 +24,7 @@ import {
 	  posterKvArchitectureDiversityRequirement,
 	  posterKvArchitectureSlotSeed,
   posterKvAssetCountsFromAssets,
-  posterKvBriefAugmentation,
+  posterKvRenderPromptAugmentation,
   posterSchemeBlueprintRequirement,
   posterStaticSchemeLanguageBan,
   posterSubjectAccessoryStrictnessLock,
@@ -272,13 +272,15 @@ function buildPosterBriefMessages(request: BriefGenerationRequest) {
         "Each scheme must include title, brief, prompt, promptZh, promptEn, and slogans.",
         "The title field must be written in Simplified Chinese, even when the slogan target language is English, Japanese, or Korean.",
         "promptZh must be a Chinese image-generation prompt. promptEn must be an English image-generation prompt.",
+        "Field separation is mandatory: brief is the user-facing KV main visual plan, with composition, story moment, camera, foreground/midground/background, logo/copy area, and art-direction intent. Do not put meta labels, quality overrides, architecture-template labels, or raw model instructions in brief.",
+        "prompt, promptZh, and promptEn are the AI base render instructions derived from the brief. They may contain provider-neutral quality rules, placeholders, reference-identity locks, typography rules, and negative constraints.",
         "languageTargets contains exactly one target slogan language. Return slogans only for that selected language.",
         "Infer each uploaded asset's semantic poster duty from semanticRole, role, label, and description: protagonist, antagonist, brandLogo, prop, environment, styleReference, compositionReference, keySubject, or supportingAsset.",
         "If multiple assets share semanticRole protagonist/gameCharacter, each one is an independent game character reference. Plan them as separate characters in group compositions when possible; never merge their appearances.",
         "Aim for premium game campaign key visual polish while respecting uploaded or selected art style.",
         "Do not plan duplicate large/small copies of the same uploaded character, BOSS, or logo.",
-        "When protagonist/gameCharacter assets are present, visible hero/player characters must come from those uploaded references only. Do not invent extra chef heroes or generic human mascots.",
-        "If only one protagonist/gameCharacter asset is present, plan exactly one playable hero. Do not write chef squad, team, allies, or multiple heroes unless multiple protagonist assets are listed.",
+        "When protagonist/gameCharacter assets are present, visible hero/player characters must come from those uploaded references only. Do not invent extra heroes, helpers, or generic human mascots.",
+        "If only one protagonist/gameCharacter asset is present, plan exactly one playable hero. Do not write squad, team, allies, or multiple heroes unless multiple protagonist assets are listed.",
         "Do not write a scheme where uploaded playable characters are only back-facing, hidden, tiny, or looking away. Their faces, expressions, body language, and signature props must be readable in front view, 3/4 front view, or strong profile.",
         posterHeroPerformanceScaleLock(),
         posterIdentitySafeMotionRule(),
@@ -289,7 +291,7 @@ function buildPosterBriefMessages(request: BriefGenerationRequest) {
         posterStaticSchemeLanguageBan(),
         "When uploaded character/BOSS/logo assets are present, image prompts must use placeholders such as [Game Character 1], [Game Character 2], [Boss], and [Game Logo] instead of describing hair, face, clothes, gender, skin, colors, or exact logo lettering.",
         "If a placeholder needs a role noun, use generic role language only. Do not attach descriptive appearance clauses to placeholders; the uploaded image reference defines identity and visual details.",
-        "Never ask the image model to add age, beard, mustache, hairstyle changes, costume changes, body-type changes, or generic chef/person redesigns to uploaded characters.",
+        "Never ask the image model to add age, beard, mustache, hairstyle changes, costume changes, body-type changes, or generic person redesigns to uploaded characters.",
         "Each image prompt should describe actions, camera, composition, environment interaction, VFX, lighting, and story tension around those placeholders, and must forbid plain overlay/PPT typography.",
         posterLogoSingleUseLock(),
         "Treat focusGuidance as soft creative emphasis only. It must not override uploaded identity references, assigned KV architecture, story readability, or production-quality composition.",
@@ -314,7 +316,9 @@ function buildPosterBriefMessages(request: BriefGenerationRequest) {
         rules: [
           "Generate NEW random poster schemes for this batch.",
           "Assign the requiredKvArchitectureSlots in order: scheme 1 uses slot 1, scheme 2 uses slot 2, and so on. The slot is mandatory and must be visible in both brief and image prompt.",
-          "Treat focusGuidance as a soft creative lens, not a literal mandatory scene. If it mentions giant pizza, giant food, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the architecture; do not make every scheme a flat pizza-floor battlefield.",
+          "brief must read like KV 主视觉详细策划: describe the scene design, layout, storytelling, camera, background, character/BOSS performance, and logo/copy safe area. Do not write phrases such as KV architecture master, Cinematic Game KV Quality Override, Mandatory KV Composition Architecture Override, movie-grade enhancement, AI render base, negative prompt, or other low-level model command labels in brief.",
+          "prompt/promptZh/promptEn must read like AI 底层渲染指令: convert the brief into concrete image-generation instructions with placeholders, action, camera, lighting, VFX, style, logo/slogan treatment, and exclusions.",
+          "Treat focusGuidance as a soft creative lens, not a literal mandatory scene. If it mentions giant scale, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the architecture; do not make every scheme a flat side-view battlefield.",
           "Every scheme brief must include a concrete shot blueprint: foreground framing, uploaded hero performance, BOSS pressure, world context, logo/copy safe area, and camera angle.",
           "Every scheme brief must include a production design blueprint: camera height/lens feel/perspective, foreground-midground-background layers, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and typography/logo integration.",
           posterSchemeBlueprintRequirement(),
@@ -323,17 +327,17 @@ function buildPosterBriefMessages(request: BriefGenerationRequest) {
           posterLogoSingleUseLock(),
           posterCinematicKvQualityDirective(),
           "Every image prompt must carry that production design forward as explicit image instructions, not as a generic one-sentence scene description.",
-          "Every scheme must stage a memorable physical set piece: restaurant interior, oven portal, cliffs, tunnels, kitchen counter battlefield, doorway breach, market/VIP pressure, or wilderness route. Avoid empty pastel sky, generic food-field backdrop, and centered mascot-ad composition.",
-          "At least one uploaded hero must physically interact with the BOSS or environment: blocking, climbing, striking, sliding, cooking, pulling, defending, or causing visible impact. Do not place heroes as symmetrical floating stickers around a central BOSS.",
+          "Every scheme must stage a memorable physical set piece from the current project: town, base, battlefield, cliffs, tunnels, portal, doorway breach, route, command area, machine room, fortress, settlement, arena, or objective zone. Avoid empty pastel sky, generic backdrop, unrelated sample-project scenery, and centered mascot-ad composition.",
+          "At least one uploaded hero must physically interact with the BOSS or environment: blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or causing visible impact. Do not place heroes as symmetrical floating stickers around a central BOSS.",
           "Every image prompt must include a KV quality self-check: one-second readability, strong thumbnail silhouette, obvious story conflict, layered depth, directional lighting, and no cheap sticker collage.",
           "Each scheme should have one coherent story scene, strong focal hierarchy, layered depth, cinematic lighting, polished color grading, and campaign-ready logo/slogan safe areas.",
-          "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-pizza-landscape concept unless the assigned slot itself asks for giant food terrain.",
+          "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-landscape concept unless the assigned slot itself asks for giant-scale pressure.",
           posterKvArchitectureDiversityRequirement(),
-          "Use divergent story-composition archetypes across the batch, such as boss encounter, kitchen siege, ingredient heist, wilderness chase, restaurant defense, portal discovery, victory feast, caravan expedition, VIP demand versus ingredient hunt, or staff-training-to-boss-fight contrast.",
-          "Do not default to a simple horizontal scene with heroes standing left and right on a pizza surface. Giant food can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
+          "Use divergent story-composition archetypes across the batch, such as boss encounter, base siege, resource raid, wilderness chase, town defense, portal discovery, victory payoff, caravan expedition, route push, upgrade crisis, or training-to-boss-fight contrast.",
+          "Do not default to a simple horizontal scene with heroes standing left and right on a flat surface. Giant-scale scenery can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
           "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",
           "Every scheme title must be concise Simplified Chinese, 6-16 Chinese characters when possible. Do not return English titles such as Comic Panel, Oven Portal, Ambush, or Break In.",
-          "Avoid flat sticker collage, cheap clip-art composition, floating elements, tabletop food wallpaper, random extra mascots, generic replacement characters, and duplicate copies of uploaded assets.",
+          "Avoid flat sticker collage, cheap clip-art composition, floating elements, tabletop wallpaper, unrelated sample-project scenery, random extra mascots, generic replacement characters, and duplicate copies of uploaded assets.",
           "If exactly one protagonist/gameCharacter asset is listed, design around [Game Character 1] as the only playable hero. Multiple-hero language is forbidden in that case.",
           posterHeroPerformanceScaleLock(),
           posterSubjectAccessoryStrictnessLock(),
@@ -342,13 +346,13 @@ function buildPosterBriefMessages(request: BriefGenerationRequest) {
           posterStaticSchemeLanguageBan(),
           "The BOSS prompt must describe a real threat action or physical reaction, not a still mascot pose enlarged beside the scene.",
           "If a scheme uses a split-world divider, the hero must actively cross, block on, slide along, leap from, or collide with that divider; the BOSS must lunge, strike, burst through, or recoil from impact rather than simply stand on the opposite side.",
-          "Never add age shifts, beard/mustache, hairstyle changes, costume changes, body-type changes, or generic chef/person redesigns to uploaded character placeholders.",
+          "Never add age shifts, beard/mustache, hairstyle changes, costume changes, body-type changes, or generic person redesigns to uploaded character placeholders.",
           "For every protagonist/gameCharacter prompt, use placeholders and state that the placeholder preserves the uploaded reference identity/model sheet, without spelling out physical details.",
           "For every antagonist/BOSS/key-subject prompt, use the [Boss] or key-subject placeholder and state that it preserves the uploaded identity from its reference, without redesigning it.",
           "When describing a placeholder's action, do not name a specific uploaded tool, weapon, costume, face, or body feature in text. Say the placeholder uses its uploaded signature prop/tool only if visible in the reference, and let the image reference define what that prop/tool is.",
           "For slogan or headline text, require a visible copy treatment: custom game-campaign lettering integrated into the scene when clean spelling is possible, or a polished blank title plate/ribbon in the copy area if clean spelling cannot be guaranteed. Never silently omit the copy area, never request fake logo text, and never request plain overlay/PPT typography.",
           imageRenderableSloganRule(targetLanguage),
-          "The slogan phrase must be derived from the assigned scheme's story beat, action verb, threat, prop, or set-piece material, so it feels written for that exact KV rather than pasted in later. Avoid generic three-part lists; prefer concrete copy such as a knife/oven/portal/impact/BOSS-action phrase when those elements define the scheme.",
+          "The slogan phrase must be derived from the assigned scheme's story beat, action verb, threat, prop, or set-piece material, so it feels written for that exact KV rather than pasted in later. Avoid generic three-part lists; prefer concrete copy such as a weapon/portal/impact/objective/BOSS-action phrase when those elements define the scheme.",
           integratedSloganTreatmentRule(),
           "If a richer campaign line is needed, put that sentence in brief/prompt only; the slogans field must stay short enough to render cleanly inside one poster image.",
           "Do not assume a logo exists unless an asset with semanticRole brandLogo is present.",
@@ -649,91 +653,70 @@ function parseBriefContent(content: string) {
   return BriefCompletionSchema.parse(coerceBriefCompletion(JSON.parse(fenced || trimmed)));
 }
 
-const posterFallbackBeats = [
+const genericPosterFallbackBeats = [
   {
-    title: "烤炉传送门破门战",
-    action: "主角从厨房烤炉爆发出的传送门前冲刺，Boss 从荒野门洞破入餐厅，二者在飞散的披萨和火花中发生正面碰撞。",
-    camera: "低角度 24mm 广角，前景披萨刀和台面形成冲击线，中景是主角格挡，后景是巨大传送门和 Boss 阴影。",
-    slogan: "SLICE THE BREACH",
+    title: "Hero Breach Clash",
+    action: "The uploaded hero pushes through a dramatic breach while the uploaded boss/key threat erupts from the opposite side, creating a clear collision moment tied to the current game's premise.",
+    camera: "Low-angle 24mm wide shot with a foreground project-specific prop or terrain break, midground hero impact, and background threat reveal.",
+    slogan: "BREAK THE LINE",
   },
   {
-    title: "VIP 订单倒计时防线",
-    action: "VIP 订单倒计时变成场景危机，主角一手护住发光披萨，一手挡下 Boss 的攻击，厨师队友在两侧忙乱防守。",
-    camera: "俯冲式斜角镜头，前景订单牌/计时器作构图框，中景主角和披萨能量，后景厨房烟雾与荒野冷光交叠。",
-    slogan: "SERVE UNDER FIRE",
+    title: "Base Under Siege",
+    action: "The current project's town, base, settlement, squad line, or protected objective is under pressure while the uploaded hero defends against the boss/key threat.",
+    camera: "Wide siege composition with foreground barricade or route marker, midground hero defense, and background enemy pressure with smoke, sparks, and rim light.",
+    slogan: "HOLD THE TOWN",
   },
   {
-    title: "荒野食材追逐",
-    action: "Boss 抢走关键食材逃向荒野，主角和厨师小队从餐厅门口追出，披萨酱、面粉和金币在运动轨迹中飞散。",
-    camera: "横向追逐镜头，前景飞散食材制造速度，中景主角跃过台面，后景荒野道路和巨大 Boss 形成压迫。",
-    slogan: "CHASE THE FLAVOR",
+    title: "Route Push Ambush",
+    action: "The uploaded hero advances along a project-specific road, bridge, battlefield lane, forest path, or tactical route while the boss/key threat ambushes from the route ahead.",
+    camera: "Dynamic chase camera with strong motion path, foreground debris, readable hero action, and the boss blocking the horizon line.",
+    slogan: "PUSH FORWARD",
   },
   {
-    title: "巨物压迫披萨台",
-    action: "餐厅台面像战场一样倾斜，巨型 Boss 的爪子/身体压向前景披萨，主角在台面边缘用厨具武器顶住压力。",
-    camera: "极端近大远小透视，前景巨型披萨和 Boss 肢体，中景小主角剪影，后景厨房灯光和尘埃粒子形成深度。",
-    slogan: "HOLD THE LINE",
+    title: "Giant Threat Pressure",
+    action: "A giant project-specific enemy, machine, structure, spell, or obstacle looms over the uploaded hero, creating forced-perspective scale drama without changing the uploaded identities.",
+    camera: "Extreme near-far perspective with foreground scale cue, midground readable hero, and background oversized threat casting shadow across the scene.",
+    slogan: "FACE THE GIANT",
   },
   {
-    title: "胜利战利品加冕",
-    action: "Boss 被击退后化作稀有食材，主角把胜利披萨高高举起，餐厅与荒野的两种光从左右合并。",
-    camera: "英雄式中心构图，前景散落食材和武器，中景主角举起披萨，后景队友欢呼与 Boss 轮廓倒下。",
-    slogan: "FEAST ON VICTORY",
+    title: "Objective Victory Payoff",
+    action: "The uploaded hero secures a key objective seconds after a hard fight, with the boss/key threat defeated or pushed back and the campaign logo area integrated into the scene.",
+    camera: "Heroic center composition with foreground aftermath, midground hero performance, and background world context that explains the game's core loop.",
+    slogan: "CLAIM THE WIN",
   },
   {
-    title: "餐厅围城防守",
-    action: "厨房窗口、门口和传送门同时被怪物围攻，主角站在服务台前组织厨师队防线，Logo 化作墙上发光招牌。",
-    camera: "宽幅围城构图，前景锅铲/披萨铲形成框景，中景队伍防守，后景多个入侵点和体积烟雾制造规模。",
-    slogan: "DEFEND THE OVEN",
-  },
-  {
-    title: "前景刀光分割双世界",
-    action: "一把巨大的披萨刀/厨刀从前景斜切画面，把暖厨房和冷荒野分成两个世界，主角沿刀光冲向 Boss。",
-    camera: "强斜线构图，前景刀刃高光作视觉路径，中景主角冲刺，后景 Boss 在冷色荒野中回击。",
-    slogan: "CUT THROUGH CHAOS",
-  },
-  {
-    title: "魔法招牌订单爆发",
-    action: "餐厅招牌和宣传词被烤炉火焰点亮，文字区成为场景里的发光牌面，主角在牌面下方释放披萨能量震退 Boss。",
-    camera: "海报式上方招牌 + 下方动作场面，前景蒸汽和火花，中景主角施放能量，后景 Boss 被轮廓光包围。",
-    slogan: "FIRE UP THE QUEST",
+    title: "Portal Discovery",
+    action: "The uploaded hero discovers or activates a project-specific gate, relic, screen, map route, magical opening, or strategic objective while danger appears beyond it.",
+    camera: "Over-the-shoulder discovery shot with glowing reveal, layered depth, readable hero reaction, and the boss/key threat visible beyond the opening.",
+    slogan: "ENTER THE FIGHT",
   },
 ];
 
-function createPosterFallbackScheme(request: BriefGenerationRequest, index: number): BriefScheme {
+function createGenericPosterFallbackScheme(request: BriefGenerationRequest, index: number): BriefScheme {
   const targetLanguage = request.languageTargets[0] || "en-US";
-  const beat = posterFallbackBeats[index % posterFallbackBeats.length]!;
-  const creativeDirection = request.creativeDirection || "";
-  const styleLock = creativeDirection.includes("画风参考")
-    ? "参考上传画风：高可读像素风/游戏插画感、暖厨房与冷荒野对比、金色披萨能量环、深色描边和清晰剪影。"
-    : "保持上传素材的整体游戏美术风格，避免写实摄影感。";
-  const promptZh = [
-    "电影级游戏宣发 KV，统一重绘上传素材，不做贴纸拼贴。",
-    beat.camera,
-    beat.action,
-    "主角保持身份但允许动作、表情、视角变化；Boss 保持关键轮廓但必须有体量、威胁和物理互动。",
-    "Logo 只出现一次，做成场景内招牌、墙面发光标识、木牌或金属浮雕。",
-    "宣传词融入场景牌面、蒸汽、火焰、横幅或招牌；如果不能准确拼写，保留自然空白牌面。",
-    "必须有前中后景、主光/轮廓光、体积烟雾、火花、食材飞溅、接触阴影和运动轨迹。",
-    styleLock,
-  ].join(" ");
-  const promptEn = [
+  const beat = genericPosterFallbackBeats[index % genericPosterFallbackBeats.length]!;
+  const title = `${beat.title} ${index + 1}`;
+  const projectLine = request.gameDescription
+    ? `Project premise: ${request.gameDescription}`
+    : `Project premise: ${request.projectName}`;
+  const prompt = [
     "Cinematic game campaign key visual, redraw uploaded assets as one integrated illustration, no sticker collage.",
+    projectLine,
     beat.camera,
     beat.action,
-    "Keep protagonist identity while changing pose, expression, camera angle, and lighting; keep Boss key silhouette while making it large, threatening, and physically interacting with the scene.",
-    "Use the game logo once as an in-world sign, glowing wall mark, wooden plate, or metal relief.",
-    "Integrate the slogan into an in-world sign, steam, fire, banner, or title plate; if exact spelling is unsafe, leave a natural blank copy-safe plate.",
-    "Foreground-midground-background depth, key/rim light, volumetric haze, sparks, flying ingredients, contact shadows, and motion trails.",
-    styleLock,
+    "Preserve uploaded character, boss, prop, environment, and logo identities while changing only pose, action, camera, lighting, scale, and scene integration.",
+    "Use one campaign-safe logo/copy area. If exact spelling is unsafe, reserve a polished blank title plate or banner instead of fake text.",
+    "Foreground-midground-background depth, key/rim light, atmospheric haze, project-specific particles, debris, contact shadows, and motion trails.",
+    "Do not introduce scenery from an unrelated sample project. Use only the current project description and uploaded assets as the source of truth.",
   ].join(" ");
+
   return {
-    title: beat.title,
-    brief: `${beat.title}：${beat.action} ${beat.camera} Logo/宣传词必须场景化处理，避免角落贴字。`,
-    prompt: promptEn,
-    promptZh,
-    promptEn,
-    slogans: targetLanguage === "zh-CN" ? { [targetLanguage]: beat.title.slice(0, 12) } : { [targetLanguage]: beat.slogan },
+    title,
+    brief: `${title}: ${beat.action} ${beat.camera}`,
+    prompt,
+    promptZh: prompt,
+    promptEn: prompt,
+    slogans: targetLanguage === "zh-CN" ? { [targetLanguage]: title.slice(0, 12) } : { [targetLanguage]: beat.slogan },
   };
 }
 
@@ -766,7 +749,7 @@ function ensureBriefSchemeCount(parsed: z.infer<typeof BriefCompletionSchema>, r
   const schemes = parsed.schemes.slice(0, request.schemeCount);
   for (let index = schemes.length; index < request.schemeCount; index += 1) {
     schemes.push(request.context.mode === "poster"
-      ? createPosterFallbackScheme(request, index)
+      ? createGenericPosterFallbackScheme(request, index)
       : createModeFallbackScheme(request, index));
   }
   return {
@@ -787,8 +770,11 @@ function normalizePosterSchemes(parsed: z.infer<typeof BriefCompletionSchema>, r
     const promptZh = sanitizePosterSchemeText(scheme.promptZh || scheme.prompt) || prompt;
     const promptEn = sanitizePosterSchemeText(scheme.promptEn || scheme.prompt) || prompt;
     const architectureSeed = posterKvArchitectureSlotSeed(seed, index);
-    const architectureBrief = posterKvBriefAugmentation(architectureSeed);
-	    const cinematicBrief = "电影级强化：方案必须具备明确镜头语言、主光/逆光/体积光、粒子/VFX、前中后景纵深、可读角色表演、环境 set-piece 和一个可被理解的故事瞬间。";
+    const renderAugmentation = posterKvRenderPromptAugmentation({
+      seed: architectureSeed,
+      assetCounts,
+      preferredText: [brief, prompt, promptZh, promptEn].join("\n"),
+    });
     const slogans = Object.fromEntries(
       SUPPORTED_SLOGAN_LANGUAGES
         .filter((language) => language === targetLanguage && scheme.slogans[language])
@@ -812,10 +798,10 @@ function normalizePosterSchemes(parsed: z.infer<typeof BriefCompletionSchema>, r
     );
     return {
 	      title,
-	      brief: `${architectureBrief}\n${cinematicBrief}\n${brief}`.slice(0, 1800),
-	      prompt,
-	      promptZh,
-	      promptEn,
+	      brief: trimBriefTextAtBoundary(brief, 1800),
+	      prompt: trimBriefTextAtBoundary(`${renderAugmentation}\n\n${prompt}`, 8000),
+	      promptZh: trimBriefTextAtBoundary(`${renderAugmentation}\n\n${promptZh}`, 8000),
+	      promptEn: trimBriefTextAtBoundary(`${renderAugmentation}\n\n${promptEn}`, 8000),
 	      slogans,
 	    };
   });

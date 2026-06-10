@@ -43,7 +43,7 @@ import {
   posterKvArchitectureDirective,
   posterKvArchitectureSlotSeed,
   posterKvAssetCountsFromAssets,
-  posterKvBriefAugmentation,
+  posterKvRenderPromptAugmentation,
   posterSchemeBlueprintRequirement,
   posterStaticSchemeLanguageBan,
   posterSubjectAccessoryStrictnessLock,
@@ -275,21 +275,21 @@ function imagePrompt(request: ImageGenerationRequest): string {
         "Do not give uploaded characters new weapons, armor, swords, shields, adult facial structures, noses, beards, mustaches, or costume variants unless those details are clearly present in the reference image.",
         "Blend the uploaded identities into the scene: environmental color grading, cinematic rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, VFX overlap, and matching brush/line quality must remove any cutout or collage feeling.",
         "Contact and occlusion audit: every hero/BOSS foot, hand, weapon, or body part that touches a surface must create contact shadow, cast shadow, small occlusion, bounce color, and local material reaction. Avoid clean cutout edges floating over props or terrain.",
-        "Style fidelity rule: if no explicit style reference is supplied, match the uploaded character art direction as a stylized 2D cartoon game world with rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant appetizing colors, and premium mobile-game key-art polish.",
-        "Do not generate photorealistic pizza macro photography, realistic food commercial renders, stock-photo backgrounds, or a realistic 3D food surface unless the user explicitly selected a realistic style.",
+        "Style fidelity rule: if no explicit style reference is supplied, match the uploaded character art direction as a stylized 2D cartoon game world with rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish.",
+        "Do not generate photorealistic product macro photography, realistic unrelated commercial renders, stock-photo backgrounds, or a realistic unrelated 3D product surface unless the user explicitly selected a realistic style or the project asks for it.",
         "Premium KV production rules:",
         "The poster must feel designed as a game marketing key visual: dramatic background, strong depth, directional light, expressive character acting, BOSS pressure, atmospheric effects, and a clear hero-vs-BOSS story moment.",
-        "Breathtaking cinematic campaign brief: complex environmental storytelling, foreground elements framing the shot, dynamic character/BOSS interaction, volumetric haze, sparks, sauce/cheese trails, ingredient debris, rim-light pockets, and premium color grading.",
-        "Cinematic escalation must come from the set piece: asymmetrical low-angle or forced-perspective camera, one dominant diagonal action path, practical light source, rim/back light, volumetric beams, dust/steam/ember/sauce particles, and visible environmental reaction. Never solve quality by redesigning the uploaded characters into different people.",
-        "Use a deliberate campaign composition architecture, not a default side-scrolling scene. Favor one of these KV structures when it fits the scheme: diagonal split-world contrast, restaurant-window/portal breach, foreground hero weapon as divider, boss reveal framed by doorway/canyon, comic-panel mission montage, or triumphant hero-on-defeated-boss trophy shot.",
-        "Stage character action and environment response together: dust trails, sauce splash arcs, cheese stretch trails, rim light, impact glow, flying ingredients, framing leaves, readable foreground platforms, and contact shadows.",
+        "Breathtaking cinematic campaign brief: complex environmental storytelling, foreground elements framing the shot, dynamic character/BOSS interaction, volumetric haze, sparks, energy/magic/tech trails, project-specific debris, rim-light pockets, and premium color grading.",
+        "Cinematic escalation must come from the set piece: asymmetrical low-angle or forced-perspective camera, one dominant diagonal action path, practical light source, rim/back light, volumetric beams, dust, smoke, embers, sparks, magic/tech particles, and visible environmental reaction. Never solve quality by redesigning the uploaded characters into different people.",
+        "Use a deliberate campaign composition architecture, not a default side-scrolling scene. Favor one of these KV structures when it fits the scheme: dynamic split-world contrast, portal/breach reveal, foreground hero weapon or prop as divider, boss reveal framed by doorway/canyon, comic-panel mission montage, or triumphant hero-on-defeated-boss trophy shot.",
+        "Stage character action and environment response together: dust trails, energy arcs, rim light, impact glow, sparks, debris, weather, readable foreground platforms, and contact shadows.",
         "Subject scale and weight requirement: the uploaded BOSS/key threat must feel physically planted or forcefully airborne with a clear landing/impact path, not a mascot sticker. The uploaded hero must have a readable support surface, grip, impact point, or motion trail with a cast shadow.",
         "Use the full requested canvas as artwork. Do not add black bars, letterbox bands, white borders, frames, UI chrome, or presentation margins.",
         "Allocate one readable campaign-safe logo treatment when uploaded logo/brand references are present. Render the exact uploaded logo only when its letterforms can stay accurate; otherwise use a polished blank logo-safe sign/title plate that fits the scene and echoes brand colors/shape language; do not invent look-alike words, substitute letters, or create an alternate fake logo. Integrate the slogan as custom game-campaign lettering or an in-world sign/ribbon with correct spelling when possible; if spelling is uncertain, reserve a polished blank sign/ribbon/title plate instead of rendering garbled text.",
         posterLogoSingleUseLock(),
         integratedSloganTreatmentRule(),
-        "Do not generate extra duplicate player characters, duplicate BOSS copies, alternate replacement heroes, or generic chef protagonists.",
-        "Avoid a flat tabletop/food-surface wallpaper composition. If giant food is used, turn it into a stylized fantasy adventure battlefield with depth, horizon, foreground framing, playable terrain, and scale cues.",
+        "Do not generate extra duplicate player characters, duplicate BOSS copies, alternate replacement heroes, or generic protagonists.",
+        "Avoid a flat tabletop or product-surface wallpaper composition. If giant-scale scenery is used, turn it into a stylized fantasy adventure battlefield with depth, horizon, foreground framing, playable terrain, and scale cues.",
         "For slogan text when a concrete slogan is listed in the prompt: do not silently omit the copy treatment. Either render the exact slogan as custom game-campaign lettering matching the logo style with outline, shadow, lighting, and perspective, or reserve a polished visible blank sign/ribbon/title plate for later copy if clean spelling cannot be guaranteed.",
       ].join("\n")
     : "";
@@ -335,7 +335,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
     ? `Avoid: ${request.negativePrompt.trim()}`
     : "";
   const posterNegativeInstruction = hasPosterMode
-    ? "Hard negative for integrated KV: duplicate uploaded asset, duplicate logo, duplicate BOSS, generic replacement hero, extra random chef protagonist, unchanged front-facing cutout look, sticker collage, flat tabletop wallpaper, photorealistic pizza macro photography, realistic food product render, stock photo background, black bars, letterbox, border frame."
+    ? "Hard negative for integrated KV: duplicate uploaded asset, duplicate logo, duplicate BOSS, generic replacement hero, extra random protagonist, unchanged front-facing cutout look, sticker collage, flat tabletop wallpaper, photorealistic product macro photography, realistic unrelated product render unless explicitly requested, stock photo background, black bars, letterbox, border frame."
     : "";
 
   return [
@@ -382,7 +382,7 @@ function modeReferenceIdentityInstruction(request: ImageGenerationRequest): stri
     default:
       return [
         "Treat uploaded character images as locked model sheets for identity: face, hair, proportions, costume, colors, original tool/prop, line weight, and silhouette. The pose and expression should become more dynamic for the poster; do not preserve the exact same front-facing reference pose unless no other identity-safe pose is possible.",
-        "Identity lock means no new facial hair, age shift, body-type shift, hairstyle swap, costume swap, or generic chef redesign. If a character reference is a small chibi/mascot, keep that exact chibi/mascot identity while only changing pose and expression.",
+        "Identity lock means no new facial hair, age shift, body-type shift, hairstyle swap, costume swap, or generic character redesign. If a character reference is a small chibi/mascot, keep that exact chibi/mascot identity while only changing pose and expression.",
       ].join("\n");
   }
 }
@@ -460,7 +460,7 @@ function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): st
       return "Collab character roster lock: visible characters must come from uploaded gameCharacter/collabCharacter references and remain distinct; do not add generic replacements or merge traits.";
     case "poster":
     default:
-      return "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic chef heroes, random human mascots, or replacement player characters.";
+      return "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic heroes, random human mascots, or replacement player characters.";
   }
 }
 
@@ -481,7 +481,7 @@ function posterReferenceMappingInstruction(request: ImageGenerationRequest): str
     const names = characters.map((asset, index) => posterAssetReferenceName(asset, index + 1)).join(", ");
     lines.push(
       `Exact playable roster: render exactly ${characters.length} uploaded protagonist reference${characters.length > 1 ? "s" : ""}: ${names}.`,
-      "Do not add any other human, chef, mascot, helper, teammate, or replacement protagonist. If the scheme says chef squad/team/heroes, reinterpret it as only the uploaded roster above.",
+      "Do not add any other human, mascot, helper, teammate, or replacement protagonist. If the scheme says squad/team/heroes, reinterpret it as only the uploaded roster above.",
       characters.length === 1
         ? "Single-character lock: only [Game Character 1] may appear as the playable hero."
         : "Multi-character lock: keep each uploaded character separate; never merge, average, recolor, or swap traits between them.",
@@ -658,7 +658,7 @@ function scenePlateReferenceLabelForAsset(
   roleCounters.set(semanticRole, nextIndex);
   const referenceName = posterAssetReferenceName(asset, nextIndex);
   if (semanticRole === "protagonist") {
-    return `[SCENE PLATE PLACEHOLDER ONLY: ${referenceName} will be composited later from the uploaded file. Do not draw any human, chef, mascot, body, face, silhouette, shadow silhouette, or substitute for this placeholder.]`;
+    return `[SCENE PLATE PLACEHOLDER ONLY: ${referenceName} will be composited later from the uploaded file. Do not draw any human, mascot, body, face, silhouette, shadow silhouette, or substitute for this placeholder.]`;
   }
   if (semanticRole === "antagonist") {
     return `[SCENE PLATE PLACEHOLDER ONLY: ${referenceName} will be composited later from the uploaded file. Do not draw any monster, creature, face, eye, mouth, teeth, silhouette, shadow silhouette, or substitute for this placeholder.]`;
@@ -737,7 +737,7 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
     ? [
       "[ABSOLUTE HIGHEST PRIORITY - IDENTITY-SAFE PLATE]",
       "Generate only the cinematic scene plate: environment, lighting, atmosphere, action trails, impact zones, foreground occlusion, particles, and empty staging pockets.",
-      "The plate must contain ZERO visible people, chefs, mascots, monsters, BOSS faces, playable characters, logo marks, signs, labels, or typography. The locked subjects will be composited afterward from the original uploaded files.",
+      "The plate must contain ZERO visible people, mascots, monsters, BOSS faces, playable characters, logo marks, signs, labels, or typography. The locked subjects will be composited afterward from the original uploaded files.",
       "If the prompt mentions [Game Character 1], [Game Character 2], [Boss], [Game Logo], or any uploaded subject placeholder, convert them into empty light pools, impact marks, contact-shadow pads, action trails, foreground occlusion, and safe-area staging. Do not draw bodies, faces, monster forms, logo letters, shadow silhouettes, placeholder silhouettes, or placeholder text.",
       "No text of any kind: no GAME LOGO words, no fake title, no fake logo, no label, no signboard, no banner text, no watermark, no UI panel, no blank wooden plaque.",
       "Leave believable light pools, contact-shadow zones, foreground occlusion, and VFX paths where the uploaded subjects can be integrated later.",
@@ -748,9 +748,9 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
       "[ABSOLUTE HIGHEST PRIORITY - REFERENCE IDENTITY, SEMANTIC DUTY & BLENDING]",
       "You MUST use the provided inline visual references according to their semantic duties while redrawing them into one coherent final poster.",
       "For identity/subject references, replicate recognizable visual identity while changing pose, expression, camera angle, action, scale, and lighting as needed for the poster.",
-      "The visual references above override the written scene prompt below. If the prompt says chef, hero, warrior, or squad, interpret those words as actions/roles for the uploaded references only, never as permission to create a new person.",
+      "The visual references above override the written scene prompt below. If the prompt says hero, warrior, squad, or helper, interpret those words as actions/roles for the uploaded references only, never as permission to create a new person.",
       "Placeholder annotation rule: any written appearance, species, clothing, weapon, logo-lettering, color, or anatomy description attached to a placeholder is non-binding unless it is visibly present in the uploaded reference. Ignore conflicting or embellished placeholder descriptions.",
-      "Do not add beard/mustache, change hair color, change hairstyle, change costume, age-up the character, alter chibi proportions, or replace any reference with a generic adult chef.",
+      "Do not add beard/mustache, change hair color, change hairstyle, change costume, age-up the character, alter chibi proportions, or replace any reference with a generic adult character.",
       posterIdentitySafeMotionRule(),
       "Do not invent new weapons, armor, shields, facial features, facial hair, adult proportions, or costume variants unless those details are visible in the uploaded reference.",
       posterSubjectAccessoryStrictnessLock(),
@@ -949,6 +949,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
     "You are a senior game marketing art director.",
     "Generate NEW poster design schemes for batch image generation.",
     "Return JSON only. Do not use markdown.",
+    "Field separation is mandatory: brief is the user-facing KV main visual plan; prompt, promptZh, and promptEn are the model-facing AI render instructions derived from that plan.",
     JSON.stringify({
       projectName: request.projectName,
       gameDescription: request.gameDescription,
@@ -962,8 +963,10 @@ function briefPrompt(request: BriefGenerationRequest): string {
       assets,
       rules: [
         "Assign the requiredKvArchitectureSlots in order: scheme 1 uses slot 1, scheme 2 uses slot 2, and so on. The slot is mandatory and must be visible in both brief and image prompt.",
+        "Field separation is mandatory: brief is KV 主视觉详细策划 only. It describes composition, story moment, camera, foreground/midground/background, character/BOSS performance, world context, and logo/copy safe area. Do not put meta labels, quality overrides, architecture-template labels, raw model commands, negative prompts, or phrases such as KV architecture master / Cinematic Game KV Quality Override / Mandatory KV Composition Architecture Override / movie-grade enhancement in brief.",
+        "prompt/promptZh/promptEn are AI 底层渲染指令. They must convert the brief into concrete image-generation instructions with placeholders, action, camera, lighting, VFX, style, logo/slogan treatment, reference-identity locks, and exclusions.",
         "Treat focusGuidance as a soft creative emphasis, not a literal mandatory scene. It must never override requiredKvArchitectureSlots, uploaded asset identity, story clarity, or KV quality.",
-        "If focusGuidance mentions giant pizza, giant food, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the scene architecture. Do not default every scheme to a flat pizza-floor battlefield.",
+        "If focusGuidance mentions giant scale, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the scene architecture. Do not default every scheme to a flat side-view battlefield.",
         "Every scheme brief must include a concrete shot blueprint: foreground framing, uploaded hero performance, BOSS pressure, world context, logo/copy safe area, and camera angle.",
         "Every scheme brief must include a production design blueprint: camera height/lens feel/perspective, foreground-midground-background layers, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and typography/logo integration.",
         posterSchemeBlueprintRequirement(),
@@ -971,21 +974,21 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "Asset duty examples: protagonist assets carry identity/performance; antagonist assets carry threat/scale; brandLogo assets stay readable and scene-integrated; prop assets become used story objects; environment assets guide world design; styleReference controls rendering; compositionReference controls layout only.",
         posterCinematicKvQualityDirective(),
         "Every image prompt must carry that production design forward as explicit image instructions, not as a generic one-sentence scene description.",
-        "Every scheme must stage a memorable physical set piece: restaurant interior, oven portal, cliffs, tunnels, kitchen counter battlefield, doorway breach, market/VIP pressure, or wilderness route. Avoid empty pastel sky, generic food-field backdrop, and centered mascot-ad composition.",
-        "At least one uploaded hero must physically interact with the BOSS or environment: blocking, climbing, striking, sliding, cooking, pulling, defending, or causing visible impact. Do not place heroes as symmetrical floating stickers around a central BOSS.",
+        "Every scheme must stage a memorable physical set piece from the current project: town, base, battlefield, cliffs, tunnels, portal, doorway breach, route, command area, machine room, fortress, settlement, arena, or objective zone. Avoid empty pastel sky, generic backdrop, unrelated sample-project scenery, and centered mascot-ad composition.",
+        "At least one uploaded hero must physically interact with the BOSS or environment: blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or causing visible impact. Do not place heroes as symmetrical floating stickers around a central BOSS.",
         "Every image prompt must include a KV quality self-check: one-second readability, strong thumbnail silhouette, obvious story conflict, layered depth, directional lighting, and no cheap sticker collage.",
         "Each scheme must be meaningfully different in composition, visual hook, and campaign angle.",
         "Each scheme must target premium game key art / campaign key visual polish while respecting the active uploaded or selected art style.",
         "Plan one coherent story scene with one clear focal hierarchy, layered depth, cinematic lighting, polished color grading, and campaign-ready logo/slogan safe areas.",
-        "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-pizza-landscape concept unless the assigned slot itself asks for giant food terrain.",
+        "Every scheme must explicitly use its assigned high-impact KV composition architecture. Do not substitute a generic tiny-heroes-on-landscape concept unless the assigned slot itself asks for giant-scale pressure.",
         posterKvArchitectureDiversityRequirement(),
-        "Use divergent story-composition archetypes across the batch, such as boss encounter, kitchen siege, ingredient heist, wilderness chase, restaurant defense, portal discovery, victory feast, caravan expedition, VIP demand versus ingredient hunt, or staff-training-to-boss-fight contrast.",
-        "Do not default to a simple horizontal scene with heroes standing left and right on a pizza surface. Giant food can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
+        "Use divergent story-composition archetypes across the batch, such as boss encounter, base siege, resource raid, wilderness chase, town defense, portal discovery, victory payoff, caravan expedition, route push, upgrade crisis, or training-to-boss-fight contrast.",
+        "Do not default to a simple horizontal scene with heroes standing left and right on a flat surface. Giant-scale scenery can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
         "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",
         "Do not plan duplicate large/small copies of the same uploaded character, BOSS, or logo. Each uploaded visual identity should appear once unless the brief explicitly asks for repeats.",
-        "Avoid flat sticker collage, cheap clip-art composition, floating elements, tabletop food wallpaper, generic extra mascots, and random replacement characters.",
-        "When protagonist/gameCharacter assets are present, visible hero/player characters must come from those uploaded references only. Do not invent extra chef heroes or generic human mascots.",
-        "If only one protagonist/gameCharacter asset is present, plan exactly one playable hero. Do not write chef squad, team, allies, or multiple heroes unless multiple protagonist assets are listed.",
+        "Avoid flat sticker collage, cheap clip-art composition, floating elements, tabletop wallpaper, unrelated sample-project scenery, generic extra mascots, and random replacement characters.",
+        "When protagonist/gameCharacter assets are present, visible hero/player characters must come from those uploaded references only. Do not invent extra heroes or generic human mascots.",
+        "If only one protagonist/gameCharacter asset is present, plan exactly one playable hero. Do not write squad, team, allies, or multiple heroes unless multiple protagonist assets are listed.",
         "Do not write a scheme where uploaded playable characters are only back-facing, hidden, tiny, or looking away. Their faces, expressions, body language, and signature props must be readable in front view, 3/4 front view, or strong profile.",
         posterHeroPerformanceScaleLock(),
         posterSubjectAccessoryStrictnessLock(),
@@ -993,13 +996,13 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "For image prompts with uploaded identity, subject, BOSS, prop, or logo references, do NOT describe their exact physical appearance, clothing, gender, skin color, hair, logo lettering, or anatomy. Use placeholders such as [Game Character 1], [Boss], [Game Logo], [Prop 1], or [Key Subject 1], and describe only semantic duty, action, power effects, camera, composition, and environment interaction.",
         "If a placeholder needs a role noun, use generic role language only. Do not attach descriptive appearance clauses to placeholders; the image reference, not the generated brief text, defines identity and visual details.",
         "When describing a placeholder's action, do not name a specific uploaded tool, weapon, costume, face, or body feature in text. Say the placeholder uses its uploaded signature prop/tool only if visible in the reference, and let the image reference define what that prop/tool is.",
-        "Never ask the image model to add age, beard, mustache, hairstyle changes, costume changes, body-type changes, or generic chef/person redesigns to uploaded characters.",
+        "Never ask the image model to add age, beard, mustache, hairstyle changes, costume changes, body-type changes, or generic person redesigns to uploaded characters.",
         "For every gameCharacter prompt, include that the placeholder must preserve the uploaded reference identity/model sheet, but do not spell out physical details.",
         "For every BOSS/key-subject prompt, include that the [Boss] placeholder preserves the uploaded BOSS silhouette and key identity from its reference, but do not redesign it.",
         "For logo, slogan, or headline text, prefer exact uploaded logo letterforms or custom game-campaign lettering integrated into the scene only when clean spelling is possible. If logo or slogan spelling cannot be preserved, require a polished blank logo/copy-safe sign, title plate, or ribbon in the intended area. Never request fake logo text, look-alike words, silent copy omission, or plain overlay/PPT typography.",
         posterLogoSingleUseLock(),
         imageRenderableSloganRule(targetLanguage),
-        "The slogan phrase must be derived from the assigned scheme's story beat, action verb, threat, prop, or set-piece material, so it feels written for that exact KV rather than pasted in later. Avoid generic three-part lists; prefer concrete copy such as a knife/oven/portal/impact/BOSS-action phrase when those elements define the scheme.",
+        "The slogan phrase must be derived from the assigned scheme's story beat, action verb, threat, prop, or set-piece material, so it feels written for that exact KV rather than pasted in later. Avoid generic three-part lists; prefer concrete copy such as a weapon/portal/impact/objective/BOSS-action phrase when those elements define the scheme.",
         integratedSloganTreatmentRule(),
         "If a richer campaign line is needed, put that sentence in brief/prompt only; the slogans field must stay short enough to render cleanly inside one poster image.",
         "Do not assume a logo exists unless an asset with semanticRole brandLogo is present.",
@@ -1405,6 +1408,7 @@ function parseBriefText(text: string) {
 function normalizePosterBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchema>, request: BriefGenerationRequest) {
   const targetLanguage = request.languageTargets[0] || "en-US";
   const seed = request.context.traceId || request.context.jobId || `${Date.now()}`;
+  const assetCounts = posterKvAssetCountsFromAssets(request.assets);
   return parsed.schemes.slice(0, request.schemeCount).map((scheme, index) => {
     const title = sanitizePosterSchemeText(scheme.title) || scheme.title;
     const brief = sanitizePosterSchemeText(scheme.brief) || scheme.brief;
@@ -1412,14 +1416,17 @@ function normalizePosterBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletio
     const promptZh = sanitizePosterSchemeText(scheme.promptZh || scheme.prompt) || prompt;
     const promptEn = sanitizePosterSchemeText(scheme.promptEn || scheme.prompt) || prompt;
     const architectureSeed = posterKvArchitectureSlotSeed(seed, index);
-    const architectureBrief = posterKvBriefAugmentation(architectureSeed);
-	    const cinematicBrief = "电影级强化：方案必须具备明确镜头语言、主光/逆光/体积光、粒子/VFX、前中后景纵深、可读角色表演、环境 set-piece 和一个可被理解的故事瞬间。";
+    const renderAugmentation = posterKvRenderPromptAugmentation({
+      seed: architectureSeed,
+      assetCounts,
+      preferredText: [brief, prompt, promptZh, promptEn].join("\n"),
+    });
 	    return {
 	      title,
-	      brief: `${architectureBrief}\n${cinematicBrief}\n${brief}`.slice(0, 1800),
-	      prompt,
-	      promptZh,
-	      promptEn,
+	      brief: trimBriefTextAtBoundary(brief, 1800),
+	      prompt: trimBriefTextAtBoundary(`${renderAugmentation}\n\n${prompt}`, 8000),
+	      promptZh: trimBriefTextAtBoundary(`${renderAugmentation}\n\n${promptZh}`, 8000),
+	      promptEn: trimBriefTextAtBoundary(`${renderAugmentation}\n\n${promptEn}`, 8000),
 	      slogans: Object.fromEntries(
         SUPPORTED_SLOGAN_LANGUAGES
           .filter((language) => language === targetLanguage && scheme.slogans[language])

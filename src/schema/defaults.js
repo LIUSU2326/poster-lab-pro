@@ -1,6 +1,6 @@
 import { enums } from "./models.js";
 
-const defaultProjectName = "Pizza Kitchen Adventures";
+const defaultProjectName = "New Game Campaign";
 
 export const modeDefaultOutput = {
   poster: {
@@ -124,7 +124,7 @@ export function createProjectBriefDefaults(mode = "poster") {
   return {
     projectName: defaultProjectName,
     gameDescription:
-      "A hybrid cooking management and wilderness hunting game where chef teams gather rare ingredients for VIP guests.",
+      "A game campaign project. Replace this with the actual game's genre, core loop, characters, enemies, setting, and marketing hook before generating schemes.",
     focusGuidanceEnabled: false,
     focusGuidance: "",
   };

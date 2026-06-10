@@ -16468,8 +16468,18 @@ select:focus-visible,
 }
 
 .result-refinement-head strong {
+  display: block;
   font-size: 14px;
   font-weight: 860;
+}
+
+.result-refinement-head small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255,255,255,0.46);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
 }
 
 .result-refinement-head button {
@@ -16511,6 +16521,29 @@ select:focus-visible,
 .result-refinement-field textarea:focus {
   border-color: rgba(158, 188, 255, 0.62);
   box-shadow: 0 0 0 3px rgba(124, 164, 255, 0.16);
+}
+
+.result-refinement-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.result-refinement-presets button {
+  min-height: 28px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.76);
+  font-size: 11px;
+  font-weight: 740;
+  padding: 0 10px;
+}
+
+.result-refinement-presets button:hover {
+  border-color: rgba(158, 188, 255, 0.36);
+  background: rgba(116, 154, 255, 0.18);
+  color: rgba(255,255,255,0.94);
 }
 
 .result-refinement-actions {

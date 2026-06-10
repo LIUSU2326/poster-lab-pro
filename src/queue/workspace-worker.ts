@@ -70,7 +70,7 @@ export type WorkspaceQueueWorkerOptions = {
   credentialRefs?: Partial<Record<ProviderId, ProviderCredentialRef>>;
   storedCredentialSource?: "runtime" | "secretStore";
   providerRegistry?: ProviderAdapterRegistry;
-  resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
+  resultFileStore?: Pick<LocalResultFileStore, "storeDataUrl"> & Partial<Pick<LocalResultFileStore, "readStoredFile">>;
   useMockCredentials?: boolean;
   requireLiveExecutionGate?: boolean;
   isCancellationRequested?: (jobId: string) => boolean;
@@ -689,6 +689,7 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
         credentialRefs,
         ...(credentialResolver ? { credentialResolver } : {}),
         ...(options.providerRegistry ? { registry: options.providerRegistry } : {}),
+        ...(options.resultFileStore ? { resultFileStore: options.resultFileStore } : {}),
         ...(options.isCancellationRequested ? { isCancellationRequested: options.isCancellationRequested } : {}),
       });
       const createdAt = now();

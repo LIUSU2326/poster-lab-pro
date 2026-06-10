@@ -136,10 +136,12 @@ function editImageGenerationRequest(request: ImageEditRequest): ImageGenerationR
     ...request,
     prompt: [
       request.prompt,
-      "Result operation: create a polished variation of the selected result.",
+      "Result operation: visual reconstruction / image-to-image refinement of the selected result.",
+      "The sourceResult reference image is the primary canvas to redraw from. Preserve its project identity, main characters, logo treatment, core composition relationship, aspect ratio, art style, and story beat unless the user explicitly asks to change a local detail.",
       request.editInstruction,
-      "Keep the same production mode, aspect ratio, brand/project identity, main subject readability, and core composition intent. Change staging, micro-composition, effects, color grading, and finishing details enough to make this a useful alternate output.",
-      "Do not add unrelated characters, fake logos, garbled text, or new project content.",
+      "Refine by repainting and reconstructing the image with higher production quality: cleaner character integration, stronger contact shadows, better rim/key light, richer foreground-midground-background depth, more coherent VFX/particles, sharper focal hierarchy, improved color grading, and repaired malformed details.",
+      "Fix local problems such as garbled text, fake logo lettering, anatomy drift, duplicated assets, low resolution, flat sticker/collage edges, pasted cutout lighting, muddy details, and weak composition pressure.",
+      "Do not switch projects, add unrelated characters, invent new logos, change uploaded character identity, change BOSS identity, rewrite the scene premise, or create a completely different poster unless the edit instruction explicitly asks for that.",
     ].filter(Boolean).join("\n\n"),
     count: 1,
   });
@@ -176,7 +178,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
       return [
         "Quality bar: premium game campaign key visual polish adapted to the active art style.",
         "Use cinematic lighting, layered foreground/midground/background depth, refined material detail, crisp focal hierarchy, polished color grading, and campaign-ready logo/slogan safe areas.",
-        "Poster integrated KV style lock: generate a stylized illustrated game world matching the uploaded character art direction by description. Use rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant appetizing colors, fantasy edible-world terrain, expressive character acting, and a clear hero-vs-BOSS story moment. Use the full requested canvas as artwork. Do not use photorealistic pizza macro photography, realistic 3D food render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames.",
+        "Poster integrated KV style lock: generate a stylized illustrated game world matching the uploaded character art direction by description. Use rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, project-specific terrain, expressive character acting, and a clear hero-vs-BOSS story moment. Use the full requested canvas as artwork. Do not use photorealistic product macro photography, realistic unrelated 3D render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames.",
       ].join(" ");
   }
 }
@@ -223,17 +225,17 @@ function compressedProviderPriorityInstruction(
         : "SELECTED SCHEME ARCHITECTURE LOCK: follow the selected scheme's own scene structure and story beat. Do not reuse the same scene, pose arrangement, or background composition from another scheme in the batch.",
       sceneContract,
       compositionGuides.length > 0
-        ? `COMPOSITION GUIDE LOCK: use ${compositionGuides.map((asset) => asset.id).join(", ")} only for camera/layout/diagonal structure/foreground-midground-background scale/safe-area hierarchy. Do not copy its text, logo, characters, monsters, food objects, UI, or scene content, and do not let this guide make every scheme share the same scene.`
+        ? `COMPOSITION GUIDE LOCK: use ${compositionGuides.map((asset) => asset.id).join(", ")} only for camera/layout/diagonal structure/foreground-midground-background scale/safe-area hierarchy. Do not copy its text, logo, characters, monsters, unrelated objects, UI, or scene content, and do not let this guide make every scheme share the same scene.`
         : "",
       styleGuides.length > 0
         ? `STYLE GUIDE LOCK: use ${styleGuides.map((asset) => asset.id).join(", ")} only for rendering language, palette, line quality, lighting, material finish, and polish. Do not copy its subjects, logo, layout, text, or scene content.`
         : "",
       required ? `Poster required anchors: ${required}.` : "",
       protagonistAssets.length === 1
-        ? `EXACT HERO ROSTER LOCK: render one and only one playable hero from ${protagonistAssets[0]?.id}. If the prompt says squad/team/staff/chefs/helpers, reinterpret it as this single uploaded hero only. No extra human chefs, no helper crowd, no background duplicate heroes.`
+        ? `EXACT HERO ROSTER LOCK: render one and only one playable hero from ${protagonistAssets[0]?.id}. If the prompt says squad/team/staff/helpers, reinterpret it as this single uploaded hero only. No extra human helpers, no helper crowd, no background duplicate heroes.`
         : "",
       protagonistAssets.length > 1
-        ? `EXACT HERO ROSTER LOCK: render exactly ${protagonistAssets.length} uploaded playable heroes, one per reference. Do not add unuploaded chef helpers, crowds, or duplicate hero copies.`
+        ? `EXACT HERO ROSTER LOCK: render exactly ${protagonistAssets.length} uploaded playable heroes, one per reference. Do not add unuploaded helpers, crowds, or duplicate hero copies.`
         : "",
       bossAssets.length > 0
         ? `EXACT BOSS ROSTER LOCK: render the uploaded BOSS/key threat as one dominant threat subject from ${bossAssets.map((asset) => asset.id).join(", ")}. Do not split it into multiple small monsters, background copies, minions, or decorative mascots.`
@@ -248,10 +250,10 @@ function compressedProviderPriorityInstruction(
       "REFERENCE PANEL BAN: reference images are private model sheets, not picture-in-picture content. Do not place a copied reference image, black-background cutout, side-by-side comparison panel, model-sheet panel, empty black block, or sticker pasted from an uploaded asset anywhere on the final canvas.",
       "STYLE CONSISTENCY LOCK: keep the entire image in one stylized game illustration language. No photorealistic people, no real-world crowd, no spectators, no adult realistic knight, no stock-photo background, no live-action advertising look, and no pasted cartoon stickers over a realistic scene.",
       "EMPTY BACKGROUND BAN: do not render a plain sky, plain gradient, studio backdrop, isolated mascot pose, icon-like character lineup, or empty two-character cutout. The final image must be a full campaign scene.",
-      "MINIMUM ENVIRONMENT CHECKLIST: include one readable foreground prop or occluder, one shared ground plane, one midground action touchpoint, one background set-piece such as oven portal/restaurant defense/ingredient canyon/kitchen battlefield, plus particles, rim light, and contact shadows.",
+      "MINIMUM ENVIRONMENT CHECKLIST: include one readable foreground prop or occluder, one shared ground plane, one midground action touchpoint, one background set-piece from the current project such as portal, base defense, canyon route, town gate, battlefield lane, machine room, fortress, forest path, or objective zone, plus particles, rim light, and contact shadows.",
       "The poster fails if a required anchor is absent, tiny, hidden, duplicated, or replaced by a generic subject.",
       "Hero and BOSS must share the same camera, perspective, lighting, contact shadows, occlusion, particles/VFX, and story action. Do not make a pretty background with small sticker-like subjects.",
-      "Logo/slogan treatment should be integrated as an in-world sign, plaque, banner, steam/sauce stroke, carved/metal relief, or blank copy-safe plate; no fake text, no garbled words, and no floating PPT-style overlay.",
+      "Logo/slogan treatment should be integrated as an in-world sign, plaque, banner, smoke/energy stroke, carved/metal relief, hologram, flag, or blank copy-safe plate; no fake text, no garbled words, and no floating PPT-style overlay.",
     ].filter(Boolean).join("\n");
   }
 
@@ -271,7 +273,7 @@ function compressedProviderPriorityInstruction(
         ? "DUAL-SUBJECT FRAMING LOCK: compose the uploaded collab partner and uploaded game character as the two primary foreground subjects, each occupying meaningful visual weight. A one-character image is invalid even if the environment is polished."
         : "",
       partner && gameCharacter
-        ? "Both co-stars need comparable visual weight, shared lighting, same ground plane, contact shadows, and one clear interaction touchpoint such as left/right handoff, cooking together, guarding one objective, racing, or reacting to the same impact. The image fails if one side disappears, becomes tiny, hides behind a prop/plate, turns into a logo-only presence, or the two identities merge into a hybrid."
+        ? "Both co-stars need comparable visual weight, shared lighting, same ground plane, contact shadows, and one clear interaction touchpoint such as left/right handoff, guarding one objective, racing, exchanging an item, rescuing, or reacting to the same impact. The image fails if one side disappears, becomes tiny, hides behind a prop/plate, turns into a logo-only presence, or the two identities merge into a hybrid."
         : "",
       partner && gameCharacter
         ? "Two-character audit: render exactly one uploaded collab partner and exactly one uploaded game character as the primary living characters. No third lead character, no background crowd, no character fusion, no side reduced to decorative mascot."
@@ -299,26 +301,26 @@ function posterSelectedSchemeExcerpt(prompt: string): string {
 function posterCompressedSceneContract(prompt: string, architectureSummary = ""): string {
   const text = (architectureSummary || posterSelectedSchemeExcerpt(prompt) || prompt.slice(0, 1800)).toLowerCase();
   const contracts: string[] = [];
-  const hasPortal = /传送门|portal|烤箱|oven|doorway|入口|golden light|金光/.test(text);
-  const hasGiant = /巨物|微缩|giant|macro|miniature|微距|披萨山|cheese mountain|olive cliff|巨大披萨|巨型披萨/.test(text);
-  const hasOrderKitchen = /订单|order|vip|厨房|kitchen|计时器|timer|menu|菜单/.test(text);
+  const hasPortal = /传送门|portal|gate|doorway|入口|golden light|金光/.test(text);
+  const hasGiant = /巨物|微缩|giant|macro|miniature|微距|huge|oversized|colossal/.test(text);
+  const hasObjectivePressure = /objective|mission|timer|route|base|town|defense|siege|raid|upgrade|resource|计时器|任务|路线|基地|城镇|防守|资源/.test(text);
 
   if (hasPortal) {
     contracts.push(
-      "glowing oven-portal discovery scene, not a normal field: show an oven, kitchen wall, menu board, or restaurant doorway becoming a bright portal, golden volumetric light, swirling flour/ingredient particles, and the uploaded BOSS/key threat visible or reaching from the other side",
+      "glowing portal or breach discovery scene, not a normal field: show a project-specific gate, doorway, relic, screen, map route, wall breach, or environmental opening becoming a bright portal, golden volumetric light, project-specific particles, and the uploaded BOSS/key threat visible or reaching from the other side",
     );
   } else if (hasGiant) {
     contracts.push(
-      "macro miniature adventure on a giant pizza or edible landscape: huge crust foreground, cheese mountains, olive cliffs or giant utensils, forced perspective scale drama, the uploaded hero small-but-readable in the foreground, and the uploaded BOSS/key threat as the oversized obstacle",
+      "forced-perspective giant-scale adventure based on the current project: oversized enemy, machine, structure, terrain, spell, vehicle, gate, or obstacle, with the uploaded hero small-but-readable in the foreground and the uploaded BOSS/key threat as the oversized pressure source",
     );
-  } else if (hasOrderKitchen) {
+  } else if (hasObjectivePressure) {
     contracts.push(
-      "explosive kitchen or restaurant-defense battlefield, not an outdoor meadow: show VIP order pressure, a kitchen timer or menu/order board, oven glow, flour/steam/ingredients flying, and the uploaded BOSS/key threat breaking into or attacking the kitchen set",
+      "objective-pressure battlefield, not a generic meadow: show the current project's mission pressure, base/town/resource/route/timer/upgrade objective, warning glow, dust, sparks, debris, and the uploaded BOSS/key threat breaking into or attacking the objective zone",
     );
   }
-  if (/荒野|hunt|hunting|ingredient canyon|食材荒野|battlefield|战场|boss/.test(text) && contracts.length === 0) {
+  if (/荒野|hunt|hunting|battlefield|战场|boss|base|town|route|quest|mission|defense/.test(text) && contracts.length === 0) {
     contracts.push(
-      "wild ingredient-adventure battlefield with edible terrain, foreground action, visible BOSS pressure, environmental reaction, and a campaign key-visual set piece instead of a simple mascot lineup",
+      "project-specific adventure or tactical battlefield with foreground action, visible BOSS pressure, environmental reaction, and a campaign key-visual set piece instead of a simple mascot lineup",
     );
   }
 
@@ -349,7 +351,7 @@ function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: Image
           ? "Characters and BOSS may change pose, expression, action, camera angle, lighting, and perspective, but must preserve recognizable identity. Use each uploaded character, BOSS/key subject, and logo once; no duplicate large/small copies."
           : referenceInstruction,
         hasPosterMode
-          ? "StyleReference and compositionReference assets are guide-only inputs: extract rendering/camera/layout/focal hierarchy, but never copy their text, logos, characters, monsters, props, food objects, UI, or full scene."
+          ? "StyleReference and compositionReference assets are guide-only inputs: extract rendering/camera/layout/focal hierarchy, but never copy their text, logos, characters, monsters, props, unrelated objects, UI, or full scene."
           : "",
         subjectAccessoryInstruction,
         fusionDirective,
@@ -431,7 +433,7 @@ function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): st
       return "Collab character rule: visible characters must come from uploaded gameCharacter/collabCharacter references and remain separate; no generic replacements or merged traits.";
     case "poster":
     default:
-      return "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic chef heroes, random human mascots, or replacement player characters.";
+      return "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic heroes, random human mascots, or replacement player characters.";
   }
 }
 
@@ -769,6 +771,7 @@ function shouldSendRawReferenceAsset(
   request: ImageGenerationRequest,
   asset: ImageGenerationRequest["assets"][number],
 ): boolean {
+  if (asset.role === "sourceResult") return true;
   if (!isIntegratedReferenceAsset(asset)) return false;
   if (providerId === AGNES_PROVIDER_ID && request.context.mode === "poster") {
     const semanticRole = assetSemanticRole(asset);

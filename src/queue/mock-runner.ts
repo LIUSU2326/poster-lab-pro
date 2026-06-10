@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createProviderConfigDefaults } from "../schema/zod-defaults";
 import type { ProviderId } from "../schema/zod";
 import { createBriefPromptPackage, createImagePromptPackage } from "../prompts/builder";
@@ -27,6 +28,7 @@ import {
 } from "../providers/executor";
 import type { CredentialResolver, ProviderCredentialRef } from "../providers/credentials";
 import type { StoredProviderConfig } from "../storage/contracts";
+import type { LocalResultFileStore } from "../results/file-store";
 import {
   QueueEventSchema,
   QueuePlanSchema,
@@ -42,6 +44,61 @@ import type { WorkspaceSnapshot } from "../storage/contracts";
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function metadataString(value: unknown, key: string): string {
+  if (!value || typeof value !== "object") return "";
+  const item = (value as Record<string, unknown>)[key];
+  return typeof item === "string" ? item : "";
+}
+
+async function sourceResultAssetFromSnapshot(
+  snapshot: WorkspaceSnapshot,
+  sourceResultId?: string,
+  fileStore?: Partial<Pick<LocalResultFileStore, "readStoredFile">>,
+) {
+  if (!sourceResultId) return null;
+  const result = snapshot.results.find((item) => item.id === sourceResultId);
+  if (!result) return null;
+
+  const providerAsset = result.metadata?.providerAsset;
+  const resultFile = result.metadata?.resultFile;
+  let url = result.assetUrl
+    || result.thumbnailUrl
+    || metadataString(providerAsset, "dataUrl")
+    || metadataString(providerAsset, "url")
+    || metadataString(resultFile, "publicUrl");
+
+  const storageKey = metadataString(resultFile, "storageKey");
+  const mimeType = metadataString(resultFile, "mimeType") || metadataString(providerAsset, "mimeType") || "image/png";
+  if (!/^(https?:\/\/|data:image\/)/i.test(url) && storageKey && fileStore?.readStoredFile) {
+    const stored = await fileStore.readStoredFile(storageKey);
+    url = `data:${mimeType};base64,${Buffer.from(stored.bytes).toString("base64")}`;
+  }
+
+  if (!/^(https?:\/\/|data:image\/)/i.test(url)) return null;
+
+  return {
+    id: `source-result-${result.id}`,
+    role: "sourceResult",
+    mimeType,
+    url,
+    description: "Source result image selected for visual reconstruction. Treat this as the primary image-to-image canvas: preserve composition, identity, style, and project content while applying the edit instruction.",
+  };
+}
+
+async function withSourceResultAsset(
+  assets: Array<{ id?: unknown; role?: unknown }>,
+  snapshot: WorkspaceSnapshot,
+  sourceResultId?: string,
+  fileStore?: Partial<Pick<LocalResultFileStore, "readStoredFile">>,
+) {
+  const sourceAsset = await sourceResultAssetFromSnapshot(snapshot, sourceResultId, fileStore);
+  if (!sourceAsset) return assets;
+  return [
+    sourceAsset,
+    ...assets.filter((asset) => asset.id !== sourceAsset.id && asset.role !== "sourceResult"),
+  ];
 }
 
 function taskSucceeded(task: QueueTask, providerResultIds: string[] = [], metadata: Record<string, unknown> = {}): QueueTask {
@@ -127,6 +184,7 @@ export type MockQueueRunOptions = {
   credentialRefs?: Partial<Record<ProviderId, ProviderCredentialRef>>;
   credentialResolver?: CredentialResolver;
   snapshot?: WorkspaceSnapshot;
+  resultFileStore?: Partial<Pick<LocalResultFileStore, "readStoredFile">>;
   isCancellationRequested?: (jobId: string) => boolean;
 };
 
@@ -332,12 +390,13 @@ function createMappedRequestForTask(initialPlan: QueuePlan, task: QueueTask, mod
   return null;
 }
 
-function createSnapshotMappedRequestForTask(
+async function createSnapshotMappedRequestForTask(
   initialPlan: QueuePlan,
   task: QueueTask,
   model: string,
   snapshot: WorkspaceSnapshot,
-): ProviderMappedRequest | null {
+  fileStore?: Partial<Pick<LocalResultFileStore, "readStoredFile">>,
+): Promise<ProviderMappedRequest | null> {
   const providerId = providerIdForTask(initialPlan, task);
   if (task.kind === "briefGeneration") {
     const queueSnapshot = snapshotWithBriefTaskSchemeSelection(snapshot, initialPlan.job.mode, task);
@@ -403,6 +462,7 @@ function createSnapshotMappedRequestForTask(
       promptPackageId: mappedPromptPackageId(initialPlan.job.id, task.id),
       request: ImageEditRequestSchema.parse({
 	        ...imageMapped.request,
+	        assets: await withSourceResultAsset(imageMapped.request.assets, snapshot, task.input.sourceResultId, fileStore),
 	        sourceResultId: task.input.sourceResultId || "mock-result",
 	        editInstruction: task.input.editInstruction || "Create a useful alternate version of the selected result. Keep the same scheme and asset identity, but vary camera energy, effects, finish, and minor composition details.",
 	      }),
@@ -422,7 +482,7 @@ async function executeProviderTask(
   const config = createProviderConfigDefaults(providerId);
   const model = resolveTaskModel(task, config, storedConfig);
   const mappedRequest = options.snapshot
-    ? createSnapshotMappedRequestForTask(initialPlan, task, model, options.snapshot)
+    ? await createSnapshotMappedRequestForTask(initialPlan, task, model, options.snapshot, options.resultFileStore)
     : createMappedRequestForTask(initialPlan, task, model);
   if (!mappedRequest) return { ok: true, providerResultIds: [], metadata: {} };
 
@@ -561,8 +621,8 @@ function applyBriefSchemesToSnapshot(
     const currentIndex = next.schemes.findIndex((scheme) => scheme.id === schemeId);
     const current = currentIndex >= 0 ? next.schemes[currentIndex] ?? null : null;
     const promptBlocks = [
-      promptBlock("视觉方向", source.brief),
-      promptBlock("中文提示词", source.promptZh || source.prompt),
+      promptBlock("KV 主视觉详细策划", source.brief),
+      promptBlock("AI 底层渲染指令", source.promptZh || source.prompt),
       promptBlock("English Prompt", source.promptEn || source.prompt),
     ].filter((item): item is { title: string; text: string } => Boolean(item));
 

@@ -126,6 +126,20 @@ export function bindEvents(render) {
     });
   });
 
+  document.querySelectorAll("[data-refinement-preset]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const input = document.querySelector("[data-result-refinement-prompt]");
+      const preset = button.dataset.refinementPreset || "";
+      if (!input || !preset) return;
+      const current = input.value.trim();
+      input.value = current ? `${current}\n${preset}` : preset;
+      state.resultRefinementPrompt = input.value;
+      input.focus();
+    });
+  });
+
   document.querySelectorAll("[data-scheme-variant]").forEach((button) => {
     button.addEventListener("click", (event) => {
       const schemeId = button.dataset.schemeId;
@@ -602,13 +616,13 @@ async function handleActionControl(control, event, render) {
 	    const editInstruction = input?.value?.trim() || "";
 	    if (!resultId) return;
 	    if (!editInstruction) {
-	      state.resultViewerMessage = "先填写二次精修方向。";
+	      state.resultViewerMessage = "先填写视觉重构方向。";
 	      render();
 	      return;
 	    }
 	    state.resultRefinementOpen = false;
 	    state.resultRefinementPrompt = editInstruction;
-	    state.resultViewerMessage = "二次精修已入队。";
+	    state.resultViewerMessage = "视觉重构已入队。";
 	    const operation = queueResultOperation("variant", resultId, { editInstruction });
 	    render();
 	    if (operation) {

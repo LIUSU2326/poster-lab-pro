@@ -93,7 +93,7 @@ function focusGuidancePolicy(modeState) {
   return [
     `Focus guidance: ${rawFocus}.`,
     "Focus guidance handling: treat this as a soft creative emphasis, not a literal scene lock. It must never override uploaded asset identity, the assigned KV architecture, story clarity, or poster quality.",
-    "If it mentions giant food, giant pizza, micro perspective, or scale words, reinterpret it as scale drama and camera energy. Do not make every scheme a flat pizza-floor scene.",
+    "If it mentions giant scale, micro perspective, or scale words, reinterpret it as scale drama and camera energy. Do not make every scheme a flat side-view scene.",
   ].join("\n");
 }
 
@@ -240,9 +240,9 @@ function posterCinematicKvQualityDirective() {
 	    "## Cinematic Game KV Quality Override",
     "Target the feel of a top-tier cinematic game announcement key visual, adapted to the uploaded art style. This means movie-poster staging and lighting quality, not photorealism unless the active style reference is photorealistic.",
     "Cinematography: choose deliberate camera language such as low-angle hero shot, 24-35mm wide cinematic lens feel, forced perspective, over-the-shoulder danger reveal, foreground occlusion, diagonal motion path, or portal/window frame-within-frame. Avoid neutral side-view staging.",
-    "Lighting: design a clear key light, colored fill, hard rim/back light, motivated practical light source such as oven glow/portal glow/fire/sauce energy, volumetric beams, glow bloom, bounced color, and deep value contrast around silhouettes.",
-    "VFX and particles: add layered particles that serve the story: steam, flour dust, embers, cheese sparks, sauce droplets, ingredient debris, motion arcs, shockwave rings, magic/cooking energy trails, atmospheric haze, and depth-of-field separation.",
-    "Story beat: capture a decisive second from the trailer: breach, ambush, rescue, counterattack, boss takedown, portal opening, VIP pressure erupting into wildlands action, or kitchen-to-battle transformation.",
+    "Lighting: design a clear key light, colored fill, hard rim/back light, and a motivated project-specific practical light source such as portal glow, fire, magic, tech screens, warning lights, moonlight, explosion light, or energy effects.",
+    "VFX and particles: add layered project-specific particles that serve the story: dust, sparks, embers, smoke, debris, magic trails, tech fragments, motion arcs, shockwave rings, weather, atmospheric haze, and depth-of-field separation.",
+    "Story beat: capture a decisive second from the current game's trailer: breach, ambush, rescue, counterattack, boss takedown, portal opening, base defense, route push, discovery, upgrade, or objective pressure erupting into action.",
     "Character performance: uploaded heroes must show readable emotion, weight, line of action, gesture, and contact with the scene. At least one hero must interact physically with the BOSS or set piece.",
     posterIdentitySafeMotionRule(),
     posterHeroPerformanceScaleLock(),
@@ -330,7 +330,7 @@ function integratedSloganPriorityBlock(sloganTargets) {
     "scene-derived requirement: the slogan must be tied to this specific scheme's action, prop, BOSS threat, or set-piece material, not a generic caption that could fit any poster.",
     "Slogan art direction: treat the slogan as a large secondary campaign object, not a small caption under the logo, but never let it become the main focal subject over the hero-vs-BOSS story.",
     "Target presence: the slogan should be big enough for thumbnail reading, roughly 10-16% of canvas height or 18-30% of canvas width, usually 1-2 lines, while preserving a larger readable protagonist performance area.",
-    "Scene integration: anchor the lettering to the poster idea through an in-world material or effect such as oven-fire glow, sauce splash, cheese pull, smoke/steam plume, carved wooden menu board, battle banner, metal sign, glowing portal rim, impact burst, or foreground prop surface.",
+    "Scene integration: anchor the lettering to the poster idea through an in-world material or effect such as fire/energy glow, smoke/steam plume, carved board, battle banner, metal sign, hologram, glowing portal rim, impact burst, or foreground prop surface.",
     "Lighting integration: the slogan must receive the same perspective, shadows, rim light, bounce color, texture, haze, and partial VFX/particle overlap as the rest of the scene.",
     "Composition rule: do not stack the slogan as detached PPT-style text directly below the logo and do not let logo+slogan consume the central action space; connect it to the story beat, action path, or environmental set piece while preserving a readable logo-safe area.",
     "Copy-safe fallback: if clean spelling is not possible, still create a visible polished blank slogan-safe plate/ribbon/sign in the intended copy area; do not omit the copy area entirely and do not generate garbled text.",
@@ -382,10 +382,10 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
   const hasStyleReference = (promptPackage.assets || []).some((asset) => asset.role === "styleReference");
   const hasCharacterReference = (promptPackage.assets || []).some((asset) => asset.role === "gameCharacter");
   const styleRule = hasStyleReference
-    ? "Visual style lock: match the uploaded styleReference image for rendering, palette, lighting, line quality, and material finish. Do not drift into photorealistic food photography unless the styleReference itself is photorealistic."
+    ? "Visual style lock: match the uploaded styleReference image for rendering, palette, lighting, line quality, and material finish. Do not drift into photorealistic product photography unless the styleReference itself is photorealistic."
     : hasCharacterReference
-      ? "Visual style lock: match the uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, bright appetizing colors, and premium mobile-game key-art polish. Do not use photorealistic food photography, realistic 3D product render, camera macro food shot, or stock-photo background."
-      : "Visual style lock: use a stylized game campaign illustration style, not photorealistic food photography, unless the user explicitly selected a realistic style.";
+      ? "Visual style lock: match the uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish. Do not use photorealistic product photography, realistic unrelated 3D render, camera macro product shot, or stock-photo background."
+      : "Visual style lock: use a stylized game campaign illustration style, not photorealistic product photography, unless the user explicitly selected a realistic style.";
   const characters = (promptPackage.assets || []).filter((asset) => asset.role === "gameCharacter");
   const bosses = (promptPackage.assets || []).filter((asset) => asset.role === "prop" && /\bBOSS\b|boss|首领|魔王|怪物|怪兽|敌人|宝箱怪/i.test(asset.label || asset.description || ""));
   const logos = (promptPackage.assets || []).filter((asset) => asset.role === "gameLogo");
@@ -395,9 +395,9 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
   const referenceMap = [
     characters.length > 0
       ? [
-        `Exact playable roster count: ${characters.length}. Render only ${characters.map((asset, index) => asset.placeholder || `[Game Character ${index + 1}]`).join(", ")} as playable/human/chef heroes.`,
+        `Exact playable roster count: ${characters.length}. Render only ${characters.map((asset, index) => asset.placeholder || `[Game Character ${index + 1}]`).join(", ")} as playable heroes.`,
         characters.length === 1
-          ? "Single-character lock: if any scheme text says chef squad/team/heroes, reinterpret that as only [Game Character 1]. Do not add any other chef, human helper, teammate, or replacement protagonist."
+          ? "Single-character lock: if any scheme text says squad/team/heroes, reinterpret that as only [Game Character 1]. Do not add any other human helper, teammate, or replacement protagonist."
           : "Multi-character lock: keep each uploaded character independent; do not merge, average, recolor, or swap traits.",
       ].join(" ")
       : "",
@@ -427,12 +427,12 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "The poster must show a concrete story moment: uploaded heroes in action against the uploaded BOSS/key subject, with readable intent, movement, pressure, and environmental reaction.",
     "Design with cinematic composition, strong depth, dramatic lighting, polished color grading, foreground/midground/background separation, and a clear hero-vs-BOSS focal hierarchy.",
     "Art-direction checklist for the final render: visible camera/lens/perspective choice, foreground framing, midground action, background reveal, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and in-world logo/typography integration.",
-    "Set-piece and action requirement: build a memorable physical campaign location and connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, cooking, pulling, defending, or impact. Avoid empty pastel sky, generic food-field backdrops, centered mascot-ad layouts, and symmetrical floating heroes.",
+    "Set-piece and action requirement: build a memorable physical campaign location from the current project and connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or impact. Avoid empty pastel sky, generic backdrops, unrelated sample-project scenes, centered mascot-ad layouts, and symmetrical floating heroes.",
     "Subject scale and weight requirement: the uploaded BOSS/key threat must feel physically planted or forcefully airborne with a clear landing/impact path, not a mascot sticker. The uploaded hero must have a readable support surface, grip, impact point, or motion trail with a cast shadow.",
-    "Cinematic escalation must come from the scene design: asymmetrical low-angle or forced-perspective camera, one dominant diagonal action path, foreground occlusion, practical light source, rim/back light, volumetric beams, dust/steam/ember/sauce particles, and visible environmental reaction. Do not solve cinematic quality by making the uploaded characters into different, more realistic people.",
+    "Cinematic escalation must come from the scene design: asymmetrical low-angle or forced-perspective camera, one dominant diagonal action path, foreground occlusion, practical light source, rim/back light, volumetric beams, dust, smoke, sparks, embers, magic/tech particles, debris, and visible environmental reaction. Do not solve cinematic quality by making the uploaded characters into different, more realistic people.",
     "Place the uploaded game logo once in a readable campaign-safe area. Integrate the slogan as custom game-poster lettering or an in-world sign/ribbon, with correct spelling when possible.",
     posterLogoSingleUseLock(),
-    "Use each uploaded character and BOSS once. Do not create duplicate large/small copies, alternate replacement characters, or extra generic chef heroes.",
+    "Use each uploaded character and BOSS once. Do not create duplicate large/small copies, alternate replacement characters, or extra generic heroes.",
     ],
     flexibleBlocks: [
       { text: sectionText, maxChars: 3200, minChars: 900 },
@@ -447,19 +447,19 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
     posterSubjectAccessoryStrictnessLock(),
     "Subject scale and weight requirement: the uploaded BOSS/key threat must feel physically planted or forcefully airborne with a clear landing/impact path, not a mascot sticker. The uploaded hero must have a readable support surface, grip, impact point, or motion trail with a cast shadow.",
-    "Set-piece and action requirement: connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, cooking, pulling, defending, or visible impact.",
+    "Set-piece and action requirement: connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or visible impact.",
     "Placeholder annotation rule: any written appearance, species, clothing, weapon, logo-lettering, color, or anatomy description attached to a placeholder is non-binding unless it is visibly present in the uploaded reference.",
     "Scheme text sanitation rule: if selected scheme text names a placeholder's clothing, face, body, weapon, shield, logo lettering, or other appearance details, treat those words as non-binding staging notes only. The uploaded image reference remains the only source of truth for visual identity.",
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     "The uploaded subjects and brand elements must look repainted into the same scene with environmental color grading, rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, material interaction, and VFX overlap.",
     staticSchemeActionRewriteRule(),
-    "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant pizza/giant food/micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat pizza-floor scene.",
-    "Use a deliberate campaign composition architecture, not a default side-scrolling food battlefield. Favor one of these KV structures when it fits the scheme: diagonal split-world contrast, restaurant-window/portal breach, foreground weapon/utensil divider, boss reveal framed by doorway/canyon, comic-panel mission montage, or triumphant hero-on-defeated-boss trophy shot.",
+    "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant scale or micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat side-view scene.",
+    "Use a deliberate campaign composition architecture, not a default side-scrolling battlefield. Favor one of these KV structures when it fits the scheme: dynamic split-world contrast, portal/breach reveal, foreground weapon/prop divider, boss reveal framed by doorway/canyon, comic-panel mission montage, or triumphant hero-on-defeated-boss trophy shot.",
     "Use the full requested canvas as artwork. Do not add black bars, letterbox bands, white borders, frames, UI chrome, or presentation margins.",
-    "Show the story through character action and environment response: impact glow, sauce splash arcs, cheese stretch trails, dust, flying ingredients, motion trails, atmospheric haze, rim-light pockets, foreground framing, and scale cues.",
-    "World-building direction: turn the food theme into a fantasy adventure battlefield or giant edible landscape with illustrated terrain, not a flat pizza surface or close-up product photo.",
+    "Show the story through character action and environment response: impact glow, energy arcs, dust, debris, sparks, magic/tech trails, weather, motion trails, atmospheric haze, rim-light pockets, foreground framing, and scale cues.",
+    "World-building direction: turn the current project premise into a fantasy, tactical, adventure, simulation, or action battlefield with illustrated terrain and playable depth. Do not introduce scenery from an unrelated sample project.",
     "## Hard KV Exclusions",
-    "No duplicate uploaded asset. No generic replacement hero. No extra random chef protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic pizza macro photography. No realistic food commercial render. No black bars. No letterbox. No border frame.",
+    "No duplicate uploaded asset. No generic replacement hero. No extra random protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic product macro photography. No unrelated commercial render unless explicitly requested. No black bars. No letterbox. No border frame.",
     "## Mode Guardrails",
     guardrails,
     ],

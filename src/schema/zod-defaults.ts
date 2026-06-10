@@ -8,7 +8,7 @@ import type {
   ProductionMode,
 } from "./zod";
 
-export const defaultProjectName = "Pizza Kitchen Adventures";
+export const defaultProjectName = "New Game Campaign";
 
 export const modeDefaultOutput: Record<ProductionMode, Omit<OutputSettingsForm, "mode">> = {
   poster: {
@@ -137,7 +137,7 @@ export function createProjectBriefDefaults(mode: ProductionMode = "poster"): Pro
   return {
     projectName: defaultProjectName,
     gameDescription:
-      "A hybrid cooking management and wilderness hunting game where chef teams gather rare ingredients for VIP guests.",
+      "A game campaign project. Replace this with the actual game's genre, core loop, characters, enemies, setting, and marketing hook before generating schemes.",
     focusGuidanceEnabled: false,
     focusGuidance: "",
   };
