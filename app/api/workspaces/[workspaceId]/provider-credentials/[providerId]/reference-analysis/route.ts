@@ -202,7 +202,7 @@ async function runOpenAICompatible(input: {
   const body = await postJson(`${input.baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${input.apiKey}`,
+      authorization: `Bearer ${input.apiKey.trim()}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({
@@ -231,7 +231,7 @@ async function runGoogle(input: {
   base64: string;
 }) {
   const modelPath = input.model.startsWith("models/") ? input.model : `models/${input.model}`;
-  const body = await postJson(`${input.baseUrl}/${modelPath}:generateContent?key=${encodeURIComponent(input.apiKey)}`, {
+  const body = await postJson(`${input.baseUrl}/${modelPath}:generateContent?key=${encodeURIComponent(input.apiKey.trim())}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -265,7 +265,7 @@ async function runClaude(input: {
   const body = await postJson(`${input.baseUrl}/messages`, {
     method: "POST",
     headers: {
-      "x-api-key": input.apiKey,
+      "x-api-key": input.apiKey.trim(),
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },

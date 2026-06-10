@@ -727,7 +727,7 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
         const status = await credentialVault.save({
           providerId: parsed.providerId,
           keyRef,
-          apiKey: parsed.apiKey,
+          apiKey: parsed.apiKey.trim(),
         });
         const mirror = await updateProviderCredentialMirror({
           repository,

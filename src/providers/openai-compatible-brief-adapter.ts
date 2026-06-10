@@ -973,7 +973,7 @@ export function createOpenAICompatibleBriefAdapter(options: OpenAICompatibleBrie
           url: `${baseUrl}${CHAT_COMPLETIONS_PATH}`,
           method: "POST",
           headers: {
-            Authorization: `Bearer ${parsedConfig.apiKey}`,
+            Authorization: `Bearer ${(parsedConfig.apiKey || "").trim()}`,
             "Content-Type": "application/json",
           },
           body: {

@@ -844,7 +844,7 @@ export function createOpenAILiveImageAdapter(options: OpenAILiveImageAdapterOpti
         url: `${normalizeBaseUrl(providerId, parsedConfig)}${OPENAI_IMAGE_GENERATIONS_PATH}`,
         method: "POST",
         headers: {
-          Authorization: `Bearer ${parsedConfig.apiKey}`,
+          Authorization: `Bearer ${(parsedConfig.apiKey || "").trim()}`,
           "Content-Type": "application/json",
         },
         body: await imageRequestBody(providerId, model, parsedRequest),

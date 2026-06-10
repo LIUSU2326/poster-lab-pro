@@ -147,17 +147,18 @@ function providerHeaders(providerId: ProviderId, apiKey?: string): Record<string
   const headers: Record<string, string> = {
     accept: "application/json",
   };
-  if (!apiKey) return headers;
+  const cleanApiKey = apiKey?.trim();
+  if (!cleanApiKey) return headers;
   if (providerId === "google") {
-    headers["x-goog-api-key"] = apiKey;
+    headers["x-goog-api-key"] = cleanApiKey;
     return headers;
   }
   if (providerId === "claude") {
-    headers["x-api-key"] = apiKey;
+    headers["x-api-key"] = cleanApiKey;
     headers["anthropic-version"] = "2023-06-01";
     return headers;
   }
-  headers.Authorization = `Bearer ${apiKey}`;
+  headers.Authorization = `Bearer ${cleanApiKey}`;
   return headers;
 }
 

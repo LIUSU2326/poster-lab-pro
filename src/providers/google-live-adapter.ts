@@ -1738,7 +1738,7 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
             url: `${normalizeBaseUrl(parsedConfig)}/models/${encodeURIComponent(model)}:${GOOGLE_GENERATE_CONTENT_METHOD}`,
             method: "POST",
             headers: {
-              "x-goog-api-key": parsedConfig.apiKey,
+              "x-goog-api-key": (parsedConfig.apiKey || "").trim(),
               "Content-Type": "application/json",
             },
             body: {
@@ -1793,7 +1793,7 @@ export function createGoogleLiveImageAdapter(options: GoogleLiveImageAdapterOpti
           url: `${normalizeBaseUrl(parsedConfig)}/models/${encodeURIComponent(model)}:${GOOGLE_GENERATE_CONTENT_METHOD}`,
           method: "POST",
           headers: {
-            "x-goog-api-key": parsedConfig.apiKey,
+            "x-goog-api-key": (parsedConfig.apiKey || "").trim(),
             "Content-Type": "application/json",
           },
           body: {
