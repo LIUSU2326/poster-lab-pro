@@ -36,6 +36,17 @@ const generationFormSyncActions = new Set([
   "confirm-generation-choice",
 ]);
 let globalKeyboardBound = false;
+let workbenchRefreshClearTimer = null;
+
+function markWorkbenchRefreshFrame(duration = 140) {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  document.documentElement.dataset.workbenchRefresh = "true";
+  if (workbenchRefreshClearTimer !== null) window.clearTimeout(workbenchRefreshClearTimer);
+  workbenchRefreshClearTimer = window.setTimeout(() => {
+    delete document.documentElement.dataset.workbenchRefresh;
+    workbenchRefreshClearTimer = null;
+  }, duration);
+}
 
 function persistProviderPreferences() {
   saveLocalProviderPreferences(state);
@@ -1582,6 +1593,7 @@ function refreshSettingsLayer(render) {
     render();
     return;
   }
+  markWorkbenchRefreshFrame();
 
   const detailScrollTop = current.querySelector(".provider-detail")?.scrollTop || 0;
   const modelRoutingDisclosure = current.querySelector(".model-routing-disclosure");

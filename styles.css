@@ -16882,3 +16882,66 @@ select:focus-visible,
   border-radius: 6px;
   object-fit: cover;
 }
+
+/* 1.1.1 interaction stability: prevent full-shell refreshes from replaying entrance motion. */
+:root[data-workbench-refresh="true"] .config-panel.collapsed,
+:root[data-workbench-refresh="true"] .settings-backdrop,
+:root[data-workbench-refresh="true"] .style-library-backdrop,
+:root[data-workbench-refresh="true"] .result-viewer,
+:root[data-workbench-refresh="true"] .settings-sheet,
+:root[data-workbench-refresh="true"] .provider-config-sheet.settings-sheet,
+:root[data-workbench-refresh="true"] .style-library-panel,
+:root[data-workbench-refresh="true"] .task-drawer,
+:root[data-workbench-refresh="true"] .result-viewer-stage img,
+:root[data-workbench-refresh="true"] .result-viewer-placeholder,
+:root[data-workbench-refresh="true"] .result-viewer-dock,
+:root[data-workbench-refresh="true"] .result-viewer-close,
+:root[data-workbench-refresh="true"] .scheme-plan-list > .scheme-card,
+:root[data-workbench-refresh="true"] .result-grid > .result-card,
+:root[data-workbench-refresh="true"] .project-library-grid > .project-library-card,
+:root[data-workbench-refresh="true"] .version-pager button.active,
+:root[data-workbench-refresh="true"] .version-pager button.filled,
+:root[data-workbench-refresh="true"] .theme-switch span.active {
+  animation: none !important;
+}
+
+:root[data-workbench-refresh="true"] .scheme-card,
+:root[data-workbench-refresh="true"] .result-card,
+:root[data-workbench-refresh="true"] .settings-sheet,
+:root[data-workbench-refresh="true"] .provider-config-sheet,
+:root[data-workbench-refresh="true"] .style-library-panel,
+:root[data-workbench-refresh="true"] .result-viewer,
+:root[data-workbench-refresh="true"] .result-viewer-stage img,
+:root[data-workbench-refresh="true"] .result-viewer-dock,
+:root[data-workbench-refresh="true"] .top-view-switch::before,
+:root[data-workbench-refresh="true"] .theme-switch::before {
+  transition-duration: 0ms !important;
+}
+
+.style-library-panel .style-library-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+
+.style-library-panel .style-library-option,
+.style-library-panel .style-library-option:nth-child(9n + 1),
+.style-library-panel .style-library-option:nth-child(13n + 5) {
+  min-height: 76px !important;
+  grid-column: auto !important;
+  grid-row: auto !important;
+  grid-template-columns: 64px minmax(0, 1fr) !important;
+}
+
+.style-library-panel .style-library-option .style-library-swatch,
+.style-library-panel .style-library-option:nth-child(9n + 1) .style-library-swatch,
+.style-library-panel .style-library-option:nth-child(13n + 5) .style-library-swatch {
+  width: 64px !important;
+}
+
+.scheme-board-empty {
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, white, transparent 56%),
+    0 10px 26px color-mix(in oklch, var(--ink), transparent 94%) !important;
+}

@@ -90,10 +90,13 @@ for (const token of [
 	  "slogans must be an empty object for icon mode",
 	  "normalizeModeBriefSchemes",
 	  "BRAND MOTIF REFERENCE",
-	  "copy-safe blank wordmark mode",
-	  "BRAND MOTIF REFERENCE WITHHELD FOR COPY-SAFE LOGO TEXT",
-	  "withholdLogoTextReferences",
-	  "referenceUrl=withheld for copy-safe blank wordmark mode",
+  "copy-safe blank wordmark mode",
+  "BRAND MOTIF REFERENCE WITHHELD FOR COPY-SAFE LOGO TEXT",
+  "withholdLogoTextReferences",
+  "referenceUrl=withheld for copy-safe blank wordmark mode",
+  "selectedStyleLockFromPrompt",
+  "retro pixel art / arcade pixel key art",
+  "Do not render smooth 3D",
 	]) {
 	  if (!adapter.includes(token) && !providerProfiles.includes(token) && !sloganPolicy.includes(token)) issues.push(`google-live-adapter.ts: missing ${token}`);
 	}
@@ -300,7 +303,7 @@ async function runRuntimeCheck() {
         traceId: "trace-google-live-adapter-check",
       },
       schemeId: "scheme-google-poster-01",
-      prompt: "Generate a game marketing poster key visual.",
+      prompt: "Active style source: selected style tag \"像素复古\".\nGenerate a game marketing poster key visual.",
       assets: [],
       platformPreset: "tiktok",
       aspectRatio: "9:16",
@@ -345,6 +348,9 @@ async function runRuntimeCheck() {
       .join("\n");
     if (!capturedPrompt.includes("Default pipeline: AI integrated redraw")) {
       issues.push("Google image prompt should default to AI integrated redraw for poster mode");
+    }
+    if (!capturedPrompt.includes("retro pixel art / arcade pixel key art") || !capturedPrompt.includes("Do not render smooth 3D")) {
+      issues.push("Google image prompt should preserve selected pixel style as a hard rendering lock");
     }
     if (capturedPrompt.includes("Identity-Safe Game Campaign KV Plate") || capturedPrompt.includes("SCENE PLATE only")) {
       issues.push("Google image prompt should not use scene-plate fallback by default");

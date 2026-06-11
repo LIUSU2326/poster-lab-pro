@@ -35,15 +35,27 @@ export function StaticWorkbenchBridge() {
     state.apiMode = state.apiMode === "static" && window.location.search.includes("api=static") ? "static" : "http";
     ensureSelectedScheme();
 
+    let refreshClearTimer: number | null = null;
     const preserveConfigScrollFromEvent = (event: Event) => {
       const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest("[data-rhf-assets-section]")) return;
+      if (!target?.closest(".config-scroll")) return;
       const configScrollTop = configScrollTopForElement(target);
       if (configScrollTop !== null) preserveWorkbenchConfigScrollTop(configScrollTop);
+    };
+    const markWorkbenchRefresh = () => {
+      if (!host.firstElementChild) return;
+      document.documentElement.dataset.workbenchRefresh = "true";
+      if (refreshClearTimer !== null) window.clearTimeout(refreshClearTimer);
+      refreshClearTimer = window.setTimeout(() => {
+        delete document.documentElement.dataset.workbenchRefresh;
+        refreshClearTimer = null;
+      }, 140);
     };
 
     host.addEventListener("pointerdown", preserveConfigScrollFromEvent, true);
     host.addEventListener("click", preserveConfigScrollFromEvent, true);
+    host.addEventListener("change", preserveConfigScrollFromEvent, true);
+    host.addEventListener("keydown", preserveConfigScrollFromEvent, true);
     host.addEventListener("drop", preserveConfigScrollFromEvent, true);
 
     const render = (options?: WorkbenchRenderOptions) => {
@@ -54,6 +66,7 @@ export function StaticWorkbenchBridge() {
         : preservedConfigScrollTop ?? host.querySelector<HTMLElement>(".config-scroll")?.scrollTop ?? 0;
       ensureSelectedScheme();
       document.documentElement.dataset.theme = state.theme;
+      markWorkbenchRefresh();
       mountedSectionsRef.current?.unmount();
       mountedSectionsRef.current = null;
       host.innerHTML = renderShell(getActiveMode(), getSelectedScheme());
@@ -79,7 +92,11 @@ export function StaticWorkbenchBridge() {
     return () => {
       host.removeEventListener("pointerdown", preserveConfigScrollFromEvent, true);
       host.removeEventListener("click", preserveConfigScrollFromEvent, true);
+      host.removeEventListener("change", preserveConfigScrollFromEvent, true);
+      host.removeEventListener("keydown", preserveConfigScrollFromEvent, true);
       host.removeEventListener("drop", preserveConfigScrollFromEvent, true);
+      if (refreshClearTimer !== null) window.clearTimeout(refreshClearTimer);
+      delete document.documentElement.dataset.workbenchRefresh;
       mountedSectionsRef.current?.unmount();
       mountedSectionsRef.current = null;
     };

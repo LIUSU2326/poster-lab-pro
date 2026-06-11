@@ -19,6 +19,91 @@ type PosterKvArchitecture = {
   directive: string;
 };
 
+type PosterKvScenarioLane = {
+  titleZh: string;
+  titleEn: string;
+  missionObjective: string;
+  locationFamily: string;
+  cameraGrammar: string;
+  threatRole: string;
+  emotionalBeat: string;
+};
+
+const POSTER_KV_SCENARIO_LANES: PosterKvScenarioLane[] = [
+  {
+    titleZh: "城镇混乱",
+    titleEn: "Market/town chaos",
+    missionObjective: "protect a busy hub, kitchen, shopfront, town gate, festival lane, or settlement objective while the game loop erupts around it",
+    locationFamily: "crowded town, shop interior, festival street, base kitchen, market road, or settlement gate",
+    cameraGrammar: "wide crowd-aware campaign composition with foreground occlusion and readable action pockets",
+    threatRole: "the BOSS disrupts the environment from the side/background rather than owning the whole center",
+    emotionalBeat: "comic panic turning into heroic action",
+  },
+  {
+    titleZh: "资源突袭",
+    titleEn: "Resource raid heist",
+    missionObjective: "steal, rescue, carry, cook, craft, or protect a key resource/object from the current project",
+    locationFamily: "storage room, resource node, kitchen station, convoy, treasure cache, farm plot, or supply route",
+    cameraGrammar: "low-angle foreground object close-up leading to midground character action",
+    threatRole: "the BOSS interrupts the objective as a blocker, thief, or pressure source",
+    emotionalBeat: "urgent problem-solving under pressure",
+  },
+  {
+    titleZh: "探索发现",
+    titleEn: "Discovery reveal",
+    missionObjective: "discover a portal, relic, recipe, map route, hidden arena, new biome, or upgrade trigger",
+    locationFamily: "doorway, portal breach, hidden chamber, route map, moonlit path, machine room, cave, or ruined gate",
+    cameraGrammar: "over-the-shoulder or frame-within-frame reveal with strong backlight",
+    threatRole: "the BOSS is hinted beyond the reveal, as silhouette, shadow, or reaching force",
+    emotionalBeat: "wonder mixed with danger",
+  },
+  {
+    titleZh: "追逐逃脱",
+    titleEn: "Chase/escape route",
+    missionObjective: "escort, escape, deliver, chase, or race through a route tied to the game loop",
+    locationFamily: "road, bridge, tunnel, canyon, kitchen conveyor, town alley, forest lane, or sky path",
+    cameraGrammar: "diagonal motion path with speed blur, dust trails, and cropped foreground",
+    threatRole: "the BOSS chases, blocks the route, or bursts into the path",
+    emotionalBeat: "breathless momentum",
+  },
+  {
+    titleZh: "防守反击",
+    titleEn: "Defense counterplay",
+    missionObjective: "defend a base, oven, gate, cart, control point, recipe station, squad line, or town objective",
+    locationFamily: "base entrance, kitchen fortress, gatehouse, command point, plaza, barricade, or arena edge",
+    cameraGrammar: "triangular defense staging with clear front/mid/back layers",
+    threatRole: "the BOSS is siege pressure, not just a mascot opponent",
+    emotionalBeat: "desperate teamwork becoming comeback",
+  },
+  {
+    titleZh: "胜利余波",
+    titleEn: "Victory aftermath",
+    missionObjective: "show the moment after a hard objective: reward, rescued item, crafted result, defeated threat, or unlocked path",
+    locationFamily: "broken arena, repaired base, trophy table, glowing upgrade station, feast table, or newly opened route",
+    cameraGrammar: "hero-and-reward payoff with lower camera, dust settling, and warm practical light",
+    threatRole: "the BOSS appears restrained, receding, defeated, or implied through debris/shadow",
+    emotionalBeat: "earned relief and triumph",
+  },
+  {
+    titleZh: "地图远征",
+    titleEn: "Map expedition",
+    missionObjective: "communicate the game journey, route planning, biome progression, or multi-stage quest",
+    locationFamily: "map table, branching path, caravan, region vista, floating islands, route board, or world gate",
+    cameraGrammar: "layered travel-poster composition with foreground map/route element and distant objective",
+    threatRole: "the BOSS becomes a destination threat, landmark, wanted mark, or looming weather system",
+    emotionalBeat: "adventure promise",
+  },
+  {
+    titleZh: "训练到决战",
+    titleEn: "Training-to-boss contrast",
+    missionObjective: "contrast preparation, crafting, cooking, upgrading, or training with the incoming boss-scale challenge",
+    locationFamily: "workshop, training yard, kitchen station, upgrade bench, camp, locker room, or staging area",
+    cameraGrammar: "foreground preparation detail contrasted with background threat reveal",
+    threatRole: "the BOSS is foreshadowed through shadow, poster, window, breach, or distant arrival",
+    emotionalBeat: "anticipation before impact",
+  },
+];
+
 const ACTIVE_POSTER_KV_ARCHITECTURES: PosterKvArchitecture[] = [
   {
     titleZh: "Dynamic conflict split-world KV",
@@ -152,6 +237,50 @@ const ACTIVE_POSTER_KV_ARCHITECTURES: PosterKvArchitecture[] = [
       "Use project-specific practical light, warning glow, dust, sparks, energy, debris, weather, or particles to make the objective pressure cinematic rather than a plain battle scene.",
     ].join(" "),
   },
+  {
+    titleZh: "Market chaos ensemble KV",
+    titleEn: "Market chaos ensemble KV",
+    briefZh: "Turn a busy town, kitchen, store, festival, base, or settlement hub into a lively campaign scene where the core loop erupts into action.",
+    directive: [
+      "Use a hub-chaos ensemble composition grounded in the current project, not a clean duel poster.",
+      "The location must feel populated by props, signage-safe surfaces, route cues, resource stations, counters, carts, tables, gates, or environmental story details.",
+      "Uploaded playable characters should be large enough to read while actively solving a situation: grabbing, defending, cooking, carrying, steering, rescuing, or dodging.",
+      "The BOSS/key threat should disrupt the hub through shadow, breach, reach, falling objects, smoke, or route blockage rather than repeating a centered frontal lunge.",
+    ].join(" "),
+  },
+  {
+    titleZh: "Resource raid heist KV",
+    titleEn: "Resource raid heist KV",
+    briefZh: "Make the poster about a mission object, recipe, treasure, upgrade, cart, supply, or resource under pressure instead of a pure face-off.",
+    directive: [
+      "Use a resource-raid or heist composition where the key object/objective is the story trigger.",
+      "A foreground prop, resource, recipe, crate, relic, cart, ingredient, upgrade station, or supply marker creates the main visual hook and safe copy area.",
+      "Uploaded playable characters must physically carry, steal, defend, cook, repair, pull, or activate the object with readable faces and action.",
+      "The BOSS/key threat interrupts the raid as a blocker, thief, ambusher, or environmental pressure source with contact shadows and VFX reaction.",
+    ].join(" "),
+  },
+  {
+    titleZh: "Map expedition KV",
+    titleEn: "Map expedition KV",
+    briefZh: "Use a route, map, region vista, expedition path, caravan, or quest-board composition to sell the game's adventure scope.",
+    directive: [
+      "Use a travel/expedition campaign composition with a readable route through the current project's world.",
+      "Foreground should contain a map, signpost, route board, travel prop, vehicle, path marker, or terrain edge that leads the eye into the distance.",
+      "Uploaded playable characters must be on the journey with expressive intent: pointing, charging, steering, climbing, scouting, or protecting the route.",
+      "The BOSS/key threat should appear as a destination pressure, silhouette, landmark, storm, wanted mark, or distant obstacle rather than another close-up duel.",
+    ].join(" "),
+  },
+  {
+    titleZh: "Training-to-boss contrast KV",
+    titleEn: "Training-to-boss contrast KV",
+    briefZh: "Contrast preparation, crafting, cooking, upgrade, training, or staging with the incoming boss-scale challenge.",
+    directive: [
+      "Use a preparation-versus-threat composition that shows what the player is doing before the big encounter.",
+      "Foreground/midground should show a project-specific preparation action: crafting, cooking, loading, repairing, training, upgrading, planning, or guarding.",
+      "The uploaded playable roster must be readable and active in the preparation moment, not simply parked in a battle pose.",
+      "The BOSS/key threat appears as foreshadowing through a doorway, shadow, window, poster, smoke breach, far silhouette, or incoming impact cue.",
+    ].join(" "),
+  },
 ];
 
 function positiveModulo(value: number, divisor: number): number {
@@ -188,6 +317,22 @@ function architectureOrderForSeed(seed: string): number[] {
     });
 }
 
+function scenarioLaneOrderForSeed(seed: string): number[] {
+  return POSTER_KV_SCENARIO_LANES
+    .map((_lane, index) => index)
+    .sort((left, right) => {
+      const leftHash = hashSeed(`${seed}:poster-kv-scenario-lane:${left}`);
+      const rightHash = hashSeed(`${seed}:poster-kv-scenario-lane:${right}`);
+      return leftHash - rightHash || left - right;
+    });
+}
+
+function scenarioLaneForSlot(seed: string, slotIndex: number): PosterKvScenarioLane {
+  const order = scenarioLaneOrderForSeed(seed);
+  const index = order[positiveModulo(slotIndex, order.length)] || 0;
+  return POSTER_KV_SCENARIO_LANES[index] || POSTER_KV_SCENARIO_LANES[0]!;
+}
+
 export function posterKvAssetCountsFromAssets(assets: PosterKvAssetLike[]): PosterKvAssetCounts {
   return {
     gameCharacters: assets.filter((asset) => posterAssetSemanticRole(asset) === "protagonist").length,
@@ -211,7 +356,8 @@ export function posterKvArchitectureSlotSeed(seed: string, slotIndex: number): n
 export function posterKvArchitectureBriefSlots(schemeCount: number, seed: string): string {
   return Array.from({ length: Math.max(1, Math.min(20, schemeCount)) }, (_, index) => {
     const architecture = posterKvArchitectureForSeed(posterKvArchitectureSlotSeed(seed, index));
-    return `${index + 1}. ${architecture.titleZh} / ${architecture.titleEn}: ${architecture.briefZh}`;
+    const lane = scenarioLaneForSlot(seed, index);
+    return `${index + 1}. ${architecture.titleZh} / ${architecture.titleEn}: ${architecture.briefZh} Scenario lane: ${lane.titleZh} / ${lane.titleEn}; missionObjective=${lane.missionObjective}; locationFamily=${lane.locationFamily}; cameraGrammar=${lane.cameraGrammar}; threatRole=${lane.threatRole}; emotionalBeat=${lane.emotionalBeat}.`;
   }).join("\n");
 }
 
@@ -273,7 +419,7 @@ export function posterSchemeBlueprintRequirement(): string {
 }
 
 export function posterKvArchitectureDiversityRequirement(): string {
-  return "KV architecture and scenario diversity requirement / KV architecture diversity requirement: across a batch, do not repeat the same hero-vs-BOSS confrontation, location family, mission objective, camera grammar, emotional beat, diagonal split-world, tunnel breach, or side-view battlefield solution. Use the assigned architecture slot as the visible structural idea, and give each scheme a different scenario family such as chase/escape, base defense, resource raid, discovery/portal reveal, victory payoff, route escort, objective crisis, market/town chaos, training-to-boss contrast, or wilderness expedition. If a BOSS asset appears in multiple schemes, vary its role: direct attacker, looming silhouette, route blocker, background threat, aftermath trophy, or environmental pressure source instead of the same central lunge every time. If a diagonal divider appears it must be an active collision/action path rather than a static line with subjects parked on each side.";
+  return "KV architecture and scenario diversity requirement / KV architecture diversity requirement: across a batch, do not repeat the same hero-vs-BOSS confrontation, location family, mission objective, camera grammar, emotional beat, diagonal split-world, tunnel breach, or side-view battlefield solution. Use the assigned architecture slot and its Scenario lane as visible structural ideas, and give each scheme a different scenario family such as chase/escape, base defense, resource raid/heist, discovery/portal reveal, victory payoff, route escort, objective crisis, market/town chaos, training-to-boss contrast, map expedition, or hub defense. At most one scheme in a batch may be a pure frontal hero-vs-BOSS standoff; the others must sell different game-poster promises such as exploration, objective pressure, reward, preparation, route movement, town chaos, or resource play. If a BOSS asset appears in multiple schemes, vary its role: direct attacker, looming silhouette, route blocker, background threat, aftermath trophy, distant landmark, wanted mark, or environmental pressure source instead of the same central lunge/open-mouth close-up every time. If a diagonal divider appears it must be an active collision/action path rather than a static line with subjects parked on each side.";
 }
 
 export function posterFocalHierarchyLock(): string {

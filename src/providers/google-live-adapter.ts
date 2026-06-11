@@ -205,9 +205,24 @@ function isLogoCopySafeBlankWordmarkPrompt(prompt: string): boolean {
   return /COPY-SAFE BLANK WORDMARK ENFORCEMENT|copy-safe blank wordmark/i.test(prompt);
 }
 
+function selectedStyleLockFromPrompt(prompt: string): string {
+  const styleName = prompt.match(/Active style source:\s*selected style tag\s+"([^"]+)"/i)?.[1]?.trim() || "";
+  if (!styleName) return "";
+  if (/像素|街机|pixel|8[- ]?bit|16[- ]?bit|arcade/i.test(styleName)) {
+    return [
+      `Selected style hard lock (${styleName}): render as retro pixel art / arcade pixel key art.`,
+      "Use crisp square pixels, blocky silhouettes, limited color ramps, dithering, stepped shadows, sprite/tile edges, and pixelated lighting.",
+      "Redraw uploaded characters, BOSS, logo, props, particles, lighting, and typography-safe surfaces into the same pixel-art rendering system.",
+      "Do not render smooth 3D, glossy cinematic materials, photorealistic lighting, clay render, airbrush, or painterly blending.",
+    ].join(" ");
+  }
+  return `Selected style hard lock (${styleName}): make this style visibly dominant in rendering, palette, edge language, material finish, and lighting.`;
+}
+
 function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterMode = request.context.mode === "poster";
   const hasSelectedStyleTag = /Active style source:\s*selected style tag/i.test(request.prompt);
+  const selectedStyleLock = selectedStyleLockFromPrompt(request.prompt);
   const logoCopySafeBlankWordmark = request.context.mode === "logo" && isLogoCopySafeBlankWordmarkPrompt(request.prompt);
   const hasPosterReferenceAssets = hasPosterMode && request.assets.some((asset) => isPosterIntegratedReferenceAsset(asset));
   const assetInventory = request.assets.length ? assetSemanticInventory(request.assets, { mode: request.context.mode }) : "";
@@ -284,7 +299,10 @@ function imagePrompt(request: ImageGenerationRequest): string {
         "Contact and occlusion audit: every hero/BOSS foot, hand, weapon, or body part that touches a surface must create contact shadow, cast shadow, small occlusion, bounce color, and local material reaction. Avoid clean cutout edges floating over props or terrain.",
         "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
         hasSelectedStyleTag
-          ? "Style fidelity rule: a style library tag is selected, so use that selected style as the rendering standard while preserving uploaded character/BOSS/logo identity."
+          ? [
+            "Style fidelity rule: a style library tag is selected, so use that selected style as the rendering standard while preserving uploaded character/BOSS/logo identity.",
+            selectedStyleLock,
+          ].filter(Boolean).join(" ")
           : "Style fidelity rule: if no explicit style reference and no selected style tag are supplied, match the uploaded character art direction as a stylized 2D cartoon game world with rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish.",
         "Do not generate photorealistic product macro photography, realistic unrelated commercial renders, stock-photo backgrounds, or a realistic unrelated 3D product surface unless the user explicitly selected a realistic style or the project asks for it.",
         "Premium KV production rules:",
@@ -978,6 +996,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
       assets,
       rules: [
         "Assign the requiredKvArchitectureSlots in order: scheme 1 uses slot 1, scheme 2 uses slot 2, and so on. The slot is mandatory and must be visible in both brief and image prompt.",
+        "Each requiredKvArchitectureSlot includes a Scenario lane. Copy that lane into the scheme planning as scenarioFamily, missionObjective, locationFamily, cameraGrammar, threatRole, and emotionalBeat, then design the poster around those fields rather than falling back to a generic BOSS fight.",
         "Field separation is mandatory: brief is KV 主视觉详细策划 only. It describes composition, story moment, camera, foreground/midground/background, character/BOSS performance, world context, and logo/copy safe area. Do not put meta labels, quality overrides, architecture-template labels, raw model commands, negative prompts, or phrases such as KV architecture master / Cinematic Game KV Quality Override / Mandatory KV Composition Architecture Override / movie-grade enhancement in brief.",
         "prompt/promptZh/promptEn are AI 底层渲染指令. They must convert the brief into concrete image-generation instructions with placeholders, action, camera, lighting, VFX, style, logo/slogan treatment, reference-identity locks, and exclusions.",
         "Treat focusGuidance as a soft creative emphasis, not a literal mandatory scene. It must never override requiredKvArchitectureSlots, uploaded asset identity, story clarity, or KV quality.",
@@ -1003,6 +1022,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         posterKvArchitectureDiversityRequirement(),
         "Use divergent story-composition archetypes across the batch, such as boss encounter, base siege, resource raid, wilderness chase, town defense, portal discovery, victory payoff, caravan expedition, route push, upgrade crisis, or training-to-boss-fight contrast.",
         "Batch diversity hard lock: each scheme brief must explicitly name a different scenarioFamily, mission objective, location family, camera grammar, BOSS/threat role, and emotional beat. No two schemes may share the same central set-piece or the same 'hero faces BOSS in a fiery tunnel/arena' template.",
+        "At most one scheme in a batch may be a direct frontal hero-versus-BOSS showdown. Other schemes must visibly sell different poster promises such as discovery, chase/escape, resource raid, town/base chaos, preparation, victory payoff, map journey, or objective crisis.",
         "If uploaded BOSS assets are present, they may recur for identity continuity, but their story function must change across schemes: attacker, silhouette beyond a portal, route blocker, objective disruptor, aftermath trophy, base-siege pressure, or environmental hazard. Do not repeat the same centered lunging BOSS composition.",
         "Do not default to a simple horizontal scene with heroes standing left and right on a flat surface. Giant-scale scenery can be used only when it creates scale drama, foreground framing, vertical layers, danger, and a clear story beat.",
         "Every scheme must have a unique title, unique visual direction, unique image prompt, unique camera angle, and unique story moment. Do not reuse the same sentence template across schemes.",

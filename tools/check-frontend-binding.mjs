@@ -32,6 +32,7 @@ const taskChrome = read("src/render/task-chrome.js");
 const settingsSheet = read("src/render/settings-sheet.js");
 const resultOperationClient = read("src/result-operation-client.js");
 const stateSource = read("src/state.js");
+const staticWorkbenchBridge = read("src/react/StaticWorkbenchBridge.tsx");
 const styles = read("styles.css");
 
 requireTokens("form-binding.js", binding, [
@@ -62,6 +63,7 @@ requireTokens("events.js", events, [
   "data-scheme-render-count",
   "getSchemeRenderCountForSubmit",
   "imagesPerScheme",
+  "markWorkbenchRefreshFrame",
 ]);
 
 const imageCopyHandler = events.match(/function bindResultViewerImageCopy\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction setResultViewerMessage/);
@@ -135,7 +137,20 @@ requireTokens("styles.css", styles, [
   ".result-refinement-panel",
   ".scheme-render-count",
   ".scheme-result-strip",
+  "data-workbench-refresh",
+  ".style-library-panel .style-library-option:nth-child(9n + 1)",
 ]);
+
+requireTokens("StaticWorkbenchBridge.tsx", staticWorkbenchBridge, [
+  'target?.closest(".config-scroll")',
+  "document.documentElement.dataset.workbenchRefresh",
+  'host.addEventListener("change", preserveConfigScrollFromEvent, true)',
+  'host.addEventListener("keydown", preserveConfigScrollFromEvent, true)',
+]);
+
+if (staticWorkbenchBridge.includes('closest("[data-rhf-assets-section]")')) {
+  issues.push("StaticWorkbenchBridge.tsx: config scroll preservation must cover the full config panel, not only the assets section");
+}
 
 requireTokens("result-operation-client.js", resultOperationClient, [
   "editInstruction",

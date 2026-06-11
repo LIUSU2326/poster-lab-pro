@@ -51,7 +51,13 @@ for (const token of [
   "Victory trophy payoff KV",
   "Giant-scale pressure KV",
   "Objective pressure eruption KV",
+  "Market chaos ensemble KV",
+  "Resource raid heist KV",
+  "Map expedition KV",
+  "Training-to-boss contrast KV",
+  "Scenario lane",
   "KV architecture and scenario diversity requirement",
+  "At most one scheme in a batch may be a pure frontal hero-vs-BOSS standoff",
 ]) {
   if (!architectures.includes(token)) issues.push(`poster-kv-architectures.ts: missing architecture ${token}`);
 }
@@ -97,6 +103,8 @@ for (const token of [
 	    "Icon mode hard lock",
 	    "slogans must be an empty object for icon mode",
 	    "requiredKvArchitectureSlots",
+	    "scenarioFamily, missionObjective, locationFamily, cameraGrammar, threatRole, and emotionalBeat",
+	    "At most one scheme in a batch may be a direct frontal hero-versus-BOSS showdown",
 	    "Batch diversity hard lock",
 	  ]) {
 	    if (!source.includes(token)) issues.push(`${file}: missing mode-aware brief guard token ${token}`);
