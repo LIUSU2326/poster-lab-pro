@@ -59,6 +59,9 @@ requireTokens("events.js", events, [
   "selectAdjacentResult",
   "ArrowLeft",
   "ArrowRight",
+  "data-scheme-render-count",
+  "getSchemeRenderCountForSubmit",
+  "imagesPerScheme",
 ]);
 
 const imageCopyHandler = events.match(/function bindResultViewerImageCopy\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction setResultViewerMessage/);
@@ -66,6 +69,10 @@ if (!imageCopyHandler) {
   issues.push("events.js: image copy handler should update viewer copy state without rebuilding the workbench");
 } else if (imageCopyHandler[0].includes("render(")) {
   issues.push("events.js: right-click image copy must not call render(), because it rebuilds the large-image viewer during contextmenu");
+}
+
+if (!/outputOverrides:\s*\{\s*imagesPerScheme:\s*getSchemeRenderCountForSubmit\(control\.dataset\.schemeId\)/s.test(events)) {
+  issues.push("events.js: scheme-card image count selector must feed outputOverrides.imagesPerScheme for single-scheme generation");
 }
 
 requireTokens("topbar.js", topbar, [
@@ -87,11 +94,14 @@ requireTokens("center-board.js", centerBoard, [
 	  "data-copy-result-image",
 	  "data-result-refinement-prompt",
 	  'data-action="confirm-result-refinement"',
+	  "renderSchemeRenderCountControl",
+	  "renderSchemeResultStrip",
 	]);
 
 requireTokens("config-panel.js", configPanel, [
   'data-action="generate-schemes"',
   'data-action="clear-workbench"',
+  'data-form-choice="outputSettings.imagesPerScheme"',
   "renderModelRoutingSummary",
   "providerCapabilityGateUserMessage",
 ]);
@@ -114,6 +124,7 @@ requireTokens("state.js", stateSource, [
   "resultDeleteConfirmId",
   "resultRefinementOpen",
   "resultViewerMessage",
+  "schemeRenderCounts",
 ]);
 
 requireTokens("styles.css", styles, [
@@ -122,6 +133,8 @@ requireTokens("styles.css", styles, [
   ".preview-icon-action",
   ".result-operation-context",
   ".result-refinement-panel",
+  ".scheme-render-count",
+  ".scheme-result-strip",
 ]);
 
 requireTokens("result-operation-client.js", resultOperationClient, [

@@ -164,6 +164,22 @@ export function bindEvents(render) {
     });
   });
 
+  document.querySelectorAll("[data-scheme-render-count]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const schemeId = button.dataset.schemeId;
+      const count = clampImageCount(button.dataset.schemeRenderCount);
+      if (!schemeId) return;
+      state.selectedScheme = schemeId;
+      state.schemeRenderCounts = {
+        ...(state.schemeRenderCounts || {}),
+        [schemeId]: count,
+      };
+      event.preventDefault();
+      event.stopPropagation();
+      render();
+    });
+  });
+
 	  bindActionControls(render);
 	  bindResultViewerImageCopy();
 	  bindKeyRevealControls();
@@ -635,6 +651,9 @@ async function handleActionControl(control, event, render) {
         : {
             schemeStrategy: "continue",
             schemeIds: [control.dataset.schemeId],
+            outputOverrides: {
+              imagesPerScheme: getSchemeRenderCountForSubmit(control.dataset.schemeId),
+            },
             renderImages: true,
           };
     } else {
@@ -996,6 +1015,17 @@ function getCurrentSchemeCountOverride() {
   const value = Number(getActiveGenerationFormValues()?.outputSettings?.schemeCount);
   if (!Number.isFinite(value)) return null;
   return Math.max(1, Math.min(20, Math.round(value)));
+}
+
+function clampImageCount(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(4, Math.round(parsed))) : 1;
+}
+
+function getSchemeRenderCountForSubmit(schemeId) {
+  const schemeValue = state.schemeRenderCounts?.[schemeId];
+  if (Number.isFinite(Number(schemeValue))) return clampImageCount(schemeValue);
+  return clampImageCount(getActiveGenerationFormValues()?.outputSettings?.imagesPerScheme);
 }
 
 function createLocalServiceError(reason, message) {

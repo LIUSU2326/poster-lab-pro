@@ -730,6 +730,7 @@ function renderModeDirection(activeMode, form) {
 
 function renderModeOutput(activeMode, form, outputSizes) {
   const outputSettings = normalizeRenderedOutputSettings(activeMode.id, form.outputSettings);
+  const imagesPerScheme = Math.max(1, Math.min(4, Math.round(Number(outputSettings.imagesPerScheme || 1))));
   const suitePresetIds = new Set(["tiktok", "metaAds", "tapTap", "googlePlay", "appStore"]);
   const suiteMode = outputSettings.platformPresets?.some((preset) => suitePresetIds.has(preset))
     || outputSettings.aspectRatios.length > 1;
@@ -737,6 +738,19 @@ function renderModeOutput(activeMode, form, outputSizes) {
   return `
     <div class="size-grid ${activeMode.id === "icon" ? "single-size" : ""}">
       ${outputSizes.map((item) => `<button class="${outputSettings.aspectRatios.includes(item) ? "active" : ""}" type="button" data-form-choice="outputSettings.aspectRatios" data-choice-value="${escapeAttribute(item)}" ${activeMode.id === "icon" ? "" : 'data-choice-multi="true"'}>${escapeHtml(item)}</button>`).join("")}
+    </div>
+    <div class="number-row output-count-row" aria-label="每方案出图数量">
+      <span>每方案出图</span>
+      <div>
+        ${[1, 2, 3, 4].map((count) => `
+          <button
+            class="${imagesPerScheme === count ? "active" : ""}"
+            type="button"
+            data-form-choice="outputSettings.imagesPerScheme"
+            data-choice-value="${count}"
+          >${count}</button>
+        `).join("")}
+      </div>
     </div>
     ${suiteMode ? `<div class="segmented">
       <button class="active" type="button">${activeMode.id === "icon" ? "锁定方形" : "统一方案"}</button>

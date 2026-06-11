@@ -76,6 +76,7 @@ async function run() {
     state,
   } = await import(pathToFileURL(path.join(root, "src/state.js")).href);
   const {
+    clearGeneratedSchemesForWorkbench,
     deleteGeneratedSchemeForWorkbench,
     resetGeneratedSchemeForWorkbench,
   } = await import(pathToFileURL(path.join(root, "src/scheme-management-client.js")).href);
@@ -143,6 +144,7 @@ async function run() {
     ],
     queueSummaries: [],
   };
+  const initialServerSnapshot = clone(serverSnapshot);
 
   const fakeFetch = async (url, init = {}) => {
     const method = init.method || "GET";
@@ -220,6 +222,40 @@ async function run() {
   };
 
   state.apiMode = "http";
+  serverSnapshot = clone(initialServerSnapshot);
+  setRuntimeWorkspaceSnapshot(serverSnapshot, "http");
+  state.selectedScheme = schemeA;
+  state.selectedSchemeVariants = {
+    [schemeA]: 2,
+    [schemeB]: 1,
+    "missing-scheme": 3,
+  };
+  state.schemeRenderCounts = {
+    [schemeA]: 4,
+    [schemeB]: 2,
+    "missing-scheme": 3,
+  };
+  state.archiveSelection = [`archive-${resultA.id}`, `archive-${resultB.id}`];
+
+  const clearEnvelope = await clearGeneratedSchemesForWorkbench({ modeId: "poster" }, { fetchImpl: fakeFetch });
+  const clearedSnapshot = getRuntimeWorkspaceSnapshot();
+  assert(clearEnvelope.ok, "clearGeneratedSchemesForWorkbench should persist through fake http");
+  assert(!clearedSnapshot.schemes.some((scheme) => scheme.id === schemeA || scheme.id === schemeB), "clear generated schemes should remove old generated scheme cards");
+  assert(clearedSnapshot.results.some((result) => result.id === resultA.id), "clear generated schemes should preserve previous generated results for archive");
+  assert(clearedSnapshot.results.some((result) => result.id === resultB.id), "clear generated schemes should preserve all previous generated results for archive");
+  assert(clearedSnapshot.archiveRows.some((row) => row.resultAssetId === resultA.id), "clear generated schemes should preserve previous archive rows");
+  assert(clearedSnapshot.archiveRows.some((row) => row.resultAssetId === resultB.id), "clear generated schemes should preserve all previous archive rows");
+  assert(!clearedSnapshot.queuePlans.some((plan) => (plan.tasks || []).some((task) => (
+    task.input?.schemeId === schemeA
+      || task.input?.schemeId === schemeB
+      || task.input?.schemeIds?.includes(schemeA)
+      || task.input?.schemeIds?.includes(schemeB)
+  ))), "clear generated schemes should remove stale queue references");
+  assert(!(schemeA in state.selectedSchemeVariants), "clearing generated schemes should remove stale scheme variant state");
+  assert(!(schemeA in state.schemeRenderCounts), "clearing generated schemes should remove stale render count state");
+  assert(state.archiveSelection.includes(`archive-${resultA.id}`), "clearing generated schemes should keep archive selection for preserved rows");
+
+  serverSnapshot = clone(initialServerSnapshot);
   setRuntimeWorkspaceSnapshot(serverSnapshot, "http");
   state.selectedScheme = schemeA;
   state.selectedResult = resultA.id;

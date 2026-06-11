@@ -81,9 +81,8 @@ function refreshQueueSummary(plan) {
   };
 }
 
-function removeSchemeOutputReferences(snapshot, schemeIds) {
+function removeSchemeQueueReferences(snapshot, schemeIds) {
   const schemeSet = new Set(schemeIds);
-  const resultIds = associatedResultIds(snapshot, schemeIds);
   const queuePlans = (snapshot.queuePlans || []).map((plan) => {
     const tasks = (plan.tasks || []).filter((task) => {
       const schemeId = task.input?.schemeId;
@@ -112,16 +111,28 @@ function removeSchemeOutputReferences(snapshot, schemeIds) {
 
   return {
     ...snapshot,
-    results: (snapshot.results || []).filter((result) => !schemeSet.has(result.schemeId)),
-    archiveRows: (snapshot.archiveRows || []).filter((row) => !resultIds.has(row.resultAssetId)),
     queuePlans,
     queueSummaries,
   };
 }
 
-function removeSchemeReferences(snapshot, schemeIds) {
+function removeSchemeOutputReferences(snapshot, schemeIds) {
   const schemeSet = new Set(schemeIds);
-  const nextSnapshot = removeSchemeOutputReferences(snapshot, schemeIds);
+  const resultIds = associatedResultIds(snapshot, schemeIds);
+  const nextSnapshot = removeSchemeQueueReferences(snapshot, schemeIds);
+
+  return {
+    ...nextSnapshot,
+    results: (nextSnapshot.results || []).filter((result) => !schemeSet.has(result.schemeId)),
+    archiveRows: (nextSnapshot.archiveRows || []).filter((row) => !resultIds.has(row.resultAssetId)),
+  };
+}
+
+function removeSchemeReferences(snapshot, schemeIds, options = {}) {
+  const schemeSet = new Set(schemeIds);
+  const nextSnapshot = options.preserveOutputs
+    ? removeSchemeQueueReferences(snapshot, schemeIds)
+    : removeSchemeOutputReferences(snapshot, schemeIds);
 
   return {
     ...nextSnapshot,
@@ -234,7 +245,7 @@ export async function clearGeneratedSchemesForWorkbench(input = {}, options = {}
     return { ok: true, cleared: 0, transport: state.workspaceLoadStatus };
   }
 
-  const nextSnapshot = touchSnapshot(removeSchemeReferences(snapshot, schemeIds));
+  const nextSnapshot = touchSnapshot(removeSchemeReferences(snapshot, schemeIds, { preserveOutputs: true }));
   const envelope = await persistSnapshot(nextSnapshot, options);
   return {
     ...envelope,

@@ -19,6 +19,7 @@ export const state = {
   activeMode: defaultWorkspaceSnapshot.activeMode || "poster",
   selectedScheme: "",
   selectedSchemeVariants: /** @type {Record<string, number>} */ ({}),
+  schemeRenderCounts: /** @type {Record<string, number>} */ ({}),
   selectedResult: "",
   selectedResultUserSet: false,
   schemeDeleteConfirmId: "",
@@ -253,6 +254,9 @@ export function reconcileWorkspaceUiState() {
   ]);
   state.selectedSchemeVariants = Object.fromEntries(
     Object.entries(state.selectedSchemeVariants || {}).filter(([schemeId]) => knownSchemeIds.has(schemeId)),
+  );
+  state.schemeRenderCounts = Object.fromEntries(
+    Object.entries(state.schemeRenderCounts || {}).filter(([schemeId]) => knownSchemeIds.has(schemeId)),
   );
 
   const archiveRowIds = new Set((snapshot.archiveRows || []).map((row) => row.id));

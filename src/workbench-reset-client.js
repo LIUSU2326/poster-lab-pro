@@ -104,6 +104,7 @@ function applyClearedUiState() {
   state.copyVisible = true;
   state.selectedScheme = "";
   state.selectedSchemeVariants = {};
+  state.schemeRenderCounts = {};
   state.selectedResult = "";
   state.selectedResultUserSet = false;
   state.schemeDeleteConfirmId = "";

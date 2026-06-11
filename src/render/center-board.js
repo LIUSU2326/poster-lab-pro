@@ -575,9 +575,10 @@ function renderSchemeCard(activeMode, scheme, selected, schemeResults = []) {
       ${state.copyVisible ? renderTextBlocks(display) : ""}
 
       ${renderPlanImageArea(activeMode, scheme, display, schemeResults, imageFailure)}
+      ${renderSchemeResultStrip(scheme, schemeResults)}
 
       <footer>
-        ${renderSchemeVersionPager(scheme, schemeResults)}
+        ${renderSchemeRenderCountControl(activeMode, scheme)}
         <div class="scheme-card-actions">
           <button
             class="scheme-delete-button ${confirmingDelete ? "confirming" : ""}"
@@ -620,8 +621,7 @@ function normalizeBriefSecondaryLabel(value) {
 }
 
 function renderPlanImageArea(activeMode, scheme, display, schemeResults, imageFailure = { failed: false }) {
-  const variantIndex = getSelectedSchemeVariantIndex(scheme.id);
-  const primaryResult = schemeResults[variantIndex] || schemeResults.find((result) => getResultPreviewUrl(result)) || schemeResults[0];
+  const primaryResult = getSelectedSchemeResult(scheme.id, schemeResults);
   const previewUrl = primaryResult ? getResultPreviewUrl(primaryResult) : "";
   const orientation = primaryResult ? getResultOrientation(primaryResult) : "";
 
@@ -666,18 +666,77 @@ function renderPlanImageArea(activeMode, scheme, display, schemeResults, imageFa
   return "";
 }
 
-function renderSchemeVersionPager(scheme, schemeResults) {
-  const total = Math.max(4, parseProgressTotal(scheme.progress), schemeResults.length);
-  const readyCount = Math.max(schemeResults.length, parseProgressDone(scheme.progress));
-  const activeIndex = Math.min(getSelectedSchemeVariantIndex(scheme.id), Math.min(total, 6) - 1);
-  const buttons = Array.from({ length: Math.min(total, 6) }, (_, index) => {
-    const number = index + 1;
-    const active = index === activeIndex;
-    const filled = number <= readyCount;
-    return `<button class="${active ? "active" : ""} ${filled ? "filled" : ""}" type="button" data-scheme-id="${escapeHtml(scheme.id)}" data-scheme-variant="${number}" aria-label="方案变体 ${number}">${number}</button>`;
-  });
+function renderSchemeRenderCountControl(activeMode, scheme) {
+  const activeCount = getSchemeRenderCount(activeMode, scheme.id);
+  const buttons = [1, 2, 3, 4].map((number) => `
+    <button
+      class="${number === activeCount ? "active" : ""}"
+      type="button"
+      data-scheme-id="${escapeAttribute(scheme.id)}"
+      data-scheme-render-count="${number}"
+      aria-label="本次生成 ${number} 张图片"
+      title="本次生成 ${number} 张图片"
+    >${number}</button>
+  `).join("");
 
-  return `<div class="version-pager">${buttons.join("")}</div>`;
+  return `
+    <div class="scheme-render-count" aria-label="本次出图张数">
+      <span>出图</span>
+      <div class="version-pager">${buttons}</div>
+    </div>
+  `;
+}
+
+function renderSchemeResultStrip(scheme, schemeResults) {
+  const previewResults = getPreviewResults(schemeResults).slice(0, 8);
+  if (previewResults.length <= 1) return "";
+
+  const activeIndex = Math.min(getSelectedSchemeVariantIndex(scheme.id), previewResults.length - 1);
+  return `
+    <div class="scheme-result-strip" aria-label="已生成图片">
+      ${previewResults.map((result, index) => {
+        const previewUrl = getResultPreviewUrl(result);
+        const active = index === activeIndex;
+        return `
+          <button
+            class="${active ? "active" : ""}"
+            type="button"
+            data-scheme-id="${escapeAttribute(scheme.id)}"
+            data-scheme-variant="${index + 1}"
+            aria-label="查看第 ${index + 1} 张生成图"
+          >
+            <img src="${escapeAttribute(previewUrl)}" alt="" width="64" height="64" loading="lazy">
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function getSchemeRenderCount(activeMode, schemeId) {
+  const explicitValue = state.schemeRenderCounts?.[schemeId];
+  if (Number.isFinite(Number(explicitValue))) return clampRenderCount(explicitValue);
+  const snapshot = getRuntimeWorkspaceSnapshot();
+  const modeState = (snapshot.modeStates || []).find((item) => item.mode === activeMode.id);
+  return clampRenderCount(modeState?.outputSettings?.imagesPerScheme || 1);
+}
+
+function clampRenderCount(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(1, Math.min(4, Math.round(parsed))) : 1;
+}
+
+function getSelectedSchemeResult(schemeId, schemeResults) {
+  const variantIndex = getSelectedSchemeVariantIndex(schemeId);
+  const previewResults = getPreviewResults(schemeResults);
+  if (previewResults.length > 0) {
+    return previewResults[Math.min(variantIndex, previewResults.length - 1)] || previewResults[0];
+  }
+  return schemeResults[variantIndex] || schemeResults[0] || null;
+}
+
+function getPreviewResults(schemeResults) {
+  return schemeResults.filter((result) => getResultPreviewUrl(result));
 }
 
 function getSelectedSchemeVariantIndex(schemeId) {
