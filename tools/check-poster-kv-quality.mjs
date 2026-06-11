@@ -132,6 +132,13 @@ for (const token of [
   "Scenario uniqueness lock",
   "Placeholder annotation rule",
   "Slogan visibility requirement",
+  "Multi-character hero requirement",
+  "Render every listed uploaded protagonist",
+  "all uploaded characters must be visible as separate readable characters",
+  "selected style library tag",
+  "styleReference visual guide",
+  "uploaded character art direction",
+  "When focus guidance is active",
 ]) {
   if (!requestMapper.includes(token)) issues.push(`request-mapper.ts: missing provider prompt lock ${token}`);
 }
@@ -146,9 +153,24 @@ for (const token of [
   "Focal hierarchy lock",
   "Text economy lock",
   "In-world brand treatment lock",
+  "Multi-character usage requirement",
+  "Focus guidance impact requirement",
 ]) {
   if (!promptBuilder.includes(token) && !architectures.includes(token)) {
     issues.push(`prompt/architecture layer missing poster QA token ${token}`);
+  }
+}
+
+for (const [file, source] of [
+  ["src/providers/google-live-adapter.ts", googleAdapter],
+  ["src/providers/openai-compatible-brief-adapter.ts", openAiBriefAdapter],
+]) {
+  for (const token of [
+    "every uploaded protagonist",
+    "separate readable",
+    "focusGuidance is active",
+  ]) {
+    if (!source.includes(token)) issues.push(`${file}: missing multi-character/focus prompt guard ${token}`);
   }
 }
 

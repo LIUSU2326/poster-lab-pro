@@ -207,6 +207,7 @@ function isLogoCopySafeBlankWordmarkPrompt(prompt: string): boolean {
 
 function imagePrompt(request: ImageGenerationRequest): string {
   const hasPosterMode = request.context.mode === "poster";
+  const hasSelectedStyleTag = /Active style source:\s*selected style tag/i.test(request.prompt);
   const logoCopySafeBlankWordmark = request.context.mode === "logo" && isLogoCopySafeBlankWordmarkPrompt(request.prompt);
   const hasPosterReferenceAssets = hasPosterMode && request.assets.some((asset) => isPosterIntegratedReferenceAsset(asset));
   const assetInventory = request.assets.length ? assetSemanticInventory(request.assets, { mode: request.context.mode }) : "";
@@ -281,7 +282,9 @@ function imagePrompt(request: ImageGenerationRequest): string {
         "Do not give uploaded characters new weapons, armor, swords, shields, adult facial structures, noses, beards, mustaches, or costume variants unless those details are clearly present in the reference image.",
         "Blend the uploaded identities into the scene: environmental color grading, cinematic rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, VFX overlap, and matching brush/line quality must remove any cutout or collage feeling.",
         "Contact and occlusion audit: every hero/BOSS foot, hand, weapon, or body part that touches a surface must create contact shadow, cast shadow, small occlusion, bounce color, and local material reaction. Avoid clean cutout edges floating over props or terrain.",
-        "Style fidelity rule: if no explicit style reference is supplied, match the uploaded character art direction as a stylized 2D cartoon game world with rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish.",
+        hasSelectedStyleTag
+          ? "Style fidelity rule: a style library tag is selected, so use that selected style as the rendering standard while preserving uploaded character/BOSS/logo identity."
+          : "Style fidelity rule: if no explicit style reference and no selected style tag are supplied, match the uploaded character art direction as a stylized 2D cartoon game world with rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish.",
         "Do not generate photorealistic product macro photography, realistic unrelated commercial renders, stock-photo backgrounds, or a realistic unrelated 3D product surface unless the user explicitly selected a realistic style or the project asks for it.",
         "Premium KV production rules:",
         posterFocalHierarchyLock(),
@@ -317,6 +320,8 @@ function imagePrompt(request: ImageGenerationRequest): string {
         assetInventory ? `Uploaded asset semantic duties:\n${assetInventory}` : "",
         request.assets.some((asset) => assetSemanticRole(asset) === "styleReference")
           ? "A styleReference image is present. It has priority over selected style tags and character-derived style for rendering, palette, lighting, and finish."
+          : hasSelectedStyleTag
+            ? "A style library tag is selected and no styleReference image is present. The selected style tag has priority over character-derived default style, while uploaded character assets still define identity."
           : "",
         ...request.assets.map((asset) => {
           const semanticRole = assetSemanticRole(asset);
@@ -414,7 +419,7 @@ function modeSpecificMultiProtagonistInstruction(request: ImageGenerationRequest
       return "Multiple character references in collab mode are separate identities; keep them distinct and never merge, average, or swap visual traits.";
     case "poster":
     default:
-      return "Multiple gameCharacter references are separate characters. Include them as distinct characters when the composition supports a group poster; do not merge their appearances.";
+      return "Multiple gameCharacter references are separate characters. In poster mode, render every uploaded protagonist reference as a distinct readable character in the same scene; do not merge, omit, hide, average, or treat one as a tiny decoration.";
   }
 }
 
@@ -490,10 +495,10 @@ function posterReferenceMappingInstruction(request: ImageGenerationRequest): str
     const names = characters.map((asset, index) => posterAssetReferenceName(asset, index + 1)).join(", ");
     lines.push(
       `Exact playable roster: render exactly ${characters.length} uploaded protagonist reference${characters.length > 1 ? "s" : ""}: ${names}.`,
-      "Do not add any other human, mascot, helper, teammate, or replacement protagonist. If the scheme says squad/team/heroes, reinterpret it as only the uploaded roster above.",
+      "Do not add any other human, mascot, helper, teammate, or replacement protagonist. If the scheme says squad/team/heroes, reinterpret it as only the uploaded roster above, with every listed protagonist visibly present.",
       characters.length === 1
         ? "Single-character lock: only [Game Character 1] may appear as the playable hero."
-        : "Multi-character lock: keep each uploaded character separate; never merge, average, recolor, or swap traits between them.",
+        : "Multi-character lock: every uploaded protagonist must be visible as a separate readable character; never merge, omit, hide, average, recolor, or swap traits between them.",
     );
   }
 
@@ -976,6 +981,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "prompt/promptZh/promptEn are AI 底层渲染指令. They must convert the brief into concrete image-generation instructions with placeholders, action, camera, lighting, VFX, style, logo/slogan treatment, reference-identity locks, and exclusions.",
         "Treat focusGuidance as a soft creative emphasis, not a literal mandatory scene. It must never override requiredKvArchitectureSlots, uploaded asset identity, story clarity, or KV quality.",
         "If focusGuidance mentions giant scale, micro perspective, or scale, reinterpret it as scale drama/camera energy and vary the scene architecture. Do not default every scheme to a flat side-view battlefield.",
+        "When focusGuidance is active/non-empty, every scheme brief and every image prompt must visibly translate at least one focus item into a concrete camera, action, environment, prop, lighting, slogan, or copy-area decision. Do not ignore active focus guidance.",
         "Every scheme brief must include a concrete shot blueprint: foreground framing, uploaded hero performance, BOSS pressure, world context, logo/copy safe area, and camera angle.",
         "Every scheme brief must include a production design blueprint: camera height/lens feel/perspective, foreground-midground-background layers, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and typography/logo integration.",
         posterSchemeBlueprintRequirement(),
@@ -1003,6 +1009,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "Avoid flat sticker collage, cheap clip-art composition, floating elements, tabletop wallpaper, unrelated sample-project scenery, generic extra mascots, and random replacement characters.",
         "When protagonist/gameCharacter assets are present, visible hero/player characters must come from those uploaded references only. Do not invent extra heroes or generic human mascots.",
         "If only one protagonist/gameCharacter asset is present, plan exactly one playable hero. Do not write squad, team, allies, or multiple heroes unless multiple protagonist assets are listed.",
+        "If two or more protagonist/gameCharacter assets are present, every scheme brief and every image prompt must visibly use all protagonist placeholders, such as [Game Character 1] and [Game Character 2], as separate readable characters in the same scene. The image fails if one uploaded character is omitted, hidden, merged, or reduced to a small logo-like decoration.",
         "Do not write a scheme where uploaded playable characters are only back-facing, hidden, tiny, or looking away. Their faces, expressions, body language, and signature props must be readable in front view, 3/4 front view, or strong profile.",
         posterFocalHierarchyLock(),
         posterHeroPerformanceScaleLock(),
@@ -1024,7 +1031,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         "If a richer campaign line is needed, put that sentence in brief/prompt only; the slogans field must stay short enough to render cleanly inside one poster image.",
         "Do not assume a logo exists unless an asset with semanticRole brandLogo is present.",
         "If no image assets are provided, create concepts from the project description only.",
-        "If multiple assets share a semantic role, each one is an independent reference unless explicitly described as an alternate view. Use multiple characters/props when the composition supports it, without merging or averaging appearances.",
+        "If multiple assets share a semantic role, each one is an independent reference unless explicitly described as an alternate view. For poster protagonists, use all uploaded gameCharacter references as separate characters instead of choosing only one, without merging or averaging appearances.",
         `Return exactly one slogan language: ${targetLanguage}.`,
         "Keep prompts suitable for game marketing posters.",
         "Respect creativeDirection for selected styles, output sizes, composition/reference analysis, and prompt constraints.",

@@ -15,6 +15,8 @@ function read(filePath) {
 }
 
 const assetClient = read("src/asset-library-client.js");
+const assetContracts = read("src/assets/contracts.ts");
+const assetService = read("src/assets/library-service.ts");
 const configPanel = read("src/render/config-panel.js");
 const events = read("src/events.js");
 const stateSource = read("src/state.js");
@@ -31,8 +33,26 @@ for (const token of [
   "loadWorkspaceSnapshotForWorkbench",
   "referenceAnalyses",
   "referenceAnalysis",
+  "syncVisibleGenerationFormControlsForAssetMutation",
+  "currentProjectDraft",
+  "projectDraft",
 ]) {
   if (!assetClient.includes(token)) issues.push(`asset-library-client.js: missing ${token}`);
+}
+
+for (const token of [
+  "projectDraft",
+  "focusGuidanceEnabled",
+  "focusGuidance",
+]) {
+  if (!assetContracts.includes(token)) issues.push(`contracts.ts: missing asset commit draft token ${token}`);
+}
+
+for (const token of [
+  "applyProjectDraft",
+  "parsed.projectDraft",
+]) {
+  if (!assetService.includes(token)) issues.push(`library-service.ts: missing project draft persistence token ${token}`);
 }
 
 for (const token of [
@@ -78,8 +98,9 @@ for (const [fileName, source] of [
 }
 
 async function runRuntimeCheck() {
-const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/data/workspace-snapshot.js")).href);
+  const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/data/workspace-snapshot.js")).href);
   const { setRuntimeWorkspaceSnapshot, state, getRuntimeWorkspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/state.js")).href);
+  const { updateGenerationFormField } = await import(pathToFileURL(path.join(root, "src/generation-form-runtime.js")).href);
   const {
     removeWorkbenchAssetsByRoleLabel,
     simulateWorkbenchAssetUpload,
@@ -107,8 +128,39 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
   let currentCommittedAsset = committedAsset;
   let serverSnapshot = snapshot;
 
+  function applyProjectDraftToServerSnapshot(projectDraft) {
+    if (!projectDraft) return;
+    const projectName = projectDraft.projectName ?? serverSnapshot.project.name;
+    const gameDescription = projectDraft.gameDescription ?? serverSnapshot.project.description;
+    serverSnapshot = {
+      ...serverSnapshot,
+      project: {
+        ...serverSnapshot.project,
+        name: projectName,
+        description: gameDescription,
+      },
+      modeStates: serverSnapshot.modeStates.map((modeState) => {
+        if (modeState.mode !== projectDraft.mode) return modeState;
+        return {
+          ...modeState,
+          projectBrief: {
+            ...modeState.projectBrief,
+            projectName,
+            gameDescription,
+            focusGuidanceEnabled: projectDraft.focusGuidanceEnabled ?? modeState.projectBrief.focusGuidanceEnabled,
+            focusGuidance: projectDraft.focusGuidance ?? modeState.projectBrief.focusGuidance,
+          },
+        };
+      }),
+    };
+  }
+
   state.apiMode = "http";
   setRuntimeWorkspaceSnapshot(serverSnapshot, "http");
+  updateGenerationFormField("projectBrief.projectName", "Asset UI Custom Campaign");
+  updateGenerationFormField("projectBrief.gameDescription", "Typed project description must survive asset upload.");
+  updateGenerationFormField("projectBrief.focusGuidanceEnabled", true);
+  updateGenerationFormField("projectBrief.focusGuidance", "Use all uploaded character roles in the poster.");
 
   const fakeFetch = async (url, init) => {
     const parsedBody = typeof init.body === "string" ? JSON.parse(init.body) : null;
@@ -210,6 +262,7 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
 
     if (url.endsWith("/assets")) {
       currentCommittedAsset = parsedBody?.asset || currentPlannedAsset;
+      applyProjectDraftToServerSnapshot(parsedBody?.projectDraft);
       const replaceExisting = Boolean(parsedBody?.replaceExisting);
       const nextAssets = serverSnapshot.assets.filter((asset) => (
         replaceExisting
@@ -302,6 +355,18 @@ const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/da
   }
   if (calls[1]?.body?.replaceExisting !== false) {
     issues.push("asset commit should append multiple slot assets by default");
+  }
+  if (calls[1]?.body?.projectDraft?.projectName !== "Asset UI Custom Campaign") {
+    issues.push("asset commit should include the current typed project name draft");
+  }
+  if (calls[1]?.body?.projectDraft?.gameDescription !== "Typed project description must survive asset upload.") {
+    issues.push("asset commit should include the current typed project description draft");
+  }
+  if (calls[1]?.body?.projectDraft?.focusGuidanceEnabled !== true || calls[1]?.body?.projectDraft?.focusGuidance !== "Use all uploaded character roles in the poster.") {
+    issues.push("asset commit should include current focus guidance draft");
+  }
+  if (getRuntimeWorkspaceSnapshot().project.name !== "Asset UI Custom Campaign") {
+    issues.push("asset upload reload should preserve the project draft returned by the server");
   }
 
   state.apiMode = "http";

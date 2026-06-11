@@ -53,6 +53,9 @@ requireTokens("events.js", events, [
   'action === "regenerate-result"',
   "runResultOperationForWorkbench",
   "setResultViewerMessage",
+  "bindWorkbenchFormSubmissionGuard",
+  "event.preventDefault()",
+  "refreshSettingsLayer(render)",
 ]);
 
 const imageCopyHandler = events.match(/function bindResultViewerImageCopy\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction setResultViewerMessage/);
@@ -100,6 +103,7 @@ requireTokens("settings-sheet.js", settingsSheet, [
   "provider-config-sheet",
   "provider-credential-card",
   "model-routing",
+  'type="button"',
 ]);
 
 requireTokens("state.js", stateSource, [

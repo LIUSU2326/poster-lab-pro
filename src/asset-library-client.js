@@ -1,5 +1,6 @@
 import { getRuntimeWorkspaceSnapshot, setRuntimeWorkspaceSnapshot, state } from './state.js';
 import { createHttpWorkspaceDataService, loadWorkspaceSnapshotForWorkbench } from './workspace-data-service.js';
+import { getActiveGenerationFormValues, updateGenerationFormField } from './generation-form-runtime.js';
 
 function encodeSegment(value) {
   return encodeURIComponent(String(value));
@@ -169,6 +170,39 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function isVisibleFormControl(control) {
+  if (typeof HTMLElement === "undefined") return false;
+  if (!(control instanceof HTMLElement)) return false;
+  return Boolean(control.offsetParent || control.getClientRects().length > 0);
+}
+
+function formControlValue(control) {
+  if (typeof HTMLInputElement !== "undefined" && control instanceof HTMLInputElement && control.type === "checkbox") return control.checked;
+  return control.value;
+}
+
+function syncVisibleGenerationFormControlsForAssetMutation() {
+  if (typeof document === "undefined") return;
+  const values = new Map();
+  document.querySelectorAll("[data-form-field]").forEach((control) => {
+    const field = control.dataset?.formField;
+    if (!field || !isVisibleFormControl(control)) return;
+    values.set(field, formControlValue(control));
+  });
+  values.forEach((value, field) => updateGenerationFormField(field, value));
+}
+
+function currentProjectDraft() {
+  const values = getActiveGenerationFormValues();
+  return {
+    mode: values.mode,
+    projectName: values.projectBrief.projectName ?? "",
+    gameDescription: values.projectBrief.gameDescription ?? "",
+    focusGuidanceEnabled: Boolean(values.projectBrief.focusGuidanceEnabled),
+    focusGuidance: values.projectBrief.focusGuidance || "",
+  };
+}
+
 function createStaticAssetDraft(payload, options = {}) {
   const createdAt = nowIso(options);
   return {
@@ -277,6 +311,8 @@ export function createHttpAssetLibraryClient(options = {}) {
 }
 
 async function runWorkbenchAssetUpload(input = {}, options = {}) {
+  syncVisibleGenerationFormControlsForAssetMutation();
+  const projectDraft = currentProjectDraft();
   const payload = createUploadPayload(input, options);
   const workspaceId = payload.workspaceId;
 
@@ -343,6 +379,7 @@ async function runWorkbenchAssetUpload(input = {}, options = {}) {
     ? await client.commitAssetRecord(workspaceId, {
       asset: plannedAsset,
       replaceExisting: false,
+      projectDraft,
     })
     : binaryUpload || uploadPlan;
   const assetList = commit.ok
@@ -449,6 +486,7 @@ async function persistSnapshotIfNeeded(snapshot, options = {}) {
 }
 
 async function runRemoveWorkbenchAssetsByRoleLabel(role, label = "", options = {}) {
+  syncVisibleGenerationFormControlsForAssetMutation();
   const snapshot = clone(getRuntimeWorkspaceSnapshot());
   const removal = removeAssetsFromSnapshot(snapshot, role, label, options);
 

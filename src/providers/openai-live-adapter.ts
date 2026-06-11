@@ -202,7 +202,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
       posterFocalHierarchyLock(),
       posterTextEconomyLock(),
       posterInWorldBrandTreatmentLock(),
-      "Poster integrated KV style lock: generate a stylized illustrated game world matching the uploaded character art direction by description. Use rounded readable shapes, clean graphic silhouettes, soft cel/painterly shading, vibrant game-poster colors, project-specific terrain, expressive character acting, and a clear trailer-moment story beat with objective pressure or BOSS threat. Use the full requested canvas as artwork. Do not use photorealistic product macro photography, realistic unrelated 3D render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames.",
+      "Poster integrated KV style lock: follow the active style priority from the prompt: uploaded styleReference first, selected style tag second, uploaded character art direction third. When no styleReference or selected style tag is active, match the uploaded character art direction with rounded readable shapes, clean silhouettes, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish. Do not use photorealistic product macro photography, realistic unrelated 3D render, stock-photo background, duplicate assets, generic replacement heroes, black bars, letterbox bands, or border frames.",
       ].join(" ");
   }
 }
@@ -259,7 +259,7 @@ function compressedProviderPriorityInstruction(
         ? `EXACT HERO ROSTER LOCK: render one and only one playable hero from ${protagonistAssets[0]?.id}. If the prompt says squad/team/staff/helpers, reinterpret it as this single uploaded hero only. No extra human helpers, no helper crowd, no background duplicate heroes.`
         : "",
       protagonistAssets.length > 1
-        ? `EXACT HERO ROSTER LOCK: render exactly ${protagonistAssets.length} uploaded playable heroes, one per reference. Do not add unuploaded helpers, crowds, or duplicate hero copies.`
+        ? `EXACT HERO ROSTER LOCK: render exactly ${protagonistAssets.length} uploaded playable heroes, one per reference, and every uploaded hero must be visible as a separate readable character. Do not omit the second character, merge identities, hide one behind a prop/plate, add unuploaded helpers, crowds, or duplicate hero copies.`
         : "",
       bossAssets.length > 0
         ? `EXACT BOSS ROSTER LOCK: render the uploaded BOSS/key threat as one dominant threat subject from ${bossAssets.map((asset) => asset.id).join(", ")}. Do not split it into multiple small monsters, background copies, minions, or decorative mascots.`
@@ -270,7 +270,9 @@ function compressedProviderPriorityInstruction(
       forceBlankTextPlates
         ? "LOW TEXT RELIABILITY LOCK: this provider is not reliable for spelling. Do NOT render readable words, pseudo-letters, warped logo text, title text, slogan text, or glyph-like strokes. Use large polished blank in-world logo/slogan plates only, with clean empty surfaces for later copy."
         : "",
-      "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+      protagonistAssets.length > 1
+        ? "KV ACTION MINI-BRIEF: every uploaded hero is a readable separate actor, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects."
+        : "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
       posterFocalHierarchyLock(),
       posterTextEconomyLock(),
       posterInWorldBrandTreatmentLock(),
@@ -364,6 +366,7 @@ function posterCompressedSceneContract(prompt: string, architectureSummary = "")
 function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: ImageGenerationRequest): string {
   const compressedPriorityInstruction = compressedProviderPriorityInstruction(providerId, request);
   const hasPosterMode = request.context.mode === "poster";
+  const hasSelectedStyleTag = /Active style source:\s*selected style tag/i.test(request.prompt);
   const fusionDirective = request.assets.length ? modeAssetFusionDirective(request.context.mode, request.assets) : "";
   const referenceInstruction = modeReferenceInstruction(request);
   const subjectAccessoryInstruction = modeSubjectAccessoryInstruction(request);
@@ -385,6 +388,8 @@ function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: Image
         fusionDirective,
         request.assets.some((asset) => asset.role === "styleReference")
           ? "A styleReference image is present and has priority over selected style tags and character-derived style for rendering, palette, lighting, and finish."
+          : hasSelectedStyleTag
+            ? "A style library tag is selected and no styleReference image is present. The selected style tag has priority over character-derived default style, while uploaded character assets still define identity."
           : "",
         protagonistInstruction,
         hasPosterMode
@@ -449,7 +454,8 @@ function modeSubjectAccessoryInstruction(request: ImageGenerationRequest): strin
 }
 
 function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): string {
-  if (!hasSemanticRole(request, "protagonist")) return "";
+  const protagonistCount = request.assets.filter((asset) => assetSemanticRole(asset) === "protagonist").length;
+  if (protagonistCount === 0) return "";
   switch (request.context.mode) {
     case "icon":
       return "Icon character rule: a gameCharacter reference may become the single main icon subject, but no extra characters or crowded group scenes.";
@@ -461,6 +467,9 @@ function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): st
       return "Collab character rule: visible characters must come from uploaded gameCharacter/collabCharacter references and remain separate; no generic replacements or merged traits.";
     case "poster":
     default:
+      if (protagonistCount > 1) {
+        return `Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Render every uploaded protagonist reference as a separate readable character in the same scene (${protagonistCount} total). Do not omit, hide, merge, average, swap traits, add generic heroes, random human mascots, or replacement player characters.`;
+      }
       return "Character roster lock: visible hero/player characters must come from uploaded gameCharacter references only. Do not add generic heroes, random human mascots, or replacement player characters.";
   }
 }

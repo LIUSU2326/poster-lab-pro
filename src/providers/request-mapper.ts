@@ -631,11 +631,18 @@ function posterRequiredAnchorNames(
     .join(", ") || fallbackLabel;
 }
 
+function styleStrategyText(promptPackage: PromptPackage): string {
+  return promptPackage.sections.find((section) => section.id === "style-strategy")?.content || "";
+}
+
 function posterMandatoryVisualContract(input: {
   promptPackage: PromptPackage;
   sloganTargets: string;
 }): string {
-  const heroNames = posterRequiredAnchorNames(input.promptPackage.assets, "protagonist", "[Game Character]");
+  const heroAssets = input.promptPackage.assets.filter((asset) => assetSemanticRole(asset) === "protagonist");
+  const heroNames = heroAssets
+    .map((asset, index) => asset.placeholder || posterAssetReferenceName(asset, index + 1))
+    .join(", ") || posterRequiredAnchorNames(input.promptPackage.assets, "protagonist", "[Game Character]");
   const bossNames = posterRequiredAnchorNames(input.promptPackage.assets, "antagonist", "[Boss]");
   const logoNames = posterRequiredAnchorNames(input.promptPackage.assets, "brandLogo", "[Game Logo]");
   const required = [
@@ -650,7 +657,10 @@ function posterMandatoryVisualContract(input: {
   return [
     "## Non-Negotiable Poster Visual Contract",
     `Final image fails if any required visual anchor is absent, tiny, hidden, duplicated, or replaced: ${required.join("; ")}.`,
-    heroNames
+    heroAssets.length > 1
+      ? `Multi-character hero requirement: every uploaded protagonist anchor must appear as a separate readable in-world character: ${heroNames}. They must not be merged, averaged, swapped, omitted, hidden behind a prop/plate, or reduced to tiny decorations.`
+      : "",
+    heroNames && heroAssets.length <= 1
       ? "Hero anchor requirement: at least one uploaded protagonist is a large readable foreground/midground actor with visible face/emotion, changed action pose, contact shadow, and set-piece/BOSS interaction."
       : "",
     bossNames
@@ -662,7 +672,9 @@ function posterMandatoryVisualContract(input: {
     input.sloganTargets
       ? "Slogan anchor requirement: slogan mode is active; reserve one large visible slogan area tied to the scheme action/material: in-world sign, energy stroke, smoke ribbon, flag, carved plaque, neon board, metal/stone relief, hologram, or battle banner. If spelling is unsafe, leave the plate blank but visible. Do not repeat the same slogan as a second plaque, subtitle, caption, corner badge, bottom label, lower-left label, or lower-right label."
       : "",
-    "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible/reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
+    heroAssets.length > 1
+      ? "Pre-render checklist: all uploaded hero identities visible as separate characters; uploaded BOSS threat visible; single logo treatment visible/reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world."
+      : "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible/reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
   ].filter(Boolean).join("\n");
 }
 
@@ -761,10 +773,14 @@ function posterIntegratedKvPromptFromPromptPackage(
   const hasStyleReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "styleReference");
   const hasCompositionReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "compositionReference");
   const hasCharacterReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "protagonist");
+  const styleStrategy = styleStrategyText(promptPackage);
+  const hasSelectedStyle = /Active style source:\s*selected style tag/i.test(styleStrategy);
   const styleRule = hasStyleReference
       ? "Visual style lock: follow the styleReference visual guide and any extracted style analysis for rendering, palette, lighting, line quality, and material finish. Do not copy the style reference image's characters, objects, logos, scenery, layout, text, brand content, or project-specific motifs."
+    : hasSelectedStyle
+      ? "Visual style lock: follow the manually selected style library tag as the dominant rendering standard for palette, lighting, shape language, material finish, and overall art direction. Uploaded characters/BOSS/logo still define identity only and must be adapted into that selected style without redesigning their recognizable traits."
     : hasCharacterReference
-      ? "Visual style lock: match the uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish. Do not use photorealistic product photography, realistic unrelated 3D render, camera macro product shot, or stock-photo background."
+      ? "Visual style lock: no styleReference image and no selected style tag are active, so match the uploaded character art direction / uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish. Do not use photorealistic product photography, realistic unrelated 3D render, camera macro product shot, or stock-photo background."
       : "Visual style lock: use a stylized game campaign illustration style, not photorealistic product photography, unless the user explicitly selected a realistic style.";
   const analysisOnlyRule = [
     hasStyleReference
@@ -790,10 +806,10 @@ function posterIntegratedKvPromptFromPromptPackage(
   const referenceMap = [
     characters.length > 0
       ? [
-        `Exact playable roster count: ${characters.length}. Render only ${characters.map((asset, index) => asset.placeholder || `[Game Character ${index + 1}]`).join(", ")} as playable heroes.`,
+        `Exact playable roster count: ${characters.length}. Render every listed uploaded protagonist as a playable hero: ${characters.map((asset, index) => asset.placeholder || `[Game Character ${index + 1}]`).join(", ")}.`,
         characters.length === 1
         ? "Single-character lock: if any scheme text says squad/team/heroes, reinterpret that as only [Game Character 1]. Do not add any other human helper, teammate, or replacement protagonist."
-          : "Multi-character lock: keep each uploaded character independent; do not merge, average, recolor, or swap traits.",
+          : "Multi-character lock: all uploaded characters must be visible as separate readable characters; do not merge, average, omit, hide, recolor, or swap traits.",
       ].join(" ")
       : "",
     bosses.length > 0 ? `Antagonist lock: ${bosses.map((asset, index) => posterAssetReferenceName(asset, index + 1)).join(", ")} means the uploaded BOSS/key-subject reference(s); preserve identity while redrawing as dominant in-world threat(s).` : "",
@@ -819,7 +835,9 @@ function posterIntegratedKvPromptFromPromptPackage(
     analysisOnlyRule,
     schemeAnchor,
     visualContract,
-    "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+    characters.length > 1
+      ? "KV ACTION MINI-BRIEF: every uploaded hero appears as a readable separate actor, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects."
+      : "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
     posterFocalHierarchyLock(),
     posterTextEconomyLock(),
     posterInWorldBrandTreatmentLock(),
@@ -858,7 +876,9 @@ function posterIntegratedKvPromptFromPromptPackage(
       { text: supportingSectionText ? `## Workspace Creative Direction\n${supportingSectionText}` : sectionText, maxChars: 1200, minChars: 300 },
     ],
     closingBlocks: [
-    "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
+    characters.length > 1
+      ? "Pre-render checklist: every uploaded hero identity visible as a separate character; uploaded BOSS threat visible; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world."
+      : "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
     "Selected-scheme architecture lock: each image must visibly follow its own selected scheme architecture and story beat. A shared compositionReference may guide camera rhythm only; it must not cause multiple schemes to reuse the same background, pose arrangement, set piece, or scene.",
     "Scenario uniqueness lock: do not collapse this render into the default boss-versus-hero standoff if the selected scheme implies chase, discovery, defense, objective crisis, resource raid, route escort, victory payoff, town chaos, or expedition. The location family, camera grammar, mission objective, BOSS role, and emotional beat must match the selected scheme rather than a reused confrontation template.",
     sloganPriorityBlock,
@@ -884,7 +904,7 @@ function posterIntegratedKvPromptFromPromptPackage(
     "World-building direction: turn the current project premise into a fantasy, tactical, adventure, simulation, or action battlefield with illustrated terrain and playable depth. Do not introduce scenery from an unrelated sample project.",
     "## Hard KV Exclusions",
     "No duplicate uploaded asset. No second slogan/copy plaque. No lower-left or lower-right repeated label. No corner badge with campaign copy. No extra blank title plate. No copied reference image. No copied styleReference or compositionReference content. No black-background cutout. No side-by-side comparison panel. No model-sheet panel. No empty black block. No generic replacement hero. No extra random protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic product macro photography. No unrelated commercial render unless explicitly requested. No black bars. No letterbox. No border frame.",
-    "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override the assigned KV architecture, uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant scale or micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat side-view scene.",
+    "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override the assigned KV architecture, uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant scale or micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat side-view scene. When focus guidance is active, visibly translate at least one focus item into camera, action, environment, prop, lighting, or copy-area design.",
     "## Mode Guardrails",
     guardrails,
     ],

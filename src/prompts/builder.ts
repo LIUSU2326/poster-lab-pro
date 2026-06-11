@@ -437,6 +437,7 @@ function formatAssetInventory(assets: PromptAssetBinding[], mode: ProductionMode
         semanticInventory ? `Semantic asset map:\n${semanticInventory}` : "",
         characterAssets.length > 0 ? `Exact playable roster count: ${characterAssets.length}. Use only ${characterAssets.map((asset) => asset.placeholder || asset.label).join(", ")} as visible playable heroes.` : "",
         characterAssets.length === 1 ? "Single-character rule: do not write or render a squad, allies, teammates, or extra human helpers; only [Game Character 1] may appear as the playable hero." : "",
+        characterAssets.length > 1 ? "Multi-character usage requirement: every uploaded protagonist asset must appear as a separate readable in-world character in poster schemes and image prompts. Do not omit the second character, merge them, treat one as a small decoration, or collapse them into alternate views of one hero." : "",
         characterAssets.length > 0 ? "Poster must visibly use each uploaded protagonist asset as one integrated in-world character with model-sheet identity preserved, not as a sticker, generic redraw, or duplicated cutout." : "",
         bossAssets.length > 0 ? "Poster must visibly include uploaded antagonist/BOSS assets as integrated threats with preserved silhouette and key identity, scale pressure, contact shadows, atmosphere, debris, and environmental reaction." : "",
         logoAssets.length > 0 ? "Poster must allocate one readable campaign-safe logo treatment for uploaded logo/wordmark assets. Render the exact uploaded logo only when its letterforms can stay accurate; otherwise leave a polished blank logo-safe sign/title plate that uses the brand colors/shape language without fake text. Do not invent look-alike words, substitute letters, or create alternate fake logos." : "",
@@ -498,6 +499,7 @@ function formatFocusGuidancePolicy(modeState: WorkspaceModeState): string {
   return [
     `Focus guidance: ${rawFocus}.`,
     "Focus guidance handling: treat this as a soft creative emphasis, not a literal scene lock. It must never override uploaded asset identity, the assigned KV architecture, story clarity, or poster quality.",
+    "Focus guidance impact requirement: every generated scheme must visibly translate at least one active focus item into a concrete camera, action, environment, prop, lighting, or copy-area decision in the brief and image prompt.",
     "If focus guidance mentions giant scale, micro perspective, or scale words, reinterpret it as scale drama and camera energy. Do not make every scheme a flat side-view scene; vary the architecture, viewpoint, environment, and story beat.",
   ].join("\n");
 }

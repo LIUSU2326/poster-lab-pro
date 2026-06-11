@@ -83,6 +83,13 @@ export const AssetCommitRequestSchema = z.object({
   workspaceId: z.string().min(1),
   asset: StoredAssetRecordSchema,
   replaceExisting: z.boolean().default(false),
+  projectDraft: z.object({
+    mode: ProductionModeSchema,
+    projectName: z.string().max(80).optional(),
+    gameDescription: z.string().max(2000).optional(),
+    focusGuidanceEnabled: z.boolean().optional(),
+    focusGuidance: z.string().max(500).optional(),
+  }).optional(),
 });
 
 export const AssetCommitResultSchema = z.object({

@@ -176,6 +176,7 @@ export function bindEvents(render) {
   bindResizeDividers(render);
   bindSettingsResize();
   bindProviderKeyForms();
+  bindWorkbenchFormSubmissionGuard();
   bindGlobalKeyboardShortcuts(render);
 }
 
@@ -195,6 +196,17 @@ function bindActionControls(render, root = document) {
 function bindProviderKeyForms(root = document) {
   root.querySelectorAll("[data-provider-key-form]").forEach((form) => {
     form.addEventListener("submit", (event) => event.preventDefault());
+  });
+}
+
+function bindWorkbenchFormSubmissionGuard(root = document) {
+  root.querySelectorAll("form").forEach((form) => {
+    if (form.dataset.submitGuardBound === "true") return;
+    form.dataset.submitGuardBound = "true";
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
   });
 }
 
@@ -331,12 +343,20 @@ async function handleActionControl(control, event, render) {
     state.settingsOpen = true;
     render();
     await loadProviderCredentialStatusForWorkbench({ providerId: state.provider });
+    if (state.settingsOpen) refreshSettingsLayer(render);
+    return;
   }
-  if (action === "close-settings") state.settingsOpen = false;
+  if (action === "close-settings") {
+    state.settingsOpen = false;
+    render();
+    return;
+  }
   if (action === "refresh-provider-key") {
     await loadProviderCredentialStatusForWorkbench({
       providerId: control.dataset.providerId || state.provider,
     });
+    refreshSettingsLayer(render);
+    return;
   }
   if (action === "save-provider-key") {
     const providerId = control.dataset.providerId || state.provider;
@@ -1485,6 +1505,7 @@ function refreshSettingsLayer(render) {
     bindActionControls(render, rebindRoot);
     bindKeyRevealControls(rebindRoot);
     bindProviderKeyForms(rebindRoot);
+    bindWorkbenchFormSubmissionGuard(rebindRoot);
     bindProviderControls(render, rebindRoot);
     bindProviderModelControls(render, rebindRoot);
   }

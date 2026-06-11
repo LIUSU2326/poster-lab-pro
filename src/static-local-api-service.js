@@ -93,6 +93,7 @@ function focusGuidancePolicy(modeState) {
   return [
     `Focus guidance: ${rawFocus}.`,
     "Focus guidance handling: treat this as a soft creative emphasis, not a literal scene lock. It must never override uploaded asset identity, the assigned KV architecture, story clarity, or poster quality.",
+    "Focus guidance impact requirement: every generated scheme must visibly translate at least one active focus item into a concrete camera, action, environment, prop, lighting, or copy-area decision in the brief and image prompt.",
     "If it mentions giant scale, micro perspective, or scale words, reinterpret it as scale drama and camera energy. Do not make every scheme a flat side-view scene.",
   ].join("\n");
 }
@@ -402,10 +403,14 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     .join("\n");
   const hasStyleReference = (promptPackage.assets || []).some((asset) => asset.role === "styleReference");
   const hasCharacterReference = (promptPackage.assets || []).some((asset) => asset.role === "gameCharacter");
+  const styleStrategy = (promptPackage.sections || []).find((section) => section.id === "style-strategy")?.content || "";
+  const hasSelectedStyle = /Active style source:\s*selected style tag/i.test(styleStrategy);
   const styleRule = hasStyleReference
     ? "Visual style lock: match the uploaded styleReference image for rendering, palette, lighting, line quality, and material finish. Do not drift into photorealistic product photography unless the styleReference itself is photorealistic."
+    : hasSelectedStyle
+      ? "Visual style lock: follow the manually selected style library tag as the dominant rendering standard for palette, lighting, shape language, material finish, and overall art direction. Uploaded characters/BOSS/logo still define identity only and must be adapted into that selected style without redesigning their recognizable traits."
     : hasCharacterReference
-      ? "Visual style lock: match the uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish. Do not use photorealistic product photography, realistic unrelated 3D render, camera macro product shot, or stock-photo background."
+      ? "Visual style lock: no styleReference image and no selected style tag are active, so match the uploaded character art direction / uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish. Do not use photorealistic product photography, realistic unrelated 3D render, camera macro product shot, or stock-photo background."
       : "Visual style lock: use a stylized game campaign illustration style, not photorealistic product photography, unless the user explicitly selected a realistic style.";
   const characters = (promptPackage.assets || []).filter((asset) => asset.role === "gameCharacter");
   const bosses = (promptPackage.assets || []).filter((asset) => asset.role === "prop" && /\bBOSS\b|boss|首领|魔王|怪物|怪兽|敌人|宝箱怪/i.test(asset.label || asset.description || ""));
@@ -416,10 +421,10 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
   const referenceMap = [
     characters.length > 0
       ? [
-        `Exact playable roster count: ${characters.length}. Render only ${characters.map((asset, index) => asset.placeholder || `[Game Character ${index + 1}]`).join(", ")} as playable heroes.`,
+        `Exact playable roster count: ${characters.length}. Render every listed uploaded protagonist as a playable hero: ${characters.map((asset, index) => asset.placeholder || `[Game Character ${index + 1}]`).join(", ")}.`,
         characters.length === 1
           ? "Single-character lock: if any scheme text says squad/team/heroes, reinterpret that as only [Game Character 1]. Do not add any other human helper, teammate, or replacement protagonist."
-          : "Multi-character lock: keep each uploaded character independent; do not merge, average, recolor, or swap traits.",
+          : "Multi-character lock: all uploaded characters must be visible as separate readable characters; do not merge, average, omit, hide, recolor, or swap traits.",
       ].join(" ")
       : "",
     bosses.length > 0 ? "Boss lock: [Boss] means the uploaded BOSS/key-subject reference; render exactly one BOSS unless explicitly requested otherwise." : "",
@@ -432,6 +437,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "Generate the final unified premium game campaign key visual as one coherent illustration.",
     "Use uploaded image references as binding identity/model-sheet anchors, not as static stickers. Characters and BOSS may change pose, expression, action, camera angle, lighting, and perspective to become vivid in-world actors.",
     referenceMap ? `## Exact Uploaded Reference Map\n${referenceMap}` : "",
+    characters.length > 1 ? "Multi-character hero requirement: every uploaded protagonist anchor must appear as a separate readable in-world character. Do not omit the second character, merge them, hide one behind a prop/plate, or reduce one to a tiny decoration." : "",
     "ABSOLUTE HIGHEST PRIORITY - REFERENCE IDENTITY AND BLENDING: replicate the exact visual identity from the uploaded references while integrating them into the new scene's lighting. Preserve character face shape, hair colors, costume palette, body proportions, signature prop/tool, line weight, BOSS silhouette, crown, eye, teeth, tongue, mouth, color blocks, and uploaded game logo design.",
     "Reference identity may only be reposed or re-lit. Do not age-up, add beard/mustache, change hairstyle or hair color, change costume, change body type/proportions, change species, or replace a chibi/mascot reference with a generic adult character.",
     posterIdentitySafeMotionRule(),
@@ -448,7 +454,9 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "The uploaded subjects must look repainted into the same scene, not pasted on top: apply environmental color grading, rim light, contact shadows, bounce light, atmospheric perspective, partial foreground occlusion, and VFX overlap across their bodies.",
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     styleRule,
-    "The poster must show a concrete story moment: uploaded heroes in action against the uploaded BOSS/key subject, with readable intent, movement, pressure, and environmental reaction.",
+    characters.length > 1
+      ? "The poster must show a concrete story moment where all uploaded heroes are visible as separate actors in action against the uploaded BOSS/key subject, with readable intent, movement, pressure, and environmental reaction."
+      : "The poster must show a concrete story moment: uploaded heroes in action against the uploaded BOSS/key subject, with readable intent, movement, pressure, and environmental reaction.",
     "Design with cinematic composition, strong depth, dramatic lighting, polished color grading, foreground/midground/background separation, and a clear trailer-moment focal hierarchy built around protagonist action, objective pressure, environmental pressure, or BOSS threat.",
     "Art-direction checklist for the final render: visible camera/lens/perspective choice, foreground framing, midground action, background reveal, key/fill/rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and in-world logo/typography integration.",
     "Set-piece and action requirement: build a memorable physical campaign location from the current project and connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or impact. Avoid empty pastel sky, generic backdrops, unrelated sample-project scenes, centered mascot-ad layouts, and symmetrical floating heroes.",
@@ -456,7 +464,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "Cinematic escalation must come from the scene design: asymmetrical low-angle or forced-perspective camera, one dominant diagonal action path, foreground occlusion, practical light source, rim/back light, volumetric beams, dust, smoke, sparks, embers, magic/tech particles, debris, and visible environmental reaction. Do not solve cinematic quality by making the uploaded characters into different, more realistic people.",
     "Place the uploaded game logo once in a readable campaign-safe area. Integrate the slogan as custom game-poster lettering or an in-world sign/ribbon, with correct spelling when possible.",
     posterLogoSingleUseLock(),
-    "Use each uploaded character and BOSS once. Do not create duplicate large/small copies, alternate replacement characters, or extra generic heroes.",
+    "Use each uploaded character and BOSS once. Do not omit uploaded protagonists, create duplicate large/small copies, alternate replacement characters, or extra generic heroes.",
     ],
     flexibleBlocks: [
       { text: sectionText, maxChars: 3200, minChars: 900 },
@@ -481,7 +489,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     "The uploaded subjects and brand elements must look repainted into the same scene with environmental color grading, rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, material interaction, and VFX overlap.",
     staticSchemeActionRewriteRule(),
-    "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant scale or micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat side-view scene.",
+    "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant scale or micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat side-view scene. When focus guidance is active, visibly translate at least one focus item into camera, action, environment, prop, lighting, or copy-area design.",
     "Use a deliberate campaign composition architecture, not a default side-scrolling battlefield. Favor one of these KV structures when it fits the scheme: dynamic split-world contrast, portal/breach reveal, foreground weapon/prop divider, boss reveal framed by doorway/canyon, comic-panel mission montage, or triumphant hero-on-defeated-boss trophy shot.",
     "Use the full requested canvas as artwork. Do not add black bars, letterbox bands, white borders, frames, UI chrome, or presentation margins.",
     "Show the story through character action and environment response: impact glow, energy arcs, dust, debris, sparks, magic/tech trails, weather, motion trails, atmospheric haze, rim-light pockets, foreground framing, and scale cues.",

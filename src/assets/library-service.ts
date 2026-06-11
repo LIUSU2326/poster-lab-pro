@@ -174,6 +174,41 @@ function upsertAsset(
   };
 }
 
+function applyProjectDraft(
+  snapshot: WorkspaceSnapshot,
+  draft: AssetCommitRequest["projectDraft"],
+  updatedAt: string,
+): WorkspaceSnapshot {
+  if (!draft) return snapshot;
+
+  const projectName = draft.projectName ?? snapshot.project.name;
+  const gameDescription = draft.gameDescription ?? snapshot.project.description;
+  const modeStates = snapshot.modeStates.map((modeState) => {
+    if (modeState.mode !== draft.mode) return modeState;
+    return {
+      ...modeState,
+      projectBrief: {
+        ...modeState.projectBrief,
+        projectName,
+        gameDescription,
+        focusGuidanceEnabled: draft.focusGuidanceEnabled ?? modeState.projectBrief.focusGuidanceEnabled,
+        focusGuidance: draft.focusGuidance ?? modeState.projectBrief.focusGuidance,
+      },
+      updatedAt,
+    };
+  });
+
+  return {
+    ...snapshot,
+    project: {
+      ...snapshot.project,
+      name: projectName,
+      description: gameDescription,
+    },
+    modeStates,
+  };
+}
+
 export function createAssetLibraryService(options: AssetLibraryServiceOptions): AssetLibraryService {
   const { repository } = options;
   const now = options.now || (() => new Date().toISOString());
@@ -227,8 +262,9 @@ export function createAssetLibraryService(options: AssetLibraryServiceOptions): 
 
     async commitAsset(request) {
       const parsed = AssetCommitRequestSchema.parse(request);
-      const snapshot = await loadWorkspace(repository, parsed.workspaceId);
+      const loadedSnapshot = await loadWorkspace(repository, parsed.workspaceId);
       const updatedAt = now();
+      const snapshot = applyProjectDraft(loadedSnapshot, parsed.projectDraft, updatedAt);
       const asset = {
         ...parsed.asset,
         updatedAt,
