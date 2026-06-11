@@ -15125,26 +15125,32 @@ select:focus-visible,
 .style-library-panel .style-library-grid {
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)) !important;
-  grid-auto-flow: dense !important;
+  grid-auto-flow: row !important;
+  align-items: stretch !important;
   gap: 10px !important;
 }
 
 .style-library-panel .style-library-option {
+  width: 100% !important;
+  min-width: 0 !important;
   min-height: 76px !important;
+  grid-column: auto !important;
+  grid-row: auto !important;
   grid-template-columns: 64px minmax(0, 1fr) !important;
   align-items: center !important;
+  justify-self: stretch !important;
 }
 
 .style-library-panel .style-library-option:nth-child(9n + 1),
 .style-library-panel .style-library-option:nth-child(13n + 5) {
-  grid-column: span 2;
-  min-height: 92px !important;
-  grid-template-columns: 104px minmax(0, 1fr) !important;
+  grid-column: auto !important;
+  min-height: 76px !important;
+  grid-template-columns: 64px minmax(0, 1fr) !important;
 }
 
 .style-library-panel .style-library-option:nth-child(9n + 1) .style-library-swatch,
 .style-library-panel .style-library-option:nth-child(13n + 5) .style-library-swatch {
-  width: 104px !important;
+  width: 64px !important;
 }
 
 .announcement-direction-section {

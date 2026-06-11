@@ -370,10 +370,24 @@ function posterCompressedSceneContract(prompt: string, architectureSummary = "")
   ].join("\n");
 }
 
+function selectedStyleLockFromPrompt(prompt: string): string {
+  const styleName = prompt.match(/Active style source:\s*selected style tag\s+"([^"]+)"/i)?.[1]?.trim() || "";
+  if (!styleName) return "";
+  if (/像素|街机|pixel|8[- ]?bit|16[- ]?bit|arcade/i.test(styleName)) {
+    return [
+      `Selected style hard lock (${styleName}): render as retro pixel art / arcade pixel key art.`,
+      "Use crisp square pixels, blocky silhouettes, limited color ramps, dithering, stepped shadows, sprite/tile edges, and pixelated lighting.",
+      "Do not render smooth 3D, glossy cinematic materials, photorealistic lighting, clay render, airbrush, or painterly blending.",
+    ].join(" ");
+  }
+  return `Selected style hard lock (${styleName}): make this style visibly dominant in rendering, palette, edge language, material finish, and lighting.`;
+}
+
 function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: ImageGenerationRequest): string {
   const compressedPriorityInstruction = compressedProviderPriorityInstruction(providerId, request);
   const hasPosterMode = request.context.mode === "poster";
   const hasSelectedStyleTag = /Active style source:\s*selected style tag/i.test(request.prompt);
+  const selectedStyleLock = selectedStyleLockFromPrompt(request.prompt);
   const fusionDirective = request.assets.length ? modeAssetFusionDirective(request.context.mode, request.assets) : "";
   const referenceInstruction = modeReferenceInstruction(request);
   const subjectAccessoryInstruction = modeSubjectAccessoryInstruction(request);
@@ -396,7 +410,10 @@ function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: Image
         request.assets.some((asset) => asset.role === "styleReference")
           ? "A styleReference image is present and has priority over selected style tags and character-derived style for rendering, palette, lighting, and finish."
           : hasSelectedStyleTag
-            ? "A style library tag is selected and no styleReference image is present. The selected style tag has priority over character-derived default style, while uploaded character assets still define identity."
+            ? [
+              "A style library tag is selected and no styleReference image is present. The selected style tag has priority over character-derived default style, while uploaded character assets still define identity.",
+              selectedStyleLock,
+            ].filter(Boolean).join(" ")
           : "",
         protagonistInstruction,
         hasPosterMode

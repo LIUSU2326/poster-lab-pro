@@ -674,6 +674,37 @@ function summarizeQueue(queuePlan) {
   };
 }
 
+function outputTargetsForPlan({ schemeIds, aspectRatios, platformPresets, selectionMode, planStrategy }) {
+  const safeSchemeIds = Array.isArray(schemeIds) ? schemeIds.filter(Boolean) : [];
+  const safeAspectRatios = Array.isArray(aspectRatios) && aspectRatios.length ? aspectRatios : ["1:1"];
+  const safePlatformPresets = Array.isArray(platformPresets) && platformPresets.length ? platformPresets : ["custom"];
+  const suiteMode = selectionMode === "suite" && safeAspectRatios.length > 1;
+
+  if (suiteMode && planStrategy === "unified") {
+    const targets = [];
+    safeSchemeIds.forEach((schemeId, schemeIndex) => {
+      safeAspectRatios.forEach((aspectRatio, sizeIndex) => {
+        targets.push({
+          schemeId,
+          schemeIndex,
+          outputIndex: targets.length,
+          aspectRatio,
+          platformPreset: safePlatformPresets[sizeIndex % safePlatformPresets.length] || "custom",
+        });
+      });
+    });
+    return targets;
+  }
+
+  return safeSchemeIds.map((schemeId, schemeIndex) => ({
+    schemeId,
+    schemeIndex,
+    outputIndex: schemeIndex,
+    aspectRatio: safeAspectRatios[schemeIndex % safeAspectRatios.length] || "1:1",
+    platformPreset: safePlatformPresets[schemeIndex % safePlatformPresets.length] || "custom",
+  }));
+}
+
 function createQueuePlanPayload(payload) {
   const createdAt = nowIso();
   const batchId = String(payload.batchId || Date.now().toString(36)).replace(/[^a-zA-Z0-9_-]+/g, "-");
@@ -703,6 +734,15 @@ function createQueuePlanPayload(payload) {
 	  const aspectRatios = payload.aspectRatios?.length ? payload.aspectRatios : fallbackRatios;
 	  const platformPresets = payload.platformPresets?.length ? payload.platformPresets : fallbackPresets;
 	  const customSize = payload.customSize || modeState?.outputSettings?.customSize || null;
+	  const selectionMode = payload.selectionMode || modeState?.outputSettings?.selectionMode || "single";
+	  const planStrategy = payload.planStrategy || modeState?.outputSettings?.planStrategy || "unified";
+	  const outputTargets = outputTargetsForPlan({
+	    schemeIds: payload.schemeIds,
+	    aspectRatios,
+	    platformPresets,
+	    selectionMode,
+	    planStrategy,
+	  });
 	  const operationOnly = Boolean(payload.sourceResultId && (payload.includeImageEdit || payload.includeUpscale || payload.includeBackgroundRemoval));
 
 	  const briefTask = operationOnly || payload.regenerateSchemes === false
@@ -718,15 +758,13 @@ function createQueuePlanPayload(payload) {
       });
   if (briefTask) tasks.push(briefTask);
 
-  payload.schemeIds.forEach((schemeId, index) => {
-    const rawRatio = aspectRatios[index % aspectRatios.length] || "1:1";
+  outputTargets.forEach(({ schemeId, outputIndex, aspectRatio: rawRatio, platformPreset }) => {
     const size = customSize || inferSize(rawRatio);
     const aspectRatio = customSize ? `${customSize.width}x${customSize.height}` : rawRatio;
-    const platformPreset = platformPresets[index % platformPresets.length] || "custom";
 	    const imageTask = operationOnly || payload.includeImageGeneration === false
 	      ? null
       : createQueueTask({
-      id: `${jobId}-image-${index + 1}`,
+      id: `${jobId}-image-${outputIndex + 1}`,
       jobId,
       kind: "imageGeneration",
       mode: payload.mode,
@@ -749,7 +787,7 @@ function createQueuePlanPayload(payload) {
     ].forEach(([kind, enabled]) => {
       if (!enabled) return;
       tasks.push(createQueueTask({
-        id: `${jobId}-${kind}-${index + 1}`,
+        id: `${jobId}-${kind}-${outputIndex + 1}`,
         jobId,
         kind,
         mode: payload.mode,

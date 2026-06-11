@@ -249,6 +249,36 @@ async function runRuntimeCheck() {
     if (!mapped.request.prompt.includes("Uploaded Asset Role Semantics and Fusion Strategies")) {
       issues.push("poster image request should include semantic asset fusion strategies");
     }
+    const pixelStyleSnapshot = {
+      ...snapshot,
+      modeStates: snapshot.modeStates.map((modeState) => modeState.mode === "poster"
+        ? {
+          ...modeState,
+          modeForm: {
+            ...modeState.modeForm,
+            styleTags: ["像素复古"],
+          },
+        }
+        : modeState),
+    };
+    const pixelStylePrompt = prompts.createImagePromptPackage({
+      snapshot: pixelStyleSnapshot,
+      mode: "poster",
+      schemeId: "scheme-poster-01",
+    });
+    const pixelStyleMapped = mapperModule.mapPromptPackageToProviderRequest({
+      promptPackage: pixelStylePrompt,
+      snapshot: pixelStyleSnapshot,
+      providerId: "openai",
+      kind: "imageGeneration",
+      traceId: "trace-provider-request-pixel-style-check",
+    });
+    if (!pixelStylePrompt.finalPrompt.includes("retro pixel art / arcade pixel key art")) {
+      issues.push("selected pixel style should be expanded into the prompt package style lock");
+    }
+    if (!pixelStyleMapped.request.prompt.includes("crisp square pixels") || !pixelStyleMapped.request.prompt.includes("Do not render smooth 3D")) {
+      issues.push("selected pixel style should survive provider image request mapping as a hard rendering lock");
+    }
     const agnesMapped = mapperModule.mapPromptPackageToProviderRequest({
       promptPackage: imagePrompt,
       snapshot,

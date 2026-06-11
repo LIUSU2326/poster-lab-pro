@@ -136,6 +136,9 @@ function normalizeRuntimeOutputSettings(modeId, outputSettings) {
   const carriesOldSuitePreset = platformPresets.some((preset) => oldSuitePresetIds.has(preset));
   const carriesCustomSuiteState = platformPresets.includes("custom") && aspectRatios.length > 1 && !outputSettings?.customSize;
   const markedSuite = selectionMode === "suite";
+  const effectiveSelectionMode = modeId === "icon" ? "suite" : selectionMode;
+  const schemeCountMax = effectiveSelectionMode === "suite" ? 5 : 20;
+  const schemeCount = Math.max(1, Math.min(schemeCountMax, Math.round(Number(outputSettings?.schemeCount || 1))));
 
   if (["poster", "collab", "announcement"].includes(modeId) && (carriesOldSuitePreset || (carriesCustomSuiteState && !markedSuite))) {
     return {
@@ -145,6 +148,7 @@ function normalizeRuntimeOutputSettings(modeId, outputSettings) {
       customSize: null,
       selectionMode: "single",
       planStrategy,
+      schemeCount: Math.max(1, Math.min(20, Math.round(Number(outputSettings?.schemeCount || 1)))),
     };
   }
 
@@ -152,8 +156,9 @@ function normalizeRuntimeOutputSettings(modeId, outputSettings) {
     ...outputSettings,
     platformPresets,
     aspectRatios: modeId === "icon" ? ["1:1"] : (aspectRatios.length > 0 ? aspectRatios : ["16:9"]),
-    selectionMode: modeId === "icon" ? "suite" : selectionMode,
+    selectionMode: effectiveSelectionMode,
     planStrategy,
+    schemeCount,
   };
 }
 

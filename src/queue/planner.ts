@@ -33,6 +33,8 @@ const QueuePlannerInputSchema = z.object({
     })
     .nullable()
     .optional(),
+  selectionMode: z.enum(["single", "suite", "custom-size"]).default("single"),
+  planStrategy: z.enum(["unified", "independent"]).default("unified"),
   imagesPerScheme: z.number().int().min(1).max(8).default(1),
   includeImageGeneration: z.boolean().default(true),
   includeImageEdit: z.boolean().default(false),
@@ -119,18 +121,28 @@ function outputTargetsForPlan(parsed: QueuePlannerResolvedInput): Array<{
   const output = createOutputSettingsDefaults(parsed.mode);
   const aspectRatios = parsed.aspectRatios?.length ? parsed.aspectRatios : output.aspectRatios;
   const platformPresets = parsed.platformPresets?.length ? parsed.platformPresets : output.platformPresets;
-  const singleSchemeSuite = parsed.schemeIds.length === 1 && aspectRatios.length > 1;
+  const suiteMode = parsed.selectionMode === "suite" && aspectRatios.length > 1;
 
-  if (singleSchemeSuite) {
-    const schemeId = parsed.schemeIds[0];
-    if (!schemeId) return [];
-    return aspectRatios.map((aspectRatio, outputIndex) => ({
-      schemeId,
-      schemeIndex: 0,
-      outputIndex,
-      aspectRatio,
-      platformPreset: platformPresets[outputIndex % platformPresets.length] || "custom",
-    }));
+  if (suiteMode && parsed.planStrategy === "unified") {
+    const targets: Array<{
+      schemeId: string;
+      schemeIndex: number;
+      outputIndex: number;
+      aspectRatio: string;
+      platformPreset: z.infer<typeof PlatformPresetSchema>;
+    }> = [];
+    parsed.schemeIds.forEach((schemeId, schemeIndex) => {
+      aspectRatios.forEach((aspectRatio, sizeIndex) => {
+        targets.push({
+          schemeId,
+          schemeIndex,
+          outputIndex: targets.length,
+          aspectRatio,
+          platformPreset: platformPresets[sizeIndex % platformPresets.length] || "custom",
+        });
+      });
+    });
+    return targets;
   }
 
   return parsed.schemeIds.map((schemeId, schemeIndex) => ({

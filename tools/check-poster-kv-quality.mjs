@@ -136,6 +136,8 @@ for (const token of [
   "Render every listed uploaded protagonist",
   "all uploaded characters must be visible as separate readable characters",
   "selected style library tag",
+  "retro pixel art / arcade pixel key art",
+  "crisp square pixels",
   "styleReference visual guide",
   "uploaded character art direction",
   "When focus guidance is active",
@@ -155,6 +157,7 @@ for (const token of [
   "In-world brand treatment lock",
   "Multi-character usage requirement",
   "Focus guidance impact requirement",
+  "retro pixel art / arcade pixel key art",
 ]) {
   if (!promptBuilder.includes(token) && !architectures.includes(token)) {
     issues.push(`prompt/architecture layer missing poster QA token ${token}`);

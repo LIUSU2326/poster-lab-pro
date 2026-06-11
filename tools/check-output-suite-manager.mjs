@@ -36,7 +36,7 @@ for (const token of [
   }
 }
 
-for (const token of ["outputTargetsForPlan", "singleSchemeSuite", "inferDimensions", "imageGeneration"]) {
+for (const token of ["outputTargetsForPlan", "selectionMode", "planStrategy", "inferDimensions", "imageGeneration"]) {
   if (!plannerSource.includes(token)) {
     issues.push(`planner.ts: missing suite expansion token ${token}`);
   }
@@ -125,7 +125,7 @@ async function runRuntimeCheck() {
       : path.join(outDir, "src", "queue", "index.js");
     const queue = await import(pathToFileURL(queueModulePath).href);
     const sizes = ["1024x1024", "1200x627", "1080x1920", "1600x1200", "1024x500"];
-    const plan = queue.createBatchQueuePlan({
+    const unifiedPlan = queue.createBatchQueuePlan({
       projectId: "project-output-suite-manager-check",
       mode: "poster",
       providerId: "aigocode",
@@ -133,26 +133,74 @@ async function runRuntimeCheck() {
         concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
         image: { providerId: "aigocode", model: "gpt-image-1" },
       },
-      schemeIds: ["scheme-suite-1"],
+      schemeIds: ["scheme-suite-1", "scheme-suite-2"],
       platformPresets: ["custom"],
       aspectRatios: sizes,
-      imagesPerScheme: 1,
+      selectionMode: "suite",
+      planStrategy: "unified",
+      imagesPerScheme: 2,
       regenerateSchemes: false,
       includeImageGeneration: true,
     });
-    const imageTasks = plan.tasks.filter((task) => task.kind === "imageGeneration");
-    if (imageTasks.length !== sizes.length) {
-      issues.push(`custom suite should create ${sizes.length} image tasks, got ${imageTasks.length}`);
+    const unifiedImageTasks = unifiedPlan.tasks.filter((task) => task.kind === "imageGeneration");
+    if (unifiedImageTasks.length !== sizes.length * 2) {
+      issues.push(`unified custom suite should create ${sizes.length * 2} image tasks, got ${unifiedImageTasks.length}`);
     }
     for (const [index, size] of sizes.entries()) {
-      const task = imageTasks[index];
+      const task = unifiedImageTasks[index];
       if (!task) continue;
       const [width, height] = size.split("x").map(Number);
       if (task.input.width !== width || task.input.height !== height || task.input.aspectRatio !== size) {
-        issues.push(`custom suite task ${index + 1} should preserve ${size}, got ${task.input.width}x${task.input.height}/${task.input.aspectRatio}`);
+        issues.push(`unified custom suite task ${index + 1} should preserve ${size}, got ${task.input.width}x${task.input.height}/${task.input.aspectRatio}`);
       }
       if (task.input.schemeId !== "scheme-suite-1") {
-        issues.push("custom suite should fan out all sizes from the selected scheme");
+        issues.push("unified custom suite should fan out the first full size set from the first selected scheme");
+      }
+      if (task.input.count !== 2) {
+        issues.push("unified custom suite should preserve imagesPerScheme as per-size variant count");
+      }
+    }
+    for (const [index, size] of sizes.entries()) {
+      const task = unifiedImageTasks[index + sizes.length];
+      if (!task) continue;
+      if (task.input.schemeId !== "scheme-suite-2" || task.input.aspectRatio !== size) {
+        issues.push("unified custom suite should fan out every selected scheme across every suite size");
+      }
+    }
+
+    const independentSchemeIds = Array.from({ length: sizes.length * 2 }, (_, index) => `scheme-independent-${index + 1}`);
+    const independentPlan = queue.createBatchQueuePlan({
+      projectId: "project-output-suite-manager-check",
+      mode: "poster",
+      providerId: "aigocode",
+      providerRoutes: {
+        concept: { providerId: "mimo", model: "mimo-v2.5-pro" },
+        image: { providerId: "aigocode", model: "gpt-image-1" },
+      },
+      schemeIds: independentSchemeIds,
+      platformPresets: ["custom"],
+      aspectRatios: sizes,
+      selectionMode: "suite",
+      planStrategy: "independent",
+      imagesPerScheme: 3,
+      regenerateSchemes: false,
+      includeImageGeneration: true,
+    });
+    const independentImageTasks = independentPlan.tasks.filter((task) => task.kind === "imageGeneration");
+    if (independentImageTasks.length !== independentSchemeIds.length) {
+      issues.push(`independent custom suite should create ${independentSchemeIds.length} image tasks, got ${independentImageTasks.length}`);
+    }
+    for (const [index, task] of independentImageTasks.entries()) {
+      const expectedSize = sizes[index % sizes.length];
+      const [width, height] = expectedSize.split("x").map(Number);
+      if (task.input.schemeId !== independentSchemeIds[index]) {
+        issues.push("independent custom suite should keep one scheme per size-specific design");
+      }
+      if (task.input.width !== width || task.input.height !== height || task.input.aspectRatio !== expectedSize) {
+        issues.push(`independent custom suite task ${index + 1} should preserve ${expectedSize}, got ${task.input.width}x${task.input.height}/${task.input.aspectRatio}`);
+      }
+      if (task.input.count !== 3) {
+        issues.push("independent custom suite should preserve imagesPerScheme as per-size variant count");
       }
     }
   } finally {

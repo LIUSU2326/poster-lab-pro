@@ -893,6 +893,8 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
           platformPresets: parsed.platformPresets,
           aspectRatios: parsed.aspectRatios,
           customSize: parsed.customSize,
+          selectionMode: parsed.selectionMode,
+          planStrategy: parsed.planStrategy,
           imagesPerScheme: parsed.imagesPerScheme,
           includeImageGeneration: parsed.includeImageGeneration,
           includeImageEdit: parsed.includeImageEdit,

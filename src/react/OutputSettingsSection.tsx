@@ -232,6 +232,17 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
   const suiteMode = suiteEligible && selectionMode === "suite";
   const customSizeMode = selectionMode === "custom-size";
   const visibleOutputSizes = outputSizes.map(normalizeOutputSizeLabel);
+  const schemeCountLimit = suiteMode ? 5 : 20;
+  const schemeCountValue = Math.max(1, Math.min(schemeCountLimit, Math.round(Number(currentValues.schemeCount || 1))));
+  const suiteSizeCount = suiteMode ? Math.max(1, currentValues.aspectRatios.length) : 1;
+  const imagesPerSchemeValue = Math.max(1, Math.round(Number(currentValues.imagesPerScheme || 1)));
+  const plannedOutputCount = schemeCountValue * suiteSizeCount * imagesPerSchemeValue;
+
+  useEffect(() => {
+    if (suiteMode && Number(currentValues.schemeCount || 1) > 5) {
+      void update("schemeCount", 5);
+    }
+  }, [suiteMode, currentValues.schemeCount]);
 
   const selectSuite = async (suite: DeliverySuite) => {
     const sizes = uniqueSizes(suite.sizes);
@@ -247,6 +258,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       customSize: null,
       selectionMode: "suite",
       planStrategy,
+      schemeCount: Math.min(5, Math.max(1, Math.round(Number(form.getValues().schemeCount || defaults.schemeCount || 1)))),
     });
   };
 
@@ -310,6 +322,7 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       customSize: null,
       selectionMode: "suite",
       planStrategy,
+      schemeCount: Math.min(5, Math.max(1, Math.round(Number(form.getValues().schemeCount || defaults.schemeCount || 1)))),
     });
   };
 
@@ -570,19 +583,25 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
       </div>
 
       <div className="number-row scheme-count-row">
-        <span>方案数量</span>
-        <strong>{currentValues.schemeCount}</strong>
+        <span>{suiteMode ? "套装数量" : "方案数量"}</span>
+        <strong>{schemeCountValue}</strong>
       </div>
 
       <input
         className="scheme-count-slider"
         type="range"
         min={1}
-        max={20}
-        value={currentValues.schemeCount}
-        onChange={(event) => void update("schemeCount", Number(event.currentTarget.value))}
-        aria-label="方案数量"
+        max={schemeCountLimit}
+        value={schemeCountValue}
+        onChange={(event) => void update("schemeCount", Math.min(schemeCountLimit, Number(event.currentTarget.value)))}
+        aria-label={suiteMode ? "套装数量" : "方案数量"}
       />
+
+      {suiteMode ? (
+        <p className="output-note">
+          {planStrategy === "unified" ? "统一方案" : "独立方案"}：{schemeCountValue} 套 × {suiteSizeCount} 个尺寸 × 每方案 {imagesPerSchemeValue} 张，预计 {plannedOutputCount} 张图。
+        </p>
+      ) : null}
 
       {errors.aspectRatios ? <p className="form-error">{errors.aspectRatios.message}</p> : null}
       {errors.platformPresets ? <p className="form-error">{errors.platformPresets.message}</p> : null}

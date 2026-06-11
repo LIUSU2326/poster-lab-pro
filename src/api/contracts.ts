@@ -226,6 +226,8 @@ export const QueuePlanCreateApiRequestSchema = z.object({
     })
     .nullable()
     .optional(),
+  selectionMode: z.enum(["single", "suite", "custom-size"]).default("single"),
+  planStrategy: z.enum(["unified", "independent"]).default("unified"),
   imagesPerScheme: z.number().int().min(1).max(8).default(1),
   includeImageGeneration: z.boolean().default(true),
   includeImageEdit: z.boolean().default(false),

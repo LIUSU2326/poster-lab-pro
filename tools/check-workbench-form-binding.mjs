@@ -239,6 +239,48 @@ async function runRuntimeCheck() {
   if (queueSubmission.payload.imagesPerScheme !== 3) {
     issues.push("queue plan payload should read imagesPerScheme from bound form state");
   }
+  const baseOutputSettings = values.outputSettings;
+  const suiteAspectRatios = ["1920x1080", "1080x1920", "1080x1080", "1600x300", "1200x627"];
+  replaceGenerationFormField("outputSettings", {
+    ...baseOutputSettings,
+    selectionMode: "suite",
+    planStrategy: "unified",
+    platformPresets: suiteAspectRatios.map(() => "custom"),
+    aspectRatios: suiteAspectRatios,
+    schemeCount: 2,
+    imagesPerScheme: 2,
+  });
+  const unifiedSuiteBound = createBoundWorkspaceSnapshot();
+  const unifiedSuiteModeState = unifiedSuiteBound.modeStates.find((item) => item.mode === "poster");
+  const unifiedSuiteQueue = buildQueuePlanCreateSubmission(unifiedSuiteBound);
+  if (unifiedSuiteModeState?.selectedSchemeIds?.length !== 2 || unifiedSuiteQueue.payload.schemeIds.length !== 2) {
+    issues.push("unified suite mode should create one scheme per suite, then let queue fan it out across sizes");
+  }
+  if (unifiedSuiteQueue.payload.selectionMode !== "suite" || unifiedSuiteQueue.payload.planStrategy !== "unified") {
+    issues.push("unified suite queue payload should preserve suite selection mode and strategy");
+  }
+  if (unifiedSuiteQueue.payload.aspectRatios.length !== suiteAspectRatios.length || unifiedSuiteQueue.payload.imagesPerScheme !== 2) {
+    issues.push("unified suite queue payload should preserve all suite sizes and per-scheme image count");
+  }
+  replaceGenerationFormField("outputSettings", {
+    ...baseOutputSettings,
+    selectionMode: "suite",
+    planStrategy: "independent",
+    platformPresets: suiteAspectRatios.map(() => "custom"),
+    aspectRatios: suiteAspectRatios,
+    schemeCount: 2,
+    imagesPerScheme: 1,
+  });
+  const independentSuiteBound = createBoundWorkspaceSnapshot();
+  const independentSuiteModeState = independentSuiteBound.modeStates.find((item) => item.mode === "poster");
+  const independentSuiteQueue = buildQueuePlanCreateSubmission(independentSuiteBound);
+  if (independentSuiteModeState?.selectedSchemeIds?.length !== 10 || independentSuiteQueue.payload.schemeIds.length !== 10) {
+    issues.push("independent suite mode should create suite count x size count schemes");
+  }
+  if (independentSuiteQueue.payload.selectionMode !== "suite" || independentSuiteQueue.payload.planStrategy !== "independent") {
+    issues.push("independent suite queue payload should preserve suite selection mode and independent strategy");
+  }
+  replaceGenerationFormField("outputSettings", baseOutputSettings);
   state.providerSlotRoutes = {
     ...(state.providerSlotRoutes || {}),
     concept: { providerId: "mimo", model: "mimo-v2.5-pro" },

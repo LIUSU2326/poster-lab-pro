@@ -392,6 +392,26 @@ function applyOutputOverrides(snapshot, modeId, overrides, updatedAt) {
   modeState.updatedAt = updatedAt;
 }
 
+function isSuiteOutput(outputSettings = {}) {
+  return outputSettings.selectionMode === "suite";
+}
+
+function suiteSizeCount(outputSettings = {}) {
+  return isSuiteOutput(outputSettings) ? Math.max(1, outputSettings.aspectRatios.length) : 1;
+}
+
+function normalizedSuiteCount(value, outputSettings = {}) {
+  const max = isSuiteOutput(outputSettings) ? 5 : 20;
+  return Math.max(1, Math.min(max, Math.round(Number(value || 1))));
+}
+
+function plannedSchemeCount(outputSettings = {}, overrideValue = null) {
+  const suiteCount = normalizedSuiteCount(overrideValue ?? outputSettings.schemeCount, outputSettings);
+  return outputSettings.selectionMode === "suite" && outputSettings.planStrategy === "independent"
+    ? suiteCount * suiteSizeCount(outputSettings)
+    : suiteCount;
+}
+
 export function createBoundWorkspaceSnapshot(options = {}) {
   const normalizedOptions = normalizeGenerationOptions(options);
   const activeMode = getActiveMode();
@@ -436,7 +456,7 @@ function getCurrentPosterSchemeIds(snapshot, activeMode, outputSettings, options
   const explicitIds = Array.isArray(options.schemeIds) ? options.schemeIds.filter(Boolean) : [];
   if (explicitIds.length > 0) return explicitIds;
 
-  const schemeCount = normalizedCount(options.schemeCountOverride ?? outputSettings.schemeCount);
+  const schemeCount = plannedSchemeCount(outputSettings, options.schemeCountOverride);
   const fixtureIds = new Set((activeMode.schemes || []).map((scheme) => scheme.id));
   const resultSchemeIds = new Set((snapshot.results || [])
     .filter((result) => result.mode === "poster")
@@ -455,7 +475,7 @@ function preparePosterBatchSchemes(snapshot, activeMode, updatedAt, options = {}
 
   const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
   const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
-  const schemeCount = normalizedCount(options.schemeCountOverride ?? outputSettings.schemeCount);
+  const schemeCount = plannedSchemeCount(outputSettings, options.schemeCountOverride);
   if (options.schemeStrategy === "continue") {
     const currentIds = getCurrentPosterSchemeIds(snapshot, activeMode, outputSettings, options);
     if (currentIds.length > 0) {
@@ -615,6 +635,8 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
       platformPresets: outputSettings.platformPresets,
       aspectRatios: outputSettings.aspectRatios,
       customSize: outputSettings.customSize || null,
+      selectionMode: outputSettings.selectionMode || "single",
+      planStrategy: outputSettings.planStrategy || "unified",
       imagesPerScheme: outputSettings.imagesPerScheme,
       includeImageGeneration: normalizedOptions.renderImages,
       regenerateSchemes: shouldRegenerateSchemes,

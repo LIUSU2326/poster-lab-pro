@@ -702,6 +702,34 @@ function formatModeSafetyDirection(modeState: WorkspaceModeState, assets: Prompt
   return null;
 }
 
+function selectedStyleRenderingDirective(style: string, modeLabel: string): string {
+  const normalized = style.trim().toLowerCase();
+  if (!normalized) return "";
+
+  if (/像素|街机|pixel|8[- ]?bit|16[- ]?bit|arcade/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": the final ${modeLabel} must visibly read as retro pixel art / arcade pixel key art, not smooth 3D or painterly illustration.`,
+      "Use low-resolution pixel-grid aesthetics, blocky silhouettes, crisp square pixels, limited-palette color ramps, tile/sprite-like edges, pixelated lighting, dithering, stepped shadows, and readable chunky game-art shapes.",
+      "Translate uploaded character, BOSS, logo, and prop identities into pixel-art sprites or pixel-art poster elements. Preserve identity, but redraw the render language as pixel art.",
+      "Negative style lock: no smooth cinematic 3D, no clay render, no soft airbrush, no photorealistic materials, no glossy realistic lighting, and no painterly brush blending.",
+    ].join("\n");
+  }
+
+  if (/黏土|clay|plasticine/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use tactile clay / plasticine materials, hand-shaped rounded forms, soft studio-like highlights, and subtle fingerprints; avoid flat vector or realistic photography.`;
+  }
+
+  if (/水彩|watercolor/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use translucent watercolor washes, paper texture, soft pigment blooms, gentle edge bleed, and light layered color; avoid glossy 3D materials.`;
+  }
+
+  if (/低多边形|low[- ]?poly/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use readable low-poly geometry, faceted planes, crisp angular silhouettes, simplified materials, and graphic lighting; avoid smooth painterly blending.`;
+  }
+
+  return `Selected-style execution lock for "${style}": make this style visibly dominant in palette, rendering method, line/edge language, material finish, lighting, and surface treatment across the whole ${modeLabel}.`;
+}
+
 function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
   const form = modeState.modeForm;
   if (modeState.mode === "poster" && form.mode !== "poster") return "";
@@ -745,6 +773,7 @@ function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetB
     return [
       priorityRule,
       `Active style source: selected style tag "${selectedStyle}".`,
+      selectedStyleRenderingDirective(selectedStyle, modeLabel),
       modeState.mode === "poster"
         ? "Use this selected style as the dominant art direction for the whole poster, while preserving uploaded character identity, BOSS shape, and logo readability."
         : `Use this selected style as the dominant art direction for the ${modeLabel}, while preserving uploaded visual identity and the mode's readability rules.`,
@@ -768,6 +797,29 @@ function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetB
   return [
     priorityRule,
     `Active style source: project context only because no style reference, selected style tag, or ${modeState.mode === "poster" ? "character" : "primary subject/logo"} asset is available.`,
+  ].join("\n");
+}
+
+function formatOutputSuiteStrategy(
+  modeState: WorkspaceModeState,
+  platform: ReturnType<typeof createPlatformConstraint>,
+): string {
+  const outputSettings = modeState.outputSettings;
+  if (modeState.mode !== "poster" || outputSettings.selectionMode !== "suite") return "";
+  const aspectRatios = Array.isArray(outputSettings.aspectRatios) && outputSettings.aspectRatios.length > 0
+    ? outputSettings.aspectRatios
+    : [platform.aspectRatio];
+  const suiteCount = Math.max(1, Math.min(5, Math.round(Number(outputSettings.schemeCount || 1))));
+  const imagesPerScheme = Math.max(1, Math.round(Number(outputSettings.imagesPerScheme || 1)));
+  const planStrategy = outputSettings.planStrategy === "independent" ? "independent" : "unified";
+  const strategyText = planStrategy === "independent"
+    ? "Independent suite strategy: each output size needs its own size-specific poster scheme, composition, safe-area logic, and visual emphasis. Do not reuse one unchanged scene across all sizes."
+    : "Unified suite strategy: one poster scheme is adapted across every size in the suite. Keep the same story beat and identity, but plan flexible safe areas, crop-safe focal hierarchy, and responsive logo/copy zones.";
+
+  return [
+    `Output suite mode: ${planStrategy}.`,
+    `Suite count: ${suiteCount}; suite sizes: ${aspectRatios.join(" / ")}; images per scheme: ${imagesPerScheme}.`,
+    strategyText,
   ].join("\n");
 }
 
@@ -1125,7 +1177,8 @@ export function createPromptPackage(input: PromptBuilderInput): PromptPackage {
     `Size: ${platform.width || "auto"}x${platform.height || "auto"}.`,
     `Safe area: ${platform.safeArea}`,
     `Copy length: ${platform.copyLengthHint}`,
-  ].join("\n");
+    formatOutputSuiteStrategy(modeState, platform),
+  ].filter(Boolean).join("\n");
   const sections = buildSections({
     snapshot: parsed.snapshot,
     mode,

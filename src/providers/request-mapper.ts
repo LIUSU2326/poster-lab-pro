@@ -635,6 +635,32 @@ function styleStrategyText(promptPackage: PromptPackage): string {
   return promptPackage.sections.find((section) => section.id === "style-strategy")?.content || "";
 }
 
+function selectedStyleTagFromStrategy(styleStrategy: string): string {
+  return styleStrategy.match(/Active style source:\s*selected style tag\s+"([^"]+)"/i)?.[1]?.trim() || "";
+}
+
+function selectedStyleProviderLock(styleName: string): string {
+  if (!styleName) return "";
+  if (/像素|街机|pixel|8[- ]?bit|16[- ]?bit|arcade/i.test(styleName)) {
+    return [
+      `Selected style hard lock (${styleName}): final image must visibly be retro pixel art / arcade pixel key art.`,
+      "Use blocky silhouettes, crisp square pixels, limited color ramps, dithering, pixelated lighting, stepped shadows, sprite/tile edges, and chunky readable shapes.",
+      "Redraw uploaded characters, BOSS, logo, and props into the pixel-art style while preserving identity.",
+      "Do not render smooth 3D, glossy cinematic materials, photorealistic lighting, clay render, airbrush, or painterly brush blending.",
+    ].join(" ");
+  }
+  if (/黏土|clay|plasticine/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use tactile clay/plasticine materials, hand-shaped rounded forms, soft highlights, and subtle handmade surface irregularities.`;
+  }
+  if (/水彩|watercolor/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use translucent watercolor washes, paper texture, pigment blooms, edge bleed, and layered light color.`;
+  }
+  if (/低多边形|low[- ]?poly/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use low-poly faceted planes, angular silhouettes, simplified materials, and crisp graphic lighting.`;
+  }
+  return `Selected style hard lock (${styleName}): make this library style visibly dominant in rendering method, palette, line/edge language, material finish, and lighting.`;
+}
+
 function posterMandatoryVisualContract(input: {
   promptPackage: PromptPackage;
   sloganTargets: string;
@@ -774,11 +800,16 @@ function posterIntegratedKvPromptFromPromptPackage(
   const hasCompositionReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "compositionReference");
   const hasCharacterReference = promptPackage.assets.some((asset) => assetSemanticRole(asset) === "protagonist");
   const styleStrategy = styleStrategyText(promptPackage);
-  const hasSelectedStyle = /Active style source:\s*selected style tag/i.test(styleStrategy);
+  const selectedStyleTag = selectedStyleTagFromStrategy(styleStrategy);
+  const hasSelectedStyle = Boolean(selectedStyleTag);
+  const selectedStyleLock = selectedStyleProviderLock(selectedStyleTag);
   const styleRule = hasStyleReference
       ? "Visual style lock: follow the styleReference visual guide and any extracted style analysis for rendering, palette, lighting, line quality, and material finish. Do not copy the style reference image's characters, objects, logos, scenery, layout, text, brand content, or project-specific motifs."
     : hasSelectedStyle
-      ? "Visual style lock: follow the manually selected style library tag as the dominant rendering standard for palette, lighting, shape language, material finish, and overall art direction. Uploaded characters/BOSS/logo still define identity only and must be adapted into that selected style without redesigning their recognizable traits."
+      ? [
+        "Visual style lock: follow the manually selected style library tag as the dominant rendering standard for palette, lighting, shape language, material finish, and overall art direction. Uploaded characters/BOSS/logo still define identity only and must be adapted into that selected style without redesigning their recognizable traits.",
+        selectedStyleLock,
+      ].filter(Boolean).join(" ")
     : hasCharacterReference
       ? "Visual style lock: no styleReference image and no selected style tag are active, so match the uploaded character art direction / uploaded gameCharacter asset art direction for the whole world plate. Use a stylized 2D cartoon game illustration language: rounded readable shapes, clean graphic silhouettes, confident line-art feeling, soft cel/painterly shading, vibrant game-poster colors, and premium mobile-game key-art polish. Do not use photorealistic product photography, realistic unrelated 3D render, camera macro product shot, or stock-photo background."
       : "Visual style lock: use a stylized game campaign illustration style, not photorealistic product photography, unless the user explicitly selected a realistic style.";
@@ -833,11 +864,12 @@ function posterIntegratedKvPromptFromPromptPackage(
     assetRoleInventory ? "## Uploaded Asset Role Semantics and Fusion Strategies\nUse each uploaded asset according to its semantic duty and fusion strategy; these duties override loose scheme wording." : "",
     "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
     analysisOnlyRule,
-    schemeAnchor,
-    visualContract,
     characters.length > 1
       ? "KV ACTION MINI-BRIEF: every uploaded hero appears as a readable separate actor, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects."
       : "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+    styleRule,
+    schemeAnchor,
+    visualContract,
     posterFocalHierarchyLock(),
     posterTextEconomyLock(),
     posterInWorldBrandTreatmentLock(),
@@ -859,7 +891,6 @@ function posterIntegratedKvPromptFromPromptPackage(
     "The uploaded subjects and brand elements must look repainted into the same scene, not pasted on top: apply environmental color grading, rim light, contact shadows, bounce light, atmospheric perspective, partial foreground occlusion, material interaction, and VFX overlap across their bodies or surfaces.",
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
-    styleRule,
     "The poster must show a concrete story moment: uploaded heroes in action against the uploaded BOSS/key subject, with readable intent, movement, pressure, and environmental reaction.",
     "Design with cinematic composition, strong depth, dramatic lighting, polished color grading, foreground/midground/background separation, and a clear trailer-moment focal hierarchy built around protagonist action, objective pressure, environmental pressure, or BOSS threat.",
     "Art-direction checklist for the final render: visible camera/lens/perspective choice, foreground framing, midground action, background reveal, key/fill/rim lighting, volumetric haze, particles/VFX, cast and contact shadows, color/value grouping, material texture, and in-world logo/typography integration.",
