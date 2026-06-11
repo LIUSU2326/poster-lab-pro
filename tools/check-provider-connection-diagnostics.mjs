@@ -214,6 +214,102 @@ async function runRuntimeCheck() {
       issues.push("provider connection test should mirror safe provider status metadata to workspace snapshot");
     }
 
+    const openaiTextModelSnapshot = await repository.loadSnapshot(workspaceId);
+    if (openaiTextModelSnapshot.ok) {
+      await repository.saveSnapshot({
+        ...openaiTextModelSnapshot.snapshot,
+        providerConfigs: {
+          ...openaiTextModelSnapshot.snapshot.providerConfigs,
+          openai: {
+            ...openaiTextModelSnapshot.snapshot.providerConfigs.openai,
+            enabled: true,
+            defaultModel: "gpt-5.4",
+            modelSlots: {
+              ...openaiTextModelSnapshot.snapshot.providerConfigs.openai.modelSlots,
+              concept: "gpt-5.4",
+            },
+          },
+        },
+      });
+    }
+    const openaiTextModelService = api.createProviderDiagnosticService({
+      repository,
+      credentialVault: vault,
+      transport: async () => ({
+        ok: true,
+        status: 200,
+        body: {
+          data: [{ id: "gpt-4.1" }],
+        },
+      }),
+    });
+    const openaiTextModelProbe = await openaiTextModelService.testProviderConnection({
+      workspaceId,
+      providerId: "openai",
+      verifyModels: true,
+    });
+    if (!openaiTextModelProbe.ok || !openaiTextModelProbe.data.result.ok || openaiTextModelProbe.data.result.defaultModelAvailable !== false) {
+      issues.push("missing GPT text model list entry should be reported as a non-blocking warning after the provider responds");
+    }
+
+    await vault.save({
+      providerId: "aigocode",
+      keyRef: `${workspaceId}:aigocode:default`,
+      apiKey: "AIGOCODE_GEMINI_KEY_TEST_PLACEHOLDER",
+    });
+    const aigocodeSnapshot = await repository.loadSnapshot(workspaceId);
+    if (aigocodeSnapshot.ok) {
+      await repository.saveSnapshot({
+        ...aigocodeSnapshot.snapshot,
+        providerConfigs: {
+          ...aigocodeSnapshot.snapshot.providerConfigs,
+          aigocode: {
+            ...aigocodeSnapshot.snapshot.providerConfigs.aigocode,
+            enabled: true,
+            baseUrl: "https://api.aigocode.com/v1beta",
+            defaultModel: "gemini-2.5-flash",
+            modelSlots: {
+              concept: "gemini-2.5-flash",
+              image: "gemini-2.5-flash-image",
+              styleReference: "gemini-2.5-flash",
+              compositionReference: "gemini-2.5-flash",
+            },
+          },
+        },
+      });
+    }
+    let capturedAigocodeGeminiUrl = "";
+    let capturedAigocodeAuthorization = "";
+    const aigocodeGeminiService = api.createProviderDiagnosticService({
+      repository,
+      credentialVault: vault,
+      transport: async (request) => {
+        capturedAigocodeGeminiUrl = request.url;
+        capturedAigocodeAuthorization = request.headers.Authorization || "";
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            models: [{ name: "models/gemini-2.5-flash" }],
+          },
+        };
+      },
+    });
+    const aigocodeGeminiProbe = await aigocodeGeminiService.testProviderConnection({
+      workspaceId,
+      providerId: "aigocode",
+      verifyModels: true,
+    });
+    if (!aigocodeGeminiProbe.ok || !aigocodeGeminiProbe.data.result.ok || aigocodeGeminiProbe.data.result.status !== "ready") {
+      issues.push("AIGoCode Gemini-compatible connection probe should pass through the Gemini model-list response");
+    }
+    if (!capturedAigocodeGeminiUrl.startsWith("https://api.aigocode.com/v1beta/models?key=")) {
+      issues.push("AIGoCode Gemini-compatible probe should use the v1beta models?key= route");
+    }
+    if (capturedAigocodeAuthorization) {
+      issues.push("AIGoCode Gemini-compatible probe should not use OpenAI Bearer authorization");
+    }
+
     const authFailedService = api.createProviderDiagnosticService({
       repository,
       credentialVault: vault,

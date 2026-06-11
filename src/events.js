@@ -282,10 +282,16 @@ function bindResultViewerImageSpecs() {
       const ratioLabel = specs?.querySelector("[data-result-viewer-ratio-label]");
       const sizeValue = specs?.querySelector("[data-result-viewer-size-value]");
       const ratioValue = specs?.querySelector("[data-result-viewer-ratio-value]");
+      const targetSpec = specs?.querySelector("[data-result-viewer-target-spec]");
+      const targetWidth = Number(image.dataset.resultTargetWidth);
+      const targetHeight = Number(image.dataset.resultTargetHeight);
       if (sizeLabel) sizeLabel.textContent = "真实尺寸";
       if (ratioLabel) ratioLabel.textContent = "真实比例";
       if (sizeValue) sizeValue.textContent = `${width}x${height}`;
       if (ratioValue) ratioValue.textContent = formatNaturalRatio(width, height);
+      if (targetSpec && Number.isFinite(targetWidth) && Number.isFinite(targetHeight)) {
+        targetSpec.hidden = targetWidth === width && targetHeight === height;
+      }
     };
 
     if (image.complete) {

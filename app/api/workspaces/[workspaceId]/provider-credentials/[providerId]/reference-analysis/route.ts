@@ -4,6 +4,12 @@ import { nextCredentialVault, nextRepository } from "../../../../../../../src/ap
 import { ProviderIdSchema } from "../../../../../../../src/schema/zod";
 import { getProviderManifest } from "../../../../../../../src/providers/manifests";
 import { normalizeMimoProviderBaseUrl, normalizeMimoProviderModel } from "../../../../../../../src/providers/mimo-compat";
+import {
+  AIGOCODE_DEFAULT_BASE_URL,
+  isAigocodeGeminiBaseUrl,
+  normalizeAigocodeGeminiBaseUrl,
+  normalizeAigocodeGeminiModel,
+} from "../../../../../../../src/providers/aigocode-compat";
 
 const ReferenceAnalysisRequestSchema = z.object({
   kind: z.enum(["composition", "full", "style"]),
@@ -15,7 +21,7 @@ const ReferenceAnalysisRequestSchema = z.object({
 
 const DEFAULT_BASE_URLS: Record<z.infer<typeof ProviderIdSchema>, string> = {
   openai: "https://api.openai.com/v1",
-  aigocode: "https://api.aigocode.com/v1",
+  aigocode: AIGOCODE_DEFAULT_BASE_URL,
   custom: "",
   google: "https://generativelanguage.googleapis.com/v1beta",
   deepseek: "https://api.deepseek.com",
@@ -38,6 +44,9 @@ async function readJsonBody(request: Request): Promise<unknown> {
 }
 
 function normalizeBaseUrl(value: string | undefined, providerId: z.infer<typeof ProviderIdSchema>): string {
+  if (providerId === "aigocode" && isAigocodeGeminiBaseUrl(value)) {
+    return normalizeAigocodeGeminiBaseUrl(value);
+  }
   return normalizeMimoProviderBaseUrl(providerId, value?.trim() || DEFAULT_BASE_URLS[providerId]);
 }
 
@@ -357,15 +366,18 @@ export async function POST(
         ? configuredSlotModel
         : slotModels[0] || candidateModel
       : candidateModel;
-    const model = normalizeReferenceModel(providerId, safeModel);
     const baseUrl = normalizeBaseUrl(config.baseUrl, providerId);
+    const aigocodeGeminiRoute = providerId === "aigocode" && isAigocodeGeminiBaseUrl(config.baseUrl);
+    const model = aigocodeGeminiRoute
+      ? normalizeAigocodeGeminiModel(safeModel)
+      : normalizeReferenceModel(providerId, safeModel);
     if (manifest.baseUrlRequired && !baseUrl) {
       return json({ ok: false, error: { code: "missing_base_url", message: "请先为当前供应商填写 Base URL。" } }, { status: 400 });
     }
     const image = parseImageDataUrl(body.imageDataUrl);
     const prompt = promptFor(body.kind, body.label);
 
-    const text = providerId === "google"
+    const text = providerId === "google" || aigocodeGeminiRoute
       ? await runGoogle({ baseUrl, apiKey: resolved.value.apiKey, model, prompt, ...image })
       : providerId === "claude"
         ? await runClaude({ baseUrl, apiKey: resolved.value.apiKey, model, prompt, ...image })

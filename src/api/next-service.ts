@@ -16,7 +16,19 @@ import {
   createGoogleLiveImageAdapter,
   createMockProviderRegistry,
   createOpenAILiveImageAdapter,
+  createProviderError,
+  ProviderBriefResponseSchema,
+  ProviderHealthResponseSchema,
+  ProviderImageResponseSchema,
+  type BriefGenerationRequest,
+  type GenerationProviderAdapter,
+  type ImageEditRequest,
+  type ImageGenerationRequest,
   type ProviderAdapterRegistry,
+  type ProviderBriefResponse,
+  type ProviderHealthResponse,
+  type ProviderImageResponse,
+  type ProviderResult,
 } from "../providers";
 import {
   createGoogleImageFetchTransport,
@@ -26,8 +38,14 @@ import {
   createOpenAICompatibleBriefAdapter,
   createOpenAICompatibleChatFetchTransport,
 } from "../providers/openai-compatible-brief-adapter";
+import {
+  isAigocodeGeminiBaseUrl,
+  normalizeAigocodeGeminiBaseUrl,
+  normalizeAigocodeGeminiModel,
+} from "../providers/aigocode-compat";
 import { createProviderDiagnosticService } from "./provider-diagnostics";
 import { isQueueCancellationRequested } from "./queue-cancellation";
+import type { ProviderConfigForm } from "../schema/zod";
 
 function createFileCredentialVaultBackingStore(filePath: string): ProviderCredentialVaultBackingStore {
   let loaded = false;
@@ -82,6 +100,204 @@ function createFileCredentialVaultBackingStore(filePath: string): ProviderCreden
   };
 }
 
+function appendAigocodeGeminiApiKey(url: string, apiKey: string): string {
+  const cleanApiKey = apiKey.trim();
+  if (!cleanApiKey) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}key=${encodeURIComponent(cleanApiKey)}`;
+}
+
+function createAigocodeGeminiImageFetchTransport(fetchImpl: typeof fetch) {
+  return async (request: Parameters<ReturnType<typeof createGoogleImageFetchTransport>>[0]) => {
+    const apiKey = request.headers["x-goog-api-key"] || request.headers["X-Goog-Api-Key"] || "";
+    const headers = { ...request.headers };
+    delete headers["x-goog-api-key"];
+    delete headers["X-Goog-Api-Key"];
+
+    let response: Response;
+    try {
+      response = await fetchImpl(appendAigocodeGeminiApiKey(request.url, apiKey), {
+        method: request.method,
+        headers,
+        body: JSON.stringify(request.body),
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        status: 0,
+        body: {
+          error: {
+            message: error instanceof Error ? error.message : "AIGoCode Gemini-compatible network request failed.",
+          },
+        },
+      };
+    }
+
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      body,
+    };
+  };
+}
+
+function isAigocodeGeminiConfig(config: ProviderConfigForm): boolean {
+  return isAigocodeGeminiBaseUrl(config.baseUrl);
+}
+
+function asAigocodeGeminiConfig(config: ProviderConfigForm): ProviderConfigForm {
+  const modelSlots = Object.fromEntries(
+    Object.entries(config.modelSlots || {}).map(([slot, model]) => [slot, normalizeAigocodeGeminiModel(model)]),
+  );
+  return {
+    ...config,
+    providerId: "google",
+    baseUrl: normalizeAigocodeGeminiBaseUrl(config.baseUrl),
+    defaultModel: normalizeAigocodeGeminiModel(config.defaultModel),
+    modelSlots,
+  };
+}
+
+function asAigocodeGeminiBriefRequest(request: BriefGenerationRequest): BriefGenerationRequest {
+  return {
+    ...request,
+    context: {
+      ...request.context,
+      providerId: "google",
+    },
+  };
+}
+
+function asAigocodeGeminiImageRequest(request: ImageGenerationRequest): ImageGenerationRequest {
+  return {
+    ...request,
+    context: {
+      ...request.context,
+      providerId: "google",
+    },
+    model: normalizeAigocodeGeminiModel(request.model),
+  };
+}
+
+function remapAigocodeBriefResult(result: ProviderResult<ProviderBriefResponse>): ProviderResult<ProviderBriefResponse> {
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    value: ProviderBriefResponseSchema.parse({
+      ...result.value,
+      providerId: "aigocode",
+    }),
+  };
+}
+
+function remapAigocodeImageResult(result: ProviderResult<ProviderImageResponse>): ProviderResult<ProviderImageResponse> {
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    value: ProviderImageResponseSchema.parse({
+      ...result.value,
+      providerId: "aigocode",
+    }),
+  };
+}
+
+function remapAigocodeHealthResult(result: ProviderResult<ProviderHealthResponse>): ProviderResult<ProviderHealthResponse> {
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    value: ProviderHealthResponseSchema.parse({
+      ...result.value,
+      providerId: "aigocode",
+      message: result.value.message.replace(/^Google/i, "AIGoCode Gemini-compatible"),
+    }),
+  };
+}
+
+function unsupportedAigocodeGeminiEdit(): ProviderResult<ProviderImageResponse> {
+  return {
+    ok: false,
+    error: createProviderError(
+      "aigocode",
+      "unsupported_capability",
+      "AIGoCode Gemini-compatible route does not expose an OpenAI image-edit endpoint.",
+      {
+        userMessage: "AIGoCode Gemini-compatible can generate images, but visual reconstruction/edit needs an OpenAI-compatible image-edit route.",
+      },
+    ),
+  };
+}
+
+function unsupportedAigocodeBrief(): ProviderResult<ProviderBriefResponse> {
+  return {
+    ok: false,
+    error: createProviderError(
+      "aigocode",
+      "unsupported_capability",
+      "AIGoCode brief generation is not available for the current route.",
+    ),
+  };
+}
+
+function createAigocodeHybridAdapter(
+  openAICompatibleAdapter: GenerationProviderAdapter,
+  geminiCompatibleAdapter: GenerationProviderAdapter,
+): GenerationProviderAdapter {
+  return {
+    manifest: openAICompatibleAdapter.manifest,
+
+    validateConfig(config) {
+      if (!isAigocodeGeminiConfig(config)) return openAICompatibleAdapter.validateConfig(config);
+      return geminiCompatibleAdapter.validateConfig(asAigocodeGeminiConfig(config));
+    },
+
+    async healthCheck(config) {
+      if (!isAigocodeGeminiConfig(config)) return openAICompatibleAdapter.healthCheck(config);
+      return remapAigocodeHealthResult(await geminiCompatibleAdapter.healthCheck(asAigocodeGeminiConfig(config)));
+    },
+
+    async generateBrief(request: BriefGenerationRequest, config: ProviderConfigForm) {
+      if (!isAigocodeGeminiConfig(config)) {
+        if (!openAICompatibleAdapter.generateBrief) return unsupportedAigocodeBrief();
+        return openAICompatibleAdapter.generateBrief(request, config);
+      }
+      if (!geminiCompatibleAdapter.generateBrief) {
+        return unsupportedAigocodeBrief();
+      }
+      return remapAigocodeBriefResult(await geminiCompatibleAdapter.generateBrief(
+        asAigocodeGeminiBriefRequest(request),
+        asAigocodeGeminiConfig(config),
+      ));
+    },
+
+    async generateImage(request: ImageGenerationRequest, config: ProviderConfigForm) {
+      if (!isAigocodeGeminiConfig(config)) {
+        if (!openAICompatibleAdapter.generateImage) return unsupportedAigocodeGeminiEdit();
+        return openAICompatibleAdapter.generateImage(request, config);
+      }
+      if (!geminiCompatibleAdapter.generateImage) return unsupportedAigocodeGeminiEdit();
+      return remapAigocodeImageResult(await geminiCompatibleAdapter.generateImage(
+        asAigocodeGeminiImageRequest(request),
+        asAigocodeGeminiConfig(config),
+      ));
+    },
+
+    async editImage(request: ImageEditRequest, config: ProviderConfigForm) {
+      if (!isAigocodeGeminiConfig(config)) {
+        if (!openAICompatibleAdapter.editImage) return unsupportedAigocodeGeminiEdit();
+        return openAICompatibleAdapter.editImage(request, config);
+      }
+      return unsupportedAigocodeGeminiEdit();
+    },
+  };
+}
+
 function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRegistry {
   const registry = createMockProviderRegistry();
   const chatTransport = createOpenAICompatibleChatFetchTransport(fetchImpl);
@@ -91,6 +307,9 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
   const aigocodeImageAdapter = createOpenAILiveImageAdapter({
     providerId: "aigocode",
     transport: createOpenAIImageFetchTransport(fetchImpl),
+  });
+  const aigocodeGeminiAdapter = createGoogleLiveImageAdapter({
+    transport: createAigocodeGeminiImageFetchTransport(fetchImpl),
   });
   const customImageAdapter = createOpenAILiveImageAdapter({
     providerId: "custom",
@@ -126,7 +345,7 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     ...(openAIImageAdapter.generateImage ? { generateImage: openAIImageAdapter.generateImage.bind(openAIImageAdapter) } : {}),
     ...(openAIImageAdapter.editImage ? { editImage: openAIImageAdapter.editImage.bind(openAIImageAdapter) } : {}),
   };
-  registry.aigocode = {
+  const aigocodeOpenAIAdapter: GenerationProviderAdapter = {
     ...registry.aigocode,
     manifest: aigocodeImageAdapter.manifest,
     validateConfig: aigocodeImageAdapter.validateConfig,
@@ -135,6 +354,7 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     ...(aigocodeImageAdapter.generateImage ? { generateImage: aigocodeImageAdapter.generateImage.bind(aigocodeImageAdapter) } : {}),
     ...(aigocodeImageAdapter.editImage ? { editImage: aigocodeImageAdapter.editImage.bind(aigocodeImageAdapter) } : {}),
   };
+  registry.aigocode = createAigocodeHybridAdapter(aigocodeOpenAIAdapter, aigocodeGeminiAdapter);
   registry.custom = {
     ...registry.custom,
     manifest: customImageAdapter.manifest,

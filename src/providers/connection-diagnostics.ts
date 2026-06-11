@@ -11,7 +11,13 @@ import type { CredentialResolver, ProviderCredentialRef } from "./credentials";
 import type { ProviderErrorCode } from "./contracts";
 import { getProviderManifest } from "./manifests";
 import { MIMO_DEFAULT_BASE_URL, normalizeMimoBaseUrl, normalizeMimoProviderModel } from "./mimo-compat";
-import { AIGOCODE_DEFAULT_BASE_URL, normalizeAigocodeBaseUrl } from "./aigocode-compat";
+import {
+  AIGOCODE_DEFAULT_BASE_URL,
+  isAigocodeGeminiBaseUrl,
+  normalizeAigocodeBaseUrl,
+  normalizeAigocodeGeminiBaseUrl,
+  normalizeAigocodeGeminiModel,
+} from "./aigocode-compat";
 import { OPENAI_DEFAULT_BASE_URL, normalizeOpenAIBaseUrl } from "./openai-compat";
 
 const DEFAULT_OPENAI_BASE_URL = OPENAI_DEFAULT_BASE_URL;
@@ -131,9 +137,20 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
   return (value?.trim() || fallback).replace(/\/+$/, "");
 }
 
-function probeUrl(config: StoredProviderConfig): string {
+function appendApiKeyQuery(url: string, apiKey?: string): string {
+  const cleanApiKey = apiKey?.trim();
+  if (!cleanApiKey) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}key=${encodeURIComponent(cleanApiKey)}`;
+}
+
+function probeUrl(config: StoredProviderConfig, apiKey?: string): string {
   if (config.providerId === "openai") return `${normalizeOpenAIBaseUrl(config.baseUrl || DEFAULT_OPENAI_BASE_URL)}/models`;
-  if (config.providerId === "aigocode") return `${normalizeAigocodeBaseUrl(config.baseUrl)}/models`;
+  if (config.providerId === "aigocode") {
+    return isAigocodeGeminiBaseUrl(config.baseUrl)
+      ? appendApiKeyQuery(`${normalizeAigocodeGeminiBaseUrl(config.baseUrl)}/models`, apiKey)
+      : `${normalizeAigocodeBaseUrl(config.baseUrl)}/models`;
+  }
   if (config.providerId === "custom") {
     const baseUrl = normalizeBaseUrl(config.baseUrl, "");
     return baseUrl ? `${baseUrl}/models` : "";
@@ -147,13 +164,14 @@ function probeUrl(config: StoredProviderConfig): string {
   return normalizeBaseUrl(config.baseUrl, "");
 }
 
-function providerHeaders(providerId: ProviderId, apiKey?: string): Record<string, string> {
+function providerHeaders(configOrProviderId: ProviderId | StoredProviderConfig, apiKey?: string): Record<string, string> {
+  const providerId = typeof configOrProviderId === "string" ? configOrProviderId : configOrProviderId.providerId;
   const headers: Record<string, string> = {
     accept: "application/json",
   };
   const cleanApiKey = apiKey?.trim();
   if (!cleanApiKey) return headers;
-  if (providerId === "google") {
+  if (providerId === "google" || (typeof configOrProviderId !== "string" && providerId === "aigocode" && isAigocodeGeminiBaseUrl(configOrProviderId.baseUrl))) {
     headers["x-goog-api-key"] = cleanApiKey;
     return headers;
   }
@@ -199,6 +217,9 @@ function modelIds(body: unknown): string[] {
 function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids: string[], strictModel = false): boolean {
   if (ids.length === 0 || ids.includes(defaultModel)) return true;
   if (strictModel) return false;
+  if (providerId === "aigocode" && isAigocodeGeminiModel(defaultModel)) {
+    return ids.some((id) => id.startsWith("gemini-"));
+  }
   if (
     providerId === "aigocode"
     && (defaultModel.startsWith("gpt-image-") || defaultModel.startsWith("image-"))
@@ -220,6 +241,19 @@ function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids:
   }
   if (providerId === "mimo" && defaultModel.startsWith("mimo-")) {
     return ids.some((id) => id.startsWith("mimo-"));
+  }
+  return false;
+}
+
+function isAigocodeGeminiModel(model: string): boolean {
+  const normalized = normalizeAigocodeGeminiModel(model);
+  return normalized.startsWith("gemini-");
+}
+
+function shouldWarnOnlyForMissingModel(providerId: ProviderId, defaultModel: string, ids: string[], strictModel = false): boolean {
+  if (strictModel || ids.length === 0) return false;
+  if ((providerId === "openai" || providerId === "aigocode" || providerId === "custom") && /^gpt-[\w.-]+$/i.test(defaultModel)) {
+    return ids.some((id) => /^gpt-[\w.-]+$/i.test(id) || /^chatgpt-/i.test(id));
   }
   return false;
 }
@@ -427,7 +461,7 @@ export async function runProviderConnectionDiagnostic(input: {
     });
   }
 
-  const url = probeUrl(input.storedConfig);
+  const url = probeUrl(input.storedConfig, apiKey);
   if (!url) {
     return result({
       providerId: parsed.providerId,
@@ -445,7 +479,7 @@ export async function runProviderConnectionDiagnostic(input: {
     const response = await input.transport({
       url,
       method: "GET",
-      headers: providerHeaders(parsed.providerId, apiKey),
+      headers: providerHeaders(input.storedConfig, apiKey),
       timeoutMs: parsed.timeoutMs,
     });
 
@@ -463,7 +497,10 @@ export async function runProviderConnectionDiagnostic(input: {
     const defaultModelAvailable = defaultModel
       ? modelFamilyAvailable(parsed.providerId, defaultModel, ids, parsed.strictModel)
       : undefined;
-    const ok = !defaultModel || defaultModelAvailable !== false;
+    const modelWarningOnly = Boolean(
+      defaultModel && defaultModelAvailable === false && shouldWarnOnlyForMissingModel(parsed.providerId, defaultModel, ids, parsed.strictModel),
+    );
+    const ok = !defaultModel || defaultModelAvailable !== false || modelWarningOnly;
 
     return result({
       providerId: parsed.providerId,
@@ -472,10 +509,14 @@ export async function runProviderConnectionDiagnostic(input: {
       attemptedNetwork: true,
       startedAt,
       message: ok
-        ? `${manifest.displayName} connection test passed.`
+        ? modelWarningOnly
+          ? `${manifest.displayName} connection test passed, but the selected model was not listed by /models.`
+          : `${manifest.displayName} connection test passed.`
         : `${manifest.displayName} responded, but the selected model was not found in the model list.`,
       userMessage: ok
-        ? "Provider connection is ready."
+        ? modelWarningOnly
+          ? "Provider connection is ready. The selected model was not returned by the model-list probe, so generation will be the final availability check."
+          : "Provider connection is ready."
         : "Provider responded, but the selected model was not found.",
       errorCode: ok ? undefined : "missing_config",
       modelCount: ids.length,
