@@ -1,4 +1,4 @@
-import { state, ensureSelectedResult, ensureSelectedScheme, queueResultOperation, getRuntimeWorkspaceSnapshot } from './state.js';
+import { state, ensureSelectedResult, ensureSelectedScheme, getModeResults, queueResultOperation, getRuntimeWorkspaceSnapshot } from './state.js';
 import { cancelActiveGenerationDraft, submitGenerationDraft } from './form-binding.js';
 import { runResultOperationForWorkbench } from './result-operation-client.js';
 import { deleteResultForWorkbench } from './result-management-client.js';
@@ -261,10 +261,42 @@ function setResultViewerMessage(message) {
   messageElement.textContent = message;
 }
 
+function isEditableKeyboardTarget(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
+}
+
+function selectAdjacentResult(offset) {
+  const results = getModeResults();
+  if (results.length <= 1) return false;
+  const currentIndex = Math.max(0, results.findIndex((item) => item.id === state.selectedResult));
+  const nextIndex = (currentIndex + offset + results.length) % results.length;
+  const nextResult = results[nextIndex];
+  if (!nextResult || nextResult.id === state.selectedResult) return false;
+  state.selectedResult = nextResult.id;
+  state.selectedResultUserSet = true;
+  state.selectedScheme = nextResult.schemeId || state.selectedScheme;
+  state.resultViewerMessage = "";
+  state.resultRefinementOpen = false;
+  state.resultRefinementPrompt = "";
+  state.resultDeleteConfirmId = "";
+  return true;
+}
+
 function bindGlobalKeyboardShortcuts(render) {
   if (globalKeyboardBound) return;
   globalKeyboardBound = true;
   document.addEventListener("keydown", (event) => {
+    if (state.resultViewerOpen && !isEditableKeyboardTarget(event.target)) {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (selectAdjacentResult(event.key === "ArrowRight" ? 1 : -1)) {
+          render();
+        }
+        return;
+      }
+    }
     if (event.key !== "Escape") return;
     if (state.settingsOpen) {
       state.settingsOpen = false;

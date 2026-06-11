@@ -50,6 +50,14 @@ export const promptGuardrailsByMode: Record<ProductionMode, PromptGuardrailRule[
       negativeRule: "Do not bury a provided logo inside visual clutter, redraw it as a fake replacement, invent look-alike words, or substitute letters.",
     }),
     rule({
+      id: "poster-limb-anatomy-sanity",
+      mode: "poster",
+      severity: "hard",
+      rule: "Visible playable characters must pass a limb and hand sanity check: coherent arm count, clear wrists, believable hand placement, readable fingers or mitten shapes according to the uploaded style, and one intentional grip/contact point when holding a prop.",
+      negativeRule: "No extra arms, duplicate forearms, front-and-back duplicate hands, disconnected hands, broken wrists, fused fingers, impossible limb overlaps, or malformed prop grips on uploaded characters.",
+      appliesTo: ["image"],
+    }),
+    rule({
       id: "poster-platform-safe-area",
       mode: "poster",
       severity: "hard",

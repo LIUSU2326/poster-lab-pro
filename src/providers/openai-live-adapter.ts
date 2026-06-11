@@ -199,6 +199,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
       return [
       "Quality bar: premium game campaign key visual polish adapted to the active art style.",
       "Use cinematic lighting, layered foreground/midground/background depth, refined material detail, crisp focal hierarchy, polished color grading, and campaign-ready logo/slogan safe areas.",
+      "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
       posterFocalHierarchyLock(),
       posterTextEconomyLock(),
       posterInWorldBrandTreatmentLock(),

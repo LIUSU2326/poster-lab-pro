@@ -69,7 +69,10 @@ for (const token of [
   "assetsForRequiredSlot",
   "Icon primary subject (subjectReference, gameCharacter, prop, or gameLogo)",
   "promptAssetSlotKey",
+  "multiReferencePromptAssetRoles",
   "clear foot/hand contact points",
+  "Limb/anatomy sanity target",
+  "No extra arms",
   "Reference pose release",
   "BOSS performance lock",
   "static standee staging",
@@ -124,7 +127,7 @@ for (const token of [
   "mode !== \"logo\"",
   "asset.role === \"prop\" && assetSemanticRole(asset) === \"antagonist\"",
 ]) {
-  if (!builder.includes(token) && !posterArchitectures.includes(token) && !sloganPolicy.includes(token) && !logoTextPolicy.includes(token) && !modeSafetyPolicy.includes(token)) {
+  if (!builder.includes(token) && !guardrails.includes(token) && !posterArchitectures.includes(token) && !sloganPolicy.includes(token) && !logoTextPolicy.includes(token) && !modeSafetyPolicy.includes(token)) {
     issues.push(`builder.ts: missing ${token}`);
   }
 }

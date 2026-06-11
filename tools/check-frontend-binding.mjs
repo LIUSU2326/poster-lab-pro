@@ -56,6 +56,9 @@ requireTokens("events.js", events, [
   "bindWorkbenchFormSubmissionGuard",
   "event.preventDefault()",
   "refreshSettingsLayer(render)",
+  "selectAdjacentResult",
+  "ArrowLeft",
+  "ArrowRight",
 ]);
 
 const imageCopyHandler = events.match(/function bindResultViewerImageCopy\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction setResultViewerMessage/);

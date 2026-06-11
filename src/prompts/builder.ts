@@ -179,7 +179,15 @@ function promptAssetDedupeKey(asset: StoredAssetRecord): string {
   ].join("|");
 }
 
+const multiReferencePromptAssetRoles = new Set<StoredAssetRecord["role"]>([
+  "gameCharacter",
+  "collabCharacter",
+]);
+
 function promptAssetSlotKey(asset: StoredAssetRecord): string {
+  if (multiReferencePromptAssetRoles.has(asset.role)) {
+    return `${asset.role}|${asset.id}`;
+  }
   const label = asset.label.trim();
   return label ? `${asset.role}|${label}` : `${asset.role}|${asset.id}`;
 }
@@ -548,6 +556,7 @@ function formatPosterQualityDirection(modeState: WorkspaceModeState, assets: Pro
     "Flat-scene ban: do not settle for characters standing left/right on a flat surface with mountains behind them. If giant-scale scenery is used, it must create scale drama, vertical layering, foreground framing, danger, and a clear story beat.",
     "Rendering target: dramatic but clean lighting, contact shadows, rim light, cast shadows, atmospheric depth, crisp focal detail, controlled background complexity, polished color grading, high contrast around the main subjects, and refined materials inside the chosen art style.",
     "Contact target: visible characters and BOSS must have clear foot/hand contact points, cast shadows, small occlusion, bounce color, and local material reaction wherever they touch props, terrain, weapons, or each other.",
+    "Limb/anatomy sanity target: visible playable characters must keep coherent arms, hands, fingers, legs, and tool grips. No extra duplicated arms, double forearms, front-and-back duplicate hands, disconnected hands, broken wrists, fused fingers, or impossible limb overlaps.",
     "World-building target: transform the current project premise into a fantasy, tactical, adventure, simulation, or action battlefield with playable-space depth. Do not introduce a premise from an unrelated sample project.",
     "Avoid: duplicate copies of the same uploaded asset, sticker-like pasted cutouts, floating isolated elements, random extra characters, generic mascot substitutions, cluttered UI/text, cheap clip-art, plastic toy look, muddy lighting, tabletop wallpaper composition, unrelated commercial scenery, photorealistic product photography, and realistic product renders.",
   ].join("\n");

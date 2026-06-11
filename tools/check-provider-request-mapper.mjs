@@ -504,6 +504,83 @@ async function runRuntimeCheck() {
       issues.push("poster prompt should default to uploaded character asset style when no style tag or style reference exists");
     }
 
+    const multiCharacterSnapshot = {
+      ...userAssetSnapshot,
+      assets: [
+        ...userAssetSnapshot.assets.filter((asset) => asset.role !== "gameCharacter"),
+        {
+          ...baseAsset,
+          id: "asset-user-character-a",
+          role: "gameCharacter",
+          label: "瑙掕壊",
+          metadata: { originalFileName: "hero-a.png" },
+          previewUrl: "http://localhost:3000/uploads/workspaces/check/hero-a.png",
+          storageKey: "projects/project-pizza-kitchen/assets/gameCharacter/asset-user-character-a.png",
+          checksum: "sha256-hero-a",
+          byteSize: 111000,
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          ...baseAsset,
+          id: "asset-user-character-b",
+          role: "gameCharacter",
+          label: "瑙掕壊",
+          metadata: { originalFileName: "hero-b.png" },
+          previewUrl: "http://localhost:3000/uploads/workspaces/check/hero-b.png",
+          storageKey: "projects/project-pizza-kitchen/assets/gameCharacter/asset-user-character-b.png",
+          checksum: "sha256-hero-b",
+          byteSize: 222000,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    };
+    const multiCharacterPrompt = prompts.createImagePromptPackage({
+      snapshot: multiCharacterSnapshot,
+      mode: "poster",
+      schemeId: "scheme-poster-01",
+    });
+    const multiCharacterIds = multiCharacterPrompt.assets
+      .filter((asset) => asset.role === "gameCharacter")
+      .map((asset) => asset.assetId);
+    for (const expected of ["asset-user-character-a", "asset-user-character-b"]) {
+      if (!multiCharacterIds.includes(expected)) {
+        issues.push(`poster prompt should preserve same-slot multi-character asset ${expected}`);
+      }
+    }
+    if (multiCharacterIds.length !== 2) {
+      issues.push(`poster prompt should keep exactly two distinct uploaded gameCharacter assets with the same label, found ${multiCharacterIds.length}`);
+    }
+    const multiCharacterPlaceholders = multiCharacterPrompt.assets
+      .filter((asset) => asset.role === "gameCharacter")
+      .map((asset) => asset.placeholder);
+    if (!multiCharacterPlaceholders.includes("[Game Character 1]")
+      || !multiCharacterPlaceholders.includes("[Game Character 2]")) {
+      issues.push("poster prompt should assign numbered placeholders to both uploaded gameCharacter assets");
+    }
+    if (!multiCharacterPrompt.negativePrompt.includes("No extra arms")) {
+      issues.push("poster prompt negative prompt should include limb and hand sanity exclusions");
+    }
+    const multiCharacterMapped = mapperModule.mapPromptPackageToProviderRequest({
+      promptPackage: multiCharacterPrompt,
+      snapshot: multiCharacterSnapshot,
+      providerId: "google",
+      kind: "imageGeneration",
+    });
+    const providerCharacterIds = multiCharacterMapped.request.assets
+      .filter((asset) => /semanticRole=protagonist/.test(asset.description || ""))
+      .map((asset) => asset.id);
+    for (const expected of ["asset-user-character-a", "asset-user-character-b"]) {
+      if (!providerCharacterIds.includes(expected)) {
+        issues.push(`provider image request should carry same-slot multi-character reference ${expected}`);
+      }
+    }
+    if (!multiCharacterMapped.request.prompt.includes("Multi-character hero requirement")
+      || !multiCharacterMapped.request.prompt.includes("Limb and hand sanity audit")) {
+      issues.push("provider image request should include multi-character and limb sanity prompt locks");
+    }
+
     const selectedStyleSnapshot = JSON.parse(JSON.stringify(userAssetSnapshot));
     selectedStyleSnapshot.modeStates = selectedStyleSnapshot.modeStates.map((modeState) =>
       modeState.mode === "poster"
