@@ -182,6 +182,7 @@ export function bindEvents(render) {
 
 	  bindActionControls(render);
 	  bindResultViewerImageCopy();
+	  bindResultViewerImageSpecs();
 	  bindKeyRevealControls();
 
   bindProviderControls(render);
@@ -258,6 +259,50 @@ function bindResultViewerImageCopy() {
       }
     });
   });
+}
+
+function bindResultViewerImageSpecs() {
+  document.querySelectorAll("[data-result-viewer-image-id]").forEach((image) => {
+    const updateSpecs = () => {
+      const resultId = image.dataset.resultViewerImageId;
+      const width = Number(image.naturalWidth);
+      const height = Number(image.naturalHeight);
+      if (!resultId || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;
+
+      const current = state.resultViewerNaturalSizes?.[resultId];
+      if (!current || current.width !== width || current.height !== height) {
+        state.resultViewerNaturalSizes = {
+          ...(state.resultViewerNaturalSizes || {}),
+          [resultId]: { width, height },
+        };
+      }
+
+      const specs = image.closest(".result-viewer")?.querySelector(".result-viewer-specs");
+      const sizeLabel = specs?.querySelector("[data-result-viewer-size-label]");
+      const ratioLabel = specs?.querySelector("[data-result-viewer-ratio-label]");
+      const sizeValue = specs?.querySelector("[data-result-viewer-size-value]");
+      const ratioValue = specs?.querySelector("[data-result-viewer-ratio-value]");
+      if (sizeLabel) sizeLabel.textContent = "真实尺寸";
+      if (ratioLabel) ratioLabel.textContent = "真实比例";
+      if (sizeValue) sizeValue.textContent = `${width}x${height}`;
+      if (ratioValue) ratioValue.textContent = formatNaturalRatio(width, height);
+    };
+
+    if (image.complete) {
+      updateSpecs();
+    } else {
+      image.addEventListener("load", updateSpecs, { once: true });
+    }
+  });
+}
+
+function formatNaturalRatio(width, height) {
+  const divisor = naturalSizeGcd(Math.round(width), Math.round(height));
+  return `${Math.round(width / divisor)}:${Math.round(height / divisor)}`;
+}
+
+function naturalSizeGcd(a, b) {
+  return b === 0 ? a : naturalSizeGcd(b, a % b);
 }
 
 function setResultViewerMessage(message) {
@@ -1481,6 +1526,10 @@ function removeProviderModelOverrideValue(providerId, modelId) {
 }
 
 function renderPreservingSettings(render) {
+  if (state.settingsOpen && document.querySelector(".settings-layer")) {
+    refreshSettingsLayer(render);
+    return;
+  }
   const detailScrollTop = document.querySelector(".provider-detail")?.scrollTop || 0;
   render();
   const nextDetail = document.querySelector(".provider-detail");

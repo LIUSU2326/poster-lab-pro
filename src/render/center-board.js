@@ -382,8 +382,13 @@ function renderResultViewer() {
   const display = scheme ? getSchemeDisplay({ id: result.mode }, scheme) : null;
   const previewUrl = getResultPreviewUrl(result);
   const downloadUrl = getResultDownloadUrlForViewer(result);
-  const finalSize = result.width && result.height ? `${result.width}x${result.height}` : "待定尺寸";
-  const ratio = result.width && result.height ? simplifyRatio(result.width, result.height) : "自定义";
+  const naturalSize = state.resultViewerNaturalSizes?.[result.id];
+  const specWidth = naturalSize?.width || result.width;
+  const specHeight = naturalSize?.height || result.height;
+  const finalSize = specWidth && specHeight ? `${specWidth}x${specHeight}` : "待定尺寸";
+  const ratio = specWidth && specHeight ? simplifyRatio(specWidth, specHeight) : "自定义";
+  const sizeLabel = naturalSize ? "真实尺寸" : "尺寸";
+  const ratioLabel = naturalSize ? "真实比例" : "比例";
   const confirmingDelete = state.resultDeleteConfirmId === result.id;
   const aiActions = [
     renderResultActionButton(result, "variant", "视觉重构"),
@@ -394,7 +399,7 @@ function renderResultViewer() {
       <button class="result-viewer-close" type="button" data-action="close-result-viewer" aria-label="关闭">×</button>
       <div class="result-viewer-stage">
         ${previewUrl
-          ? `<img src="${escapeAttribute(previewUrl)}" data-copy-result-image="${escapeAttribute(previewUrl)}" title="右键复制图片" alt="${escapeHtml(display?.title || scheme?.title || result.id)}" width="1280" height="720">`
+          ? `<img src="${escapeAttribute(previewUrl)}" data-copy-result-image="${escapeAttribute(previewUrl)}" data-result-viewer-image-id="${escapeAttribute(result.id)}" title="右键复制图片" alt="${escapeHtml(display?.title || scheme?.title || result.id)}" width="1280" height="720">`
           : `<div class="result-viewer-placeholder">本地预览暂不可用</div>`}
       </div>
       ${state.resultRefinementOpen ? renderResultRefinementPanel(result, display, scheme) : ""}
@@ -407,12 +412,12 @@ function renderResultViewer() {
           </div>
           <div class="result-viewer-specs" aria-label="输出规格">
             <span class="result-viewer-spec">
-              <small>尺寸</small>
-              <strong class="mono">${escapeHtml(finalSize)}</strong>
+              <small data-result-viewer-size-label>${escapeHtml(sizeLabel)}</small>
+              <strong class="mono" data-result-viewer-size-value>${escapeHtml(finalSize)}</strong>
             </span>
             <span class="result-viewer-spec">
-              <small>比例</small>
-              <strong class="mono">${escapeHtml(ratio)}</strong>
+              <small data-result-viewer-ratio-label>${escapeHtml(ratioLabel)}</small>
+              <strong class="mono" data-result-viewer-ratio-value>${escapeHtml(ratio)}</strong>
             </span>
           </div>
         </div>

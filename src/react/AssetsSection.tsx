@@ -55,7 +55,7 @@ type AssetsSectionProps = {
 
 const acceptedImageTypes = ["image/png", "image/jpeg", "image/webp"];
 const customSlotTone = "custom";
-const referenceAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen", "mimo"]);
+const referenceAnalysisProviderIds = new Set(["openai", "aigocode", "custom", "google", "claude", "qwen", "mimo"]);
 
 function normalizeCategoryLabel(value: string): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 24);

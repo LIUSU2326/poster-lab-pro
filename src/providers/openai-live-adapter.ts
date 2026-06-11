@@ -41,13 +41,14 @@ import {
 
 const OPENAI_PROVIDER_ID = "openai" as const;
 const AIGOCODE_PROVIDER_ID = "aigocode" as const;
+const CUSTOM_PROVIDER_ID = "custom" as const;
 const AGNES_PROVIDER_ID = "agnes" as const;
 const DEFAULT_OPENAI_BASE_URL = OPENAI_DEFAULT_BASE_URL;
 const DEFAULT_AIGOCODE_BASE_URL = AIGOCODE_DEFAULT_BASE_URL;
 const DEFAULT_AGNES_BASE_URL = "https://apihub.agnes-ai.com/v1";
 export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
 export const OPENAI_IMAGE_EDITS_PATH = "/images/edits";
-type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "aigocode" | "agnes">;
+type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "aigocode" | "custom" | "agnes">;
 
 const OpenAIImageDataSchema = z
   .object({
@@ -104,6 +105,7 @@ export type OpenAILiveImageAdapterOptions = {
 
 function validateOpenAICompatibleConfig(providerId: OpenAICompatibleImageProviderId, config: ProviderConfigForm): ProviderConfigValidation {
   const parsed = ProviderConfigFormSchema.parse(config);
+  const manifest = getProviderManifest(providerId);
   const missing: (keyof ProviderConfigForm)[] = [];
   const warnings: string[] = [];
 
@@ -115,6 +117,9 @@ function validateOpenAICompatibleConfig(providerId: OpenAICompatibleImageProvide
   }
   if (!parsed.apiKey?.trim()) {
     missing.push("apiKey");
+  }
+  if (manifest.baseUrlRequired && !parsed.baseUrl?.trim()) {
+    missing.push("baseUrl");
   }
   if (!parsed.defaultModel?.trim()) {
     missing.push("defaultModel");
@@ -129,6 +134,7 @@ function validateOpenAICompatibleConfig(providerId: OpenAICompatibleImageProvide
 
 function defaultBaseUrl(providerId: OpenAICompatibleImageProviderId): string {
   if (providerId === AIGOCODE_PROVIDER_ID) return DEFAULT_AIGOCODE_BASE_URL;
+  if (providerId === CUSTOM_PROVIDER_ID) return "";
   return providerId === "agnes" ? DEFAULT_AGNES_BASE_URL : DEFAULT_OPENAI_BASE_URL;
 }
 

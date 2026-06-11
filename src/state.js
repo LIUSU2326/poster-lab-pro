@@ -32,6 +32,7 @@ export const state = {
   projectLibraryEntries: /** @type {Array<{ id: string, name: string, description: string, updatedAt: string }>} */ ([]),
   resultViewerOpen: false,
   resultViewerMessage: "",
+  resultViewerNaturalSizes: /** @type {Record<string, { width: number, height: number }>} */ ({}),
   resultRefinementOpen: false,
   resultRefinementPrompt: "",
   taskOpen: false,

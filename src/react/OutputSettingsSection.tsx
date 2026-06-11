@@ -227,8 +227,9 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
     ...defaults,
     ...values,
   };
-  const suites = customSuites.map(toDeliverySuite);
-  const suiteMode = selectionMode === "suite";
+  const suiteEligible = mode !== "logo" && mode !== "icon";
+  const suites = suiteEligible ? customSuites.map(toDeliverySuite) : [];
+  const suiteMode = suiteEligible && selectionMode === "suite";
   const customSizeMode = selectionMode === "custom-size";
   const visibleOutputSizes = outputSizes.map(normalizeOutputSizeLabel);
 
@@ -482,15 +483,14 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
                 type="button"
                 onClick={() => void setStrategy("unified")}
               >
-                {mode === "icon" ? "锁定方形" : "统一方案"}
+                统一方案
               </button>
               <button
                 className={planStrategy === "independent" ? "active" : ""}
                 type="button"
-                disabled={mode === "icon"}
                 onClick={() => void setStrategy("independent")}
               >
-                {mode === "icon" ? "不改尺寸" : "独立方案"}
+                独立方案
               </button>
             </div>
           ) : (
@@ -501,12 +501,12 @@ export function OutputSettingsSection({ mode, initialValues, outputSizes, sizeNo
 
           {suiteManagerDialog}
         </>
-      ) : (
+      ) : suiteEligible ? (
         <button className="suite-add-trigger" type="button" onClick={() => void createCustomSuite()}>
           <span aria-hidden="true">+</span>
           <strong>添加投放套装</strong>
         </button>
-      )}
+      ) : null}
 
       <span className="field-caption">尺寸选择</span>
       <div className={`size-grid ${mode === "icon" ? "single-size" : ""}`} aria-label="图片比例与尺寸">

@@ -645,10 +645,10 @@ function providerRouteForSlot(slot) {
   const route = state.providerSlotRoutes?.[slot] || {};
   const snapshot = getRuntimeWorkspaceSnapshot();
   const candidateIds = {
-    concept: ["mimo", "agnes", "google", "deepseek", "openai", "aigocode", "claude", "qwen"],
-    image: ["google", "aigocode", "openai", "agnes", "qwen"],
-    styleReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
-    compositionReference: ["mimo", "openai", "aigocode", "google", "claude", "qwen"],
+    concept: ["mimo", "agnes", "google", "deepseek", "openai", "aigocode", "custom", "claude", "qwen"],
+    image: ["google", "aigocode", "custom", "openai", "agnes", "qwen"],
+    styleReference: ["mimo", "openai", "aigocode", "custom", "google", "claude", "qwen"],
+    compositionReference: ["mimo", "openai", "aigocode", "custom", "google", "claude", "qwen"],
   }[slot] || [state.provider];
   const configured = (providerId) => {
     const config = snapshot.providerConfigs?.[providerId];

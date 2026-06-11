@@ -14,6 +14,12 @@ const providerModelCatalog = {
     image: ["gpt-image-1", "gpt-image-2", "gpt-image-1.5", "image-2", "image-1", "dall-e-3"],
     vision: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1"],
   },
+  custom: {
+    default: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5.1", "gpt-image-2", "gpt-image-1.5", "gpt-image-1"],
+    plan: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5.1"],
+    image: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "image-2", "image-1", "dall-e-3"],
+    vision: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5.1"],
+  },
   google: {
     default: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-image-preview", "gemini-2.5-flash-image"],
     plan: ["gemini-2.5-flash", "gemini-2.5-pro"],
@@ -197,6 +203,7 @@ function providerSourceLabel(provider) {
   const id = provider?.id || "";
   if (id === "openai") return "OpenAI 官方";
   if (id === "aigocode") return "AIGoCode 中转";
+  if (id === "custom") return "自定义中转";
   if (id === "google") return "Google AI Studio";
   if (id === "deepseek") return "DeepSeek 官方";
   if (id === "claude") return "Claude 官方";
@@ -210,6 +217,7 @@ function providerEndpointKind(provider) {
   const id = provider?.id || "";
   if (id === "openai") return "官方 API";
   if (id === "aigocode") return "OpenAI 兼容中转";
+  if (id === "custom") return "OpenAI 兼容中转";
   if (id === "google") return "Gemini API";
   if (id === "deepseek") return "OpenAI 兼容 API";
   if (id === "claude") return "Anthropic API";
@@ -336,7 +344,7 @@ function renderAgnesRouteAssist(providers) {
   return `
     <div class="agnes-route-assist ${coreRoute ? "active" : ""} ${configured ? "" : "disabled"}" aria-label="MiMo + Agnes 生成路线">
       <div>
-        <strong>MiMo + Agnes 免费实测路线</strong>
+        <strong>MiMo + Agnes 路由方案</strong>
         <small>${configured
           ? "方案生成走 MiMo 2.5 Pro；画风和构图解析只走支持视觉的模型（默认 MiMo Omni）；图片渲染走 Agnes。"
           : "保存 MiMo 和 Agnes API Key 后，可一键切到 MiMo 方案 + 视觉参考分析 + Agnes 图像渲染路线。"}</small>
@@ -456,8 +464,6 @@ export function renderSettingsSheet() {
                 <h3>${escapeHtml(selectedProvider.name)} ${renderProviderStatus(selectedProvider, credential)}</h3>
               </div>
             </div>
-            ${selectedProvider.id === "agnes" ? renderAgnesRouteAssist(providers) : ""}
-
             <section class="provider-config-card provider-credential-card">
               <div class="provider-card-title">
                 <strong>API Key</strong>

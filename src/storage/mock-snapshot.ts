@@ -93,6 +93,7 @@ function createProviderSettings() {
     apiKey: "",
   };
   const aigocode: ProviderConfigForm = createProviderConfigDefaults("aigocode");
+  const custom: ProviderConfigForm = createProviderConfigDefaults("custom");
   const google: ProviderConfigForm = createProviderConfigDefaults("google");
   const deepseek: ProviderConfigForm = createProviderConfigDefaults("deepseek");
   const claude: ProviderConfigForm = createProviderConfigDefaults("claude");
@@ -100,7 +101,7 @@ function createProviderSettings() {
   const agnes: ProviderConfigForm = createProviderConfigDefaults("agnes");
   const mimo: ProviderConfigForm = createProviderConfigDefaults("mimo");
 
-  return redactProviderConfigs([openai, aigocode, google, deepseek, claude, qwen, agnes, mimo], { updatedAt: CREATED_AT });
+  return redactProviderConfigs([openai, aigocode, custom, google, deepseek, claude, qwen, agnes, mimo], { updatedAt: CREATED_AT });
 }
 
 export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {

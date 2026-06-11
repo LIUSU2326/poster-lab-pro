@@ -677,10 +677,10 @@ function renderSloganSettings(form, modeId) {
 
 function renderLockedTextStrategy({ title, label, detail, chips }) {
   return `
-    <div class="slogan-settings-card locked-text-strategy" data-slogan-locked="${escapeAttribute(label)}" title="${escapeAttribute(detail)}">
-      <div class="slogan-settings-head">
-        <strong>${escapeHtml(title)}</strong>
-        <span>${escapeHtml(label)}</span>
+    <div class="locked-text-strategy" data-slogan-locked="${escapeAttribute(label)}" title="${escapeAttribute(detail)}">
+      <div class="locked-text-strategy-head">
+        <span>${escapeHtml(title)}</span>
+        <strong>${escapeHtml(label)}</strong>
       </div>
       <div class="guardrail-chips">
         ${chips.map((chip) => `<span>${escapeHtml(chip)}</span>`).join("")}

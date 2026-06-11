@@ -11,7 +11,6 @@ export function renderArchiveBoard() {
       <div class="archive-shell">
         <header class="archive-header">
           <div>
-            <span>ARCHIVE</span>
             <h1>归档资源</h1>
             <p>管理已保存的方案、生成结果和可复用素材记录。</p>
           </div>

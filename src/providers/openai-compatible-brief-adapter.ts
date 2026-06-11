@@ -43,6 +43,7 @@ const CHAT_COMPLETIONS_PATH = "/chat/completions";
 const defaultBaseUrls: Partial<Record<ProviderId, string>> = {
   openai: "https://api.openai.com/v1",
   aigocode: AIGOCODE_DEFAULT_BASE_URL,
+  custom: "",
   deepseek: "https://api.deepseek.com",
   qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
   agnes: "https://apihub.agnes-ai.com/v1",
@@ -161,6 +162,7 @@ export function createOpenAICompatibleChatFetchTransport(fetchImpl: typeof fetch
 
 function validateConfig(providerId: ProviderId, config: ProviderConfigForm): ProviderConfigValidation {
   const parsed = ProviderConfigFormSchema.parse(config);
+  const manifest = getProviderManifest(providerId);
   const missing: (keyof ProviderConfigForm)[] = [];
   const warnings: string[] = [];
 
@@ -169,10 +171,11 @@ function validateConfig(providerId: ProviderId, config: ProviderConfigForm): Pro
   }
   if (!parsed.enabled) missing.push("enabled");
   if (!parsed.apiKey?.trim()) missing.push("apiKey");
+  if (manifest.baseUrlRequired && !parsed.baseUrl?.trim()) missing.push("baseUrl");
   if (
     !parsed.defaultModel?.trim()
     && !parsed.modelSlots.concept?.trim()
-    && !getProviderManifest(providerId).modelSlots.concept?.[0]?.trim()
+    && !manifest.modelSlots.concept?.[0]?.trim()
   ) {
     missing.push("defaultModel");
   }

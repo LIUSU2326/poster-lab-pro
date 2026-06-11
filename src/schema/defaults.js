@@ -30,18 +30,18 @@ export const modeDefaultOutput = {
   },
   logo: {
     platformPresets: ["custom"],
-    aspectRatios: ["1:1", "4:3"],
-    schemeCount: 6,
-    imagesPerScheme: 1,
-    selectionMode: "suite",
-    planStrategy: "unified",
-  },
-  icon: {
-    platformPresets: ["appStore", "googlePlay"],
     aspectRatios: ["1:1"],
     schemeCount: 6,
     imagesPerScheme: 1,
-    selectionMode: "suite",
+    selectionMode: "single",
+    planStrategy: "unified",
+  },
+  icon: {
+    platformPresets: ["custom"],
+    aspectRatios: ["1:1"],
+    schemeCount: 6,
+    imagesPerScheme: 1,
+    selectionMode: "single",
     planStrategy: "unified",
   },
 };
@@ -64,6 +64,16 @@ const providerDefaults = {
     modelSlots: {
       concept: "gpt-5.5",
       image: "gpt-image-1",
+      styleReference: "gpt-5.5",
+      compositionReference: "gpt-5.5",
+    },
+  },
+  custom: {
+    baseUrl: "",
+    defaultModel: "gpt-5.5",
+    modelSlots: {
+      concept: "gpt-5.5",
+      image: "gpt-image-2",
       styleReference: "gpt-5.5",
       compositionReference: "gpt-5.5",
     },

@@ -86,7 +86,7 @@ const logoBackgroundOptions = [
   { label: "暖橙", value: "#fb923c" },
   { label: "透明后期", value: "#f8fafc" },
 ];
-const styleAnalysisProviderIds = new Set(["openai", "aigocode", "google", "claude", "qwen", "mimo"]);
+const styleAnalysisProviderIds = new Set(["openai", "aigocode", "custom", "google", "claude", "qwen", "mimo"]);
 
 function normalizeInitialValues(values: ModeForm): ModeForm {
   const parsed = ModeFormSchema.parse(values);

@@ -16,6 +16,7 @@ const ReferenceAnalysisRequestSchema = z.object({
 const DEFAULT_BASE_URLS: Record<z.infer<typeof ProviderIdSchema>, string> = {
   openai: "https://api.openai.com/v1",
   aigocode: "https://api.aigocode.com/v1",
+  custom: "",
   google: "https://generativelanguage.googleapis.com/v1beta",
   deepseek: "https://api.deepseek.com",
   claude: "https://api.anthropic.com/v1",
@@ -358,6 +359,9 @@ export async function POST(
       : candidateModel;
     const model = normalizeReferenceModel(providerId, safeModel);
     const baseUrl = normalizeBaseUrl(config.baseUrl, providerId);
+    if (manifest.baseUrlRequired && !baseUrl) {
+      return json({ ok: false, error: { code: "missing_base_url", message: "请先为当前供应商填写 Base URL。" } }, { status: 400 });
+    }
     const image = parseImageDataUrl(body.imageDataUrl);
     const prompt = promptFor(body.kind, body.label);
 

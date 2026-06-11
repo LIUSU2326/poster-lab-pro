@@ -134,6 +134,10 @@ function normalizeBaseUrl(value: string | undefined, fallback: string): string {
 function probeUrl(config: StoredProviderConfig): string {
   if (config.providerId === "openai") return `${normalizeOpenAIBaseUrl(config.baseUrl || DEFAULT_OPENAI_BASE_URL)}/models`;
   if (config.providerId === "aigocode") return `${normalizeAigocodeBaseUrl(config.baseUrl)}/models`;
+  if (config.providerId === "custom") {
+    const baseUrl = normalizeBaseUrl(config.baseUrl, "");
+    return baseUrl ? `${baseUrl}/models` : "";
+  }
   if (config.providerId === "google") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_GOOGLE_BASE_URL)}/models`;
   if (config.providerId === "deepseek") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_DEEPSEEK_BASE_URL)}/models`;
   if (config.providerId === "claude") return `${normalizeBaseUrl(config.baseUrl, DEFAULT_CLAUDE_BASE_URL)}/models`;
@@ -202,10 +206,10 @@ function modelFamilyAvailable(providerId: ProviderId, defaultModel: string, ids:
   ) {
     return true;
   }
-  if ((providerId === "openai" || providerId === "aigocode") && defaultModel.startsWith("gpt-image-")) {
-    return ids.some((id) => id.startsWith("gpt-image-") || (providerId === "aigocode" && id.startsWith("image-")));
+  if ((providerId === "openai" || providerId === "aigocode" || providerId === "custom") && defaultModel.startsWith("gpt-image-")) {
+    return ids.some((id) => id.startsWith("gpt-image-") || ((providerId === "aigocode" || providerId === "custom") && id.startsWith("image-")));
   }
-  if (providerId === "aigocode" && defaultModel.startsWith("image-")) {
+  if ((providerId === "aigocode" || providerId === "custom") && defaultModel.startsWith("image-")) {
     return ids.some((id) => id.startsWith("image-"));
   }
   if (providerId === "agnes" && defaultModel.startsWith("agnes-image-")) {

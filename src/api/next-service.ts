@@ -92,6 +92,10 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     providerId: "aigocode",
     transport: createOpenAIImageFetchTransport(fetchImpl),
   });
+  const customImageAdapter = createOpenAILiveImageAdapter({
+    providerId: "custom",
+    transport: createOpenAIImageFetchTransport(fetchImpl),
+  });
   const agnesImageAdapter = createOpenAILiveImageAdapter({
     providerId: "agnes",
     transport: createOpenAIImageFetchTransport(fetchImpl),
@@ -100,7 +104,7 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     transport: createGoogleImageFetchTransport(fetchImpl),
   });
 
-  for (const providerId of ["openai", "aigocode", "deepseek", "qwen", "agnes", "mimo"] as const) {
+  for (const providerId of ["openai", "aigocode", "custom", "deepseek", "qwen", "agnes", "mimo"] as const) {
     const briefAdapter = createOpenAICompatibleBriefAdapter({
       providerId,
       transport: chatTransport,
@@ -130,6 +134,15 @@ function createQueueProviderRegistry(fetchImpl: typeof fetch): ProviderAdapterRe
     ...(registry.aigocode?.generateBrief ? { generateBrief: registry.aigocode.generateBrief.bind(registry.aigocode) } : {}),
     ...(aigocodeImageAdapter.generateImage ? { generateImage: aigocodeImageAdapter.generateImage.bind(aigocodeImageAdapter) } : {}),
     ...(aigocodeImageAdapter.editImage ? { editImage: aigocodeImageAdapter.editImage.bind(aigocodeImageAdapter) } : {}),
+  };
+  registry.custom = {
+    ...registry.custom,
+    manifest: customImageAdapter.manifest,
+    validateConfig: customImageAdapter.validateConfig,
+    healthCheck: customImageAdapter.healthCheck,
+    ...(registry.custom?.generateBrief ? { generateBrief: registry.custom.generateBrief.bind(registry.custom) } : {}),
+    ...(customImageAdapter.generateImage ? { generateImage: customImageAdapter.generateImage.bind(customImageAdapter) } : {}),
+    ...(customImageAdapter.editImage ? { editImage: customImageAdapter.editImage.bind(customImageAdapter) } : {}),
   };
   registry.agnes = {
     ...registry.agnes,

@@ -1,6 +1,7 @@
 export const providerLabels = {
   openai: "OpenAI",
   aigocode: "AIGoCode",
+  custom: "自定义中转",
   google: "Google AI Studio",
   deepseek: "DeepSeek",
   claude: "Claude",
@@ -12,6 +13,7 @@ export const providerLabels = {
 export const providerCapabilities = {
   openai: ["briefGeneration", "imageGeneration", "imageEdit", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   aigocode: ["briefGeneration", "imageGeneration", "imageEdit", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
+  custom: ["briefGeneration", "imageGeneration", "imageEdit", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   google: ["briefGeneration", "imageGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
   deepseek: ["briefGeneration"],
   claude: ["briefGeneration", "styleReferenceAnalysis", "compositionReferenceAnalysis"],
@@ -34,6 +36,13 @@ export const providerModelSlots = {
     styleReference: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1"],
     compositionReference: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano", "gpt-5.2", "gpt-5.1"],
     imageEdit: ["gpt-image-1", "gpt-image-2", "gpt-image-1.5", "image-2", "image-1"],
+  },
+  custom: {
+    concept: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5.1"],
+    image: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "image-2", "image-1", "dall-e-3"],
+    styleReference: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5.1"],
+    compositionReference: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.2", "gpt-5.1"],
+    imageEdit: ["gpt-image-2", "gpt-image-1.5", "gpt-image-1", "image-2", "image-1"],
   },
   google: {
     concept: ["gemini-2.5-flash", "gemini-2.5-pro"],
@@ -69,6 +78,7 @@ export const providerModelSlots = {
 export const providerSupportedModes = {
   openai: ["poster", "collab", "announcement", "logo", "icon"],
   aigocode: ["poster", "collab", "announcement", "logo", "icon"],
+  custom: ["poster", "collab", "announcement", "logo", "icon"],
   google: ["poster", "collab", "announcement", "logo", "icon"],
   deepseek: ["poster", "collab", "announcement", "logo", "icon"],
   claude: ["poster", "collab", "announcement", "logo", "icon"],
@@ -93,21 +103,21 @@ export const resultOperationRouting = {
     taskKind: "图像编辑",
     capability: "imageEdit",
     flags: { includeImageEdit: true, includeUpscale: false, includeBackgroundRemoval: false },
-    providers: ["openai", "agnes", "aigocode", "qwen", "google"],
+    providers: ["openai", "agnes", "aigocode", "custom", "qwen", "google"],
   },
   upscale: {
     label: "高清放大",
     taskKind: "高清放大",
     capability: "upscale",
     flags: { includeImageEdit: false, includeUpscale: true, includeBackgroundRemoval: false },
-    providers: ["openai", "aigocode", "qwen", "google"],
+    providers: ["openai", "aigocode", "custom", "qwen", "google"],
   },
   removeBg: {
     label: "移除背景",
     taskKind: "背景移除",
     capability: "backgroundRemoval",
     flags: { includeImageEdit: false, includeUpscale: false, includeBackgroundRemoval: true },
-    providers: ["openai", "aigocode", "qwen", "google"],
+    providers: ["openai", "aigocode", "custom", "qwen", "google"],
   },
 };
 

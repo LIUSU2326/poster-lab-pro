@@ -22,6 +22,17 @@ export const providers = [
     note: "适合使用 AIGoCode 中转站 API Key。保存后会用模型列表做轻量连接测试，不触发图片生成。",
   },
   {
+    id: "custom",
+    name: "自定义中转",
+    state: "未启用",
+    status: "idle",
+    key: "",
+    model: "gpt-5.5",
+    url: "",
+    caps: ["OpenAI 兼容", "自定义模型", "中转站"],
+    note: "用于接入用户自己的 OpenAI-compatible 中转站。填写 Base URL、API Key 和模型 ID 后，可作为方案、识别或图像生成路由。",
+  },
+  {
     id: "google",
     name: "Google AI Studio",
     state: "未启用",
