@@ -169,6 +169,7 @@ export type StorageRepository = {
   saveSnapshot(snapshot: WorkspaceSnapshot): Promise<StorageSaveResult>;
   loadSnapshot(workspaceId: string): Promise<StorageLoadResult>;
   listSnapshots(projectId?: string): Promise<WorkspaceSnapshotSummary[]>;
+  deleteSnapshot?(workspaceId: string): Promise<boolean>;
 };
 
 function latestIsoTimestamp(values: Array<string | null | undefined>): string | null {

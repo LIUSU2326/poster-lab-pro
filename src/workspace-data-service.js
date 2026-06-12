@@ -1,4 +1,4 @@
-import { state, setRuntimeWorkspaceSnapshot } from './state.js';
+import { resetWorkspaceSwitchUiState, state, setRuntimeWorkspaceSnapshot } from './state.js';
 
 function encodeSegment(value) {
   return encodeURIComponent(String(value));
@@ -52,6 +52,39 @@ async function postJson(path, payload, options = {}) {
       "content-type": "application/json",
     },
     body: JSON.stringify(payload),
+  });
+
+  return readEnvelope(response);
+}
+
+async function patchJson(path, payload, options = {}) {
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  if (typeof fetchImpl !== "function") {
+    throw new Error("Workspace data service requires a fetch implementation.");
+  }
+
+  const response = await fetchImpl(path, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return readEnvelope(response);
+}
+
+async function deleteJson(path, options = {}) {
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  if (typeof fetchImpl !== "function") {
+    throw new Error("Workspace data service requires a fetch implementation.");
+  }
+
+  const response = await fetchImpl(path, {
+    method: "DELETE",
+    headers: {
+      accept: "application/json",
+    },
   });
 
   return readEnvelope(response);
@@ -218,6 +251,26 @@ export function createHttpWorkspaceDataService(options = {}) {
   const basePath = options.basePath || "";
 
   return {
+    async listWorkspaceSnapshots() {
+      return getJson(`${basePath}/api/workspaces`, options);
+    },
+
+    async createWorkspaceSnapshot(payload = {}) {
+      return postJson(`${basePath}/api/workspaces`, payload, options);
+    },
+
+    async renameWorkspaceSnapshot(workspaceId, payload = {}) {
+      return patchJson(`${basePath}/api/workspaces/${encodeSegment(workspaceId)}`, payload, options);
+    },
+
+    async duplicateWorkspaceSnapshot(workspaceId, payload = {}) {
+      return postJson(`${basePath}/api/workspaces/${encodeSegment(workspaceId)}/duplicate`, payload, options);
+    },
+
+    async deleteWorkspaceSnapshot(workspaceId) {
+      return deleteJson(`${basePath}/api/workspaces/${encodeSegment(workspaceId)}`, options);
+    },
+
     async loadWorkspaceSnapshot(workspaceId) {
       return getJson(`${basePath}/api/workspaces/${encodeSegment(workspaceId)}`, options);
     },
@@ -228,9 +281,50 @@ export function createHttpWorkspaceDataService(options = {}) {
   };
 }
 
-export async function loadWorkspaceSnapshotForWorkbench(options = {}) {
-  const workspaceId = options.workspaceId || state.workspaceId;
+function updateWorkspaceSummaries(envelope) {
+  const summaries = envelope?.data?.workspaces;
+  if (Array.isArray(summaries)) {
+    state.workspaceSummaries = summaries;
+  }
+}
+
+function setWorkspaceMessage(message) {
+  state.workspaceMessage = message || "";
+}
+
+function activeWorkspaceIdFromList(requestedWorkspaceId) {
+  const summaries = Array.isArray(state.workspaceSummaries) ? state.workspaceSummaries : [];
+  if (requestedWorkspaceId && summaries.some((item) => item.workspaceId === requestedWorkspaceId)) {
+    return requestedWorkspaceId;
+  }
+  return summaries[0]?.workspaceId || requestedWorkspaceId || state.workspaceId;
+}
+
+async function saveActiveWorkspaceBeforeSwitch(options = {}) {
+  if (state.workspaceLoadStatus !== "http" && state.apiMode !== "http") return null;
+  const snapshot = state.workspaceSnapshot;
+  if (!snapshot?.metadata?.workspaceId) return null;
   const service = createHttpWorkspaceDataService(options);
+  return service.saveWorkspaceSnapshot(snapshot.metadata.workspaceId, { snapshot });
+}
+
+function applyLoadedWorkspaceSnapshot(snapshot, source = "http", options = {}) {
+  setRuntimeWorkspaceSnapshot(snapshot, source);
+  if (options.resetUi) resetWorkspaceSwitchUiState();
+}
+
+export async function loadWorkspaceListForWorkbench(options = {}) {
+  const service = createHttpWorkspaceDataService(options);
+  const envelope = await service.listWorkspaceSnapshots();
+  updateWorkspaceSummaries(envelope);
+  return envelope;
+}
+
+export async function loadWorkspaceSnapshotForWorkbench(options = {}) {
+  const service = createHttpWorkspaceDataService(options);
+  const listEnvelope = !options.workspaceId && !options.skipList ? await service.listWorkspaceSnapshots() : null;
+  if (listEnvelope) updateWorkspaceSummaries(listEnvelope);
+  const workspaceId = activeWorkspaceIdFromList(options.workspaceId || state.workspaceId);
 
   state.workspaceLoadStatus = "loading";
   state.workspaceLoadError = null;
@@ -242,19 +336,123 @@ export async function loadWorkspaceSnapshotForWorkbench(options = {}) {
     if (normalized.changed) {
       const saved = await service.saveWorkspaceSnapshot(workspaceId, { snapshot: normalized.snapshot });
       if (saved.ok) {
-        setRuntimeWorkspaceSnapshot(normalized.snapshot, "http");
+        applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", { resetUi: options.resetUi });
       } else {
-        setRuntimeWorkspaceSnapshot(normalized.snapshot, "http");
+        applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", { resetUi: options.resetUi });
         state.workspaceLoadError = saved.error?.message || "Failed to persist normalized workspace state.";
       }
     } else {
-      setRuntimeWorkspaceSnapshot(normalized.snapshot, "http");
+      applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", { resetUi: options.resetUi });
     }
   } else {
     state.workspaceLoadStatus = "error";
     state.workspaceLoadError = envelope.error?.message || "Failed to load workspace snapshot.";
   }
 
+  return envelope;
+}
+
+export async function switchWorkspaceForWorkbench(workspaceId, options = {}) {
+  if (!workspaceId || workspaceId === state.workspaceId) {
+    state.projectSwitcherOpen = false;
+    return { ok: true, skipped: true };
+  }
+  state.workspaceOperation = { action: "switch", workspaceId };
+  setWorkspaceMessage("");
+  await saveActiveWorkspaceBeforeSwitch(options);
+  const envelope = await loadWorkspaceSnapshotForWorkbench({
+    ...options,
+    workspaceId,
+    resetUi: true,
+  });
+  state.workspaceOperation = null;
+  if (envelope.ok) {
+    state.projectSwitcherOpen = false;
+    state.workspaceRenameId = "";
+    state.workspaceDeleteConfirmId = "";
+  } else {
+    setWorkspaceMessage(envelope.error?.message || "切换失败");
+  }
+  return envelope;
+}
+
+export async function createWorkspaceForWorkbench(options = {}) {
+  const service = createHttpWorkspaceDataService(options);
+  state.workspaceOperation = { action: "create" };
+  setWorkspaceMessage("");
+  await saveActiveWorkspaceBeforeSwitch(options);
+  const envelope = await service.createWorkspaceSnapshot({
+    name: options.name || "",
+    sourceWorkspaceId: state.workspaceId,
+  });
+  updateWorkspaceSummaries(envelope);
+  if (envelope.ok && envelope.data?.snapshot) {
+    applyLoadedWorkspaceSnapshot(envelope.data.snapshot, "http", { resetUi: true });
+    state.projectSwitcherOpen = false;
+  } else {
+    setWorkspaceMessage(envelope.error?.message || "新建失败");
+  }
+  state.workspaceOperation = null;
+  return envelope;
+}
+
+export async function renameWorkspaceForWorkbench(workspaceId, name, options = {}) {
+  const service = createHttpWorkspaceDataService(options);
+  state.workspaceOperation = { action: "rename", workspaceId };
+  setWorkspaceMessage("");
+  const envelope = await service.renameWorkspaceSnapshot(workspaceId, { name });
+  updateWorkspaceSummaries(envelope);
+  if (envelope.ok && envelope.data?.snapshot && workspaceId === state.workspaceId) {
+    applyLoadedWorkspaceSnapshot(envelope.data.snapshot, "http");
+  }
+  if (envelope.ok) {
+    state.workspaceRenameId = "";
+  } else {
+    setWorkspaceMessage(envelope.error?.message || "重命名失败");
+  }
+  state.workspaceOperation = null;
+  return envelope;
+}
+
+export async function duplicateWorkspaceForWorkbench(workspaceId, options = {}) {
+  const service = createHttpWorkspaceDataService(options);
+  state.workspaceOperation = { action: "duplicate", workspaceId };
+  setWorkspaceMessage("");
+  await saveActiveWorkspaceBeforeSwitch(options);
+  const envelope = await service.duplicateWorkspaceSnapshot(workspaceId, {
+    name: options.name || "",
+  });
+  updateWorkspaceSummaries(envelope);
+  if (envelope.ok && envelope.data?.snapshot) {
+    applyLoadedWorkspaceSnapshot(envelope.data.snapshot, "http", { resetUi: true });
+    state.projectSwitcherOpen = false;
+  } else {
+    setWorkspaceMessage(envelope.error?.message || "复制失败");
+  }
+  state.workspaceOperation = null;
+  return envelope;
+}
+
+export async function deleteWorkspaceForWorkbench(workspaceId, options = {}) {
+  const service = createHttpWorkspaceDataService(options);
+  state.workspaceOperation = { action: "delete", workspaceId };
+  setWorkspaceMessage("");
+  const envelope = await service.deleteWorkspaceSnapshot(workspaceId);
+  updateWorkspaceSummaries(envelope);
+  if (envelope.ok) {
+    state.workspaceDeleteConfirmId = "";
+    state.workspaceRenameId = "";
+    if (workspaceId === state.workspaceId && envelope.data?.fallbackWorkspaceId) {
+      await loadWorkspaceSnapshotForWorkbench({
+        ...options,
+        workspaceId: envelope.data.fallbackWorkspaceId,
+        resetUi: true,
+      });
+    }
+  } else {
+    setWorkspaceMessage(envelope.error?.message || "删除失败");
+  }
+  state.workspaceOperation = null;
   return envelope;
 }
 

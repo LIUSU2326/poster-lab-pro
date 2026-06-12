@@ -7,7 +7,7 @@ const path = require("node:path");
 
 const APP_NAME = "Poster Lab Pro";
 const DEFAULT_PORT = 43117;
-const WORKSPACE_HEALTH_PATH = "/api/workspaces/workspace-pizza-kitchen";
+const WORKSPACE_HEALTH_PATH = "/api/workspaces";
 const SHELL_HEALTH_PATH = "/";
 const PACKAGED_ICON_PATH = path.join(process.resourcesPath || "", "poster-lab-pro.png");
 const DESKTOP_SESSION_PARTITION = "persist:poster-lab-pro-desktop";
@@ -337,9 +337,14 @@ function createWindow(url) {
   });
 
   let shellRecoveryCount = 0;
-  mainWindow.once("ready-to-show", () => {
+  const showMainWindow = () => {
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isVisible()) return;
     mainWindow.show();
-  });
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  };
+
+  mainWindow.once("ready-to-show", showMainWindow);
 
   mainWindow.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
     shell.openExternal(targetUrl);
@@ -367,6 +372,7 @@ function createWindow(url) {
 
   mainWindow.webContents.on("did-finish-load", () => {
     loadRetryCount = 0;
+    showMainWindow();
     mainWindow.webContents.executeJavaScript(`
       (() => {
         const titleOk = document.title.includes("Poster Lab Pro");
@@ -382,6 +388,7 @@ function createWindow(url) {
   });
 
   mainWindow.loadURL(desktopEntryUrl(url));
+  setTimeout(showMainWindow, 5000);
 }
 
 function installApplicationMenu() {

@@ -23,8 +23,13 @@ import {
 } from "../assets/contracts";
 import { ResultDownloadDescriptorSchema } from "../results/download-descriptor";
 
-export const ApiHttpMethodSchema = z.enum(["GET", "POST", "DELETE"]);
+export const ApiHttpMethodSchema = z.enum(["GET", "POST", "PATCH", "DELETE"]);
 export const ApiRouteIdSchema = z.enum([
+  "workspace.list",
+  "workspace.create",
+  "workspace.rename",
+  "workspace.duplicate",
+  "workspace.delete",
   "workspace.snapshot.load",
   "workspace.snapshot.save",
   "prompt.package.create",
@@ -103,6 +108,56 @@ export const WorkspaceSnapshotSaveResponseSchema = z.union([
   apiSuccessEnvelope(
     z.object({
       summary: WorkspaceSnapshotSummarySchema,
+    }),
+  ),
+  ApiFailureEnvelopeSchema,
+]);
+
+export const WorkspaceListResponseSchema = z.union([
+  apiSuccessEnvelope(
+    z.object({
+      workspaces: z.array(WorkspaceSnapshotSummarySchema),
+    }),
+  ),
+  ApiFailureEnvelopeSchema,
+]);
+
+export const WorkspaceCreateRequestSchema = z.object({
+  name: z.string().max(80).optional(),
+  sourceWorkspaceId: z.string().min(1).optional(),
+});
+
+export const WorkspaceRenameRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+  name: z.string().max(80),
+});
+
+export const WorkspaceDuplicateRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+  name: z.string().max(80).optional(),
+});
+
+export const WorkspaceDeleteRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+});
+
+export const WorkspaceMutationResponseSchema = z.union([
+  apiSuccessEnvelope(
+    z.object({
+      summary: WorkspaceSnapshotSummarySchema,
+      snapshot: WorkspaceSnapshotSchema,
+      workspaces: z.array(WorkspaceSnapshotSummarySchema).optional(),
+    }),
+  ),
+  ApiFailureEnvelopeSchema,
+]);
+
+export const WorkspaceDeleteResponseSchema = z.union([
+  apiSuccessEnvelope(
+    z.object({
+      deletedWorkspaceId: z.string().min(1),
+      fallbackWorkspaceId: z.string().min(1).nullable().default(null),
+      workspaces: z.array(WorkspaceSnapshotSummarySchema),
     }),
   ),
   ApiFailureEnvelopeSchema,
@@ -340,6 +395,13 @@ export type WorkspaceSnapshotLoadRequest = z.infer<typeof WorkspaceSnapshotLoadR
 export type WorkspaceSnapshotLoadResponse = z.infer<typeof WorkspaceSnapshotLoadResponseSchema>;
 export type WorkspaceSnapshotSaveRequest = z.infer<typeof WorkspaceSnapshotSaveRequestSchema>;
 export type WorkspaceSnapshotSaveResponse = z.infer<typeof WorkspaceSnapshotSaveResponseSchema>;
+export type WorkspaceListResponse = z.infer<typeof WorkspaceListResponseSchema>;
+export type WorkspaceCreateRequest = z.infer<typeof WorkspaceCreateRequestSchema>;
+export type WorkspaceRenameRequest = z.infer<typeof WorkspaceRenameRequestSchema>;
+export type WorkspaceDuplicateRequest = z.infer<typeof WorkspaceDuplicateRequestSchema>;
+export type WorkspaceDeleteRequest = z.infer<typeof WorkspaceDeleteRequestSchema>;
+export type WorkspaceMutationResponse = z.infer<typeof WorkspaceMutationResponseSchema>;
+export type WorkspaceDeleteResponse = z.infer<typeof WorkspaceDeleteResponseSchema>;
 export type PromptPackageCreateApiRequest = z.infer<typeof PromptPackageCreateApiRequestSchema>;
 export type PromptPackageCreateApiResponse = z.infer<typeof PromptPackageCreateApiResponseSchema>;
 export type ProviderRequestMapApiRequest = z.infer<typeof ProviderRequestMapApiRequestSchema>;
@@ -380,6 +442,41 @@ export type ApiRouteContract = {
 };
 
 export const apiRouteContracts = {
+  workspaceList: {
+    routeId: "workspace.list",
+    method: "GET",
+    path: "/api/workspaces",
+    requestSchema: z.object({}).default({}),
+    responseSchema: WorkspaceListResponseSchema,
+  },
+  workspaceCreate: {
+    routeId: "workspace.create",
+    method: "POST",
+    path: "/api/workspaces",
+    requestSchema: WorkspaceCreateRequestSchema,
+    responseSchema: WorkspaceMutationResponseSchema,
+  },
+  workspaceRename: {
+    routeId: "workspace.rename",
+    method: "PATCH",
+    path: "/api/workspaces/:workspaceId",
+    requestSchema: WorkspaceRenameRequestSchema,
+    responseSchema: WorkspaceMutationResponseSchema,
+  },
+  workspaceDuplicate: {
+    routeId: "workspace.duplicate",
+    method: "POST",
+    path: "/api/workspaces/:workspaceId/duplicate",
+    requestSchema: WorkspaceDuplicateRequestSchema,
+    responseSchema: WorkspaceMutationResponseSchema,
+  },
+  workspaceDelete: {
+    routeId: "workspace.delete",
+    method: "DELETE",
+    path: "/api/workspaces/:workspaceId",
+    requestSchema: WorkspaceDeleteRequestSchema,
+    responseSchema: WorkspaceDeleteResponseSchema,
+  },
   workspaceSnapshotLoad: {
     routeId: "workspace.snapshot.load",
     method: "GET",

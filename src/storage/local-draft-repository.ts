@@ -111,5 +111,12 @@ export function createBrowserLocalDraftRepository(
 
       return summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     },
+    async deleteSnapshot(workspaceId: string): Promise<boolean> {
+      const key = snapshotKey(namespace, workspaceId);
+      const exists = storage.getItem(key) !== null;
+      storage.removeItem(key);
+      writeIndex(storage, namespace, readIndex(storage, namespace).filter((item) => item !== workspaceId));
+      return exists;
+    },
   };
 }

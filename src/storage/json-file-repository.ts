@@ -103,5 +103,12 @@ export function createJsonFileWorkspaceRepository(
         .map((snapshot) => summarizeWorkspaceSnapshot(snapshot))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     },
+
+    async deleteSnapshot(workspaceId: string): Promise<boolean> {
+      await load();
+      const deleted = snapshots.delete(workspaceId);
+      if (deleted) await persist();
+      return deleted;
+    },
   };
 }

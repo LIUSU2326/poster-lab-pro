@@ -24,7 +24,9 @@ import {
 } from "../results/file-store";
 import type { ProductionMode } from "../schema/zod";
 import {
+  createBlankWorkspaceSnapshot,
   createMemoryDraftRepository,
+  WorkspaceSnapshotSchema,
   type StorageRepository,
   type StorageLoadResult,
   type StoredProviderConfig,
@@ -63,6 +65,13 @@ import {
   ResultDeleteApiResponseSchema,
   ResultDownloadDescribeApiRequestSchema,
   ResultDownloadDescribeApiResponseSchema,
+  WorkspaceCreateRequestSchema,
+  WorkspaceDeleteRequestSchema,
+  WorkspaceDeleteResponseSchema,
+  WorkspaceDuplicateRequestSchema,
+  WorkspaceListResponseSchema,
+  WorkspaceMutationResponseSchema,
+  WorkspaceRenameRequestSchema,
   WorkspaceSnapshotLoadRequestSchema,
   WorkspaceSnapshotLoadResponseSchema,
   WorkspaceSnapshotSaveRequestSchema,
@@ -96,6 +105,13 @@ import {
   type ResultDeleteApiResponse,
   type ResultDownloadDescribeApiRequest,
   type ResultDownloadDescribeApiResponse,
+  type WorkspaceCreateRequest,
+  type WorkspaceDeleteRequest,
+  type WorkspaceDeleteResponse,
+  type WorkspaceDuplicateRequest,
+  type WorkspaceListResponse,
+  type WorkspaceMutationResponse,
+  type WorkspaceRenameRequest,
   type WorkspaceSnapshotLoadRequest,
   type WorkspaceSnapshotLoadResponse,
   type WorkspaceSnapshotSaveRequest,
@@ -112,6 +128,11 @@ export type LocalApiServiceOptions = {
 };
 
 export type LocalApiService = {
+  listWorkspaceSnapshots(): Promise<WorkspaceListResponse>;
+  createWorkspaceSnapshot(request: WorkspaceCreateRequest): Promise<WorkspaceMutationResponse>;
+  renameWorkspaceSnapshot(request: WorkspaceRenameRequest): Promise<WorkspaceMutationResponse>;
+  duplicateWorkspaceSnapshot(request: WorkspaceDuplicateRequest): Promise<WorkspaceMutationResponse>;
+  deleteWorkspaceSnapshot(request: WorkspaceDeleteRequest): Promise<WorkspaceDeleteResponse>;
   loadWorkspaceSnapshot(request: WorkspaceSnapshotLoadRequest): Promise<WorkspaceSnapshotLoadResponse>;
   saveWorkspaceSnapshot(request: WorkspaceSnapshotSaveRequest): Promise<WorkspaceSnapshotSaveResponse>;
   createPromptPackage(request: PromptPackageCreateApiRequest): Promise<PromptPackageCreateApiResponse>;
@@ -559,6 +580,177 @@ async function providerCredentialKeyRefForRequest(
   return providerCredentialKeyRef(input);
 }
 
+function cloneValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function createEntityId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function workspaceDisplayName(value: string | null | undefined, fallback = "Untitled Project"): string {
+  const name = String(value || "").trim().slice(0, 80);
+  return name || fallback;
+}
+
+function replaceProjectStorageKey(value: string | null | undefined, oldProjectId: string, nextProjectId: string): string | null | undefined {
+  if (!value || !oldProjectId || !nextProjectId) return value;
+  return value.replaceAll(`projects/${oldProjectId}/`, `projects/${nextProjectId}/`);
+}
+
+function createWorkspaceFromTemplate(input: {
+  repository: StorageRepository;
+  name?: string | undefined;
+  source?: WorkspaceSnapshot | null | undefined;
+}): WorkspaceSnapshot {
+  const updatedAt = new Date().toISOString();
+  const workspaceId = createEntityId("workspace");
+  const projectId = createEntityId("project");
+  const projectName = workspaceDisplayName(input.name, "");
+  const source = input.source || null;
+  const snapshot = createBlankWorkspaceSnapshot({
+    workspaceId,
+    projectId,
+    projectName,
+    projectDescription: "",
+    createdAt: updatedAt,
+    ...(source?.providerConfigs ? { providerConfigs: cloneValue(source.providerConfigs) } : {}),
+  });
+
+  return WorkspaceSnapshotSchema.parse({
+    ...snapshot,
+    metadata: {
+      ...snapshot.metadata,
+      ownerId: source?.metadata.ownerId || snapshot.metadata.ownerId,
+      backend: input.repository.backend,
+      createdAt: updatedAt,
+      updatedAt,
+    },
+  });
+}
+
+function renameSnapshotProject(snapshot: WorkspaceSnapshot, name: string): WorkspaceSnapshot {
+  const updatedAt = new Date().toISOString();
+  const projectName = workspaceDisplayName(name, "");
+  return WorkspaceSnapshotSchema.parse({
+    ...snapshot,
+    project: {
+      ...snapshot.project,
+      name: projectName,
+    },
+    modeStates: snapshot.modeStates.map((modeState) => ({
+      ...modeState,
+      projectBrief: {
+        ...modeState.projectBrief,
+        projectName,
+      },
+      updatedAt,
+    })),
+    metadata: {
+      ...snapshot.metadata,
+      revision: snapshot.metadata.revision + 1,
+      updatedAt,
+    },
+  });
+}
+
+function duplicateSnapshotProject(input: {
+  repository: StorageRepository;
+  snapshot: WorkspaceSnapshot;
+  name?: string | undefined;
+}): WorkspaceSnapshot {
+  const source = cloneValue(input.snapshot);
+  const updatedAt = new Date().toISOString();
+  const oldProjectId = source.project.id;
+  const projectId = createEntityId("project");
+  const workspaceId = createEntityId("workspace");
+  const projectName = workspaceDisplayName(input.name, `${source.project.name || "Untitled Project"} Copy`);
+
+  return WorkspaceSnapshotSchema.parse({
+    ...source,
+    metadata: {
+      ...source.metadata,
+      workspaceId,
+      backend: input.repository.backend,
+      revision: 1,
+      createdAt: updatedAt,
+      updatedAt,
+    },
+    project: {
+      ...source.project,
+      id: projectId,
+      name: projectName,
+    },
+    brandKit: source.brandKit
+      ? {
+          ...source.brandKit,
+          id: createEntityId("brand"),
+          projectId,
+        }
+      : null,
+    characters: source.characters.map((character) => ({
+      ...character,
+      projectId,
+    })),
+    assets: source.assets.map((asset) => ({
+      ...asset,
+      projectId,
+      storageKey: replaceProjectStorageKey(asset.storageKey, oldProjectId, projectId) ?? asset.storageKey,
+      updatedAt,
+    })),
+    modeStates: source.modeStates.map((modeState) => ({
+      ...modeState,
+      projectBrief: {
+        ...modeState.projectBrief,
+        projectName,
+      },
+      updatedAt,
+    })),
+    schemes: source.schemes.map((scheme) => ({
+      ...scheme,
+      projectId,
+    })),
+    queuePlans: source.queuePlans.map((plan) => ({
+      ...plan,
+      job: {
+        ...plan.job,
+        projectId,
+        updatedAt,
+      },
+    })),
+    results: source.results.map((result) => ({
+      ...result,
+      projectId,
+      updatedAt,
+    })),
+    archiveRows: source.archiveRows.map((row) => ({
+      ...row,
+      projectId,
+      updatedAt,
+    })),
+  });
+}
+
+async function workspaceMutationSuccess(input: {
+  repository: StorageRepository;
+  snapshot: WorkspaceSnapshot;
+  summary: unknown;
+}): Promise<WorkspaceMutationResponse> {
+  const workspaces = await input.repository.listSnapshots();
+  return WorkspaceMutationResponseSchema.parse({
+    ok: true,
+    data: {
+      summary: input.summary,
+      snapshot: input.snapshot,
+      workspaces,
+    },
+    meta: createApiMeta({
+      workspaceId: input.snapshot.metadata.workspaceId,
+      revision: input.snapshot.metadata.revision,
+    }),
+  });
+}
+
 export function createLocalApiService(options: LocalApiServiceOptions = {}): LocalApiService {
   const repository = options.repository || createMemoryDraftRepository();
   const credentialVault = options.credentialVault || createEncryptedProviderCredentialVault({
@@ -580,6 +772,145 @@ export function createLocalApiService(options: LocalApiServiceOptions = {}): Loc
   });
 
   return {
+    async listWorkspaceSnapshots() {
+      try {
+        const workspaces = await repository.listSnapshots();
+        return WorkspaceListResponseSchema.parse({
+          ok: true,
+          data: { workspaces },
+          meta: createApiMeta(),
+        });
+      } catch (error) {
+        return WorkspaceListResponseSchema.parse(failureFromError(error));
+      }
+    },
+
+    async createWorkspaceSnapshot(request) {
+      try {
+        const parsed = WorkspaceCreateRequestSchema.parse(request || {});
+        let source: WorkspaceSnapshot | null = null;
+        if (parsed.sourceWorkspaceId) {
+          const loaded = await repository.loadSnapshot(parsed.sourceWorkspaceId);
+          if (loaded.ok) source = loaded.snapshot;
+        }
+        const snapshot = createWorkspaceFromTemplate({
+          repository,
+          name: parsed.name,
+          source,
+        });
+        const saved = await repository.saveSnapshot(snapshot);
+        return workspaceMutationSuccess({
+          repository,
+          snapshot,
+          summary: saved.snapshot,
+        });
+      } catch (error) {
+        return WorkspaceMutationResponseSchema.parse(failureFromError(error));
+      }
+    },
+
+    async renameWorkspaceSnapshot(request) {
+      try {
+        const parsed = WorkspaceRenameRequestSchema.parse(request);
+        const loaded = await repository.loadSnapshot(parsed.workspaceId);
+        if (!loaded.ok) {
+          return WorkspaceMutationResponseSchema.parse(storageLoadFailure(loaded, parsed.workspaceId));
+        }
+        const snapshot = renameSnapshotProject(loaded.snapshot, parsed.name);
+        const saved = await repository.saveSnapshot(snapshot);
+        return workspaceMutationSuccess({
+          repository,
+          snapshot,
+          summary: saved.snapshot,
+        });
+      } catch (error) {
+        const workspaceId = workspaceIdFromUnknown(request);
+        return WorkspaceMutationResponseSchema.parse(
+          failureFromError(error, {
+            ...(workspaceId ? { workspaceId } : {}),
+          }),
+        );
+      }
+    },
+
+    async duplicateWorkspaceSnapshot(request) {
+      try {
+        const parsed = WorkspaceDuplicateRequestSchema.parse(request);
+        const loaded = await repository.loadSnapshot(parsed.workspaceId);
+        if (!loaded.ok) {
+          return WorkspaceMutationResponseSchema.parse(storageLoadFailure(loaded, parsed.workspaceId));
+        }
+        const snapshot = duplicateSnapshotProject({
+          repository,
+          snapshot: loaded.snapshot,
+          name: parsed.name,
+        });
+        const saved = await repository.saveSnapshot(snapshot);
+        return workspaceMutationSuccess({
+          repository,
+          snapshot,
+          summary: saved.snapshot,
+        });
+      } catch (error) {
+        const workspaceId = workspaceIdFromUnknown(request);
+        return WorkspaceMutationResponseSchema.parse(
+          failureFromError(error, {
+            ...(workspaceId ? { workspaceId } : {}),
+          }),
+        );
+      }
+    },
+
+    async deleteWorkspaceSnapshot(request) {
+      try {
+        const parsed = WorkspaceDeleteRequestSchema.parse(request);
+        if (!repository.deleteSnapshot) {
+          return WorkspaceDeleteResponseSchema.parse(createFailure({
+            code: "unsupported_capability",
+            workspaceId: parsed.workspaceId,
+            message: "The active storage repository cannot delete workspace snapshots.",
+          }));
+        }
+        const before = await repository.listSnapshots();
+        if (!before.some((workspace) => workspace.workspaceId === parsed.workspaceId)) {
+          return WorkspaceDeleteResponseSchema.parse(createFailure({
+            code: "not_found",
+            workspaceId: parsed.workspaceId,
+            message: `Workspace snapshot ${parsed.workspaceId} was not found.`,
+          }));
+        }
+        await repository.deleteSnapshot(parsed.workspaceId);
+        let workspaces = await repository.listSnapshots();
+        let fallbackWorkspaceId = workspaces[0]?.workspaceId || null;
+        if (!fallbackWorkspaceId) {
+          const snapshot = createWorkspaceFromTemplate({
+            repository,
+            name: "",
+            source: null,
+          });
+          await repository.saveSnapshot(snapshot);
+          workspaces = await repository.listSnapshots();
+          fallbackWorkspaceId = snapshot.metadata.workspaceId;
+        }
+        return WorkspaceDeleteResponseSchema.parse({
+          ok: true,
+          data: {
+            deletedWorkspaceId: parsed.workspaceId,
+            fallbackWorkspaceId,
+            workspaces,
+          },
+          meta: createApiMeta(),
+        });
+      } catch (error) {
+        const workspaceId = workspaceIdFromUnknown(request);
+        return WorkspaceDeleteResponseSchema.parse(
+          failureFromError(error, {
+            ...(workspaceId ? { workspaceId } : {}),
+          }),
+        );
+      }
+    },
+
     async loadWorkspaceSnapshot(request) {
       try {
         const parsed = WorkspaceSnapshotLoadRequestSchema.parse(request);

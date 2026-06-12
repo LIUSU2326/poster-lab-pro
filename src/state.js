@@ -30,6 +30,12 @@ export const state = {
   projectLibraryMessage: "",
   projectLibraryActiveEntryId: "",
   projectLibraryEntries: /** @type {Array<{ id: string, name: string, description: string, updatedAt: string }>} */ ([]),
+  projectSwitcherOpen: false,
+  workspaceSummaries: /** @type {Array<{ workspaceId: string, projectId: string, projectName: string, updatedAt: string, resultCount: number, runningQueueCount: number }>} */ ([]),
+  workspaceOperation: /** @type {null | { action: string, workspaceId?: string }} */ (null),
+  workspaceRenameId: "",
+  workspaceDeleteConfirmId: "",
+  workspaceMessage: "",
   resultViewerOpen: false,
   resultViewerMessage: "",
   resultViewerNaturalSizes: /** @type {Record<string, { width: number, height: number }>} */ ({}),
@@ -152,6 +158,38 @@ export function setRuntimeWorkspaceSnapshot(snapshot, source = "runtime") {
     state.activeMode = snapshot.activeMode;
   }
 
+  reconcileWorkspaceUiState();
+}
+
+export function resetWorkspaceSwitchUiState() {
+  state.view = "schemes";
+  state.selectedScheme = "";
+  state.selectedSchemeVariants = {};
+  state.schemeRenderCounts = {};
+  state.selectedResult = "";
+  state.selectedResultUserSet = false;
+  state.schemeDeleteConfirmId = "";
+  state.resultDeleteConfirmId = "";
+  state.resultFilter = "all";
+  state.archiveSelection = [];
+  state.archiveExportMessage = "";
+  state.projectLibraryMessage = "";
+  state.projectLibraryActiveEntryId = "";
+  state.resultViewerOpen = false;
+  state.resultViewerMessage = "";
+  state.resultRefinementOpen = false;
+  state.resultRefinementPrompt = "";
+  state.taskOpen = false;
+  state.generationChoiceOpen = false;
+  state.assetOperation = null;
+  state.hiddenAssetSlots = {};
+  state.resultOperation = null;
+  state.resultOperations = [];
+  state.directionLibraryOffset = {};
+  state.outputSuiteManagerOpen = false;
+  state.referenceAnalysis = {};
+  state.referenceUploadDataUrls = {};
+  state.submission = null;
   reconcileWorkspaceUiState();
 }
 

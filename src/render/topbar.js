@@ -25,13 +25,7 @@ export function renderTopbar(activeMode) {
 
   return `
     <header class="topbar" data-workspace-revision="${escapeHtml(summary.revision)}" data-workspace-assets="${escapeHtml(summary.assetCount)}">
-      <div class="topbar-project">
-        <i aria-hidden="true"></i>
-        <div>
-          <small>${modeLabel}工作台</small>
-          <strong>${escapeHtml(project.name || "未命名项目")}</strong>
-        </div>
-      </div>
+      ${renderProjectSwitcher(project, modeLabel)}
       <div class="view-switch top-view-switch" aria-label="主视图">
         <button class="${state.view === "schemes" ? "active" : ""}" type="button" data-view="schemes">方案</button>
         <button class="${state.view === "archive" ? "active" : ""}" type="button" data-view="archive">归档</button>
@@ -92,6 +86,135 @@ export function renderTopbar(activeMode) {
   `;
 }
 
+function renderProjectSwitcher(project, modeLabel) {
+  const projectName = project.name || "未命名项目";
+  return `
+    <div class="topbar-project-wrap">
+      <button
+        class="topbar-project"
+        type="button"
+        data-action="toggle-project-switcher"
+        aria-haspopup="dialog"
+        aria-expanded="${state.projectSwitcherOpen ? "true" : "false"}"
+        title="切换项目"
+      >
+        <i aria-hidden="true"></i>
+        <div>
+          <small>${escapeHtml(modeLabel)}工作台</small>
+          <strong>${escapeHtml(projectName)}</strong>
+        </div>
+        <span class="project-switcher-caret" aria-hidden="true">⌄</span>
+      </button>
+      ${state.projectSwitcherOpen ? renderProjectSwitcherPanel() : ""}
+    </div>
+  `;
+}
+
+function renderProjectSwitcherPanel() {
+  const summaries = normalizedWorkspaceSummaries();
+  const busy = state.workspaceOperation || null;
+  return `
+    <section class="project-switcher-panel" role="dialog" aria-label="项目切换">
+      <div class="project-switcher-head">
+        <strong>项目</strong>
+        <button type="button" data-action="create-workspace" ${busy ? "disabled" : ""}>新建</button>
+      </div>
+      <div class="project-switcher-list">
+        ${summaries.map((workspace) => renderProjectSwitcherRow(workspace, busy)).join("")}
+      </div>
+      ${state.workspaceMessage ? `<p class="project-switcher-message">${escapeHtml(state.workspaceMessage)}</p>` : ""}
+    </section>
+  `;
+}
+
+function normalizedWorkspaceSummaries() {
+  const summaries = Array.isArray(state.workspaceSummaries) ? state.workspaceSummaries : [];
+  if (summaries.length > 0) return summaries;
+  const snapshot = state.workspaceSnapshot || {};
+  return [{
+    workspaceId: state.workspaceId,
+    projectId: snapshot.project?.id || "project",
+    projectName: snapshot.project?.name || "未命名项目",
+    updatedAt: snapshot.metadata?.updatedAt || "",
+    resultCount: Array.isArray(snapshot.results) ? snapshot.results.length : 0,
+    runningQueueCount: Array.isArray(snapshot.queuePlans)
+      ? snapshot.queuePlans.filter((plan) => plan.job?.status === "running" || plan.job?.status === "queued").length
+      : 0,
+  }];
+}
+
+function renderProjectSwitcherRow(workspace, busy) {
+  const active = workspace.workspaceId === state.workspaceId;
+  const confirming = state.workspaceDeleteConfirmId === workspace.workspaceId;
+  const editing = state.workspaceRenameId === workspace.workspaceId;
+  const disabled = Boolean(busy);
+  const busyThis = busy?.workspaceId === workspace.workspaceId;
+  return `
+    <div class="project-switcher-row ${active ? "active" : ""} ${confirming ? "confirming" : ""} ${editing ? "editing" : ""}" data-project-row="${escapeAttribute(workspace.workspaceId)}">
+      ${editing ? renderWorkspaceRenameRow(workspace, disabled) : renderWorkspaceSwitchRow(workspace, { active, busyThis, disabled })}
+    </div>
+  `;
+}
+
+function renderWorkspaceSwitchRow(workspace, flags) {
+  return `
+    <button
+      class="project-switcher-main"
+      type="button"
+      data-action="switch-workspace"
+      data-workspace-id="${escapeAttribute(workspace.workspaceId)}"
+      ${flags.active || flags.disabled ? "disabled" : ""}
+    >
+      <span>
+        <strong>${escapeHtml(workspace.projectName || "未命名项目")}</strong>
+        <small>${escapeHtml(formatWorkspaceDate(workspace.updatedAt))} · ${Number(workspace.resultCount || 0)} 结果</small>
+      </span>
+      ${workspace.runningQueueCount > 0 ? `<b>运行中</b>` : ""}
+      ${flags.busyThis ? `<em>处理中</em>` : ""}
+    </button>
+    <div class="project-switcher-actions">
+      <button type="button" data-action="rename-workspace" data-workspace-id="${escapeAttribute(workspace.workspaceId)}" title="重命名" ${flags.disabled ? "disabled" : ""}>改</button>
+      <button type="button" data-action="duplicate-workspace" data-workspace-id="${escapeAttribute(workspace.workspaceId)}" title="复制" ${flags.disabled ? "disabled" : ""}>复</button>
+      <button
+        class="${state.workspaceDeleteConfirmId === workspace.workspaceId ? "danger" : ""}"
+        type="button"
+        data-action="${state.workspaceDeleteConfirmId === workspace.workspaceId ? "confirm-delete-workspace" : "request-delete-workspace"}"
+        data-workspace-id="${escapeAttribute(workspace.workspaceId)}"
+        title="${state.workspaceDeleteConfirmId === workspace.workspaceId ? "确认删除" : "删除"}"
+        ${flags.disabled ? "disabled" : ""}
+      >${state.workspaceDeleteConfirmId === workspace.workspaceId ? "确认" : "删"}</button>
+    </div>
+  `;
+}
+
+function renderWorkspaceRenameRow(workspace, disabled) {
+  return `
+    <input
+      class="project-switcher-rename-input"
+      type="text"
+      data-workspace-rename-input
+      value="${escapeAttribute(workspace.projectName || "未命名项目")}"
+      maxlength="80"
+      aria-label="项目名称"
+      ${disabled ? "disabled" : ""}
+    />
+    <div class="project-switcher-actions">
+      <button type="button" data-action="save-rename-workspace" data-workspace-id="${escapeAttribute(workspace.workspaceId)}" ${disabled ? "disabled" : ""}>保存</button>
+      <button type="button" data-action="cancel-rename-workspace" ${disabled ? "disabled" : ""}>取消</button>
+    </div>
+  `;
+}
+
+function formatWorkspaceDate(value) {
+  const date = new Date(value || "");
+  if (!Number.isFinite(date.getTime())) return "刚刚";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${month}-${day} ${hour}:${minute}`;
+}
+
 function hasRenderableSchemes(modeId) {
   const snapshot = state.workspaceSnapshot || {};
   return (snapshot.schemes || []).some((scheme) =>
@@ -136,4 +259,8 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("'", "&#39;");
 }

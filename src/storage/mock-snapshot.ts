@@ -274,23 +274,35 @@ export function createMockWorkspaceSnapshot(): WorkspaceSnapshot {
   return snapshot;
 }
 
-export function createBlankWorkspaceSnapshot(): WorkspaceSnapshot {
+export type CreateBlankWorkspaceSnapshotOptions = {
+  workspaceId?: string;
+  projectId?: string;
+  projectName?: string;
+  projectDescription?: string;
+  createdAt?: string;
+  providerConfigs?: WorkspaceSnapshot["providerConfigs"];
+};
+
+export function createBlankWorkspaceSnapshot(options: CreateBlankWorkspaceSnapshotOptions = {}): WorkspaceSnapshot {
   const projectBrief = createProjectBriefDefaults("poster");
+  const createdAt = options.createdAt || CREATED_AT;
+  const projectName = options.projectName ?? projectBrief.projectName;
+  const projectDescription = options.projectDescription ?? projectBrief.gameDescription;
   const snapshot = WorkspaceSnapshotSchema.parse({
     version: "workspace.v1",
     metadata: {
-      workspaceId: WORKSPACE_ID,
+      workspaceId: options.workspaceId || WORKSPACE_ID,
       ownerId: "local-user",
       backend: "memory",
       revision: 1,
-      createdAt: CREATED_AT,
-      updatedAt: CREATED_AT,
+      createdAt,
+      updatedAt: createdAt,
     },
     activeMode: "poster",
     project: ProjectSchema.parse({
-      id: BLANK_PROJECT_ID,
-      name: projectBrief.projectName,
-      description: projectBrief.gameDescription,
+      id: options.projectId || BLANK_PROJECT_ID,
+      name: projectName,
+      description: projectDescription,
       genre: "",
       coreSellingPoints: [],
       targetAudience: "",
@@ -300,8 +312,16 @@ export function createBlankWorkspaceSnapshot(): WorkspaceSnapshot {
     brandKit: null,
     characters: [],
     assets: [],
-    providerConfigs: createProviderSettings(),
-    modeStates: createBlankModeStates(),
+    providerConfigs: options.providerConfigs || createProviderSettings(),
+    modeStates: createBlankModeStates().map((modeState) => ({
+      ...modeState,
+      projectBrief: {
+        ...modeState.projectBrief,
+        projectName,
+        gameDescription: projectDescription,
+      },
+      updatedAt: createdAt,
+    })),
     schemes: [],
     queuePlans: [],
     queueSummaries: [],

@@ -16945,3 +16945,206 @@ select:focus-visible,
     inset 0 1px 0 color-mix(in oklch, white, transparent 56%),
     0 10px 26px color-mix(in oklch, var(--ink), transparent 94%) !important;
 }
+
+/* 2026-06-12 compact multi-project workspace switcher. */
+.topbar-project-wrap {
+  position: relative;
+  z-index: 70;
+  min-width: 0;
+}
+
+.topbar-project {
+  border: 0;
+  text-align: left;
+}
+
+.topbar-project .project-switcher-caret {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.topbar-project:hover .project-switcher-caret {
+  color: var(--text);
+}
+
+.project-switcher-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: min(340px, calc(100vw - 24px));
+  max-height: min(560px, calc(100vh - 110px));
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--panel-raised), var(--panel) 24%);
+  box-shadow: var(--shadow-card);
+}
+
+:root:not([data-theme="dark"]) .project-switcher-panel {
+  background: #ffffff;
+}
+
+.project-switcher-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 8px;
+}
+
+.project-switcher-head strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.project-switcher-head button,
+.project-switcher-actions button {
+  min-width: 34px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--control-bg);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.project-switcher-head button {
+  padding: 0 12px;
+}
+
+.project-switcher-list {
+  display: grid;
+  gap: 4px;
+}
+
+.project-switcher-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.project-switcher-row.active {
+  border-color: color-mix(in oklch, var(--accent), transparent 52%);
+  background: color-mix(in oklch, var(--accent-soft), transparent 54%);
+}
+
+.project-switcher-row.confirming {
+  border-color: color-mix(in oklch, var(--danger), transparent 48%);
+}
+
+.project-switcher-row.editing {
+  border-color: color-mix(in oklch, var(--accent), transparent 44%);
+}
+
+.project-switcher-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  padding: 8px;
+  text-align: left;
+}
+
+.project-switcher-main:hover,
+.project-switcher-actions button:hover,
+.project-switcher-head button:hover {
+  background: var(--control-hover);
+}
+
+.project-switcher-main span {
+  min-width: 0;
+}
+
+.project-switcher-main strong,
+.project-switcher-main small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-switcher-main strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.project-switcher-main small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.project-switcher-main b,
+.project-switcher-main em {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.project-switcher-main b {
+  background: color-mix(in oklch, var(--warning), transparent 78%);
+  color: color-mix(in oklch, var(--warning), var(--text) 24%);
+}
+
+.project-switcher-main em {
+  background: color-mix(in oklch, var(--accent), transparent 82%);
+  color: var(--accent);
+}
+
+.project-switcher-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.project-switcher-rename-input {
+  min-width: 0;
+  height: 34px;
+  border: 1px solid color-mix(in oklch, var(--accent), transparent 58%);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--panel), white 5%);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+:root:not([data-theme="dark"]) .project-switcher-rename-input {
+  background: #ffffff;
+}
+
+.project-switcher-actions .danger {
+  border-color: color-mix(in oklch, var(--danger), transparent 36%);
+  background: color-mix(in oklch, var(--danger-soft), transparent 22%);
+  color: var(--danger);
+}
+
+.project-switcher-message {
+  margin-top: 8px;
+  padding: 6px 8px;
+  color: var(--danger);
+  font-size: 11px;
+}
+
+@media (max-width: 780px) {
+  .project-switcher-panel {
+    left: -8px;
+  }
+}

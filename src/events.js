@@ -9,6 +9,14 @@ import { getArchiveRows } from './data/workspace-adapters.js';
 import { modeSpecs } from './data/modes.js';
 import { getActiveGenerationFormValues, setGenerationFormChoice, updateGenerationFormField } from './generation-form-runtime.js';
 import {
+  createWorkspaceForWorkbench,
+  deleteWorkspaceForWorkbench,
+  duplicateWorkspaceForWorkbench,
+  loadWorkspaceListForWorkbench,
+  renameWorkspaceForWorkbench,
+  switchWorkspaceForWorkbench,
+} from './workspace-data-service.js';
+import {
   activateProviderCredentialForWorkbench,
   loadProviderCredentialStatusForWorkbench,
   revokeProviderCredentialForWorkbench,
@@ -34,6 +42,12 @@ const generationFormSyncActions = new Set([
   "submit-generation",
   "retry-failed-images",
   "confirm-generation-choice",
+  "switch-workspace",
+  "create-workspace",
+  "rename-workspace",
+  "duplicate-workspace",
+  "request-delete-workspace",
+  "confirm-delete-workspace",
 ]);
 let globalKeyboardBound = false;
 let workbenchRefreshClearTimer = null;
@@ -416,6 +430,20 @@ function syncVisibleGenerationFormControls() {
   values.forEach((value, field) => updateGenerationFormField(field, value));
 }
 
+function findWorkspaceSummary(workspaceId) {
+  return (state.workspaceSummaries || []).find((workspace) => workspace.workspaceId === workspaceId) || null;
+}
+
+function nextUntitledWorkspaceName() {
+  const names = new Set((state.workspaceSummaries || [])
+    .map((workspace) => String(workspace.projectName || "").trim())
+    .filter(Boolean));
+  if (!names.has("未命名项目")) return "未命名项目";
+  let index = 2;
+  while (names.has(`未命名项目 ${index}`)) index += 1;
+  return `未命名项目 ${index}`;
+}
+
 async function handleActionControl(control, event, render) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
@@ -427,6 +455,82 @@ async function handleActionControl(control, event, render) {
   if (action === "toggle-copy") state.copyVisible = !state.copyVisible;
   if (action === "toggle-task-panel") {
     state.taskOpen = !state.taskOpen;
+    render();
+    return;
+  }
+  if (action === "toggle-project-switcher") {
+    state.projectSwitcherOpen = !state.projectSwitcherOpen;
+    state.workspaceDeleteConfirmId = "";
+    state.workspaceMessage = "";
+    if (state.projectSwitcherOpen) {
+      render();
+      await loadWorkspaceListForWorkbench();
+    }
+    render();
+    return;
+  }
+  if (action === "switch-workspace") {
+    const workspaceId = control.dataset.workspaceId || "";
+    if (!workspaceId) return;
+    render();
+    await switchWorkspaceForWorkbench(workspaceId);
+    render();
+    return;
+  }
+  if (action === "create-workspace") {
+    const name = nextUntitledWorkspaceName();
+    render();
+    await createWorkspaceForWorkbench({ name });
+    render();
+    return;
+  }
+  if (action === "rename-workspace") {
+    const workspaceId = control.dataset.workspaceId || state.workspaceId;
+    state.workspaceRenameId = workspaceId;
+    state.workspaceDeleteConfirmId = "";
+    state.workspaceMessage = "";
+    render();
+    return;
+  }
+  if (action === "cancel-rename-workspace") {
+    state.workspaceRenameId = "";
+    state.workspaceMessage = "";
+    render();
+    return;
+  }
+  if (action === "save-rename-workspace") {
+    const workspaceId = control.dataset.workspaceId || state.workspaceId;
+    const input = control.closest("[data-project-row]")?.querySelector("[data-workspace-rename-input]");
+    const fallback = findWorkspaceSummary(workspaceId)?.projectName || getRuntimeWorkspaceSnapshot().project?.name || "";
+    const name = (input?.value || fallback || "").trim().slice(0, 80);
+    if (!name) {
+      state.workspaceMessage = "项目名不能为空";
+      render();
+      return;
+    }
+    render();
+    await renameWorkspaceForWorkbench(workspaceId, name);
+    render();
+    return;
+  }
+  if (action === "duplicate-workspace") {
+    const workspaceId = control.dataset.workspaceId || state.workspaceId;
+    const current = findWorkspaceSummary(workspaceId)?.projectName || getRuntimeWorkspaceSnapshot().project?.name || "未命名项目";
+    render();
+    await duplicateWorkspaceForWorkbench(workspaceId, { name: `${current} Copy` });
+    render();
+    return;
+  }
+  if (action === "request-delete-workspace") {
+    state.workspaceDeleteConfirmId = control.dataset.workspaceId || "";
+    render();
+    return;
+  }
+  if (action === "confirm-delete-workspace") {
+    const workspaceId = control.dataset.workspaceId || "";
+    if (!workspaceId) return;
+    render();
+    await deleteWorkspaceForWorkbench(workspaceId);
     render();
     return;
   }

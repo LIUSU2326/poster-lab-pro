@@ -54,5 +54,9 @@ export function createMemoryDraftRepository(seedSnapshots: WorkspaceSnapshot[] =
         .map((snapshot) => summarizeWorkspaceSnapshot(snapshot))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     },
+
+    async deleteSnapshot(workspaceId: string): Promise<boolean> {
+      return snapshots.delete(workspaceId);
+    },
   };
 }
