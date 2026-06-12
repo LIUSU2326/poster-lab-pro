@@ -161,6 +161,19 @@ export function setRuntimeWorkspaceSnapshot(snapshot, source = "runtime") {
   reconcileWorkspaceUiState();
 }
 
+export function setActiveWorkspaceMode(modeId) {
+  if (!modeSpecs[modeId]) return false;
+  state.activeMode = modeId;
+  if (state.workspaceSnapshot?.metadata?.workspaceId) {
+    state.workspaceSnapshot = {
+      ...state.workspaceSnapshot,
+      activeMode: modeId,
+    };
+  }
+  reconcileWorkspaceUiState();
+  return true;
+}
+
 export function resetWorkspaceSwitchUiState() {
   state.view = "schemes";
   state.selectedScheme = "";

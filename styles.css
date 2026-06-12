@@ -17001,20 +17001,40 @@ select:focus-visible,
   font-weight: 800;
 }
 
-.project-switcher-head button,
-.project-switcher-actions button {
-  min-width: 34px;
+.project-switcher-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
   height: 30px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--control-bg);
   color: var(--text);
-  font-size: 12px;
-  font-weight: 800;
+  line-height: 1;
 }
 
-.project-switcher-head button {
-  padding: 0 12px;
+.project-switcher-head .project-switcher-icon-button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+}
+
+.project-switcher-icon-button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.project-switcher-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .project-switcher-list {
@@ -17060,8 +17080,7 @@ select:focus-visible,
 }
 
 .project-switcher-main:hover,
-.project-switcher-actions button:hover,
-.project-switcher-head button:hover {
+.project-switcher-icon-button:hover {
   background: var(--control-hover);
 }
 
@@ -17130,7 +17149,7 @@ select:focus-visible,
   background: #ffffff;
 }
 
-.project-switcher-actions .danger {
+.project-switcher-icon-button.danger {
   border-color: color-mix(in oklch, var(--danger), transparent 36%);
   background: color-mix(in oklch, var(--danger-soft), transparent 22%);
   color: var(--danger);

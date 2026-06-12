@@ -1,4 +1,4 @@
-import { state, ensureSelectedResult, ensureSelectedScheme, getModeResults, queueResultOperation, getRuntimeWorkspaceSnapshot } from './state.js';
+import { state, ensureSelectedResult, ensureSelectedScheme, getModeResults, queueResultOperation, getRuntimeWorkspaceSnapshot, setActiveWorkspaceMode } from './state.js';
 import { cancelActiveGenerationDraft, submitGenerationDraft } from './form-binding.js';
 import { runResultOperationForWorkbench } from './result-operation-client.js';
 import { deleteResultForWorkbench } from './result-management-client.js';
@@ -69,7 +69,7 @@ function persistProviderPreferences() {
 export function bindEvents(render) {
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.activeMode = button.dataset.mode;
+      setActiveWorkspaceMode(button.dataset.mode);
       state.view = "schemes";
       state.selectedScheme = "";
       state.resultViewerOpen = false;

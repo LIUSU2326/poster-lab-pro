@@ -117,7 +117,12 @@ function renderProjectSwitcherPanel() {
     <section class="project-switcher-panel" role="dialog" aria-label="项目切换">
       <div class="project-switcher-head">
         <strong>项目</strong>
-        <button type="button" data-action="create-workspace" ${busy ? "disabled" : ""}>新建</button>
+        ${renderProjectIconButton({
+          action: "create-workspace",
+          icon: "plus",
+          label: "新建项目",
+          disabled: Boolean(busy),
+        })}
       </div>
       <div class="project-switcher-list">
         ${summaries.map((workspace) => renderProjectSwitcherRow(workspace, busy)).join("")}
@@ -173,16 +178,28 @@ function renderWorkspaceSwitchRow(workspace, flags) {
       ${flags.busyThis ? `<em>处理中</em>` : ""}
     </button>
     <div class="project-switcher-actions">
-      <button type="button" data-action="rename-workspace" data-workspace-id="${escapeAttribute(workspace.workspaceId)}" title="重命名" ${flags.disabled ? "disabled" : ""}>改</button>
-      <button type="button" data-action="duplicate-workspace" data-workspace-id="${escapeAttribute(workspace.workspaceId)}" title="复制" ${flags.disabled ? "disabled" : ""}>复</button>
-      <button
-        class="${state.workspaceDeleteConfirmId === workspace.workspaceId ? "danger" : ""}"
-        type="button"
-        data-action="${state.workspaceDeleteConfirmId === workspace.workspaceId ? "confirm-delete-workspace" : "request-delete-workspace"}"
-        data-workspace-id="${escapeAttribute(workspace.workspaceId)}"
-        title="${state.workspaceDeleteConfirmId === workspace.workspaceId ? "确认删除" : "删除"}"
-        ${flags.disabled ? "disabled" : ""}
-      >${state.workspaceDeleteConfirmId === workspace.workspaceId ? "确认" : "删"}</button>
+      ${renderProjectIconButton({
+        action: "rename-workspace",
+        workspaceId: workspace.workspaceId,
+        icon: "edit",
+        label: "重命名",
+        disabled: flags.disabled,
+      })}
+      ${renderProjectIconButton({
+        action: "duplicate-workspace",
+        workspaceId: workspace.workspaceId,
+        icon: "copy",
+        label: "复制项目",
+        disabled: flags.disabled,
+      })}
+      ${renderProjectIconButton({
+        action: state.workspaceDeleteConfirmId === workspace.workspaceId ? "confirm-delete-workspace" : "request-delete-workspace",
+        workspaceId: workspace.workspaceId,
+        icon: state.workspaceDeleteConfirmId === workspace.workspaceId ? "check" : "trash",
+        label: state.workspaceDeleteConfirmId === workspace.workspaceId ? "确认删除" : "删除项目",
+        danger: true,
+        disabled: flags.disabled,
+      })}
     </div>
   `;
 }
@@ -199,9 +216,46 @@ function renderWorkspaceRenameRow(workspace, disabled) {
       ${disabled ? "disabled" : ""}
     />
     <div class="project-switcher-actions">
-      <button type="button" data-action="save-rename-workspace" data-workspace-id="${escapeAttribute(workspace.workspaceId)}" ${disabled ? "disabled" : ""}>保存</button>
-      <button type="button" data-action="cancel-rename-workspace" ${disabled ? "disabled" : ""}>取消</button>
+      ${renderProjectIconButton({
+        action: "save-rename-workspace",
+        workspaceId: workspace.workspaceId,
+        icon: "check",
+        label: "保存",
+        disabled,
+      })}
+      ${renderProjectIconButton({
+        action: "cancel-rename-workspace",
+        icon: "x",
+        label: "取消",
+        disabled,
+      })}
     </div>
+  `;
+}
+
+const projectSwitcherIcons = {
+  plus: '<path d="M12 5v14M5 12h14"></path>',
+  edit: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>',
+  copy: '<rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>',
+  trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path>',
+  check: '<path d="M20 6 9 17l-5-5"></path>',
+  x: '<path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>',
+};
+
+function renderProjectIconButton({ action, icon, label, workspaceId = "", danger = false, disabled = false }) {
+  const workspaceAttribute = workspaceId ? ` data-workspace-id="${escapeAttribute(workspaceId)}"` : "";
+  return `
+    <button
+      class="project-switcher-icon-button ${danger ? "danger" : ""}"
+      type="button"
+      data-action="${escapeAttribute(action)}"
+      ${workspaceAttribute}
+      title="${escapeAttribute(label)}"
+      aria-label="${escapeAttribute(label)}"
+      ${disabled ? "disabled" : ""}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${projectSwitcherIcons[icon] || projectSwitcherIcons.plus}</svg>
+    </button>
   `;
 }
 
