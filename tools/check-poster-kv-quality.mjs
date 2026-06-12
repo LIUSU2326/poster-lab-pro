@@ -55,9 +55,10 @@ for (const token of [
   "Resource raid heist KV",
   "Map expedition KV",
   "Training-to-boss contrast KV",
-  "Scenario lane",
-  "KV architecture and scenario diversity requirement",
-  "At most one scheme in a batch may be a pure frontal hero-vs-BOSS standoff",
+  "Adaptive poster-intent axis",
+  "Adaptive poster diversity requirement",
+  "not a whitelist of allowed scenes",
+  "projectName, gameDescription, focusGuidance",
 ]) {
   if (!architectures.includes(token)) issues.push(`poster-kv-architectures.ts: missing architecture ${token}`);
 }
@@ -102,8 +103,8 @@ for (const token of [
 	    "modeBriefRules",
 	    "Icon mode hard lock",
 	    "slogans must be an empty object for icon mode",
-	    "requiredKvArchitectureSlots",
-	    "scenarioFamily, missionObjective, locationFamily, cameraGrammar, threatRole, and emotionalBeat",
+	    "adaptivePosterDiversitySlots",
+	    "project-native poster promise",
 	    "At most one scheme in a batch may be a direct frontal hero-versus-BOSS showdown",
 	    "Batch diversity hard lock",
 	  ]) {

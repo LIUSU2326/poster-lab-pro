@@ -260,7 +260,7 @@ function posterIdentitySafeMotionRule() {
 }
 
 function posterHeroPerformanceScaleLock() {
-  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 24-38% of canvas height or equivalent foreground/midground visual weight, with readable face, emotion, body language, and signature prop/tool; it must be staged before logo/slogan placement, physically interacting with the BOSS or set piece, and must not be tiny, hidden, back-facing, cropped into insignificance, or visually subordinate to the logo, slogan, BOSS, or background.";
+  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 24-38% of canvas height or equivalent foreground/midground visual weight, with readable face, emotion, body language, and signature prop/tool; it must be staged before logo/slogan placement, physically interacting with the core mechanic, objective, environment, prop, other character, or BOSS/threat when the project has one, and must not be tiny, hidden, back-facing, cropped into insignificance, or visually subordinate to the logo, slogan, BOSS/threat, or background.";
 }
 
 function posterLogoSingleUseLock() {
@@ -272,15 +272,15 @@ function posterSubjectAccessoryStrictnessLock() {
 }
 
 function posterFocalHierarchyLock() {
-  return "Focal hierarchy lock: design the poster around one readable trailer-moment story beat first, then place brand and copy. The protagonist action, mission objective, environmental pressure, or hero-vs-BOSS beat must own the brightest focal contrast and clearest silhouette path; logo and slogan are supporting campaign elements, never the largest or sharpest subject cluster.";
+  return "Focal hierarchy lock: design the poster around one readable project-native promise first, then place brand and copy. The protagonist action, core mechanic, emotional moment, mission objective, world hook, reward, gameplay proof, environmental pressure, or hero-vs-BOSS beat must own the brightest focal contrast and clearest silhouette path; logo and slogan are supporting campaign elements, never the largest or sharpest subject cluster.";
 }
 
 function posterKvArchitectureDiversityRequirement() {
-  return "KV architecture and scenario diversity requirement: across a batch, do not repeat the same hero-vs-BOSS confrontation, location family, mission objective, camera grammar, emotional beat, diagonal split-world, tunnel breach, or side-view battlefield solution. Give each scheme a different scenario family such as chase/escape, base defense, resource raid, discovery/portal reveal, victory payoff, route escort, objective crisis, market/town chaos, training-to-boss contrast, or wilderness expedition.";
+  return "Adaptive poster diversity requirement: projectName, gameDescription, focusGuidance, creativeDirection, uploaded assets, genre, tone, and core loop decide the poster promise first. Architecture slots are anti-repetition composition scaffolds, not a whitelist of allowed scenes. Do not force every game into combat, BOSS pressure, portal, town, chase, or resource-raid scenarios; use character appeal, cozy/healing mood, gameplay proof, progression reward, collection showcase, world/setting hook, event/social moment, puzzle aha moment, management pressure, sports rivalry, horror suspense, romance/relationship beat, boss encounter, objective crisis, or brand-icon thumbnail only when they fit the project.";
 }
 
 function posterTextEconomyLock() {
-  return "Text economy lock: after the logo treatment is placed, allow at most one slogan/copy-bearing campaign zone in the whole poster. Combine logo and slogan into one compact campaign-safe typography zone whenever possible, leaving the rest of the canvas for action, faces, scale, atmosphere, and story. Do not add a second caption zone, lower-left or lower-right label, corner badge, stacked right-side text wall, UI label strip, bottom plaque, duplicate translation, blank extra title plate, or decorative subtitle that steals attention from the character conflict.";
+  return "Text economy lock: after the logo treatment is placed, allow at most one slogan/copy-bearing campaign zone in the whole poster. Combine logo and slogan into one compact campaign-safe typography zone whenever possible, leaving the rest of the canvas for action, faces, scale, atmosphere, gameplay proof, emotion, and story. Do not add a second caption zone, lower-left or lower-right label, corner badge, stacked right-side text wall, UI label strip, bottom plaque, duplicate translation, blank extra title plate, or decorative subtitle that steals attention from the main visual promise.";
 }
 
 function posterInWorldBrandTreatmentLock() {

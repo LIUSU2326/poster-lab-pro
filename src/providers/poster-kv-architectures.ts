@@ -19,17 +19,14 @@ type PosterKvArchitecture = {
   directive: string;
 };
 
-type PosterKvScenarioLane = {
+type PosterKvAdaptiveIntentAxis = {
   titleZh: string;
   titleEn: string;
-  missionObjective: string;
-  locationFamily: string;
-  cameraGrammar: string;
-  threatRole: string;
-  emotionalBeat: string;
+  question: string;
+  directive: string;
 };
 
-const POSTER_KV_SCENARIO_LANES: PosterKvScenarioLane[] = [
+const POSTER_KV_LEGACY_SCENARIO_LANES = [
   {
     titleZh: "城镇混乱",
     titleEn: "Market/town chaos",
@@ -101,6 +98,57 @@ const POSTER_KV_SCENARIO_LANES: PosterKvScenarioLane[] = [
     cameraGrammar: "foreground preparation detail contrasted with background threat reveal",
     threatRole: "the BOSS is foreshadowed through shadow, poster, window, breach, or distant arrival",
     emotionalBeat: "anticipation before impact",
+  },
+];
+
+const POSTER_KV_ADAPTIVE_INTENT_AXES: PosterKvAdaptiveIntentAxis[] = [
+  {
+    titleZh: "Core loop promise",
+    titleEn: "Core loop promise",
+    question: "What is the clearest playable action or repeated loop the player should understand from this project?",
+    directive: "Build a poster promise around the game's actual loop: cooking, matching, building, solving, collecting, racing, fighting, managing, exploring, decorating, surviving, socializing, or another project-native action.",
+  },
+  {
+    titleZh: "Emotional fantasy",
+    titleEn: "Emotional fantasy",
+    question: "What feeling should the game sell first: cozy healing, comedy, tension, mastery, wonder, competition, romance, collection pride, horror, or victory?",
+    directive: "Let the project's emotional tone define the poster format. A calm/healing game may need warmth and intimacy; a competitive game may need rivalry; a puzzle game may need aha-moment clarity; a character game may need charm and attachment.",
+  },
+  {
+    titleZh: "Character appeal",
+    titleEn: "Character appeal",
+    question: "Are characters, mascots, factions, outfits, or relationships the main reason to click?",
+    directive: "If character appeal is central, use a lineup, portrait-led key art, relationship moment, transformation, faction contrast, costume showcase, or expressive cast composition instead of forcing a battle scene.",
+  },
+  {
+    titleZh: "World and setting hook",
+    titleEn: "World and setting hook",
+    question: "What place, world rule, time period, biome, room, map, or atmosphere makes this game different?",
+    directive: "Make the environment carry the hook when the project is world-led: cozy room, shop, farm, city, battlefield, puzzle board, fantasy map, sci-fi control room, sports arena, school, haunted house, or another project-specific setting.",
+  },
+  {
+    titleZh: "Progression reward",
+    titleEn: "Progression reward",
+    question: "What does the player earn, unlock, improve, rescue, collect, upgrade, restore, decorate, or become?",
+    directive: "If progression is the selling point, make reward, before/after change, collection, upgrade, restoration, level completion, trophy, new area, or power growth the poster's center of gravity.",
+  },
+  {
+    titleZh: "Gameplay proof",
+    titleEn: "Gameplay proof",
+    question: "Would the best poster show rules, board state, UI-like decision pressure, level layout, route, combo, or tactical choice?",
+    directive: "For puzzle, strategy, simulation, roguelike, management, rhythm, sports, or arcade projects, the scheme may be a polished gameplay-proof KV rather than a character-versus-threat scene.",
+  },
+  {
+    titleZh: "Conflict or challenge",
+    titleEn: "Conflict or challenge",
+    question: "If this project has enemies, rivals, danger, scarcity, timing, or pressure, what specific challenge should the poster dramatize?",
+    directive: "Use conflict only when it belongs to the project. The challenge can be a boss, rival, timer, resource shortage, messy kitchen, failing machine, puzzle trap, storm, customer queue, rank race, or social dilemma.",
+  },
+  {
+    titleZh: "Brand icon moment",
+    titleEn: "Brand icon moment",
+    question: "What single image could become the recognizable app-store, campaign, or social-share memory for this game?",
+    directive: "When brand recognition matters, simplify around a mascot, emblem, signature prop, title lockup, iconic silhouette, faction symbol, collectible, or high-read thumbnail moment without repeating a generic poster fight.",
   },
 ];
 
@@ -317,20 +365,20 @@ function architectureOrderForSeed(seed: string): number[] {
     });
 }
 
-function scenarioLaneOrderForSeed(seed: string): number[] {
-  return POSTER_KV_SCENARIO_LANES
+function adaptiveIntentAxisOrderForSeed(seed: string): number[] {
+  return POSTER_KV_ADAPTIVE_INTENT_AXES
     .map((_lane, index) => index)
     .sort((left, right) => {
-      const leftHash = hashSeed(`${seed}:poster-kv-scenario-lane:${left}`);
-      const rightHash = hashSeed(`${seed}:poster-kv-scenario-lane:${right}`);
+      const leftHash = hashSeed(`${seed}:poster-kv-adaptive-intent:${left}`);
+      const rightHash = hashSeed(`${seed}:poster-kv-adaptive-intent:${right}`);
       return leftHash - rightHash || left - right;
     });
 }
 
-function scenarioLaneForSlot(seed: string, slotIndex: number): PosterKvScenarioLane {
-  const order = scenarioLaneOrderForSeed(seed);
+function adaptiveIntentAxisForSlot(seed: string, slotIndex: number): PosterKvAdaptiveIntentAxis {
+  const order = adaptiveIntentAxisOrderForSeed(seed);
   const index = order[positiveModulo(slotIndex, order.length)] || 0;
-  return POSTER_KV_SCENARIO_LANES[index] || POSTER_KV_SCENARIO_LANES[0]!;
+  return POSTER_KV_ADAPTIVE_INTENT_AXES[index] || POSTER_KV_ADAPTIVE_INTENT_AXES[0]!;
 }
 
 export function posterKvAssetCountsFromAssets(assets: PosterKvAssetLike[]): PosterKvAssetCounts {
@@ -356,8 +404,8 @@ export function posterKvArchitectureSlotSeed(seed: string, slotIndex: number): n
 export function posterKvArchitectureBriefSlots(schemeCount: number, seed: string): string {
   return Array.from({ length: Math.max(1, Math.min(20, schemeCount)) }, (_, index) => {
     const architecture = posterKvArchitectureForSeed(posterKvArchitectureSlotSeed(seed, index));
-    const lane = scenarioLaneForSlot(seed, index);
-    return `${index + 1}. ${architecture.titleZh} / ${architecture.titleEn}: ${architecture.briefZh} Scenario lane: ${lane.titleZh} / ${lane.titleEn}; missionObjective=${lane.missionObjective}; locationFamily=${lane.locationFamily}; cameraGrammar=${lane.cameraGrammar}; threatRole=${lane.threatRole}; emotionalBeat=${lane.emotionalBeat}.`;
+    const axis = adaptiveIntentAxisForSlot(seed, index);
+    return `${index + 1}. Composition scaffold: ${architecture.titleZh} / ${architecture.titleEn}: ${architecture.briefZh} Adaptive poster-intent axis: ${axis.titleZh} / ${axis.titleEn}. Question: ${axis.question} Direction: ${axis.directive} This axis is a planning question, not a fixed scene template; infer a project-native poster promise from projectName, gameDescription, focusGuidance, creativeDirection, and uploaded assets.`;
   }).join("\n");
 }
 
@@ -377,7 +425,7 @@ export function posterKvRenderPromptAugmentation(input: {
     : "Use the project premise to define the playable hero presence without inventing unrelated characters.";
   const bossLine = input.assetCounts.bosses > 0
     ? "Use [Boss] as the uploaded antagonist/key subject reference; preserve its silhouette and identity while staging a real threat action with scale, weight, contact shadows, and environmental reaction."
-    : "Create one project-specific threat, obstacle, objective, or pressure source from the game description.";
+    : "Create a project-specific objective, emotional hook, gameplay system, obstacle, reward, relationship beat, or pressure source from the game description instead of inventing an unrelated BOSS.";
   const logoLine = input.assetCounts.logos > 0
     ? "Use exactly one [Game Logo] treatment. Reproduce the uploaded logo only if accurate; otherwise reserve a polished blank logo-safe plate without fake letters."
     : "Reserve a clean campaign logo/copy safe area without inventing fake readable brand text.";
@@ -388,7 +436,7 @@ export function posterKvRenderPromptAugmentation(input: {
     characterLine,
     bossLine,
     logoLine,
-    "AI render base: official AAA game campaign key visual, complex story set-piece, strong foreground/midground/background depth, decisive camera angle, practical key/fill/rim lighting, volumetric haze, particles/VFX following the action direction, cast/contact shadows, readable thumbnail silhouette, and no sticker collage.",
+    "AI render base: official game campaign key visual, project-native poster promise, strong foreground/midground/background depth, decisive camera angle, practical key/fill/rim lighting, atmosphere or clean graphic clarity as the genre requires, cast/contact shadows, readable thumbnail silhouette, and no sticker collage.",
     "Use uploaded references as identity/model-sheet anchors, not pasted picture-in-picture panels. The prompt may direct action, camera, environment, lighting, and effects, but must not redesign hair, face, outfit, body type, species, logo lettering, or signature props.",
     "Typography treatment: if slogan/logo text cannot be spelled cleanly, create a polished in-world blank ribbon, sign, title plate, or logo-safe surface instead of broken text or fake words.",
   ].join("\n");
@@ -399,7 +447,7 @@ export function posterIdentitySafeMotionRule(): string {
 }
 
 export function posterHeroPerformanceScaleLock(): string {
-  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 24-38% of canvas height or equivalent foreground/midground visual weight, with readable face, emotion, body language, and signature prop/tool; it must be staged before logo/slogan placement, physically interacting with the BOSS or set piece, and must not be tiny, hidden, back-facing, cropped into insignificance, or visually subordinate to the logo, slogan, BOSS, or background.";
+  return "Hero performance scale lock: at least one uploaded playable protagonist must occupy 24-38% of canvas height or equivalent foreground/midground visual weight, with readable face, emotion, body language, and signature prop/tool; it must be staged before logo/slogan placement, physically interacting with the core mechanic, objective, environment, prop, other character, or BOSS/threat when the project has one, and must not be tiny, hidden, back-facing, cropped into insignificance, or visually subordinate to the logo, slogan, BOSS/threat, or background.";
 }
 
 export function posterLogoSingleUseLock(): string {
@@ -419,15 +467,15 @@ export function posterSchemeBlueprintRequirement(): string {
 }
 
 export function posterKvArchitectureDiversityRequirement(): string {
-  return "KV architecture and scenario diversity requirement / KV architecture diversity requirement: across a batch, do not repeat the same hero-vs-BOSS confrontation, location family, mission objective, camera grammar, emotional beat, diagonal split-world, tunnel breach, or side-view battlefield solution. Use the assigned architecture slot and its Scenario lane as visible structural ideas, and give each scheme a different scenario family such as chase/escape, base defense, resource raid/heist, discovery/portal reveal, victory payoff, route escort, objective crisis, market/town chaos, training-to-boss contrast, map expedition, or hub defense. At most one scheme in a batch may be a pure frontal hero-vs-BOSS standoff; the others must sell different game-poster promises such as exploration, objective pressure, reward, preparation, route movement, town chaos, or resource play. If a BOSS asset appears in multiple schemes, vary its role: direct attacker, looming silhouette, route blocker, background threat, aftermath trophy, distant landmark, wanted mark, or environmental pressure source instead of the same central lunge/open-mouth close-up every time. If a diagonal divider appears it must be an active collision/action path rather than a static line with subjects parked on each side.";
+  return "Adaptive poster diversity requirement / KV architecture diversity requirement: projectName, gameDescription, focusGuidance, creativeDirection, uploaded assets, genre, tone, and core loop decide the poster promise first. The architecture slots are anti-repetition composition scaffolds, not a whitelist of allowed scenes. Across a batch, infer different project-native poster promises such as character appeal, cozy/healing mood, gameplay proof, progression reward, collection showcase, world/setting hook, event/social moment, puzzle aha moment, management pressure, sports rivalry, horror suspense, romance/relationship beat, boss encounter, objective crisis, or brand-icon thumbnail when they fit the project. Do not force every game into combat, BOSS pressure, portal, town, chase, or resource-raid scenarios. At most one scheme in a batch may be a pure frontal hero-vs-BOSS standoff, and only when that fits the project; other schemes must sell different player promises from the actual brief. If a BOSS or threat asset appears in multiple schemes, vary its story role or use it only where appropriate. If the project is non-combat, cozy, puzzle, sim, fashion, story, sports, education, or collection-led, replace BOSS/threat language with objective, emotion, relationship, system, reward, setting, or gameplay tension. If a diagonal divider appears it must be an active story/comparison path rather than a static line with subjects parked on each side.";
 }
 
 export function posterFocalHierarchyLock(): string {
-  return "Focal hierarchy lock: design the poster around one readable trailer-moment story beat first, then place brand and copy. The protagonist action, mission objective, environmental pressure, or hero-vs-BOSS beat must own the brightest focal contrast and clearest silhouette path; logo and slogan are supporting campaign elements, never the largest or sharpest subject cluster.";
+  return "Focal hierarchy lock: design the poster around one readable project-native promise first, then place brand and copy. The protagonist action, core mechanic, emotional moment, mission objective, world hook, reward, gameplay proof, environmental pressure, or hero-vs-BOSS beat must own the brightest focal contrast and clearest silhouette path; logo and slogan are supporting campaign elements, never the largest or sharpest subject cluster.";
 }
 
 export function posterTextEconomyLock(): string {
-  return "Text economy lock: after the logo treatment is placed, allow at most one slogan/copy-bearing campaign zone in the whole poster. Combine logo and slogan into one compact campaign-safe typography zone whenever possible, leaving the rest of the canvas for action, faces, scale, atmosphere, and story. Do not add a second caption zone, lower-left or lower-right label, corner badge, stacked right-side text wall, UI label strip, bottom plaque, duplicate translation, blank extra title plate, or decorative subtitle that steals attention from the character conflict.";
+  return "Text economy lock: after the logo treatment is placed, allow at most one slogan/copy-bearing campaign zone in the whole poster. Combine logo and slogan into one compact campaign-safe typography zone whenever possible, leaving the rest of the canvas for action, faces, scale, atmosphere, gameplay proof, emotion, and story. Do not add a second caption zone, lower-left or lower-right label, corner badge, stacked right-side text wall, UI label strip, bottom plaque, duplicate translation, blank extra title plate, or decorative subtitle that steals attention from the main visual promise.";
 }
 
 export function posterInWorldBrandTreatmentLock(): string {
@@ -437,13 +485,13 @@ export function posterInWorldBrandTreatmentLock(): string {
 export function posterCinematicKvQualityDirective(): string {
   return [
 	    "## Cinematic Game KV Quality Override",
-    "Target the feel of a top-tier cinematic game announcement key visual, adapted to the uploaded art style. This means movie-poster staging and lighting quality, not photorealism unless the active style reference is photorealistic.",
+    "Target the feel of a top-tier game campaign key visual, adapted to the uploaded art style and the current project's genre/tone. Cinematic means deliberate staging, lighting, hierarchy, and emotion; it does not always mean combat, explosions, BOSS pressure, or photorealism.",
     "Cinematography: choose a deliberate camera language such as low-angle hero shot, 24-35mm wide cinematic lens feel, forced perspective, over-the-shoulder danger reveal, foreground occlusion, diagonal motion path, or portal/window frame-within-frame. Avoid neutral side-view staging.",
     "Lighting: design a clear key light, colored fill, hard rim/back light, and a motivated project-specific practical light source such as portal glow, fire, magic, tech screens, warning lights, moonlight, explosion light, or energy effects.",
     "VFX and particles: add layered project-specific particles that serve the story: dust, sparks, embers, smoke, debris, magic trails, tech fragments, motion arcs, shockwave rings, weather, atmospheric haze, and depth-of-field separation. Particles must follow action direction, not random decoration.",
-    "Story beat: make the image capture a decisive second from the current game's trailer: breach, ambush, rescue, counterattack, boss takedown, portal opening, base defense, route push, discovery, upgrade, or objective pressure erupting into action. The viewer should understand what just happened and what will happen next.",
-    "Blockbuster escalation: exaggerate the set-piece like launch splash art: giant scale contrast, dramatic foreground prop cropping, visible impact aftermath, environmental damage or transformation, project-specific energy/VFX, and a clear before-after tension inside the same frame.",
-    "Character performance: uploaded heroes must show readable emotion, weight, line of action, gesture, and contact with the scene. At least one hero must interact physically with the BOSS or set piece. Avoid floating sticker poses, static front-facing mascot poses, or symmetrical corner jumps.",
+    "Story beat: make the image capture a decisive project-native second from the current game: cozy restoration, character charm, puzzle realization, cooking/service rush, collection reveal, race finish, tactical choice, exploration discovery, upgrade payoff, social event, boss encounter, or objective pressure when appropriate. The viewer should understand what the game promises.",
+    "Campaign escalation: raise the set-piece like launch splash art while respecting genre. This can be giant scale contrast, intimate warm lighting, charming character staging, clean gameplay proof, dramatic foreground prop cropping, visible before-after transformation, project-specific VFX, or a clear emotional/goal tension inside the same frame.",
+    "Character performance: uploaded heroes must show readable emotion, weight, line of action, gesture, and contact with the scene. At least one hero should interact physically with the core mechanic, environment, prop, other character, objective, or BOSS/threat when the project has one. Avoid floating sticker poses, static front-facing mascot poses, or symmetrical corner jumps.",
     posterFocalHierarchyLock(),
     posterTextEconomyLock(),
     posterInWorldBrandTreatmentLock(),
@@ -455,7 +503,7 @@ export function posterCinematicKvQualityDirective(): string {
     posterStaticSchemeLanguageBan(),
     posterSchemeBlueprintRequirement(),
     posterKvArchitectureDiversityRequirement(),
-    "Environment set-piece: build a memorable cinematic location with architecture or terrain from the project: town, battlefield, base, portal, ruins, forest, canyon, command area, road, arena, fortress, machine room, sky route, tunnel, doorway breach, or split-world stage.",
+    "Environment or format set-piece: build a memorable project-native visual container: character lineup, cozy room, shop/farm/home, gameplay board, puzzle layout, UI-like decision surface, collectible shelf, world map, town, battlefield, base, portal, ruins, forest, canyon, command area, road, arena, machine room, or another setting that follows the user's brief.",
     "Composition polish: use foreground-midground-background staging, overlapping silhouettes, leading lines, triangular focal hierarchy, controlled negative space for logo, and a strong thumbnail read at 10% size.",
     "Finish: painterly/cel hybrid polish, rich material texture, crisp focal detail, controlled background complexity, atmospheric depth, cast/contact shadows, occlusion, cinematic bloom, tasteful lens flare, subtle depth of field, and final color grading. Raise the uploaded cartoon style to premium cinematic campaign art.",
   ].join("\n");
@@ -473,7 +521,7 @@ export function posterKvArchitectureDirective(input: {
   ).join(input.assetCounts.gameCharacters > 2 ? ", " : " and ");
   const bossLine = input.assetCounts.bosses > 0
     ? "Use [Boss] as the single dominant antagonist/key creature from the uploaded BOSS reference. Preserve its identity while giving it believable weight, contact, shadow, and scene interaction."
-    : "Use the main threat from the project premise as one dominant antagonist/key obstacle.";
+    : "Use the main objective, mechanic, reward, environment, relationship, or challenge from the project premise as the central poster driver instead of inventing an unrelated antagonist.";
   const logoLine = input.assetCounts.logos > 0
     ? "Allocate one campaign-safe [Game Logo] treatment, readable but secondary to the trailer-moment story beat. Use the exact uploaded logo only if lettering can stay accurate; otherwise reserve a polished blank logo-safe plate without fake text."
     : "Reserve a clean campaign-safe logo area without inventing a fake logo.";
@@ -485,10 +533,10 @@ export function posterKvArchitectureDirective(input: {
     "Composition reference priority rule: uploaded compositionReference images are guide-only for camera energy, layout rhythm, safe-area hierarchy, subject scale, and depth. They must never override this selected-scheme architecture, and they must not make every scheme share the same scene, background, pose arrangement, or action beat.",
     architecture.directive,
     posterCinematicKvQualityDirective(),
-    "Internal blueprint requirement: before rendering, design the poster as a finished campaign key visual with five clear layers, but do not print layer labels. Layer 1: oversized foreground framing element, weapon, vehicle, terrain, prop, or project-specific object with perspective. Layer 2: uploaded hero performance with readable faces, expressive action, and signature props. Layer 3: uploaded BOSS/key threat with scale pressure and visible intent. Layer 4: world context that tells the current project's game loop. Layer 5: clean logo/copy safe area integrated into the art.",
+    "Internal blueprint requirement: before rendering, design the poster as a finished campaign key visual with five clear layers, but do not print layer labels. Layer 1: foreground framing element, gameplay object, UI-like surface, environment edge, prop, or project-specific object with perspective. Layer 2: uploaded hero performance with readable faces, expressive action, and signature props. Layer 3: the project-native focus: BOSS/key threat if present, or core mechanic, reward, relationship, objective, collection, puzzle, place, or emotional hook if non-combat. Layer 4: world context that tells the current project's game loop. Layer 5: clean logo/copy safe area integrated into the art.",
     "KV scoring rubric to satisfy before final image: the composition must read in one second, have a strong silhouette thumbnail, show an obvious story conflict, contain foreground-midground-background depth, use directional lighting and rim light, and feel like a designed game launch key art rather than an in-game screenshot or simple illustration.",
     "Prototype-quality target: richer value range, painterly/cel hybrid detail, atmospheric haze, bounce light, cast shadows, motion arcs, project-specific debris/VFX, readable focal contrast, and designed negative space. Keep the uploaded cartoon identity, but raise the finish above flat children's-book art.",
-    "Set-piece requirement: build a memorable campaign location with props, architecture, terrain breaks, doorways, bases, portals, cliffs, roads, machines, town elements, tunnels, or framed vistas from the current project. Avoid empty pastel sky, soft gradient backdrop, generic open field, and unrelated sample-project scenery.",
+    "Set-piece requirement: build a memorable project-native poster format with props, characters, gameplay surface, cozy room, store/farm/home, architecture, terrain, route, UI-like proof, collection display, puzzle state, machines, town elements, or framed vistas from the current project. Avoid empty pastel sky, soft gradient backdrop, generic open field, and unrelated sample-project scenery.",
     "Reference identity lock: the uploaded images are the source of truth. The prompt may change action, pose, expression, angle, lighting, and scene integration only. Do not change age, hair color, hairstyle, costume, body proportions, species, tool identity, or add facial hair/extra features not visible in the uploaded reference.",
     "Reference pose release: do not treat the uploaded still image as the final pose. Preserve identity, silhouette, and signature props, but repaint the hero/BOSS with a new performance such as 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, landing impact, or foreshortened prop/tool angle.",
     "Static scheme action rewrite: if an older or generated scheme says the hero stands on a divider and the BOSS presses from one side, reinterpret it as an active trailer moment: the hero sprints, blocks, slides, leaps, or collides with the divider while the BOSS lunges, swings, bursts through, lands, or recoils from impact.",
@@ -503,12 +551,12 @@ export function posterKvArchitectureDirective(input: {
     posterSubjectAccessoryStrictnessLock(),
     `Playable roster staging: use exactly ${characterPlaceholders} as the visible playable/human hero roster. Keep them recognizable from uploaded references, but repaint/repose them as living actors with 3/4 readable faces, expressive emotion, dynamic limbs, action intent, contact shadows, rim light, and environmental occlusion. Do not use back-facing, tiny, static, or pasted-looking cutout poses.`,
     "Hero performance lock: every uploaded playable character that appears must show a readable face in front view, 3/4 front view, or strong readable profile. Do not show any uploaded playable character only from the back, hidden behind another subject, or too small to identify.",
-    "Grounded action lock: at least one uploaded hero must physically interact with the BOSS or environment through impact, blocking, climbing, sliding, pulling, striking, casting, piloting, repairing, rescuing, or defending. Do not leave heroes floating symmetrically around the BOSS like stickers unless the jump has clear motion trail, shadow, and landing target.",
+    "Grounded action lock: at least one uploaded hero must physically interact with the core mechanic, objective, environment, prop, other character, or BOSS/threat when present through impact, blocking, climbing, sliding, pulling, striking, casting, piloting, repairing, rescuing, decorating, serving, solving, pointing, collecting, or defending. Do not leave heroes floating symmetrically around the scene like stickers unless the jump has clear motion trail, shadow, and landing target.",
     "Contact and occlusion lock: if a character stands on, grips, blocks with, strikes, or is hit by a giant prop or terrain, show the actual overlap edge, contact shadow, cast shadow, reflected color, pressure dent/scratch/spark/debris burst, and particle interruption at the contact point.",
     posterHeroPerformanceScaleLock(),
     bossLine,
     logoLine,
-    "Composition ban for this render: do not make a simple horizontal product-landscape battlefield, empty mascot poster, centered BOSS with two heroes flying at the corners, or small heroes standing on the left/right. Do not introduce scenery from an unrelated sample project. Any terrain or prop must support the assigned KV architecture with strong perspective, story pressure, foreground framing, and vertical depth.",
+    "Composition ban for this render: do not make a simple horizontal product-landscape battlefield, empty mascot poster, centered BOSS with two heroes flying at the corners, or small heroes standing on the left/right. Do not introduce scenery from an unrelated sample project. Any terrain, UI-like surface, character lineup, cozy space, gameplay proof, or prop must support the assigned/adapted KV architecture with strong perspective, story pressure or emotional clarity, foreground framing, and vertical depth.",
     "Typography rule: avoid long generated sentences inside the image. Prefer the uploaded logo plus compact custom campaign lettering of 3-8 words or a polished blank ribbon/title plate that can receive final copy later. Never let text become the main visual solution.",
   ].join("\n");
 }

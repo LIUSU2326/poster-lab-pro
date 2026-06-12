@@ -357,7 +357,7 @@ function posterCompressedSceneContract(prompt: string, architectureSummary = "")
   }
   if (/荒野|hunt|hunting|battlefield|战场|boss|base|town|route|quest|mission|defense/.test(text) && contracts.length === 0) {
     contracts.push(
-      "project-specific adventure or tactical battlefield with foreground action, visible BOSS pressure, environmental reaction, and a campaign key-visual set piece instead of a simple mascot lineup",
+      "project-specific campaign key visual with foreground action or emotional/gameplay focus, visible project-native objective pressure, environmental reaction, and a memorable set piece or poster format instead of a simple mascot lineup",
     );
   }
 

@@ -848,6 +848,23 @@ function posterIntegratedKvPromptFromPromptPackage(
   ].filter(Boolean).join("\n");
   const sloganPriorityBlock = integratedSloganPriorityBlock(sloganTargets);
   const visualContract = posterMandatoryVisualContract({ promptPackage, sloganTargets });
+  const priorityVisualContractAnchor = [
+    "## Selected Scheme",
+    "Use the selected scheme's project-native poster promise, not a generic reused composition.",
+    "## Non-Negotiable Poster Visual Contract",
+    "Final image fails if required uploaded visual anchors are absent, tiny, hidden, duplicated, replaced, or pasted as flat stickers.",
+    bosses.length > 0
+      ? "BOSS anchor requirement: uploaded BOSS/key threat remains a large secondary campaign object or project-native threat/object when the selected scheme uses it, with readable scale, contact cues, and environmental integration."
+      : "",
+    characters.length > 1
+      ? "Multi-character hero requirement: every uploaded protagonist anchor must appear as a separate readable in-world character; do not merge, average, omit, or hide any one."
+      : "",
+    "Limb and hand sanity audit: every visible playable character must have coherent arms, hands, wrist-to-hand connections, prop grips, and no duplicated forearms or impossible limb overlaps.",
+    selectedStyleLock ? selectedStyleLock : "",
+    sloganTargets
+      ? "Slogan anchor requirement: keep one visible integrated slogan/copy-safe treatment tied to the selected scheme; if spelling is unsafe, leave the plate blank but visible."
+      : "",
+  ].filter(Boolean).join("\n");
   const schemeAnchor = compactPromptBlock(schemeText, 900);
 
   const architectureBlock = posterKvArchitectureDirective({
@@ -865,8 +882,8 @@ function posterIntegratedKvPromptFromPromptPackage(
     "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
     analysisOnlyRule,
     characters.length > 1
-      ? "KV ACTION MINI-BRIEF: every uploaded hero appears as a readable separate actor, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects."
-      : "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+      ? "KV ACTION MINI-BRIEF: every uploaded hero appears as a readable separate actor, one project-native focus such as core mechanic, objective, reward, relationship, gameplay proof, or uploaded BOSS/key threat when present, one integrated blank or exact-safe logo/copy area, one shared visual space, visible contact shadows, foreground occlusion, rim light, and genre-appropriate VFX/atmosphere crossing in front of the subjects."
+      : "KV ACTION MINI-BRIEF: one large readable uploaded hero, one project-native focus such as core mechanic, objective, reward, relationship, gameplay proof, or uploaded BOSS/key threat when present, one integrated blank or exact-safe logo/copy area, one shared visual space, visible contact shadows, foreground occlusion, rim light, and genre-appropriate VFX/atmosphere crossing in front of the subjects.",
     styleRule,
     schemeAnchor,
     visualContract,
@@ -891,12 +908,12 @@ function posterIntegratedKvPromptFromPromptPackage(
     "The uploaded subjects and brand elements must look repainted into the same scene, not pasted on top: apply environmental color grading, rim light, contact shadows, bounce light, atmospheric perspective, partial foreground occlusion, material interaction, and VFX overlap across their bodies or surfaces.",
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
-    "The poster must show a concrete story moment: uploaded heroes in action against the uploaded BOSS/key subject, with readable intent, movement, pressure, and environmental reaction.",
-    "Design with cinematic composition, strong depth, dramatic lighting, polished color grading, foreground/midground/background separation, and a clear trailer-moment focal hierarchy built around protagonist action, objective pressure, environmental pressure, or BOSS threat.",
+    "The poster must show a concrete project-native story moment: uploaded heroes interacting with the core mechanic, objective, environment, relationship, reward, gameplay system, or uploaded BOSS/key subject when present, with readable intent, movement or emotion, pressure/appeal, and environmental reaction.",
+    "Design with cinematic or premium campaign composition, strong depth, deliberate lighting, polished color grading, foreground/midground/background separation, and a clear focal hierarchy built around protagonist action, core mechanic, emotional promise, objective pressure, environmental pressure, or BOSS threat when appropriate.",
     "Art-direction checklist for the final render: visible camera/lens/perspective choice, foreground framing, midground action, background reveal, key/fill/rim lighting, volumetric haze, particles/VFX, cast and contact shadows, color/value grouping, material texture, and in-world logo/typography integration.",
-    "Set-piece and action requirement: build a memorable physical campaign location from the current project and connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or impact. Avoid empty pastel sky, generic backdrops, unrelated sample-project scenes, centered mascot-ad layouts, and symmetrical floating heroes.",
-    "Subject scale and weight requirement: the uploaded BOSS/key threat must feel physically planted or forcefully airborne with a clear landing/impact path, not a mascot sticker. The uploaded hero must have a readable support surface, grip, impact point, or motion trail with a cast shadow.",
-    "Cinematic escalation must come from the scene design: asymmetrical low-angle or forced-perspective camera, one dominant diagonal action path, foreground occlusion, practical light source, rim/back light, volumetric beams, dust, smoke, sparks, embers, magic/tech particles, debris, and visible environmental reaction. Do not solve cinematic quality by making the uploaded characters into different, more realistic people.",
+    "Set-piece and action requirement: build a memorable project-native campaign location or poster format and connect at least one uploaded hero to the core mechanic, objective, environment, prop, other character, or BOSS/threat when present through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, decorating, serving, solving, collecting, defending, or impact. Avoid empty pastel sky, generic backdrops, unrelated sample-project scenes, centered mascot-ad layouts, and symmetrical floating heroes.",
+    "Subject scale and weight requirement: uploaded BOSS/key threats, if present, must feel physically planted or forcefully airborne with a clear landing/impact path, not mascot stickers. Uploaded heroes must have a readable support surface, grip, action connection, emotional relationship, gameplay interaction, or motion trail with a cast shadow.",
+    "Campaign escalation must come from the scene design or poster format: asymmetrical low-angle, forced-perspective camera, intimate premium close-up, clean gameplay-proof surface, character lineup, one dominant action/comparison path, foreground occlusion, practical light source, rim/back light, volumetric beams, dust/smoke/particles when appropriate, or visible before-after transformation. Do not solve quality by making the uploaded characters into different, more realistic people.",
     "Allocate one readable campaign-safe logo treatment when uploaded logo/brand assets are present. Render the exact uploaded logo only when the letterforms can stay accurate; otherwise create a polished blank logo-safe sign/title plate using brand colors and shape language; do not invent look-alike words, substitute letters, or create an alternate fake logo. Integrate the slogan as custom game-poster lettering or an in-world sign/ribbon, with correct spelling when possible; if spelling cannot be guaranteed, leave a natural blank sign/ribbon/title plate rather than generating garbled text.",
     posterLogoSingleUseLock(),
     "Use each uploaded protagonist, antagonist, key subject, brand logo, and prop according to its semantic duty. Do not create duplicate large/small copies, alternate replacement characters, or extra generic heroes.",
@@ -909,10 +926,11 @@ function posterIntegratedKvPromptFromPromptPackage(
     ],
     closingBlocks: [
     characters.length > 1
-      ? "Pre-render checklist: every uploaded hero identity visible as a separate character; uploaded BOSS threat visible; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world."
-      : "Pre-render checklist: uploaded hero identity visible; uploaded BOSS threat visible; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX connect subjects to the world.",
+      ? "Pre-render checklist: every uploaded hero identity visible as a separate character; project-native focus visible; uploaded BOSS/key threat visible when the scheme/project uses it; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX/atmosphere connect subjects to the world."
+      : "Pre-render checklist: uploaded hero identity visible; project-native focus visible; uploaded BOSS/key threat visible when the scheme/project uses it; single logo treatment visible or reserved; slogan-safe area visible when active; contact shadows, occlusion, and VFX/atmosphere connect subjects to the world.",
     "Selected-scheme architecture lock: each image must visibly follow its own selected scheme architecture and story beat. A shared compositionReference may guide camera rhythm only; it must not cause multiple schemes to reuse the same background, pose arrangement, set piece, or scene.",
-    "Scenario uniqueness lock: do not collapse this render into the default boss-versus-hero standoff if the selected scheme implies chase, discovery, defense, objective crisis, resource raid, route escort, victory payoff, town chaos, or expedition. The location family, camera grammar, mission objective, BOSS role, and emotional beat must match the selected scheme rather than a reused confrontation template.",
+    priorityVisualContractAnchor,
+    "Scenario uniqueness lock: do not collapse this render into the default boss-versus-hero standoff. The project-native poster promise, visual hook, setting/format, camera grammar, subject role, and emotional beat must match the selected scheme rather than a reused confrontation template.",
     sloganPriorityBlock,
     "Allocate one readable campaign-safe logo treatment when uploaded logo/brand assets are present.",
     posterLogoSingleUseLock(),
@@ -923,18 +941,18 @@ function posterIntegratedKvPromptFromPromptPackage(
     posterHeroPerformanceScaleLock(),
     "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
     posterSubjectAccessoryStrictnessLock(),
-    "Subject scale and weight requirement: the uploaded BOSS/key threat must feel physically planted or forcefully airborne with a clear landing/impact path, not a mascot sticker. The uploaded hero must have a readable support surface, grip, impact point, or motion trail with a cast shadow.",
-    "Set-piece and action requirement: connect at least one uploaded hero to the BOSS or environment through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, defending, or visible impact.",
+    "Subject scale and weight requirement: uploaded BOSS/key threats, if present, must feel physically planted or forcefully airborne with a clear landing/impact path, not mascot stickers. Uploaded heroes must have a readable support surface, grip, action connection, emotional relationship, gameplay interaction, or motion trail with a cast shadow.",
+    "Set-piece and action requirement: connect at least one uploaded hero to the core mechanic, objective, environment, prop, other character, or BOSS/threat when present through blocking, climbing, striking, sliding, casting, repairing, piloting, pulling, decorating, serving, solving, collecting, defending, or visible impact.",
     "Placeholder annotation rule: any written appearance, species, clothing, weapon, logo-lettering, color, or anatomy description attached to a placeholder is non-binding unless it is visibly present in the uploaded reference.",
     "Scheme text sanitation rule: if selected scheme text names a placeholder's clothing, face, body, weapon, shield, logo lettering, or other appearance details, treat those words as non-binding staging notes only. The uploaded image reference remains the only source of truth for visual identity.",
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
     "The uploaded subjects and brand elements must look repainted into the same scene with environmental color grading, rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, material interaction, and VFX overlap.",
     staticSchemeActionRewriteRule(),
-    "Use a deliberate campaign composition architecture, not a default side-scrolling battlefield. Favor one of these KV structures when it fits the scheme: dynamic split-world contrast, portal/breach reveal, foreground weapon/prop divider, boss reveal framed by doorway/canyon, comic-panel mission montage, or triumphant hero-on-defeated-boss trophy shot.",
+    "Use a deliberate campaign composition architecture, not a default side-scrolling battlefield. Favor one of these KV structures when it fits the scheme: dynamic split-world contrast, portal/breach reveal, foreground prop divider, character lineup, gameplay-proof board/level surface, cozy room/shop/farm format, world/setting reveal, comic-panel mission montage, giant-scale project terrain, or reward/progression payoff.",
     "Use the full requested canvas as artwork. Do not add black bars, letterbox bands, white borders, frames, UI chrome, or presentation margins.",
     "Show the story through character action and environment response: impact glow, energy arcs, dust, debris, sparks, magic/tech trails, weather, motion trails, atmospheric haze, rim-light pockets, foreground framing, and scale cues.",
-    "World-building direction: turn the current project premise into a fantasy, tactical, adventure, simulation, or action battlefield with illustrated terrain and playable depth. Do not introduce scenery from an unrelated sample project.",
+    "World-building direction: turn the current project premise into the right project-native world or format: fantasy, tactical, adventure, cozy, puzzle, simulation, sports, social, story, collection, management, or action visual space with readable depth. Do not introduce scenery from an unrelated sample project.",
     "## Hard KV Exclusions",
     "No duplicate uploaded asset. No second slogan/copy plaque. No lower-left or lower-right repeated label. No corner badge with campaign copy. No extra blank title plate. No copied reference image. No copied styleReference or compositionReference content. No black-background cutout. No side-by-side comparison panel. No model-sheet panel. No empty black block. No generic replacement hero. No extra random protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic product macro photography. No unrelated commercial render unless explicitly requested. No black bars. No letterbox. No border frame.",
     "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override the assigned KV architecture, uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant scale or micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat side-view scene. When focus guidance is active, visibly translate at least one focus item into camera, action, environment, prop, lighting, or copy-area design.",
@@ -990,7 +1008,7 @@ function posterIdentitySafePlatePromptFromPromptPackage(
     "Make the empty stage feel designed, not blank: use readable foreground platforms, cast-light pools, project-specific energy arcs, dust, debris, sparks, impact glow, rim-light pockets, atmospheric haze, foreground framing, scale cues, and a clear protagonist objective or BOSS-threat action path.",
     "Quality target: premium game marketing key visual background art with strong composition, layered foreground/midground/background depth, dramatic directional light, polished color grading, and clear silhouette hierarchy.",
     posterCinematicKvQualityDirective(),
-    "World-building target: transform the current project premise into a fantasy, tactical, adventure, simulation, or action battlefield with playable depth. Avoid unrelated sample-project scenery, flat tabletop wallpaper, close-up product photography, realistic macro product shots, stock-photo lighting, or empty generic valleys.",
+    "World-building target: transform the current project premise into the right project-native world or format: fantasy, tactical, adventure, cozy, puzzle, simulation, sports, social, story, collection, management, or action visual space with readable depth. Avoid unrelated sample-project scenery, flat tabletop wallpaper, close-up product photography, realistic macro product shots, stock-photo lighting, or empty generic valleys.",
     "Text rule: no text of any kind. Do not render final slogan text, fake logo, the words GAME LOGO, labels, signboards, wooden plaques, blank UI panels, fake title plates, UI badges, watermark, or any readable/garbled letters. Leave natural negative space and lighting-safe areas only.",
     "Use the full requested canvas as artwork. Do not add black bars, letterbox bands, white borders, frames, UI chrome, or presentation margins.",
     sectionText,
