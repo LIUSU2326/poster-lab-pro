@@ -63,7 +63,7 @@ requireTokens("events.js", events, [
   "data-scheme-render-count",
   "getSchemeRenderCountForSubmit",
   "imagesPerScheme",
-  "markWorkbenchRefreshFrame",
+  "markStableRefreshSurface",
 ]);
 
 const imageCopyHandler = events.match(/function bindResultViewerImageCopy\(\) \{[\s\S]*?\r?\n\}\r?\n\r?\nfunction setResultViewerMessage/);
@@ -137,13 +137,13 @@ requireTokens("styles.css", styles, [
   ".result-refinement-panel",
   ".scheme-render-count",
   ".scheme-result-strip",
-  "data-workbench-refresh",
+  "data-stable-refresh",
   ".style-library-panel .style-library-option:nth-child(9n + 1)",
 ]);
 
 requireTokens("StaticWorkbenchBridge.tsx", staticWorkbenchBridge, [
   'target?.closest(".config-scroll")',
-  "document.documentElement.dataset.workbenchRefresh",
+  "dataset.stableRefresh",
   'host.addEventListener("change", preserveConfigScrollFromEvent, true)',
   'host.addEventListener("keydown", preserveConfigScrollFromEvent, true)',
 ]);

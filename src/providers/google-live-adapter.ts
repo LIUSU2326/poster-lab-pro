@@ -46,6 +46,7 @@ import {
   posterKvArchitectureSlotSeed,
   posterKvAssetCountsFromAssets,
   posterKvRenderPromptAugmentation,
+  posterPoseClarityLock,
   posterSchemeBlueprintRequirement,
   posterStaticSchemeLanguageBan,
   posterTextEconomyLock,
@@ -216,6 +217,54 @@ function selectedStyleLockFromPrompt(prompt: string): string {
       "Do not render smooth 3D, glossy cinematic materials, photorealistic lighting, clay render, airbrush, or painterly blending.",
     ].join(" ");
   }
+  if (/黏土|clay|plasticine/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use tactile clay/plasticine materials, rounded hand-shaped forms, soft highlights, and subtle handmade surface irregularities.`;
+  }
+  if (/二次元|赛璐璐|anime|cel/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): render as polished anime/cel-shaded game key art with clean outlines, crisp cel shadows, expressive faces, saturated controlled color, and no photorealistic or clay material finish.`;
+  }
+  if (/水彩|watercolor/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use translucent watercolor washes, paper texture, pigment blooms, edge bleed, and layered light color.`;
+  }
+  if (/低多边形|low[- ]?poly/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use low-poly faceted planes, angular silhouettes, simplified materials, and crisp graphic lighting.`;
+  }
+  if (/欧美扁平|矢量|扁平|极简|vector|flat|minimal/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use flat/vector campaign art with simplified geometry, large clean color fields, precise edges, minimal texture, bold shape contrast, and no cinematic 3D material rendering.`;
+  }
+  if (/国风|水墨|国潮|ink|chinese/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use Chinese ink/guochao language with brush-edge rhythm, ink-wash value transitions, paper or mural texture, graphic negative space, and controlled red/gold/black accents when appropriate.`;
+  }
+  if (/赛博|霓虹|科幻|机甲|cyber|neon|sci[- ]?fi|mecha/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use neon sci-fi/cyber game art with electric rim light, emissive signs, dark value base, cyan-magenta contrast, tech-panel shapes, and hard specular highlights.`;
+  }
+  if (/暗黑|哥特|史诗暗金|RPG|dark|gothic/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use epic dark RPG art with deep shadows, gold/ember accents, ruin or ritual shapes when project-appropriate, smoke, sparks, hard rim light, and weighty material texture.`;
+  }
+  if (/吉卜力|童话|治愈|童趣|手绘|绘本|ghibli|storybook|cozy|healing/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use warm storybook/cozy hand-drawn art with soft organic shapes, gentle light, appealing character warmth, clean painterly edges, and emotional charm before spectacle.`;
+  }
+  if (/电竞|猛兽|esports/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use esports badge/key-art energy with bold mascot silhouettes, aggressive diagonal motion, sharp glow edges, high contrast, and trophy-like lighting.`;
+  }
+  if (/钻金|轻奢|产品|luxury|premium/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use premium product/KV polish with controlled black-gold or jewel lighting, clean reflections, elegant negative space, and refined material highlights.`;
+  }
+  if (/街头|涂鸦|graffiti|street/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use street graffiti styling with spray texture, sticker/poster-wall layering, bold outlines, paint drips, and high-saturation urban graphic rhythm.`;
+  }
+  if (/蒸汽|机械|朋克|steampunk/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use steampunk mechanical styling with brass/copper materials, gears, rivets, pressure gauges, smoky warm light, and worn metal texture.`;
+  }
+  if (/漫画分镜|复古海报|comic|storyboard|retro poster/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use poster/comic print language with panel rhythm, halftone or print texture, bold framing, readable silhouettes, and intentional graphic copy-safe areas.`;
+  }
+  if (/纸艺|剪纸|paper/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use layered paper/cutout craft language with stacked planes, paper fibers, soft paper shadows, handmade edge variation, and simplified forms.`;
+  }
+  if (/硬表面|3D|hard[- ]?surface/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use crisp stylized 3D hard-surface finish with beveled forms, controlled specular highlights, clean material separation, and precise silhouettes.`;
+  }
   return `Selected style hard lock (${styleName}): make this style visibly dominant in rendering, palette, edge language, material finish, and lighting.`;
 }
 
@@ -286,8 +335,9 @@ function imagePrompt(request: ImageGenerationRequest): string {
         "Preserve recognizable identity: face shape, hair colors, costume palette, body proportions, original tool/prop, line weight, BOSS silhouette, crown, eye, teeth, tongue, mouth, color blocks, and uploaded logo design.",
         "Do not age-up, masculinize/feminize, add beard/mustache, change hairstyle, change hair color, change costume, change species, change body scale, or replace a chibi/mascot reference with a generic adult character.",
         posterIdentitySafeMotionRule(),
-        "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
-        "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
+        "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero and any scheme-used BOSS/key subject as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
+        posterPoseClarityLock(),
+        "BOSS performance lock: if the selected scheme uses the uploaded BOSS/key threat, it must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, looming as a silhouette, blocking a route, becoming a trophy/aftermath cue, or reacting to impact while preserving its silhouette and signature details.",
         posterFocalHierarchyLock(),
         posterHeroPerformanceScaleLock(),
         posterSubjectAccessoryStrictnessLock(),
@@ -298,6 +348,7 @@ function imagePrompt(request: ImageGenerationRequest): string {
         "Blend the uploaded identities into the scene: environmental color grading, cinematic rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, VFX overlap, and matching brush/line quality must remove any cutout or collage feeling.",
         "Contact and occlusion audit: every hero/BOSS foot, hand, weapon, or body part that touches a surface must create contact shadow, cast shadow, small occlusion, bounce color, and local material reaction. Avoid clean cutout edges floating over props or terrain.",
         "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
+        posterPoseClarityLock(),
         hasSelectedStyleTag
           ? [
             "Style fidelity rule: a style library tag is selected, so use that selected style as the rendering standard while preserving uploaded character/BOSS/logo identity.",
@@ -522,7 +573,7 @@ function posterReferenceMappingInstruction(request: ImageGenerationRequest): str
   }
 
   if (bosses.length > 0) {
-    lines.push(`Antagonist mapping: ${bosses.map((asset, index) => posterAssetReferenceName(asset, index + 1)).join(", ")} means uploaded BOSS/key-subject reference(s). Render each as a dominant in-world threat, preserving silhouette and key features while allowing scale, attack/recoil/lunge pose, lighting, and environmental interaction; do not keep the exact static standing pose if a readable identity-safe action pose is possible.`);
+    lines.push(`Antagonist mapping: ${bosses.map((asset, index) => posterAssetReferenceName(asset, index + 1)).join(", ")} means uploaded BOSS/key-subject reference(s). Use each according to the selected scheme's poster promise: lead threat, secondary pressure, foreshadowing clue, route blocker, aftermath trophy, environmental hazard, or absent for non-threat schemes. When rendered, preserve silhouette and key features while allowing scale, attack/recoil/lunge pose, lighting, and environmental interaction; do not keep the exact static standing pose if a readable identity-safe action pose is possible.`);
   }
 
   if (logos.length > 0) {
@@ -794,7 +845,7 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
         ? posterHeroPerformanceScaleLock()
         : "",
       request.assets.some((asset) => posterAssetSemanticRole(asset) === "antagonist")
-        ? "The uploaded antagonist/BOSS must feel like the scene threat: preserve its identity but give it weight, scale, attack intent, contact shadows, atmosphere, debris, and environmental reaction."
+        ? "If the selected scheme uses the uploaded antagonist/BOSS, it must preserve identity and feel physically integrated through weight, scale, contact shadows, atmosphere, debris, and environmental reaction; if the scheme is not threat-led, the BOSS may be secondary, foreshadowed, trophy-like, environmental, or absent."
         : "",
       request.assets.some((asset) => posterAssetSemanticRole(asset) === "brandLogo")
         ? `The uploaded logo/wordmark must not become a fake replacement. Render the exact uploaded logo only when its letterforms can stay accurate. Otherwise integrate one polished blank logo-safe sign/title plate, neon, carved plate, flag, UI emblem, or title lockup that echoes the brand colors/shape language without fake text. ${posterLogoSingleUseLock()}`
@@ -1010,6 +1061,7 @@ function briefPrompt(request: BriefGenerationRequest): string {
         posterInWorldBrandTreatmentLock(),
         "For every uploaded asset, infer semantic duty from semanticRole, original role, label, and description. Do not write logic as if only gameCharacter, prop, and gameLogo can matter.",
         "Asset duty examples: protagonist assets carry identity/performance; antagonist assets carry threat/scale; brandLogo assets stay readable and scene-integrated; prop assets become used story objects; environment assets guide world design; styleReference controls rendering; compositionReference controls layout only.",
+        "Uploaded BOSS/threat assets are available story references, not mandatory centerpieces for every scheme. For each scheme decide whether the BOSS is the lead threat, background pressure, foreshadowing clue, aftermath trophy, environmental hazard, route blocker, or absent because the poster promise is gameplay proof, reward, cozy emotion, collection, map, training, shop/home, character lineup, or character appeal.",
         posterCinematicKvQualityDirective(),
         "Every image prompt must carry that production design forward as explicit image instructions, not as a generic one-sentence scene description.",
         "Every scheme must stage a memorable project-native set piece or poster format: character lineup, cozy room, shop/farm/home, gameplay board, puzzle layout, UI-like decision surface, collectible shelf, world map, town, battlefield, base, portal, route, machine room, arena, objective zone, or another form that follows the brief. Avoid empty pastel sky, generic backdrop, unrelated sample-project scenery, and centered mascot-ad composition.",

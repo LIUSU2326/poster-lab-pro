@@ -320,20 +320,20 @@ async function run() {
   const deletedSnapshot = getRuntimeWorkspaceSnapshot();
   assert(deleteEnvelope.ok, "deleteGeneratedSchemeForWorkbench should persist through fake http");
   assert(!deletedSnapshot.schemes.some((scheme) => scheme.id === schemeA), "deleted scheme should be removed from snapshot");
-  assert(!deletedSnapshot.results.some((result) => result.id === resultA.id), "deleted scheme results should be removed from snapshot");
-  assert(!deletedSnapshot.archiveRows.some((row) => row.resultAssetId === resultA.id), "deleted scheme archive rows should be removed");
+  assert(deletedSnapshot.results.some((result) => result.id === resultA.id), "deleted scheme should preserve generated results for archive");
+  assert(deletedSnapshot.archiveRows.some((row) => row.resultAssetId === resultA.id), "deleted scheme should preserve archive rows");
   assert(!deletedSnapshot.queuePlans.some((plan) => (plan.tasks || []).some((task) => task.input?.schemeId === schemeA)), "deleted scheme queue tasks should be removed");
   assert(deletedSnapshot.queuePlans.some((plan) => (plan.tasks || []).some((task) => task.input?.schemeIds?.length === 1 && task.input.schemeIds[0] === schemeB)), "batch queue tasks should keep remaining scheme ids");
   assert(state.selectedScheme !== schemeA, "selectedScheme should move away from a deleted scheme");
-  assert(state.selectedResult !== resultA.id, "selectedResult should move away from a deleted result");
-  assert(state.resultViewerOpen === false, "result viewer should close when its selected result is deleted");
+  assert(state.selectedResult === resultA.id, "selectedResult should stay on a preserved archived result");
+  assert(state.resultViewerOpen === true, "result viewer should stay open when its result is preserved");
   assert(!(schemeA in state.selectedSchemeVariants), "deleted scheme variant state should be cleared");
   assert(!("missing-scheme" in state.selectedSchemeVariants), "unknown scheme variant state should be cleared");
   assert(state.selectedSchemeVariants[schemeB] === 1, "remaining scheme variant state should be preserved");
-  assert(!state.archiveSelection.includes(`archive-${resultA.id}`), "removed archive row selection should be cleared");
+  assert(state.archiveSelection.includes(`archive-${resultA.id}`), "preserved archive row selection should remain selected");
   assert(state.archiveSelection.includes(`archive-${resultB.id}`), "remaining archive selection should be preserved");
-  assert(state.resultOperations.every((operation) => operation.resultId !== resultA.id), "result operations for removed results should be cleared");
-  assert(state.resultOperation === null, "current result operation should clear when its source result is removed");
+  assert(state.resultOperations.some((operation) => operation.resultId === resultA.id), "result operations for preserved results should be kept");
+  assert(state.resultOperation?.resultId === resultA.id, "current result operation should stay when its source result is preserved");
   assert(state.resultDeleteConfirmId === "", "result delete confirmation should clear when confirmed result is removed");
 
   state.selectedScheme = schemeB;
@@ -350,7 +350,8 @@ async function run() {
   assert(resetScheme?.status === "pending", "reset scheme should remain but return to pending status");
   assert(resetSnapshot.results.every((result) => result.schemeId !== schemeB), "reset scheme should clear its old results");
   assert(state.selectedScheme === schemeB, "reset scheme should remain selected");
-  assert(state.selectedResult === "", "selectedResult should clear when reset removes all results");
+  assert(state.selectedResult !== resultB.id, "selectedResult should move away from a reset result");
+  assert(resetSnapshot.results.some((result) => result.id === state.selectedResult), "selectedResult should stay on an available preserved result when one exists");
   assert(state.resultViewerOpen === false, "result viewer should close when reset removes the viewed result");
   assert(state.selectedSchemeVariants[schemeB] === 1, "reset should preserve variant state for the remaining scheme");
   assert(state.archiveSelection.length === 0, "archive selection should clear when reset removes archive rows");

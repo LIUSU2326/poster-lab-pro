@@ -72,6 +72,7 @@ for (const token of [
   "posterFocalHierarchyLock",
   "posterTextEconomyLock",
   "posterInWorldBrandTreatmentLock",
+  "posterPoseClarityLock",
   "STRICT TYPOGRAPHY COUNT LOCK",
   "no second slogan plaque",
   "posterCompressedSceneContract",

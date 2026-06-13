@@ -49,6 +49,7 @@ for (const token of [
   "inline image data unavailable for integrated redraw",
   "Placeholder annotation rule",
   "Reference pose release",
+  "posterPoseClarityLock",
   "BOSS performance lock",
   "Static scheme action rewrite",
   "posterFocalHierarchyLock",

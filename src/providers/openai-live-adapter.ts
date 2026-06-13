@@ -36,6 +36,7 @@ import {
 import {
   posterFocalHierarchyLock,
   posterInWorldBrandTreatmentLock,
+  posterPoseClarityLock,
   posterTextEconomyLock,
 } from "./poster-kv-architectures";
 
@@ -206,6 +207,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
       "Quality bar: premium game campaign key visual polish adapted to the active art style.",
       "Use cinematic lighting, layered foreground/midground/background depth, refined material detail, crisp focal hierarchy, polished color grading, and campaign-ready logo/slogan safe areas.",
       "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
+      posterPoseClarityLock(),
       posterFocalHierarchyLock(),
       posterTextEconomyLock(),
       posterInWorldBrandTreatmentLock(),
@@ -239,7 +241,6 @@ function compressedProviderPriorityInstruction(
     const forceBlankTextPlates = profile.textRendering === "low" && hasTextTarget;
     const required = [
       hasHero ? "uploaded protagonist as a large readable actor" : "",
-      hasBoss ? "uploaded BOSS/key threat as a physically dominant threat" : "",
       hasLogo ? "one logo-safe in-world treatment" : "",
       hasTextTarget ? "visible blank slogan/copy-safe area tied to the scene" : "",
     ].filter(Boolean).join("; ");
@@ -269,7 +270,7 @@ function compressedProviderPriorityInstruction(
         ? `EXACT HERO ROSTER LOCK: render exactly ${protagonistAssets.length} uploaded playable heroes, one per reference, and every uploaded hero must be visible as a separate readable character. Do not omit the second character, merge identities, hide one behind a prop/plate, add unuploaded helpers, crowds, or duplicate hero copies.`
         : "",
       bossAssets.length > 0
-        ? `EXACT BOSS ROSTER LOCK: render the uploaded BOSS/key threat as one dominant threat subject from ${bossAssets.map((asset) => asset.id).join(", ")}. Do not split it into multiple small monsters, background copies, minions, or decorative mascots.`
+        ? `EXACT BOSS ROSTER LOCK: ${bossAssets.map((asset) => asset.id).join(", ")} are uploaded BOSS/key-threat references. Use them only according to the selected scheme's poster promise: lead threat, secondary pressure, foreshadowing clue, route blocker, aftermath trophy, environmental hazard, or absent for non-threat schemes. When rendered, preserve identity and do not split them into multiple small monsters, background copies, minions, or decorative mascots.`
         : "",
       logoAssets.length > 0
         ? `EXACT LOGO LOCK: create one and only one logo-safe treatment for ${logoAssets.map((asset) => asset.id).join(", ")}.`
@@ -278,8 +279,8 @@ function compressedProviderPriorityInstruction(
         ? "LOW TEXT RELIABILITY LOCK: this provider is not reliable for spelling. Do NOT render readable words, pseudo-letters, warped logo text, title text, slogan text, or glyph-like strokes. Use large polished blank in-world logo/slogan plates only, with clean empty surfaces for later copy."
         : "",
       protagonistAssets.length > 1
-        ? "KV ACTION MINI-BRIEF: every uploaded hero is a readable separate actor, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects."
-        : "KV ACTION MINI-BRIEF: one large readable uploaded hero, one physically dominant uploaded BOSS/key threat, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
+        ? "KV ACTION MINI-BRIEF: every uploaded hero is a readable separate actor, one project-native focus such as core mechanic, objective, reward, relationship, gameplay proof, or uploaded BOSS/key threat when appropriate, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects."
+        : "KV ACTION MINI-BRIEF: one large readable uploaded hero, one project-native focus such as core mechanic, objective, reward, relationship, gameplay proof, or uploaded BOSS/key threat when appropriate, one integrated blank or exact-safe logo/copy area, one shared ground plane, visible contact shadows, foreground occlusion, rim light, and VFX crossing in front of the subjects.",
       posterFocalHierarchyLock(),
       posterTextEconomyLock(),
       posterInWorldBrandTreatmentLock(),
@@ -289,7 +290,7 @@ function compressedProviderPriorityInstruction(
       "EMPTY BACKGROUND BAN: do not render a plain sky, plain gradient, studio backdrop, isolated mascot pose, icon-like character lineup, or empty two-character cutout. The final image must be a full campaign scene.",
       "MINIMUM ENVIRONMENT CHECKLIST: include one readable foreground prop or occluder, one shared ground plane, one midground action touchpoint, one background set-piece from the current project such as portal, base defense, canyon route, town gate, battlefield lane, machine room, fortress, forest path, or objective zone, plus particles, rim light, and contact shadows.",
       "The poster fails if a required anchor is absent, tiny, hidden, duplicated, or replaced by a generic subject.",
-      "Hero and BOSS must share the same camera, perspective, lighting, contact shadows, occlusion, particles/VFX, and story action. Do not make a pretty background with small sticker-like subjects.",
+      "Hero and any scheme-used BOSS/key subject must share the same camera, perspective, lighting, contact shadows, occlusion, particles/VFX, and story action. Do not make a pretty background with small sticker-like subjects.",
       "Logo/slogan treatment should be integrated as one in-world sign, plaque, banner, smoke/energy stroke, carved/metal relief, hologram, flag, or blank copy-safe plate; no fake text, no garbled words, no floating PPT-style overlay, and no second slogan plaque.",
     ].filter(Boolean).join("\n");
   }
@@ -344,15 +345,15 @@ function posterCompressedSceneContract(prompt: string, architectureSummary = "")
 
   if (hasPortal) {
     contracts.push(
-      "glowing portal or breach discovery scene, not a normal field: show a project-specific gate, doorway, relic, screen, map route, wall breach, or environmental opening becoming a bright portal, golden volumetric light, project-specific particles, and the uploaded BOSS/key threat visible or reaching from the other side",
+      "glowing portal or breach discovery scene, not a normal field: show a project-specific gate, doorway, relic, screen, map route, wall breach, or environmental opening becoming a bright portal, golden volumetric light, project-specific particles, and the uploaded BOSS/key threat visible or reaching from the other side only if the selected scheme is threat-led",
     );
   } else if (hasGiant) {
     contracts.push(
-      "forced-perspective giant-scale adventure based on the current project: oversized enemy, machine, structure, terrain, spell, vehicle, gate, or obstacle, with the uploaded hero small-but-readable in the foreground and the uploaded BOSS/key threat as the oversized pressure source",
+      "forced-perspective giant-scale adventure based on the current project: oversized enemy, machine, structure, terrain, spell, vehicle, gate, or obstacle, with the uploaded hero small-but-readable in the foreground and the uploaded BOSS/key threat as the oversized pressure source only when the scheme promise is threat-led",
     );
   } else if (hasObjectivePressure) {
     contracts.push(
-      "objective-pressure battlefield, not a generic meadow: show the current project's mission pressure, base/town/resource/route/timer/upgrade objective, warning glow, dust, sparks, debris, and the uploaded BOSS/key threat breaking into or attacking the objective zone",
+      "objective-pressure battlefield, not a generic meadow: show the current project's mission pressure, base/town/resource/route/timer/upgrade objective, warning glow, dust, sparks, debris, and the uploaded BOSS/key threat breaking into or attacking the objective zone only when the selected scheme uses it as the pressure source",
     );
   }
   if (/荒野|hunt|hunting|battlefield|战场|boss|base|town|route|quest|mission|defense/.test(text) && contracts.length === 0) {
@@ -380,6 +381,54 @@ function selectedStyleLockFromPrompt(prompt: string): string {
       "Do not render smooth 3D, glossy cinematic materials, photorealistic lighting, clay render, airbrush, or painterly blending.",
     ].join(" ");
   }
+  if (/黏土|clay|plasticine/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use tactile clay/plasticine materials, rounded hand-shaped forms, soft highlights, and subtle handmade surface irregularities.`;
+  }
+  if (/二次元|赛璐璐|anime|cel/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): render as polished anime/cel-shaded game key art with clean outlines, crisp cel shadows, expressive faces, saturated controlled color, and no photorealistic or clay material finish.`;
+  }
+  if (/水彩|watercolor/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use translucent watercolor washes, paper texture, pigment blooms, edge bleed, and layered light color.`;
+  }
+  if (/低多边形|low[- ]?poly/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use low-poly faceted planes, angular silhouettes, simplified materials, and crisp graphic lighting.`;
+  }
+  if (/欧美扁平|矢量|扁平|极简|vector|flat|minimal/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use flat/vector campaign art with simplified geometry, large clean color fields, precise edges, minimal texture, bold shape contrast, and no cinematic 3D material rendering.`;
+  }
+  if (/国风|水墨|国潮|ink|chinese/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use Chinese ink/guochao language with brush-edge rhythm, ink-wash value transitions, paper or mural texture, graphic negative space, and controlled red/gold/black accents when appropriate.`;
+  }
+  if (/赛博|霓虹|科幻|机甲|cyber|neon|sci[- ]?fi|mecha/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use neon sci-fi/cyber game art with electric rim light, emissive signs, dark value base, cyan-magenta contrast, tech-panel shapes, and hard specular highlights.`;
+  }
+  if (/暗黑|哥特|史诗暗金|RPG|dark|gothic/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use epic dark RPG art with deep shadows, gold/ember accents, ruin or ritual shapes when project-appropriate, smoke, sparks, hard rim light, and weighty material texture.`;
+  }
+  if (/吉卜力|童话|治愈|童趣|手绘|绘本|ghibli|storybook|cozy|healing/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use warm storybook/cozy hand-drawn art with soft organic shapes, gentle light, appealing character warmth, clean painterly edges, and emotional charm before spectacle.`;
+  }
+  if (/电竞|猛兽|esports/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use esports badge/key-art energy with bold mascot silhouettes, aggressive diagonal motion, sharp glow edges, high contrast, and trophy-like lighting.`;
+  }
+  if (/钻金|轻奢|产品|luxury|premium/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use premium product/KV polish with controlled black-gold or jewel lighting, clean reflections, elegant negative space, and refined material highlights.`;
+  }
+  if (/街头|涂鸦|graffiti|street/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use street graffiti styling with spray texture, sticker/poster-wall layering, bold outlines, paint drips, and high-saturation urban graphic rhythm.`;
+  }
+  if (/蒸汽|机械|朋克|steampunk/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use steampunk mechanical styling with brass/copper materials, gears, rivets, pressure gauges, smoky warm light, and worn metal texture.`;
+  }
+  if (/漫画分镜|复古海报|comic|storyboard|retro poster/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use poster/comic print language with panel rhythm, halftone or print texture, bold framing, readable silhouettes, and intentional graphic copy-safe areas.`;
+  }
+  if (/纸艺|剪纸|paper/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use layered paper/cutout craft language with stacked planes, paper fibers, soft paper shadows, handmade edge variation, and simplified forms.`;
+  }
+  if (/硬表面|3D|hard[- ]?surface/i.test(styleName)) {
+    return `Selected style hard lock (${styleName}): use crisp stylized 3D hard-surface finish with beveled forms, controlled specular highlights, clean material separation, and precise silhouettes.`;
+  }
   return `Selected style hard lock (${styleName}): make this style visibly dominant in rendering, palette, edge language, material finish, and lighting.`;
 }
 
@@ -400,7 +449,7 @@ function imagePrompt(providerId: OpenAICompatibleImageProviderId, request: Image
           ? "For poster mode, generate the final integrated game campaign KV when the model can use the provided reference details. Uploaded characters, BOSS/key subject, and logo are identity/model-sheet anchors, not static stickers."
           : "Treat listed assets as binding semantic visual references for the active mode. If the provider cannot ingest the images directly, follow their role descriptions and fusion strategies as strictly as possible.",
         hasPosterMode
-          ? "Characters and BOSS may change pose, expression, action, camera angle, lighting, and perspective, but must preserve recognizable identity. Use each uploaded character, BOSS/key subject, and logo once; no duplicate large/small copies."
+          ? "Characters and any scheme-used BOSS/key subject may change pose, expression, action, camera angle, lighting, and perspective, but must preserve recognizable identity. Use each uploaded character and logo once; if the selected scheme uses a BOSS/key subject, use it once without duplicate large/small copies."
           : referenceInstruction,
         hasPosterMode
           ? "StyleReference and compositionReference assets are guide-only inputs: extract rendering/camera/layout/focal hierarchy, but never copy their text, logos, characters, monsters, props, unrelated objects, UI, or full scene."

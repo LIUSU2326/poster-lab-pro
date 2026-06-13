@@ -185,7 +185,7 @@ export async function deleteGeneratedSchemeForWorkbench(input = {}, options = {}
   }
 
   const snapshot = clone(getRuntimeWorkspaceSnapshot());
-  const nextSnapshot = touchSnapshot(removeSchemeReferences(snapshot, [schemeId]));
+  const nextSnapshot = touchSnapshot(removeSchemeReferences(snapshot, [schemeId], { preserveOutputs: true }));
   return persistSnapshot(nextSnapshot, options);
 }
 

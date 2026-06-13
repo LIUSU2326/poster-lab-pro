@@ -10190,6 +10190,93 @@ select:focus-visible,
     radial-gradient(circle at 68% 34%, rgba(220, 255, 148, .9), transparent 22%),
     linear-gradient(135deg, #2d1945, #7854b8 44%, #64d6b0);
 }
+.style-library-swatch.preview-anime {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .82) 0 16%, transparent 16%),
+    radial-gradient(circle at 72% 32%, rgba(255, 151, 210, .9), transparent 24%),
+    linear-gradient(135deg, #a6f0ff, #6c7df4 54%, #ffb6d8);
+}
+.style-library-swatch.preview-dark-rpg {
+  background:
+    radial-gradient(circle at 70% 24%, rgba(255, 209, 92, .92), transparent 18%),
+    linear-gradient(135deg, #0f0a12, #3f1621 48%, #b2792f);
+}
+.style-library-swatch.preview-vector {
+  background:
+    linear-gradient(135deg, #f7f7f2 0 34%, #5aa7ff 34% 58%, #1f2937 58% 76%, #f2c94c 76%);
+}
+.style-library-swatch.preview-ink {
+  background:
+    radial-gradient(circle at 30% 38%, rgba(21, 30, 36, .84), transparent 30%),
+    linear-gradient(135deg, #f7f1df, #d7e6d2 48%, #a0442b);
+}
+.style-library-swatch.preview-xianxia {
+  background:
+    radial-gradient(circle at 72% 32%, rgba(186, 252, 255, .86), transparent 20%),
+    radial-gradient(circle at 30% 72%, rgba(255, 255, 255, .7), transparent 28%),
+    linear-gradient(135deg, #2d1f55, #7056d9 50%, #8fe7ff);
+}
+.style-library-swatch.preview-ghibli {
+  background:
+    radial-gradient(circle at 28% 30%, rgba(255, 255, 226, .9), transparent 24%),
+    linear-gradient(135deg, #dff7de, #8bd1c7 48%, #6aa1d8);
+}
+.style-library-swatch.preview-esports {
+  background:
+    linear-gradient(120deg, transparent 0 42%, rgba(255, 255, 255, .7) 42% 48%, transparent 48%),
+    linear-gradient(135deg, #111827, #ef4444 48%, #facc15);
+}
+.style-library-swatch.preview-luxury {
+  background:
+    radial-gradient(circle at 74% 32%, rgba(255, 255, 255, .78), transparent 18%),
+    linear-gradient(135deg, #101010, #70521c 46%, #ffd36f);
+}
+.style-library-swatch.preview-graffiti {
+  background:
+    radial-gradient(circle, rgba(17, 24, 39, .26) 1px, transparent 1.5px),
+    linear-gradient(135deg, #ff5b8a, #ffb347 44%, #5a67f2);
+  background-size: 9px 9px, auto;
+}
+.style-library-swatch.preview-steampunk {
+  background:
+    radial-gradient(circle at 30% 34%, rgba(255, 239, 190, .75), transparent 17%),
+    linear-gradient(135deg, #2d1b16, #8b5a2b 52%, #d6a55d);
+}
+.style-library-swatch.preview-storyboard {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.72) 0 2px, transparent 2px 50%, rgba(255,255,255,.72) 50% calc(50% + 2px), transparent calc(50% + 2px)),
+    linear-gradient(180deg, rgba(255,255,255,.72) 0 2px, transparent 2px 50%, rgba(255,255,255,.72) 50% calc(50% + 2px), transparent calc(50% + 2px)),
+    linear-gradient(135deg, #ffe784, #ff775e 50%, #5067d8);
+}
+.style-library-swatch.preview-cute-toon {
+  background:
+    radial-gradient(circle at 32% 36%, rgba(255, 255, 255, .82), transparent 20%),
+    linear-gradient(135deg, #ffd6e8, #8ed8ff 52%, #ffe873);
+}
+.style-library-swatch.preview-retro-poster {
+  background:
+    radial-gradient(circle at 68% 34%, rgba(244, 119, 74, .84), transparent 22%),
+    linear-gradient(135deg, #f3d7a0, #b65d3a 52%, #243447);
+}
+.style-library-swatch.preview-hard-surface {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.32) 0 16%, transparent 16% 46%, rgba(255,255,255,.18) 46% 58%, transparent 58%),
+    linear-gradient(135deg, #161b25, #4d6174 48%, #8fd3ff);
+}
+.style-library-swatch.preview-island {
+  background:
+    linear-gradient(180deg, #7bd4ff 0 45%, #f3d481 45% 68%, #2fbf71 68%);
+}
+.style-library-swatch.preview-forest {
+  background:
+    radial-gradient(circle at 70% 28%, rgba(255, 244, 166, .74), transparent 18%),
+    linear-gradient(135deg, #173a25, #2f8a4c 46%, #9ddc79);
+}
+.style-library-swatch.preview-oil {
+  background:
+    linear-gradient(160deg, rgba(255, 238, 157, .8) 0 18%, transparent 18%),
+    linear-gradient(38deg, #24152e, #7b2d45 40%, #e07a3f 70%, #f6d17f);
+}
 .style-library-swatch.preview-pixel i {
   border-radius: 4px;
   box-shadow: -18px -12px 0 rgba(255,255,255,.42), -9px 10px 0 rgba(0,0,0,.22);
@@ -10244,6 +10331,91 @@ select:focus-visible,
 .style-library-swatch.preview-fantasy i {
   clip-path: polygon(50% 0, 63% 36%, 100% 50%, 63% 64%, 50% 100%, 37% 64%, 0 50%, 37% 36%);
   border-radius: 0;
+}
+.style-library-swatch.preview-anime i,
+.style-library-swatch.preview-cute-toon i {
+  width: 28px;
+  height: 22px;
+  border-radius: 48% 52% 44% 56%;
+  box-shadow: -18px -10px 0 rgba(255,255,255,.38);
+}
+.style-library-swatch.preview-dark-rpg i,
+.style-library-swatch.preview-luxury i {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  transform: rotate(45deg);
+  background: rgba(255, 223, 122, .88);
+}
+.style-library-swatch.preview-vector i {
+  width: 34px;
+  height: 20px;
+  border-radius: 1px;
+  clip-path: polygon(0 0, 100% 0, 72% 100%, 0 100%);
+}
+.style-library-swatch.preview-ink i,
+.style-library-swatch.preview-oil i {
+  width: 36px;
+  height: 14px;
+  border-radius: 999px 12px 999px 12px;
+  transform: rotate(-20deg);
+}
+.style-library-swatch.preview-xianxia i,
+.style-library-swatch.preview-ghibli i {
+  width: 36px;
+  height: 16px;
+  border-radius: 999px;
+  box-shadow: -20px 4px 0 rgba(255,255,255,.36);
+}
+.style-library-swatch.preview-esports i {
+  width: 18px;
+  height: 30px;
+  border-radius: 1px;
+  clip-path: polygon(55% 0, 100% 0, 58% 42%, 96% 42%, 28% 100%, 42% 54%, 0 54%);
+}
+.style-library-swatch.preview-graffiti i {
+  width: 34px;
+  height: 20px;
+  border-radius: 4px;
+  clip-path: polygon(0 20%, 90% 0, 100% 70%, 55% 70%, 46% 100%, 38% 70%, 0 70%);
+}
+.style-library-swatch.preview-steampunk i {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 28%, rgba(255,255,255,.74) 30% 48%, transparent 50%),
+    conic-gradient(from 0deg, rgba(255,255,255,.78) 0 12%, transparent 12% 25%, rgba(255,255,255,.78) 25% 37%, transparent 37% 50%, rgba(255,255,255,.78) 50% 62%, transparent 62% 75%, rgba(255,255,255,.78) 75% 87%, transparent 87%);
+}
+.style-library-swatch.preview-storyboard i {
+  width: 32px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,.78);
+  border-radius: 2px;
+  background: transparent;
+}
+.style-library-swatch.preview-retro-poster i {
+  width: 30px;
+  height: 18px;
+  border-radius: 999px 999px 0 0;
+}
+.style-library-swatch.preview-hard-surface i {
+  width: 30px;
+  height: 22px;
+  border-radius: 3px;
+  clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%);
+}
+.style-library-swatch.preview-island i {
+  width: 34px;
+  height: 18px;
+  border-radius: 999px 999px 4px 4px;
+  background: rgba(255, 247, 197, .84);
+}
+.style-library-swatch.preview-forest i {
+  width: 30px;
+  height: 28px;
+  border-radius: 3px;
+  clip-path: polygon(50% 0, 100% 58%, 72% 58%, 92% 100%, 8% 100%, 28% 58%, 0 58%);
 }
 
 .reference-upload-card,
@@ -16524,6 +16696,15 @@ select:focus-visible,
   white-space: nowrap;
 }
 
+.result-viewer-style-spec {
+  min-width: 112px !important;
+  max-width: 176px !important;
+}
+
+.result-viewer-style-spec strong {
+  max-width: 150px;
+}
+
 .result-viewer-actions {
   display: flex;
   min-width: 0;
@@ -16884,37 +17065,40 @@ select:focus-visible,
 }
 
 /* 1.1.1 interaction stability: prevent full-shell refreshes from replaying entrance motion. */
-:root[data-workbench-refresh="true"] .config-panel.collapsed,
-:root[data-workbench-refresh="true"] .settings-backdrop,
-:root[data-workbench-refresh="true"] .style-library-backdrop,
-:root[data-workbench-refresh="true"] .result-viewer,
-:root[data-workbench-refresh="true"] .settings-sheet,
-:root[data-workbench-refresh="true"] .provider-config-sheet.settings-sheet,
-:root[data-workbench-refresh="true"] .style-library-panel,
-:root[data-workbench-refresh="true"] .task-drawer,
-:root[data-workbench-refresh="true"] .result-viewer-stage img,
-:root[data-workbench-refresh="true"] .result-viewer-placeholder,
-:root[data-workbench-refresh="true"] .result-viewer-dock,
-:root[data-workbench-refresh="true"] .result-viewer-close,
-:root[data-workbench-refresh="true"] .scheme-plan-list > .scheme-card,
-:root[data-workbench-refresh="true"] .result-grid > .result-card,
-:root[data-workbench-refresh="true"] .project-library-grid > .project-library-card,
-:root[data-workbench-refresh="true"] .version-pager button.active,
-:root[data-workbench-refresh="true"] .version-pager button.filled,
-:root[data-workbench-refresh="true"] .theme-switch span.active {
+.prototype-shell[data-stable-refresh="true"] .config-panel.collapsed,
+.prototype-shell[data-stable-refresh="true"] .settings-backdrop,
+.prototype-shell[data-stable-refresh="true"] .style-library-backdrop,
+.prototype-shell[data-stable-refresh="true"] .result-viewer,
+.prototype-shell[data-stable-refresh="true"] .settings-sheet,
+.prototype-shell[data-stable-refresh="true"] .provider-config-sheet.settings-sheet,
+.prototype-shell[data-stable-refresh="true"] .style-library-panel,
+.prototype-shell[data-stable-refresh="true"] .task-drawer,
+.prototype-shell[data-stable-refresh="true"] .result-viewer-stage img,
+.prototype-shell[data-stable-refresh="true"] .result-viewer-placeholder,
+.prototype-shell[data-stable-refresh="true"] .result-viewer-dock,
+.prototype-shell[data-stable-refresh="true"] .result-viewer-close,
+.prototype-shell[data-stable-refresh="true"] .scheme-plan-list > .scheme-card,
+.prototype-shell[data-stable-refresh="true"] .result-grid > .result-card,
+.prototype-shell[data-stable-refresh="true"] .project-library-grid > .project-library-card,
+.prototype-shell[data-stable-refresh="true"] .version-pager button.active,
+.prototype-shell[data-stable-refresh="true"] .version-pager button.filled,
+.prototype-shell[data-stable-refresh="true"] .theme-switch span.active,
+.settings-layer[data-stable-refresh="true"] .settings-backdrop,
+.settings-layer[data-stable-refresh="true"] .settings-sheet,
+.settings-layer[data-stable-refresh="true"] .provider-config-sheet.settings-sheet {
   animation: none !important;
 }
 
-:root[data-workbench-refresh="true"] .scheme-card,
-:root[data-workbench-refresh="true"] .result-card,
-:root[data-workbench-refresh="true"] .settings-sheet,
-:root[data-workbench-refresh="true"] .provider-config-sheet,
-:root[data-workbench-refresh="true"] .style-library-panel,
-:root[data-workbench-refresh="true"] .result-viewer,
-:root[data-workbench-refresh="true"] .result-viewer-stage img,
-:root[data-workbench-refresh="true"] .result-viewer-dock,
-:root[data-workbench-refresh="true"] .top-view-switch::before,
-:root[data-workbench-refresh="true"] .theme-switch::before {
+.prototype-shell[data-stable-refresh="true"] .settings-sheet,
+.prototype-shell[data-stable-refresh="true"] .provider-config-sheet,
+.prototype-shell[data-stable-refresh="true"] .style-library-panel,
+.prototype-shell[data-stable-refresh="true"] .result-viewer,
+.prototype-shell[data-stable-refresh="true"] .result-viewer-stage img,
+.prototype-shell[data-stable-refresh="true"] .result-viewer-dock,
+.prototype-shell[data-stable-refresh="true"] .top-view-switch::before,
+.prototype-shell[data-stable-refresh="true"] .theme-switch::before,
+.settings-layer[data-stable-refresh="true"] .settings-sheet,
+.settings-layer[data-stable-refresh="true"] .provider-config-sheet {
   transition-duration: 0ms !important;
 }
 

@@ -332,6 +332,14 @@ async function runRuntimeCheck() {
       "KV ACTION MINI-BRIEF",
       "REFERENCE PANEL BAN",
       "No copied reference image",
+      "Selected Scheme Visual Difference Contract",
+      "Layout uniqueness rule",
+      "Final selected-scheme diversity audit",
+      "Selected Scheme Execution Blueprint",
+      "mandatory visual direction",
+      "Slogan/logo text cannot be the only evidence",
+      "Detailed-plan compliance audit",
+      "changing only the slogan words is a failure",
     ]) {
       if (!mapped.request.prompt.includes(priorityToken)) {
         issues.push(`poster image request should keep priority integrated-redraw rule before prompt truncation: ${priorityToken}`);
@@ -383,6 +391,10 @@ async function runRuntimeCheck() {
       "Pre-render checklist",
       "large secondary campaign object",
       "scene-derived",
+      "Selected Scheme Visual Difference Contract",
+      "Final selected-scheme diversity audit",
+      "Selected Scheme Execution Blueprint",
+      "Detailed-plan compliance audit",
     ]) {
       if (!longMapped.request.prompt.includes(retainedToken)) {
         issues.push(`poster image request should preserve ${retainedToken} even with long scheme text`);
@@ -391,6 +403,46 @@ async function runRuntimeCheck() {
     for (const sanitizedToken of ["保持其面部", "面包武器/盾牌"]) {
       if (longMapped.request.prompt.includes(sanitizedToken)) {
         issues.push(`poster image request should demote placeholder appearance text before provider mapping: ${sanitizedToken}`);
+      }
+    }
+
+    const blueprintSnapshot = {
+      ...snapshot,
+      schemes: snapshot.schemes.map((scheme) => scheme.id === "scheme-poster-01"
+        ? {
+          ...scheme,
+          brief: "Blueprint regression scheme.",
+          promptBlocks: [
+            {
+              title: "KV 主视觉详细策划",
+              text: "posterPromise: Moonlit coin-conveyor pizzeria management fantasy. userClickReason: the player sees idle coins becoming toppings. visual hook: glowing coin rain spirals into a pizza oven conveyor. setting/format: night-market kitchen counter with VIP order cards and visible conveyor belt. camera grammar: low 24mm counter-level push-in with foreground coins leading into the oven.",
+            },
+          ],
+        }
+        : scheme),
+    };
+    const blueprintPrompt = prompts.createImagePromptPackage({
+      snapshot: blueprintSnapshot,
+      mode: "poster",
+      schemeId: "scheme-poster-01",
+    });
+    const blueprintMapped = mapperModule.mapPromptPackageToProviderRequest({
+      promptPackage: blueprintPrompt,
+      snapshot: blueprintSnapshot,
+      providerId: "openai",
+      kind: "imageGeneration",
+      traceId: "trace-provider-request-blueprint-check",
+    });
+    for (const blueprintToken of [
+      "Selected Scheme Execution Blueprint",
+      "Moonlit coin-conveyor",
+      "glowing coin rain",
+      "night-market kitchen counter",
+      "low 24mm counter-level",
+      "Slogan/logo text cannot be the only evidence",
+    ]) {
+      if (!blueprintMapped.request.prompt.includes(blueprintToken)) {
+        issues.push(`poster image request should turn KV detailed planning into render blueprint: ${blueprintToken}`);
       }
     }
 
@@ -607,7 +659,9 @@ async function runRuntimeCheck() {
       }
     }
     if (!multiCharacterMapped.request.prompt.includes("Multi-character hero requirement")
-      || !multiCharacterMapped.request.prompt.includes("Limb and hand sanity audit")) {
+      || !multiCharacterMapped.request.prompt.includes("Limb and hand sanity audit")
+      || !multiCharacterMapped.request.prompt.includes("Pose clarity lock")
+      || !multiCharacterMapped.request.prompt.includes("prop-as-limb silhouette")) {
       issues.push("provider image request should include multi-character and limb sanity prompt locks");
     }
 

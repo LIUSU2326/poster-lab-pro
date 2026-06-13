@@ -369,6 +369,78 @@ function resultFromTask(
   });
 }
 
+function resultStyleSourceFromTask(
+  task: QueueTask,
+  snapshot: WorkspaceSnapshot | undefined,
+  projectId: string,
+): Record<string, unknown> | null {
+  if (!snapshot) return null;
+  const modeState = snapshot.modeStates.find((item) => item.mode === task.mode);
+  const projectAssets = snapshot.assets.filter((asset) => !projectId || asset.projectId === projectId);
+  const styleReferences = projectAssets.filter((asset) => posterAssetSemanticRole(asset) === "styleReference");
+  if (styleReferences.length > 0 || hasStyleReferenceAnalysis(snapshot, projectId)) {
+    const name = compactStyleSourcePart(styleReferences[0]?.label) || "上传参考";
+    return {
+      source: "styleReference",
+      label: `画风参考 · ${name}`,
+      detail: "生成时优先遵循上传画风参考或其画风分析结果。",
+      assetIds: styleReferences.map((asset) => asset.id),
+    };
+  }
+
+  const selectedStyle = selectedStyleTagFromModeState(modeState);
+  if (selectedStyle) {
+    return {
+      source: "styleLibrary",
+      label: `画风库 · ${compactStyleSourcePart(selectedStyle)}`,
+      styleName: selectedStyle,
+      detail: `生成时使用画风库选择：${selectedStyle}。`,
+    };
+  }
+
+  const hasPrimaryAsset = projectAssets.some((asset) => {
+    const role = posterAssetSemanticRole(asset);
+    return role === "protagonist" || role === "antagonist" || role === "keySubject";
+  });
+  if (hasPrimaryAsset || projectAssets.length > 0) {
+    return {
+      source: "assetBaseline",
+      label: `素材基准 · ${hasPrimaryAsset ? (task.mode === "poster" ? "角色/主体" : "主体素材") : "上传素材"}`,
+      detail: "生成时未选择画风库且无画风参考，默认沿用上传素材的画风基准。",
+    };
+  }
+
+  return {
+    source: "projectDefault",
+    label: "默认 · 项目语境",
+    detail: "生成时未选择画风库、未上传画风参考，也没有可继承画风的素材。",
+  };
+}
+
+function selectedStyleTagFromModeState(modeState: WorkspaceSnapshot["modeStates"][number] | undefined): string {
+  const modeForm = modeState?.modeForm;
+  if (!modeForm || !("styleTags" in modeForm) || !Array.isArray(modeForm.styleTags)) return "";
+  for (const item of modeForm.styleTags as unknown[]) {
+    const text = String(item || "").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
+function hasStyleReferenceAnalysis(snapshot: WorkspaceSnapshot, projectId: string): boolean {
+  return snapshot.referenceAnalyses.some((analysis) => {
+    if (analysis.kind !== "style") return false;
+    const text = `${analysis.role || ""} ${analysis.label || ""}`;
+    return /styleReference|画风|风格|style/i.test(text) && (!projectId || !("projectId" in analysis) || analysis.projectId === projectId);
+  });
+}
+
+function compactStyleSourcePart(value: unknown): string {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= 14) return text;
+  return `${text.slice(0, 13)}…`;
+}
+
 async function resultFromTaskWithProject(input: {
   task: QueueTask;
   providerResultId: string;
@@ -438,6 +510,7 @@ async function resultFromTaskWithProject(input: {
         textTargets: resultQualityTextTargets(input.snapshot, input.task),
       })
     : initialQualityAudit;
+  const styleSource = resultStyleSourceFromTask(input.task, input.snapshot, input.projectId);
   const resultFile = await storeResultFile({
     ...(input.fileStore ? { fileStore: input.fileStore } : {}),
     workspaceId: input.workspaceId,
@@ -458,6 +531,7 @@ async function resultFromTaskWithProject(input: {
     prepared.processing,
     { width: prepared.width, height: prepared.height },
     {
+      ...(styleSource ? { styleSource } : {}),
       ...(overlayed?.processing ? { assetOverlayProcessing: overlayed.processing } : {}),
       ...(iconRepair?.processing ? { iconPostProcessing: iconRepair.processing } : {}),
       qualityAudit,
@@ -537,6 +611,27 @@ function mergeTouchedModeState(existing: WorkspaceSnapshot["modeStates"], incomi
     selectedSchemeIds: incomingState.selectedSchemeIds,
     updatedAt: incomingState.updatedAt || item.updatedAt,
   } : item));
+}
+
+async function materializeTaskResults(input: {
+  task: QueueTask;
+  baseSnapshot: WorkspaceSnapshot;
+  createdAt: string;
+  fileStore?: Pick<LocalResultFileStore, "storeDataUrl">;
+}): Promise<StoredResultAsset[]> {
+  if (input.task.status !== "succeeded" || !taskCreatesResult(input.task)) return [];
+  return Promise.all(input.task.output.providerResultIds.map((providerResultId, index) =>
+    resultFromTaskWithProject({
+      task: input.task,
+      providerResultId,
+      index,
+      projectId: input.baseSnapshot.project.id,
+      workspaceId: input.baseSnapshot.metadata.workspaceId,
+      createdAt: input.createdAt,
+      snapshot: input.baseSnapshot,
+      ...(input.fileStore ? { fileStore: input.fileStore } : {}),
+    }),
+  ));
 }
 
 function credentialRefFromStoredConfig(
@@ -678,6 +773,44 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
           throw new Error(`Live provider execution blocked by safety gate: ${blockerCodes || gate.message}`);
         }
       }
+      const runCreatedAt = now();
+      const persistIncrementalTaskResult = async (event: {
+        plan: QueuePlan;
+        task: QueueTask;
+        workspace?: WorkspaceSnapshot;
+      }) => {
+        const incrementalSnapshot = event.workspace || snapshot;
+        const newResults = await materializeTaskResults({
+          task: event.task,
+          baseSnapshot: incrementalSnapshot,
+          createdAt: runCreatedAt,
+          ...(options.resultFileStore ? { fileStore: options.resultFileStore } : {}),
+        });
+        const safePlan = sanitizeQueuePlanProviderAssets(event.plan);
+        const latestLoaded = await repository.loadSnapshot(parsed.workspaceId);
+        if (!latestLoaded.ok) return;
+        const latestSnapshot = latestLoaded.snapshot;
+        const touchedSchemeIds = schemeIdsForPlan(safePlan);
+        const newArchiveRows = parsed.archiveResults
+          ? newResults.map((result) => archiveRowFromResult(result, runCreatedAt))
+          : [];
+        const nextSnapshot = WorkspaceSnapshotSchema.parse({
+          ...latestSnapshot,
+          activeMode: incrementalSnapshot.activeMode,
+          schemes: mergeTouchedSchemes(latestSnapshot.schemes, incrementalSnapshot.schemes, touchedSchemeIds),
+          modeStates: mergeTouchedModeState(latestSnapshot.modeStates, incrementalSnapshot.modeStates, safePlan.job.mode),
+          queuePlans: mergeQueuePlans(latestSnapshot.queuePlans, safePlan),
+          queueSummaries: mergeQueueSummaries(latestSnapshot.queueSummaries, summarizeQueue(safePlan)),
+          results: mergeResults(latestSnapshot.results, newResults),
+          archiveRows: mergeArchiveRows(latestSnapshot.archiveRows, newArchiveRows),
+          metadata: {
+            ...latestSnapshot.metadata,
+            revision: latestSnapshot.metadata.revision + 1,
+            updatedAt: runCreatedAt,
+          },
+        });
+        await repository.saveSnapshot(nextSnapshot);
+      };
       const runResult = await runMockQueuePlan(initialPlan, {
         snapshot,
         storedConfig,
@@ -687,26 +820,18 @@ export function createWorkspaceQueueWorker(options: WorkspaceQueueWorkerOptions)
         ...(options.providerRegistry ? { registry: options.providerRegistry } : {}),
         ...(options.resultFileStore ? { resultFileStore: options.resultFileStore } : {}),
         ...(options.isCancellationRequested ? { isCancellationRequested: options.isCancellationRequested } : {}),
+        onTaskSucceeded: persistIncrementalTaskResult,
       });
-      const createdAt = now();
+      const createdAt = runCreatedAt;
       const baseSnapshot = runResult.workspace || snapshot;
 
       const resultBatches = await Promise.all(runResult.plan.tasks
-        .filter((task) => task.status === "succeeded" && taskCreatesResult(task))
-        .map((task) =>
-          Promise.all(task.output.providerResultIds.map((providerResultId, index) =>
-            resultFromTaskWithProject({
-              task,
-              providerResultId,
-              index,
-              projectId: baseSnapshot.project.id,
-              workspaceId: baseSnapshot.metadata.workspaceId,
-              createdAt,
-              snapshot: baseSnapshot,
-              ...(options.resultFileStore ? { fileStore: options.resultFileStore } : {}),
-            }),
-          )),
-        ));
+        .map((task) => materializeTaskResults({
+          task,
+          baseSnapshot,
+          createdAt,
+          ...(options.resultFileStore ? { fileStore: options.resultFileStore } : {}),
+        })));
       const newResults = resultBatches.flat();
 
       const newArchiveRows = parsed.archiveResults ? newResults.map((result) => archiveRowFromResult(result, createdAt)) : [];

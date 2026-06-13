@@ -42,6 +42,8 @@ for (const token of [
   "StorageRepository",
   "mergeQueuePlans",
   "mergeQueueSummaries",
+  "onTaskSucceeded",
+  "materializeTaskResults",
 ]) {
   if (![worker, mockRunner].join("\n").includes(token)) issues.push(`workspace worker/runner: missing ${token}`);
 }
@@ -176,7 +178,15 @@ async function runRuntimeCheck() {
       results: [],
       archiveRows: [],
     });
-    const repository = storage.createMemoryDraftRepository([snapshot]);
+    const memoryRepository = storage.createMemoryDraftRepository([snapshot]);
+    const savedSnapshots = [];
+    const repository = {
+      ...memoryRepository,
+      async saveSnapshot(nextSnapshot) {
+        savedSnapshots.push(nextSnapshot);
+        return memoryRepository.saveSnapshot(nextSnapshot);
+      },
+    };
     const workerService = queue.createWorkspaceQueueWorker({
       repository,
       now: () => "2026-05-21T12:00:00.000Z",
@@ -206,6 +216,16 @@ async function runRuntimeCheck() {
     const newResults = loaded.snapshot.results.filter((item) => item.jobId === plan.job.id);
     if (newResults.length !== result.resultCount) {
       issues.push("saved workspace should contain worker result records");
+    }
+    const incrementalResultSave = savedSnapshots.find((item) =>
+      item.queuePlans.some((savedPlan) => savedPlan.job.id === plan.job.id && savedPlan.job.status === "running")
+      && item.results.some((savedResult) => savedResult.jobId === plan.job.id),
+    );
+    if (!incrementalResultSave) {
+      issues.push("queue worker should persist image results incrementally before final queue completion");
+    }
+    if (new Set(newResults.map((item) => item.id)).size !== newResults.length) {
+      issues.push("incremental and final result persistence should not duplicate result ids");
     }
     if (!newResults.some((item) => item.metadata.providerExecution === "credential-aware")) {
       issues.push("saved result records should preserve credential-aware provider execution lineage");

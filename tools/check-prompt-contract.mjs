@@ -72,6 +72,8 @@ for (const token of [
   "multiReferencePromptAssetRoles",
   "clear foot/hand contact points",
   "Limb/anatomy sanity target",
+  "Pose clarity lock",
+  "prop-as-limb silhouettes",
   "No extra arms",
   "Reference pose release",
   "BOSS performance lock",

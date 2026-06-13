@@ -186,6 +186,11 @@ export type MockQueueRunOptions = {
   snapshot?: WorkspaceSnapshot;
   resultFileStore?: Partial<Pick<LocalResultFileStore, "readStoredFile">>;
   isCancellationRequested?: (jobId: string) => boolean;
+  onTaskSucceeded?: (event: {
+    plan: QueuePlan;
+    task: QueueTask;
+    workspace?: WorkspaceSnapshot;
+  }) => Promise<void> | void;
 };
 
 function isAdapter(value: GenerationProviderAdapter | MockQueueRunOptions | undefined): value is GenerationProviderAdapter {
@@ -781,6 +786,26 @@ export async function runMockQueuePlan(
     tasks = tasks.map((task) => (task.id === completed.id ? completed : task));
     workingSnapshot = applyBriefSchemesToSnapshot(workingSnapshot, initialPlan, completed);
     events.push(event(initialPlan.job.id, "taskSucceeded", `Completed ${completed.kind}.`, completed.id));
+    if (options.onTaskSucceeded) {
+      const interimPlan = QueuePlanSchema.parse({
+        job: {
+          ...initialPlan.job,
+          status: "running",
+          updatedAt: nowIso(),
+        },
+        tasks,
+        events,
+      });
+      try {
+        await options.onTaskSucceeded({
+          plan: interimPlan,
+          task: completed,
+          ...(workingSnapshot ? { workspace: workingSnapshot } : {}),
+        });
+      } catch {
+        // Incremental persistence is best-effort; the final queue save remains authoritative.
+      }
+    }
   }
 
   const status = cancelled || tasks.some((task) => task.status === "cancelled")

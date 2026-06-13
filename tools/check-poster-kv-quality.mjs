@@ -70,6 +70,7 @@ for (const token of [
   "posterFocalHierarchyLock",
   "posterTextEconomyLock",
   "posterInWorldBrandTreatmentLock",
+  "posterPoseClarityLock",
   "posterStaticSchemeLanguageBan",
   "posterSchemeBlueprintRequirement",
   "posterKvArchitectureDiversityRequirement",
@@ -139,6 +140,11 @@ for (const token of [
   "posterInWorldBrandTreatmentLock",
   "Static scheme action rewrite",
   "Scenario uniqueness lock",
+  "Selected Scheme Visual Difference Contract",
+  "Layout uniqueness rule",
+  "Final selected-scheme diversity audit",
+  "Selected Scheme Execution Blueprint",
+  "Detailed-plan compliance audit",
   "Placeholder annotation rule",
   "Slogan visibility requirement",
   "Multi-character hero requirement",
@@ -150,6 +156,8 @@ for (const token of [
   "styleReference visual guide",
   "uploaded character art direction",
   "When focus guidance is active",
+  "Pose clarity lock",
+  "prop-as-limb silhouette",
 ]) {
   if (!requestMapper.includes(token)) issues.push(`request-mapper.ts: missing provider prompt lock ${token}`);
 }

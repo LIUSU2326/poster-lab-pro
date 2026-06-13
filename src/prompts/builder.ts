@@ -39,6 +39,7 @@ import {
   posterHeroPerformanceScaleLock,
   posterInWorldBrandTreatmentLock,
   posterLogoSingleUseLock,
+  posterPoseClarityLock,
   posterTextEconomyLock,
   posterSubjectAccessoryStrictnessLock,
 } from "../providers/poster-kv-architectures";
@@ -447,7 +448,7 @@ function formatAssetInventory(assets: PromptAssetBinding[], mode: ProductionMode
         characterAssets.length === 1 ? "Single-character rule: do not write or render a squad, allies, teammates, or extra human helpers; only [Game Character 1] may appear as the playable hero." : "",
         characterAssets.length > 1 ? "Multi-character usage requirement: every uploaded protagonist asset must appear as a separate readable in-world character in poster schemes and image prompts. Do not omit the second character, merge them, treat one as a small decoration, or collapse them into alternate views of one hero." : "",
         characterAssets.length > 0 ? "Poster must visibly use each uploaded protagonist asset as one integrated in-world character with model-sheet identity preserved, not as a sticker, generic redraw, or duplicated cutout." : "",
-        bossAssets.length > 0 ? "Poster must visibly include uploaded antagonist/BOSS assets as integrated threats with preserved silhouette and key identity, scale pressure, contact shadows, atmosphere, debris, and environmental reaction." : "",
+        bossAssets.length > 0 ? "BOSS anchor requirement: uploaded antagonist/BOSS assets are available campaign story anchors, not mandatory centerpieces for every poster. If the selected scheme is threat-led, show them as integrated threats with preserved silhouette, scale pressure, contact shadows, atmosphere, debris, and environmental reaction; if the scheme is gameplay/reward/cozy/collection/map/lineup led, they may become secondary pressure, foreshadowing, trophy, environmental hazard, or stay absent." : "",
         logoAssets.length > 0 ? "Poster must allocate one readable campaign-safe logo treatment for uploaded logo/wordmark assets. Render the exact uploaded logo only when its letterforms can stay accurate; otherwise leave a polished blank logo-safe sign/title plate that uses the brand colors/shape language without fake text. Do not invent look-alike words, substitute letters, or create alternate fake logos." : "",
         propAssets.length > 0 ? "Uploaded prop/item assets should become story objects: held, used, foregrounded, chased, defended, or triggering action." : "",
         environmentAssets.length > 0 ? "Uploaded environment assets guide world, material, mood, and set-piece design; reinterpret them into depth instead of copying a flat background." : "",
@@ -533,9 +534,10 @@ function formatPosterQualityDirection(modeState: WorkspaceModeState, assets: Pro
     "Art-direction target: the image must feel like one designed game campaign KV generated as a unified illustration, not a random background with static assets placed on top.",
     "Semantic asset target: first decide each uploaded asset's poster duty: protagonist, antagonist, brandLogo, prop, environment, styleReference, compositionReference, keySubject, or supportingAsset. The duty controls how it enters the story and how strongly identity must be preserved.",
     "Pipeline target: generate the full integrated KV when the provider can consume image references. Uploaded protagonist, antagonist, key subject, prop, environment, and logo references are visual anchors; the model may change pose, expression, camera angle, action, lighting, scale, and perspective to create a vivid poster moment while preserving recognizable identity, silhouette, colors, and key props.",
-    "Integrated subject rule: include uploaded protagonists and uploaded antagonist/key subjects as living in-world actors with action intent, facial expression, readable body language, contact shadows, environmental occlusion, and story interaction. Props should be used or activated in the scene; environment references should become world design. Do not keep assets as static front-facing cutouts.",
-    "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Keep identity, but repaint heroes and BOSS with a new performance such as 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact, landing dust, or foreshortened prop/tool angle.",
-    "BOSS performance lock: uploaded BOSS/antagonist/key subject assets must not become scaled-up stickers in the same still pose or static standee staging; stage a lunge, brace, swing, doorway burst, landing impact, or physical reaction while preserving silhouette and signature details.",
+    "Integrated subject rule: include uploaded protagonists as living in-world actors with action intent, facial expression, readable body language, contact shadows, environmental occlusion, and story interaction. When a selected scheme uses an uploaded antagonist/key subject, integrate it with the same lighting and story logic instead of making it a sticker. Props should be used or activated in the scene; environment references should become world design.",
+    "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Keep identity, but repaint heroes and any scheme-used BOSS/key subject with a new performance such as 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact, landing dust, or foreshortened prop/tool angle.",
+    posterPoseClarityLock(),
+    "BOSS performance lock: if a selected scheme uses uploaded BOSS/antagonist/key subject assets, they must not become scaled-up stickers in the same still pose or static standee staging; stage a lunge, brace, swing, doorway burst, landing impact, silhouette loom, route blockage, trophy state, or physical reaction while preserving silhouette and signature details.",
     posterFocalHierarchyLock(),
     posterHeroPerformanceScaleLock(),
     posterSubjectAccessoryStrictnessLock(),
@@ -547,7 +549,7 @@ function formatPosterQualityDirection(modeState: WorkspaceModeState, assets: Pro
     "Composition target: one clear project-native focal point, strong foreground-midground-background depth, dynamic camera angle, readable silhouette hierarchy, environmental or gameplay storytelling, a readable player promise/objective/emotional beat/character-vs-BOSS beat when appropriate, and enough negative space for logo and slogan.",
     "Cinematic KV target: borrow the language of high-end film/game announcement posters within the uploaded art style: decisive trailer-moment or emotional/gameplay storytelling, deliberate camera, strong backlight/rim light or quiet premium practical light, atmosphere, particles/VFX when genre-appropriate, and dramatic value contrast.",
     "KV architecture target: prefer a designed campaign structure rather than a simple horizontal battlefield. Strong options can include dynamic split-world contrast, portal/breach reveal, foreground prop divider, character lineup, gameplay-proof board/level surface, cozy room/shop/farm format, world/setting reveal, comic-panel mission montage, giant-scale project terrain, or reward/progression payoff.",
-    "Blueprint target: every poster should be planned as five visual layers: foreground framing or gameplay surface, uploaded hero performance with readable faces when present, project-native focus such as BOSS/threat, core mechanic, reward, relationship, puzzle, collection, or emotional hook, world/game-loop context, and integrated logo/copy safe area.",
+    "Blueprint target: every poster should be planned as five visual layers: foreground framing or gameplay surface, uploaded hero performance with readable faces when present, project-native focus such as BOSS/threat when appropriate, core mechanic, reward, relationship, puzzle, collection, character charm, or emotional hook, world/game-loop context, and integrated logo/copy safe area.",
     "Production design checklist: specify camera height/lens feel/perspective, foreground framing, midground action, background reveal, key-fill-rim lighting, volumetric haze, particles/VFX, cast/contact shadows, color/value grouping, material texture, and a typography/logo integration plan.",
     "One-second read target: the thumbnail must immediately communicate the game fantasy, player promise, protagonist objective or BOSS/threat when relevant, and the current project's core hook without relying on long text.",
     "Hero performance target: at least one uploaded playable character must be large enough to read facial identity, emotion, action pose, and signature prop. Avoid back-facing-only, tiny, hidden, or static cutout hero staging.",
@@ -557,8 +559,9 @@ function formatPosterQualityDirection(modeState: WorkspaceModeState, assets: Pro
     "Rendering target: dramatic but clean lighting, contact shadows, rim light, cast shadows, atmospheric depth, crisp focal detail, controlled background complexity, polished color grading, high contrast around the main subjects, and refined materials inside the chosen art style.",
     "Contact target: visible characters, BOSS/threats, props, and gameplay objects must have clear foot/hand contact points or equivalent object contact points, cast shadows, small occlusion, bounce color, and local material reaction wherever they touch props, terrain, UI-like surfaces, tools, or each other.",
     "Limb/anatomy sanity target: visible playable characters must keep coherent arms, hands, fingers, legs, and tool grips. No extra duplicated arms, double forearms, front-and-back duplicate hands, disconnected hands, broken wrists, fused fingers, or impossible limb overlaps.",
+    posterPoseClarityLock(),
     "World-building target: transform the current project premise into the right project-native world or format: fantasy, tactical, adventure, cozy, puzzle, simulation, sports, social, story, collection, management, or action visual space with readable depth. Do not introduce a premise from an unrelated sample project.",
-    "Avoid: duplicate copies of the same uploaded asset, sticker-like pasted cutouts, floating isolated elements, random extra characters, generic mascot substitutions, cluttered UI/text, cheap clip-art, plastic toy look, muddy lighting, tabletop wallpaper composition, unrelated commercial scenery, photorealistic product photography, and realistic product renders.",
+    "Avoid: duplicate copies of the same uploaded asset, sticker-like pasted cutouts, floating isolated elements, random extra characters, extra hands, third feet, duplicated legs, prop-as-limb silhouettes, generic mascot substitutions, cluttered UI/text, cheap clip-art, plastic toy look, muddy lighting, tabletop wallpaper composition, unrelated commercial scenery, photorealistic product photography, and realistic product renders.",
   ].join("\n");
 }
 
@@ -719,12 +722,88 @@ function selectedStyleRenderingDirective(style: string, modeLabel: string): stri
     return `Hard selected-style rendering lock for "${style}": use tactile clay / plasticine materials, hand-shaped rounded forms, soft studio-like highlights, and subtle fingerprints; avoid flat vector or realistic photography.`;
   }
 
+  if (/二次元|赛璐璐|anime|cel/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": the final ${modeLabel} must read as polished anime / cel-shaded game key art.`,
+      "Use clean silhouette shapes, confident contour lines, crisp cel shadow blocks, expressive faces, graphic highlights, saturated but controlled color, and simplified material detail.",
+      "Negative style lock: no clay render, no photorealism, no low-poly faceting, no heavy oil-paint brush blending, and no generic smooth 3D toy render.",
+    ].join("\n");
+  }
+
   if (/水彩|watercolor/i.test(style)) {
     return `Hard selected-style rendering lock for "${style}": use translucent watercolor washes, paper texture, soft pigment blooms, gentle edge bleed, and light layered color; avoid glossy 3D materials.`;
   }
 
   if (/低多边形|low[- ]?poly/i.test(style)) {
     return `Hard selected-style rendering lock for "${style}": use readable low-poly geometry, faceted planes, crisp angular silhouettes, simplified materials, and graphic lighting; avoid smooth painterly blending.`;
+  }
+
+  if (/欧美扁平|矢量|扁平|极简|vector|flat|minimal/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": render as clean flat/vector campaign art, not cinematic 3D.`,
+      "Use simplified geometric silhouettes, large color fields, precise edges, minimal texture, bold shape contrast, and poster-like negative space.",
+      "Negative style lock: no realistic material grain, no soft painterly rendering, no volumetric overload, and no photorealistic lighting.",
+    ].join("\n");
+  }
+
+  if (/国风|水墨|国潮|ink|chinese/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": make Chinese ink / guochao visual language clearly dominant.`,
+      "Use brush-like edge rhythm, ink-wash value transitions, controlled red/gold/black accents when appropriate, paper or mural texture, and graphic negative space.",
+      "Keep uploaded identities readable, but translate materials and VFX into ink, pigment, paper, lacquer, or mural-like treatment.",
+    ].join("\n");
+  }
+
+  if (/赛博|霓虹|科幻|机甲|cyber|neon|sci[- ]?fi|mecha/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": the whole ${modeLabel} must visibly use neon sci-fi / cyber game art language.`,
+      "Use electric rim light, emissive signs, holographic glow, dark value base, cyan-magenta contrast, tech-panel shapes, scanline or circuit accents, and hard specular highlights.",
+      "Negative style lock: no warm medieval fantasy default, no clay toy finish, no soft watercolor, and no generic sunny cartoon unless converted into neon-tech form.",
+    ].join("\n");
+  }
+
+  if (/暗黑|哥特|史诗暗金|RPG|dark|gothic/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": use epic dark RPG poster art with dramatic value contrast.`,
+      "Use deep shadows, gold or ember accents, cathedral/ruin/ritual shapes when project-appropriate, hard rim light, smoke, sparks, and weighty material texture.",
+      "Do not brighten into cheerful toy art unless the project brief explicitly requires a cute-dark contrast.",
+    ].join("\n");
+  }
+
+  if (/吉卜力|童话|治愈|童趣|手绘|绘本|ghibli|storybook|cozy|healing/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": use warm storybook / cozy hand-drawn campaign art.`,
+      "Use soft organic shapes, gentle light, painterly-but-clean edges, appealing character warmth, environmental charm, and readable emotion before spectacle.",
+      "Negative style lock: no harsh battle-only composition, no photorealism, no black-gold RPG finish, and no aggressive neon unless the brief demands contrast.",
+    ].join("\n");
+  }
+
+  if (/电竞|猛兽|esports/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use esports badge/key-art energy: bold mascot silhouette, aggressive diagonal motion, sharp glow edges, high contrast, impact typography-safe zones, and trophy-like lighting.`;
+  }
+
+  if (/钻金|轻奢|产品|luxury|premium/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use premium product/KV polish with controlled black-gold or jewel lighting, clean reflections, elegant negative space, refined material highlights, and no cluttered sticker collage.`;
+  }
+
+  if (/街头|涂鸦|graffiti|street/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use street graffiti energy with spray texture, sticker/poster-wall layering, bold outlines, paint drips, high-saturation accents, and raw urban graphic rhythm.`;
+  }
+
+  if (/蒸汽|机械|朋克|steampunk/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use steampunk mechanical styling: brass/copper materials, gears, rivets, pressure gauges, smoky warm light, worn metal texture, and engineered prop silhouettes.`;
+  }
+
+  if (/漫画分镜|复古海报|comic|storyboard|retro poster/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use a designed poster/comic print language with panel rhythm, halftone or print texture, bold framing, readable silhouettes, and intentional graphic copy-safe areas.`;
+  }
+
+  if (/纸艺|剪纸|paper/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use layered paper/cutout craft language with visible stacked planes, paper fibers, soft paper shadows, handmade edge variation, and simplified forms.`;
+  }
+
+  if (/硬表面|3D|hard[- ]?surface/i.test(style)) {
+    return `Hard selected-style rendering lock for "${style}": use crisp stylized 3D hard-surface finish with beveled forms, controlled specular highlights, clean material separation, and precise silhouette design; avoid mushy painterly blur.`;
   }
 
   return `Selected-style execution lock for "${style}": make this style visibly dominant in palette, rendering method, line/edge language, material finish, lighting, and surface treatment across the whole ${modeLabel}.`;

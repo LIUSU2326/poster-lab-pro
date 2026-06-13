@@ -250,6 +250,7 @@ function posterCinematicKvQualityDirective() {
     posterTextEconomyLock(),
     posterInWorldBrandTreatmentLock(),
     posterIdentitySafeMotionRule(),
+    posterPoseClarityLock(),
     posterHeroPerformanceScaleLock(),
     posterSubjectAccessoryStrictnessLock(),
   ].join("\n");
@@ -269,6 +270,10 @@ function posterLogoSingleUseLock() {
 
 function posterSubjectAccessoryStrictnessLock() {
   return "Uploaded subject accessory lock: do not give protagonists or BOSS new shields, weapons, armor, tools, facial features, costume parts, horns, crowns, or props just because a scheme mentions them. If that object is not visibly present in the uploaded reference, reinterpret the action through body movement, camera, environment, particles, or existing visible uploaded props only.";
+}
+
+function posterPoseClarityLock() {
+  return "Pose clarity lock: keep chibi/mascot action anatomically readable; prefer grounded or clear-landing poses over airborne spins. Each visible hero must read as one body with exactly two arms and two legs/feet unless naturally hidden. Separate props, plates, and motion trails from hands/feet; no third hand, third foot, duplicated leg, or prop-as-limb silhouette.";
 }
 
 function posterFocalHierarchyLock() {
@@ -375,6 +380,97 @@ function rewriteStaticPosterActionPhrases(text) {
     .replace(/(\[Boss(?: \d+)?\])\s*(?:站在|位于|被放置在|处于)/giu, "$1 以攻击或冲击姿态占据");
 }
 
+function selectedSchemeVisualDifferenceContract(schemeText, promptPackage) {
+  const normalized = String(schemeText || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  const lower = normalized.toLowerCase();
+  const anchors = [];
+  const addAnchor = (patterns, text) => {
+    if (patterns.some((pattern) => pattern.test(lower))) anchors.push(text);
+  };
+
+  addAnchor(
+    [/shop|store|restaurant|kitchen|oven|upgrade|station|cook|bake|餐厅|小店|店内|厨房|烤炉|炉火|升级|烹饪|烘焙/u],
+    "Scheme anchor: shop/kitchen/oven/upgrade interior, not a default outdoor battle or repeated pizza-foreground layout.",
+  );
+  addAnchor(
+    [/trail|route|map|path|forest|mountain|expedition|journey|wild|山野|路线|路径|地图|探索|寻找|远征|森林|山路|野外/u],
+    "Scheme anchor: route/map/path/exploration vista, not a reused shop/oven foreground.",
+  );
+  addAnchor(
+    [/rush|dinner|customer|order|queue|service|deadline|feast|晚餐|高峰|客人|订单|排队|出餐|忙碌|宴会/u],
+    "Scheme anchor: customer/order/service-rush pressure, not a generic two-hero pose with changed slogan text.",
+  );
+  addAnchor(
+    [/treasure|reward|victory|trophy|chest|collect|loot|progress|胜利|奖励|宝箱|收藏|收集|战利品|进度/u],
+    "Scheme anchor: reward/collection/progression object as visual hook, not another confrontation.",
+  );
+  addAnchor(
+    [/defend|guard|protect|breach|boss|battle|fight|monster|防守|守护|防御|突破|首领|怪物|战斗|对抗/u],
+    "Scheme anchor: if threat-led, vary BOSS role as breach, shadow, blocker, hazard, or impact source.",
+  );
+
+  const anchorText = anchors.slice(0, 2).join(" ");
+  const adaptiveAnchor = anchorText || "Scheme anchor: infer project-native setting, focal object, camera, action path, and logo/copy location.";
+  return `Selected Scheme Visual Difference Contract / Layout uniqueness rule / Final selected-scheme diversity audit: derive setting, action, camera, focal object, BOSS role, and logo/copy placement from scheme ${promptPackage?.schemeId || "current"}; ${adaptiveAnchor} Do not reuse sibling layout; changing only the slogan words is a failure.`;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractSchemeField(text, labels) {
+  const fieldLabels = [
+    "posterPromise",
+    "userClickReason",
+    "visual hook",
+    "visualHook",
+    "setting/format",
+    "setting",
+    "format",
+    "camera grammar",
+    "camera",
+    "composition",
+    "lighting",
+    "logo",
+    "slogan",
+    "海报承诺",
+    "点击理由",
+    "视觉钩子",
+    "场景",
+    "版式",
+    "镜头语言",
+    "镜头",
+    "构图",
+    "灯光",
+  ];
+  const escapedTargets = labels.map(escapeRegExp).join("|");
+  const escapedBoundaries = fieldLabels.map(escapeRegExp).join("|");
+  const match = text.match(new RegExp(`(?:^|\\s)(?:${escapedTargets})\\s*[:：]\\s*([\\s\\S]*?)(?=\\s+(?:${escapedBoundaries})\\s*[:：]|\\n\\s*##|$)`, "i"));
+  return compactPromptBlock(String(match?.[1] || "").replace(/\s+/g, " ").trim(), 130);
+}
+
+function selectedSchemeExecutionBlueprint(schemeText) {
+  const normalized = String(schemeText || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  const fields = [
+    ["posterPromise", extractSchemeField(normalized, ["posterPromise", "海报承诺"])],
+    ["userClickReason", extractSchemeField(normalized, ["userClickReason", "点击理由"])],
+    ["visual hook", extractSchemeField(normalized, ["visual hook", "visualHook", "视觉钩子"])],
+    ["setting/format", extractSchemeField(normalized, ["setting/format", "setting", "format", "场景", "版式"])],
+    ["camera grammar", extractSchemeField(normalized, ["camera grammar", "camera", "镜头语言", "镜头"])],
+  ].filter(([, value]) => value);
+  const fieldLines = fields.length > 0
+    ? fields.map(([label, value]) => `${label}: ${value}`)
+    : [`scheme source: ${compactPromptBlock(normalized, 720)}`];
+
+  return [
+    "Selected Scheme Execution Blueprint: the KV main-visual detailed plan is mandatory visual direction. Slogan/logo text cannot be the only evidence.",
+    fieldLines.join("; "),
+    "Render setting/format, visual hook, action/camera, and emotional promise in the picture.",
+  ].join(" ");
+}
+
 function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
   const allowedSectionIds = new Set([
     "project",
@@ -398,10 +494,15 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     })
     .map((section) => `## ${section.title}\n${section.content}`)
     .join("\n\n"));
+  const schemeText = rewriteStaticPosterActionPhrases((promptPackage.sections || [])
+    .filter((section) => section.id === "scheme")
+    .map((section) => `## ${section.title}\n${section.content}`)
+    .join("\n\n"));
   const guardrails = (promptPackage.guardrails || [])
     .map((item) => `${String(item.severity || "hard").toUpperCase()}: ${item.rule}`)
     .join("\n");
   const hasStyleReference = (promptPackage.assets || []).some((asset) => asset.role === "styleReference");
+  const hasCompositionReference = (promptPackage.assets || []).some((asset) => asset.role === "compositionReference");
   const hasCharacterReference = (promptPackage.assets || []).some((asset) => asset.role === "gameCharacter");
   const styleStrategy = (promptPackage.sections || []).find((section) => section.id === "style-strategy")?.content || "";
   const hasSelectedStyle = /Active style source:\s*selected style tag/i.test(styleStrategy);
@@ -431,17 +532,24 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     logos.length > 0 ? "Logo lock: [Game Logo] means the uploaded gameLogo reference; place it once and do not redraw a different wordmark." : "",
   ].filter(Boolean).join("\n");
   const sloganPriorityBlock = integratedSloganPriorityBlock(sloganTargets);
+  const schemeDifferenceContract = selectedSchemeVisualDifferenceContract(schemeText, promptPackage);
+  const schemeExecutionBlueprint = selectedSchemeExecutionBlueprint(schemeText);
+  const kvActionMiniBrief = characters.length > 1
+    ? "KV ACTION MINI-BRIEF: every uploaded hero is a readable separate actor; the selected scheme's project-native focus owns the scene; one integrated logo/copy area; shared space, shadows, occlusion, rim light, and VFX connect subjects."
+    : "KV ACTION MINI-BRIEF: one large readable uploaded hero; the selected scheme's project-native focus owns the scene; one integrated logo/copy area; shared space, shadows, occlusion, rim light, and VFX connect subjects.";
   return joinPromptBlocksWithinLimit({
     criticalBlocks: [
     "## Integrated Game Campaign KV Task",
     "Generate the final unified premium game campaign key visual as one coherent illustration.",
+    kvActionMiniBrief,
+    schemeExecutionBlueprint,
     "Use uploaded image references as binding identity/model-sheet anchors, not as static stickers. Characters and BOSS may change pose, expression, action, camera angle, lighting, and perspective to become vivid in-world actors.",
     referenceMap ? `## Exact Uploaded Reference Map\n${referenceMap}` : "",
     characters.length > 1 ? "Multi-character hero requirement: every uploaded protagonist anchor must appear as a separate readable in-world character. Do not omit the second character, merge them, hide one behind a prop/plate, or reduce one to a tiny decoration." : "",
     "ABSOLUTE HIGHEST PRIORITY - REFERENCE IDENTITY AND BLENDING: replicate the exact visual identity from the uploaded references while integrating them into the new scene's lighting. Preserve character face shape, hair colors, costume palette, body proportions, signature prop/tool, line weight, BOSS silhouette, crown, eye, teeth, tongue, mouth, color blocks, and uploaded game logo design.",
     "Reference identity may only be reposed or re-lit. Do not age-up, add beard/mustache, change hairstyle or hair color, change costume, change body type/proportions, change species, or replace a chibi/mascot reference with a generic adult character.",
     posterIdentitySafeMotionRule(),
-    "Reference pose release: identity lock does not mean copying the exact uploaded front-facing/static pose. Repaint each uploaded hero/BOSS as a living actor with at least one visible performance change: 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, grip/contact with a prop, landing dust, squash/stretch, or foreshortened limb/tool angle.",
+    "Reference pose release: preserve identity but do not copy static poses; repaint each uploaded hero/BOSS with 3/4 turn, stride, leap, recoil, attack wind-up, block, grip/contact, landing dust, or foreshortened prop/tool angle.",
     "BOSS performance lock: the uploaded BOSS/key threat must not read as a scaled-up sticker in the same standing pose. Stage it lunging, bracing, swinging, bursting through the set, landing with dust, or reacting to impact while preserving its silhouette and signature details.",
     posterFocalHierarchyLock(),
     posterHeroPerformanceScaleLock(),
@@ -473,6 +581,14 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     ],
     closingBlocks: [
     sloganPriorityBlock,
+    schemeDifferenceContract,
+    "Detailed-plan compliance audit: the rendered image fails if the KV main-visual detailed plan is only reflected by slogan words while the actual setting, focal object, camera, action path, and emotional promise stay generic.",
+    hasStyleReference
+      ? "Style reference handling: the uploaded styleReference is a visual guide only. Apply rendering language, palette, lighting, materials, line quality, and finish; never copy source content."
+      : "",
+    hasCompositionReference
+      ? "Composition reference handling: the uploaded compositionReference is a visual guide only. Use camera/layout/safe-area logic; never copy its content, brands, characters, UI, scene, text, logo, monster, or props."
+      : "",
     "Allocate one readable campaign-safe logo treatment when uploaded logo/brand assets are present.",
     posterLogoSingleUseLock(),
     posterFocalHierarchyLock(),
@@ -489,6 +605,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "Scheme text sanitation rule: if selected scheme text names a placeholder's clothing, face, body, weapon, shield, logo lettering, or other appearance details, treat those words as non-binding staging notes only. The uploaded image reference remains the only source of truth for visual identity.",
     "Contact and occlusion audit: every place an uploaded hero, BOSS, prop, or logo treatment touches another object must show overlap edge, contact shadow, cast shadow, bounce color, and local material reaction. No clean cutout silhouettes floating above the scene.",
     "Limb and hand sanity audit: every visible playable character must have a coherent arm/hand count, clear wrist-to-hand connection, intentional prop grip, and no duplicated forearms, front-and-back duplicate hands, disconnected hands, fused fingers, or impossible limb overlaps.",
+    posterPoseClarityLock(),
     "The uploaded subjects and brand elements must look repainted into the same scene with environmental color grading, rim light, contact shadows, bounce light, atmospheric perspective, foreground occlusion, material interaction, and VFX overlap.",
     staticSchemeActionRewriteRule(),
     "Focus guidance handling: user focus guidance is only a creative emphasis. It must not override uploaded asset identity, readable story conflict, or production-quality composition. If the focus says giant scale or micro perspective, translate that into scale drama and camera energy without reducing the poster to a flat side-view scene. When focus guidance is active, visibly translate at least one focus item into camera, action, environment, prop, lighting, or copy-area design.",
@@ -497,7 +614,7 @@ function posterIntegratedKvPromptFromPromptPackage(promptPackage) {
     "Show the story through character action and environment response: impact glow, energy arcs, dust, debris, sparks, magic/tech trails, weather, motion trails, atmospheric haze, rim-light pockets, foreground framing, and scale cues.",
     "World-building direction: turn the current project premise into a fantasy, tactical, adventure, simulation, or action battlefield with illustrated terrain and playable depth. Do not introduce scenery from an unrelated sample project.",
     "## Hard KV Exclusions",
-    "No duplicate uploaded asset. No generic replacement hero. No extra random protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No photorealistic product macro photography. No unrelated commercial render unless explicitly requested. No black bars. No letterbox. No border frame.",
+    "No duplicate uploaded asset. No generic replacement hero. No extra random protagonist. No sticker collage. No unchanged front-facing cutout look. No flat tabletop wallpaper. No empty pastel sky. No centered mascot-ad layout. No symmetrical floating corner heroes. No extra hands. No third foot. No duplicated legs. No prop-as-limb silhouette. No photorealistic product macro photography. No unrelated commercial render unless explicitly requested. No black bars. No letterbox. No border frame.",
     "## Mode Guardrails",
     guardrails,
     ],

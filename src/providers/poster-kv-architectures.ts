@@ -458,6 +458,10 @@ export function posterSubjectAccessoryStrictnessLock(): string {
   return "Uploaded subject accessory lock: do not give protagonists or BOSS new shields, weapons, armor, tools, facial features, costume parts, horns, crowns, or props just because a scheme mentions them. If that object is not visibly present in the uploaded reference, reinterpret the action through body movement, camera, environment, particles, or existing visible uploaded props only.";
 }
 
+export function posterPoseClarityLock(): string {
+  return "Pose clarity lock: keep chibi/mascot action anatomically readable; prefer grounded or clear-landing poses over airborne spins. Each visible hero must read as one body with exactly two arms and two legs/feet unless naturally hidden. Separate props, plates, and motion trails from hands/feet; no third hand, third foot, duplicated leg, or prop-as-limb silhouette.";
+}
+
 export function posterStaticSchemeLanguageBan(): string {
   return "Static scheme language ban: scheme briefs and prompts must not rely on static placeholder staging such as '[Game Character 1] stands', 'stands heroically', 'is placed', 'is located', 'faces off', '站在', '英勇地站在', '位于', '摆放', '对峙', or '从一侧压迫'. Use active verbs such as sprint, block, slide, leap, brace, collide, lunge, strike, burst, recoil, defend, chase, discover, or restrain.";
 }
@@ -492,6 +496,7 @@ export function posterCinematicKvQualityDirective(): string {
     "Story beat: make the image capture a decisive project-native second from the current game: cozy restoration, character charm, puzzle realization, cooking/service rush, collection reveal, race finish, tactical choice, exploration discovery, upgrade payoff, social event, boss encounter, or objective pressure when appropriate. The viewer should understand what the game promises.",
     "Campaign escalation: raise the set-piece like launch splash art while respecting genre. This can be giant scale contrast, intimate warm lighting, charming character staging, clean gameplay proof, dramatic foreground prop cropping, visible before-after transformation, project-specific VFX, or a clear emotional/goal tension inside the same frame.",
     "Character performance: uploaded heroes must show readable emotion, weight, line of action, gesture, and contact with the scene. At least one hero should interact physically with the core mechanic, environment, prop, other character, objective, or BOSS/threat when the project has one. Avoid floating sticker poses, static front-facing mascot poses, or symmetrical corner jumps.",
+    posterPoseClarityLock(),
     posterFocalHierarchyLock(),
     posterTextEconomyLock(),
     posterInWorldBrandTreatmentLock(),
@@ -520,7 +525,7 @@ export function posterKvArchitectureDirective(input: {
     (_, index) => `[Game Character ${index + 1}]`,
   ).join(input.assetCounts.gameCharacters > 2 ? ", " : " and ");
   const bossLine = input.assetCounts.bosses > 0
-    ? "Use [Boss] as the single dominant antagonist/key creature from the uploaded BOSS reference. Preserve its identity while giving it believable weight, contact, shadow, and scene interaction."
+    ? "Use [Boss] according to the selected scheme's poster promise, not as a mandatory centerpiece. For threat, defense, pursuit, crisis, or boss-encounter schemes, [Boss] can be the dominant antagonist/key creature with believable weight, contact, shadow, and scene interaction. For gameplay-proof, reward, cozy, collection, map, training, shop/home, lineup, or character-appeal schemes, [Boss] may become secondary pressure, a distant silhouette, wanted mark, shadow, trophy, environmental hazard, route blocker, or be omitted so the non-threat promise owns the hierarchy."
     : "Use the main objective, mechanic, reward, environment, relationship, or challenge from the project premise as the central poster driver instead of inventing an unrelated antagonist.";
   const logoLine = input.assetCounts.logos > 0
     ? "Allocate one campaign-safe [Game Logo] treatment, readable but secondary to the trailer-moment story beat. Use the exact uploaded logo only if lettering can stay accurate; otherwise reserve a polished blank logo-safe plate without fake text."
@@ -533,12 +538,13 @@ export function posterKvArchitectureDirective(input: {
     "Composition reference priority rule: uploaded compositionReference images are guide-only for camera energy, layout rhythm, safe-area hierarchy, subject scale, and depth. They must never override this selected-scheme architecture, and they must not make every scheme share the same scene, background, pose arrangement, or action beat.",
     architecture.directive,
     posterCinematicKvQualityDirective(),
-    "Internal blueprint requirement: before rendering, design the poster as a finished campaign key visual with five clear layers, but do not print layer labels. Layer 1: foreground framing element, gameplay object, UI-like surface, environment edge, prop, or project-specific object with perspective. Layer 2: uploaded hero performance with readable faces, expressive action, and signature props. Layer 3: the project-native focus: BOSS/key threat if present, or core mechanic, reward, relationship, objective, collection, puzzle, place, or emotional hook if non-combat. Layer 4: world context that tells the current project's game loop. Layer 5: clean logo/copy safe area integrated into the art.",
+    "Internal blueprint requirement: before rendering, design the poster as a finished campaign key visual with five clear layers, but do not print layer labels. Layer 1: foreground framing element, gameplay object, UI-like surface, environment edge, prop, or project-specific object with perspective. Layer 2: uploaded hero performance with readable faces, expressive action, and signature props. Layer 3: the project-native focus chosen by the scheme: BOSS/key threat only when the promise is threat-led, otherwise core mechanic, reward, relationship, objective, collection, puzzle, place, character charm, or emotional hook. Layer 4: world context that tells the current project's game loop. Layer 5: clean logo/copy safe area integrated into the art.",
     "KV scoring rubric to satisfy before final image: the composition must read in one second, have a strong silhouette thumbnail, show an obvious story conflict, contain foreground-midground-background depth, use directional lighting and rim light, and feel like a designed game launch key art rather than an in-game screenshot or simple illustration.",
     "Prototype-quality target: richer value range, painterly/cel hybrid detail, atmospheric haze, bounce light, cast shadows, motion arcs, project-specific debris/VFX, readable focal contrast, and designed negative space. Keep the uploaded cartoon identity, but raise the finish above flat children's-book art.",
     "Set-piece requirement: build a memorable project-native poster format with props, characters, gameplay surface, cozy room, store/farm/home, architecture, terrain, route, UI-like proof, collection display, puzzle state, machines, town elements, or framed vistas from the current project. Avoid empty pastel sky, soft gradient backdrop, generic open field, and unrelated sample-project scenery.",
     "Reference identity lock: the uploaded images are the source of truth. The prompt may change action, pose, expression, angle, lighting, and scene integration only. Do not change age, hair color, hairstyle, costume, body proportions, species, tool identity, or add facial hair/extra features not visible in the uploaded reference.",
     "Reference pose release: do not treat the uploaded still image as the final pose. Preserve identity, silhouette, and signature props, but repaint the hero/BOSS with a new performance such as 3/4 turn, stride, leap, recoil, attack wind-up, defensive block, landing impact, or foreshortened prop/tool angle.",
+    posterPoseClarityLock(),
     "Static scheme action rewrite: if an older or generated scheme says the hero stands on a divider and the BOSS presses from one side, reinterpret it as an active trailer moment: the hero sprints, blocks, slides, leaps, or collides with the divider while the BOSS lunges, swings, bursts through, lands, or recoils from impact.",
     posterStaticSchemeLanguageBan(),
     posterSchemeBlueprintRequirement(),

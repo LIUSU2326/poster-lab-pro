@@ -390,6 +390,7 @@ function renderResultViewer() {
   const sizeLabel = naturalSize ? "真实尺寸" : "尺寸";
   const ratioLabel = naturalSize ? "真实比例" : "比例";
   const targetSize = result.width && result.height ? `${result.width}x${result.height}` : "";
+  const styleDisplay = getResultStyleDisplay(result, snapshot);
   const showTargetSize = Boolean(
     naturalSize
       && result.width
@@ -432,6 +433,10 @@ function renderResultViewer() {
                 <strong class="mono">${escapeHtml(targetSize)}</strong>
               </span>
             ` : ""}
+            <span class="result-viewer-spec result-viewer-style-spec" title="${escapeAttribute(styleDisplay.detail)}">
+              <small>画风</small>
+              <strong>${escapeHtml(styleDisplay.label)}</strong>
+            </span>
           </div>
         </div>
         <div class="result-viewer-actions" aria-label="图片操作">
@@ -1206,6 +1211,92 @@ function formatResultDate(value) {
 function formatResultSize(result) {
   if (!result?.width || !result?.height) return "待定尺寸";
   return `${result.width}x${result.height}`;
+}
+
+function getResultStyleDisplay(result, snapshot) {
+  const metadataStyle = styleDisplayFromMetadata(result?.metadata);
+  if (metadataStyle) return metadataStyle;
+
+  const modeState = (snapshot?.modeStates || []).find((item) => item.mode === result?.mode);
+  const projectAssets = (snapshot?.assets || []).filter((asset) => !result?.projectId || asset.projectId === result.projectId);
+  const styleReferenceAssets = projectAssets.filter((asset) => assetStyleRole(asset) === "styleReference");
+  if (styleReferenceAssets.length > 0 || hasStyleReferenceAnalysis(snapshot, result)) {
+    const name = compactStylePart(styleReferenceAssets[0]?.label) || "上传参考";
+    return {
+      label: `画风参考 · ${name}`,
+      detail: "当前图片优先遵循上传画风参考或其画风分析结果。",
+    };
+  }
+
+  const selectedStyle = firstSelectedStyle(modeState);
+  if (selectedStyle) {
+    return {
+      label: `画风库 · ${compactStylePart(selectedStyle)}`,
+      detail: `当前图片使用画风库选择：${selectedStyle}。`,
+    };
+  }
+
+  const anchorRole = projectAssets.some((asset) => assetStyleRole(asset) === "gameCharacter" || assetStyleRole(asset) === "subjectReference")
+    ? (result?.mode === "poster" ? "角色/主体" : "主体素材")
+    : projectAssets.length > 0
+      ? "上传素材"
+      : "";
+  if (anchorRole) {
+    return {
+      label: `素材基准 · ${anchorRole}`,
+      detail: "未选择画风库且无画风参考时，默认沿用上传素材的画风基准。",
+    };
+  }
+
+  return {
+    label: "默认 · 项目语境",
+    detail: "未选择画风库、未上传画风参考，也没有可继承画风的素材。",
+  };
+}
+
+function styleDisplayFromMetadata(metadata) {
+  if (!metadata || typeof metadata !== "object") return null;
+  const source = metadata.styleSource && typeof metadata.styleSource === "object" ? metadata.styleSource : null;
+  const label = typeof source?.label === "string" ? source.label.trim() : "";
+  const detail = typeof source?.detail === "string" ? source.detail.trim() : "";
+  if (label) return { label: compactStyleLabel(label), detail: detail || label };
+
+  const legacyLabel = typeof metadata.styleLabel === "string" ? metadata.styleLabel.trim() : "";
+  if (legacyLabel) return { label: compactStyleLabel(legacyLabel), detail: legacyLabel };
+  return null;
+}
+
+function firstSelectedStyle(modeState) {
+  const styleTags = modeState?.modeForm && Array.isArray(modeState.modeForm.styleTags)
+    ? modeState.modeForm.styleTags
+    : [];
+  return String(styleTags.find((item) => String(item || "").trim()) || "").trim();
+}
+
+function hasStyleReferenceAnalysis(snapshot, result) {
+  return (snapshot?.referenceAnalyses || []).some((analysis) => {
+    if (!analysis || analysis.kind !== "style") return false;
+    if (result?.projectId && analysis.projectId && analysis.projectId !== result.projectId) return false;
+    return /styleReference|画风|风格|style/i.test(`${analysis.role || ""} ${analysis.label || ""}`);
+  });
+}
+
+function assetStyleRole(asset) {
+  return String(asset?.semanticRole || asset?.role || asset?.binding || "").trim();
+}
+
+function compactStyleLabel(label) {
+  const normalized = String(label || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "默认 · 项目语境";
+  const parts = normalized.split("·").map((item) => item.trim()).filter(Boolean);
+  if (parts.length >= 2) return `${compactStylePart(parts[0])} · ${compactStylePart(parts.slice(1).join(" · "))}`;
+  return compactStylePart(normalized);
+}
+
+function compactStylePart(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= 14) return text;
+  return `${text.slice(0, 13)}…`;
 }
 
 function simplifyRatio(width, height) {

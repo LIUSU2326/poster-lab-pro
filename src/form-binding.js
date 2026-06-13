@@ -9,7 +9,7 @@ import {
 } from './schema/index.js';
 import { saveLocalSubmissionDraft } from './local-draft-store.js';
 import { runStaticGenerationServiceFlow } from './static-local-api-service.js';
-import { cancelHttpQueuePlan, runHttpGenerationServiceFlow } from './http-generation-service.js';
+import { cancelHttpQueuePlan, createHttpGenerationService, runHttpGenerationServiceFlow } from './http-generation-service.js';
 import { applyGenerationFormValuesToSnapshot, getActiveGenerationFormValues } from './generation-form-runtime.js';
 import {
   evaluateQueuePlanCapabilityGate,
@@ -23,6 +23,7 @@ const activeQueueStatuses = new Set(["queued", "running", "blocked"]);
 const terminalJobStatuses = new Set(["completed", "failed", "cancelled", "partial"]);
 const generationTaskKinds = new Set(["briefGeneration", "conceptGeneration", "imageGeneration"]);
 const staleQueuedPlanMs = 10 * 60 * 1000;
+const incrementalWorkspacePollMs = 1800;
 let activeGenerationController = null;
 let activeGenerationJobId = "";
 let activeGenerationTraceId = "";
@@ -768,6 +769,50 @@ function mergeSubmittedProjectBrief(targetSnapshot, submittedSnapshot, modeId) {
   return nextSnapshot;
 }
 
+function startIncrementalWorkspacePolling({ submission, submittedSnapshot, modeId, options = {} }) {
+  if (!shouldUseHttpServiceFlow()) return () => {};
+  const workspaceId = submittedSnapshot.metadata?.workspaceId;
+  const traceId = submission?.traceId || "";
+  if (!workspaceId || !traceId) return () => {};
+
+  const service = createHttpGenerationService(options);
+  let stopped = false;
+  let inFlight = false;
+
+  const poll = async () => {
+    if (stopped || inFlight) return;
+    if (state.submission?.traceId !== traceId) {
+      stopped = true;
+      return;
+    }
+    inFlight = true;
+    try {
+      const envelope = await service.loadWorkspaceSnapshot(workspaceId);
+      if (stopped || state.submission?.traceId !== traceId) return;
+      const nextSnapshot = envelope.ok && envelope.data?.snapshot
+        ? mergeSubmittedProjectBrief(envelope.data.snapshot, submittedSnapshot, modeId)
+        : null;
+      const currentRevision = Number(getRuntimeWorkspaceSnapshot().metadata?.revision || 0);
+      const nextRevision = Number(nextSnapshot?.metadata?.revision || 0);
+      if (nextSnapshot && nextRevision > currentRevision) {
+        setRuntimeWorkspaceSnapshot(nextSnapshot, "http");
+        options.onWorkspaceSnapshotUpdated?.(nextSnapshot);
+      }
+    } catch {
+      // Polling is best-effort; the main generation request still returns the final workspace.
+    } finally {
+      inFlight = false;
+    }
+  };
+
+  const intervalId = globalThis.setInterval(poll, incrementalWorkspacePollMs);
+  void poll();
+  return () => {
+    stopped = true;
+    globalThis.clearInterval(intervalId);
+  };
+}
+
 export async function submitGenerationDraft(options = {}) {
   const normalizedOptions = normalizeGenerationOptions(options);
   const snapshot = createBoundWorkspaceSnapshot(normalizedOptions);
@@ -810,6 +855,7 @@ export async function submitGenerationDraft(options = {}) {
     activeGenerationJobId = "";
     activeGenerationTraceId = submission.traceId;
     activeGenerationCancelled = false;
+    let stopIncrementalPolling = () => {};
     try {
       const serviceFlow = shouldUseHttpServiceFlow()
         ? await runHttpGenerationServiceFlow(submission, {
@@ -822,6 +868,16 @@ export async function submitGenerationDraft(options = {}) {
                 ...(state.submission || submission),
                 queuePlanJobId: queuePlan.job.id,
               };
+              stopIncrementalPolling();
+              stopIncrementalPolling = startIncrementalWorkspacePolling({
+                submission,
+                submittedSnapshot: snapshot,
+                modeId: activeMode.id,
+                options: {
+                  ...options,
+                  signal: generationController.signal,
+                },
+              });
               options.onQueuePlanCreated?.(queuePlan);
             },
           })
@@ -859,6 +915,7 @@ export async function submitGenerationDraft(options = {}) {
         },
       };
     } finally {
+      stopIncrementalPolling();
       if (activeGenerationTraceId === submission.traceId) {
         activeGenerationController = null;
         activeGenerationTraceId = "";

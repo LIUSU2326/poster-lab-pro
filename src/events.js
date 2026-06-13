@@ -50,20 +50,28 @@ const generationFormSyncActions = new Set([
   "confirm-delete-workspace",
 ]);
 let globalKeyboardBound = false;
-let workbenchRefreshClearTimer = null;
-
-function markWorkbenchRefreshFrame(duration = 140) {
-  if (typeof document === "undefined" || typeof window === "undefined") return;
-  document.documentElement.dataset.workbenchRefresh = "true";
-  if (workbenchRefreshClearTimer !== null) window.clearTimeout(workbenchRefreshClearTimer);
-  workbenchRefreshClearTimer = window.setTimeout(() => {
-    delete document.documentElement.dataset.workbenchRefresh;
-    workbenchRefreshClearTimer = null;
-  }, duration);
+function markStableRefreshSurface(surface) {
+  if (typeof Element !== "undefined" && surface instanceof Element) {
+    surface.dataset.stableRefresh = "true";
+  }
 }
 
 function persistProviderPreferences() {
   saveLocalProviderPreferences(state);
+}
+
+function submitGenerationDraftWithRender(options, render) {
+  return submitGenerationDraft({
+    ...options,
+    onQueuePlanCreated: (queuePlan) => {
+      options?.onQueuePlanCreated?.(queuePlan);
+      render();
+    },
+    onWorkspaceSnapshotUpdated: () => {
+      options?.onWorkspaceSnapshotUpdated?.();
+      render();
+    },
+  });
 }
 
 export function bindEvents(render) {
@@ -101,12 +109,13 @@ export function bindEvents(render) {
   });
 
   document.querySelectorAll(".scheme-card[data-scheme-id]").forEach((card) => {
-    card.addEventListener("click", () => {
+    card.addEventListener("click", (event) => {
+      if (event.target?.closest?.("a, button, input, textarea, select, [data-action]")) return;
       state.selectedScheme = card.dataset.schemeId;
       render();
     });
     card.addEventListener("keydown", (event) => {
-      if (event.target?.closest?.("a, button, [data-action]")) return;
+      if (event.target?.closest?.("a, button, input, textarea, select, [data-action]")) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         state.selectedScheme = card.dataset.schemeId;
@@ -719,11 +728,11 @@ async function handleActionControl(control, event, render) {
       render();
       return;
     }
-    const submissionPromise = submitGenerationDraft({
+    const submissionPromise = submitGenerationDraftWithRender({
       schemeStrategy: "regenerate",
       ...(schemeCountOverride ? { schemeCountOverride } : {}),
       renderImages: false,
-    });
+    }, render);
     state.view = "schemes";
     state.taskOpen = false;
     render();
@@ -756,12 +765,12 @@ async function handleActionControl(control, event, render) {
       render();
       return;
     }
-    const submissionPromise = submitGenerationDraft({
+    const submissionPromise = submitGenerationDraftWithRender({
       schemeStrategy: "continue",
       schemeIds: [schemeId],
       schemeCountOverride: 1,
       renderImages: false,
-    });
+    }, render);
     state.view = "schemes";
     state.taskOpen = false;
     render();
@@ -779,14 +788,14 @@ async function handleActionControl(control, event, render) {
     state.selectedScheme = result.schemeId;
     state.resultViewerOpen = false;
 
-    const submissionPromise = submitGenerationDraft({
+    const submissionPromise = submitGenerationDraftWithRender({
       schemeStrategy: "continue",
       schemeIds: [result.schemeId],
       sourceResultId: result.id,
       schemeCountOverride: 1,
       outputOverrides: outputOverridesForResult(result),
       renderImages: true,
-    });
+    }, render);
     state.view = "schemes";
     state.taskOpen = false;
     render();
@@ -844,7 +853,7 @@ async function handleActionControl(control, event, render) {
         };
       }
     }
-    const submissionPromise = submitGenerationDraft(generationOptions);
+    const submissionPromise = submitGenerationDraftWithRender(generationOptions, render);
     state.view = "schemes";
     state.taskOpen = false;
     render();
@@ -855,11 +864,11 @@ async function handleActionControl(control, event, render) {
   if (action === "retry-failed-images") {
     const failedSchemeIds = getFailedImageSchemeIds();
     if (failedSchemeIds.length === 0) return;
-    const submissionPromise = submitGenerationDraft({
+    const submissionPromise = submitGenerationDraftWithRender({
       schemeStrategy: "continue",
       schemeIds: failedSchemeIds,
       retryFailedOnly: true,
-    });
+    }, render);
     state.view = "schemes";
     state.taskOpen = false;
     render();
@@ -870,10 +879,10 @@ async function handleActionControl(control, event, render) {
   if (action === "confirm-generation-choice") {
     const strategy = control.dataset.generationStrategy === "regenerate" ? "regenerate" : "continue";
     state.generationChoiceOpen = false;
-    const submissionPromise = submitGenerationDraft({
+    const submissionPromise = submitGenerationDraftWithRender({
       schemeStrategy: strategy,
       renderImages: strategy === "continue",
-    });
+    }, render);
     state.view = "schemes";
     state.taskOpen = false;
     render();
@@ -1697,7 +1706,7 @@ function refreshSettingsLayer(render) {
     render();
     return;
   }
-  markWorkbenchRefreshFrame();
+  markStableRefreshSurface(current);
 
   const detailScrollTop = current.querySelector(".provider-detail")?.scrollTop || 0;
   const modelRoutingDisclosure = current.querySelector(".model-routing-disclosure");
@@ -1726,6 +1735,7 @@ function refreshSettingsLayer(render) {
   } else if (currentBody && nextBody) {
     currentBody.replaceWith(nextBody);
   } else if (nextLayer) {
+    markStableRefreshSurface(nextLayer);
     current.replaceWith(nextLayer);
   }
 
