@@ -154,6 +154,12 @@ if (staticWorkbenchBridge.includes('closest("[data-rhf-assets-section]")')) {
 
 requireTokens("result-operation-client.js", resultOperationClient, [
   "editInstruction",
+  "sourceResultOutputLock",
+  "clampOperationDimension",
+  "customSize: { width, height }",
+  "aspectRatios: [`${width}x${height}`]",
+  'selectionMode: "custom-size"',
+  "...sourceOutputLock",
 ]);
 
 if (resultOperationClient.includes("fallback")) {

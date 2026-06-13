@@ -24,6 +24,24 @@ function selectLatestDerivedResult(sourceResultId, taskKind) {
   return derived;
 }
 
+function clampOperationDimension(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return 0;
+  return Math.max(256, Math.min(8192, Math.round(number)));
+}
+
+function sourceResultOutputLock(sourceResult) {
+  const width = clampOperationDimension(sourceResult?.width);
+  const height = clampOperationDimension(sourceResult?.height);
+  if (!width || !height) return {};
+  return {
+    platformPresets: [sourceResult.platformPreset || "custom"],
+    aspectRatios: [`${width}x${height}`],
+    customSize: { width, height },
+    selectionMode: "custom-size",
+  };
+}
+
 function formatElapsed(ms) {
   const seconds = Math.max(0, Math.round(ms / 1000));
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
@@ -58,6 +76,7 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
   const route = resolveResultOperationRoute(operation.action, state.provider, {
     configuredProviders: configuredOperationProviderIds(snapshot),
   });
+  const sourceOutputLock = sourceResultOutputLock(sourceResult);
 
   if (!route.supported) {
     updateResultOperation(operation.id, {
@@ -90,6 +109,7 @@ export async function runResultOperationForWorkbench(operation, options = {}) {
       },
       schemeIds: [sourceResult.schemeId],
       imagesPerScheme: 1,
+      ...sourceOutputLock,
       regenerateSchemes: false,
       includeImageGeneration: false,
       sourceResultId: sourceResult.id,
