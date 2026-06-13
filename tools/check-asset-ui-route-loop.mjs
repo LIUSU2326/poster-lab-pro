@@ -370,8 +370,8 @@ async function runRuntimeCheck() {
   }
 
   state.apiMode = "http";
-  serverSnapshot = snapshot;
-  setRuntimeWorkspaceSnapshot(serverSnapshot, "http");
+  serverSnapshot = { ...snapshot, activeMode: "poster" };
+  setRuntimeWorkspaceSnapshot({ ...serverSnapshot, activeMode: "icon" }, "http");
   calls.length = 0;
 
   const fileResult = await uploadWorkbenchAssetFile(
@@ -403,6 +403,9 @@ async function runRuntimeCheck() {
   }
   if (calls[2]?.body?.replaceExisting !== false) {
     issues.push("file asset commit should append multiple slot assets by default");
+  }
+  if (state.activeMode !== "icon" || getRuntimeWorkspaceSnapshot().activeMode !== "icon") {
+    issues.push("file asset upload reload should preserve the current active mode instead of adopting a stale server mode");
   }
 
   const oldLogo = {

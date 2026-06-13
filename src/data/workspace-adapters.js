@@ -42,7 +42,7 @@ const rolePriorityByMode = {
   collab: ["gameCharacter", "collabCharacter", "background", "gameLogo", "brandLogo"],
   announcement: ["gameCharacter", "background", "gameLogo", "brandLogo", "uiScreenshot"],
   logo: ["gameLogo", "subjectReference", "prop", "gameCharacter"],
-  icon: ["subjectReference", "gameCharacter", "prop", "gameLogo", "compositionReference", "styleReference"],
+  icon: ["subjectReference", "gameCharacter", "prop", "compositionReference", "styleReference"],
 };
 
 const providerFallbacks = Object.fromEntries(providerFixtures.map((provider) => [provider.id, provider]));

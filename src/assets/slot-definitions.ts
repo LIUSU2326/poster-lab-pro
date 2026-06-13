@@ -204,15 +204,6 @@ const rawModeAssetSlots = {
       description: "Optional uploaded item, weapon, ingredient, or BOSS-like object that can become a clean game icon subject.",
     },
     {
-      id: "icon-brand-symbol",
-      mode: "icon",
-      role: "gameLogo",
-      label: "Brand symbol reference",
-      required: false,
-      usage: ["reference"],
-      description: "Optional logo/brand reference used only for symbol shape, color, and style; icon mode must not render text.",
-    },
-    {
       id: "icon-style",
       mode: "icon",
       role: "styleReference",

@@ -265,7 +265,7 @@ const ICON_IMAGE_REFERENCE_PRIORITY: Record<AssetSemanticRole, number> = {
   protagonist: 1,
   prop: 2,
   antagonist: 3,
-  brandLogo: 4,
+  brandLogo: 99,
   environment: 99,
   styleReference: 99,
   compositionReference: 99,
@@ -330,8 +330,7 @@ function filterImageReferenceAssetsForMode(
         return semanticRole === "keySubject"
           || semanticRole === "protagonist"
           || semanticRole === "prop"
-          || semanticRole === "antagonist"
-          || semanticRole === "brandLogo";
+          || semanticRole === "antagonist";
       });
       return subject ? [subject] : [];
     }
@@ -377,13 +376,16 @@ function imageReferencePolicyPromptBlock(
   ];
   const modeRule: Record<ProductionMode, string> = {
     poster: "",
-    icon: "Icon mode isolation: use at most one uploaded subject/motif as identity reference. Do not copy poster composition, slogan lettering, UI panels, multi-character battle scenes, reference-sheet borders, crop marks, side labels, edge numbers, barcode-like strokes, or text from any uploaded reference. Final output must be a 1:1 text-free icon with one bold subject and minimal background. If the attached raw reference is a character, draw that character only; do not add a second large object, shield, weapon, unrelated prop, badge, or hand-held item unless it is visibly present in that reference.",
+    icon: "Icon hard request lock: no pseudo-text edge marks, no poster scene complexity, no close-up fragment crop, no logo lettering, and no extra subjects. Icon mode isolation: use at most one uploaded non-text subject/motif as identity reference. Do not use uploaded logo lettering as the icon subject. Do not copy poster composition, slogan lettering, UI panels, multi-character battle scenes, reference-sheet side markings, crop marks, side labels, edge numbers, numerals, pseudo-text edge marks, barcode-like strokes, or text from any uploaded reference. Final output must be a 1:1 text-free icon with one bold complete subject, clean silhouette, minimal background, no poster scene complexity, and no close-up fragment crop. If the attached raw reference is a character or object, redraw that subject only; do not add a second large object, shield, weapon, unrelated prop, badge, or hand-held item unless it is visibly present in that reference.",
     logo: options.copySafeLogoText
       ? "Logo mode copy-safe isolation: no raw logo lettering reference is sent because the requested wordmark is text-risky. Build a clean blank logo/wordmark plate, emblem, or mark system from non-text brand cues only. No scene, no characters, no poster background, no pseudo-letters."
       : "Logo mode isolation: use only brand/logo references as raw images. Other uploaded assets are motif/style context only, not scene subjects. Final output must be a logo/mark system, not a poster or character scene.",
     announcement: "Announcement mode isolation: raw references are limited to brand/supporting presenter imagery. Build a calm in-game announcement panel or event card with a strong copy-safe area; do not turn the render into an action poster and do not generate garbled operational text.",
     collab: "Collab mode isolation: raw references are limited to participant identities and, only when both sides have uploaded brand references, separate brand logos. If the partner brandLogo is missing, do not use or redraw uploaded gameLogo lettering as visible text; reserve blank non-letter brand plates or neutral emblems. Render one clear instance of each side, keep them separate, and show a shared interaction; do not duplicate either side, merge them into a hybrid, or generate pseudo-letters.",
   };
+  if (promptPackage.mode === "icon") {
+    return [shared[0], modeRule.icon, ...shared.slice(1)].filter(Boolean).join("\n");
+  }
   return [...shared, modeRule[promptPackage.mode]].filter(Boolean).join("\n");
 }
 

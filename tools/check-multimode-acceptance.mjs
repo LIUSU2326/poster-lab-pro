@@ -120,7 +120,7 @@ requireIncludes(slotDefinitions, "src/assets/slot-definitions.ts", [
 
 requireIncludes(modeModels, "src/schema/models.js", [
   "collab: [\"gameCharacter\", \"collabCharacter\", \"gameLogo\", \"brandLogo?\", \"background?\"]",
-  "icon: [\"subjectReference|gameCharacter|prop|gameLogo\", \"compositionReference?\", \"styleReference?\"]",
+  "icon: [\"subjectReference|gameCharacter|prop\", \"compositionReference?\", \"styleReference?\"]",
 ]);
 
 requireIncludes(multimodeGate, "tools/check-multimode-regression.mjs", [

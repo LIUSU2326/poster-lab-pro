@@ -118,6 +118,7 @@ export const state = {
   outputActiveCustomSuiteId: "",
   referenceAnalysis: /** @type {Record<string, Record<string, unknown>>} */ ({}),
   referenceUploadDataUrls: /** @type {Record<string, string>} */ ({}),
+  preservedConfigScrollTop: /** @type {number | null} */ (null),
   leftCollapsed: false,
   leftWidth: 320,
   submission: null,

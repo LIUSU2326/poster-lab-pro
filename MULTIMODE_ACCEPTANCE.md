@@ -44,7 +44,7 @@ Poster:
 
 Icon:
 
-- Required test assets: one subject reference or one character/prop/logo used as the single icon subject.
+- Required test assets: one subject reference or one character/prop used as the single icon subject; optional composition/style references may guide layout or rendering.
 - Pass: 1:1 square, no text, one dominant full-bleed subject, readable at 64px, strong silhouette, minimal background. Rounded corners or badge-like app-icon styling are acceptable when intentional and polished.
 - Fail: poster scene, multiple subjects, copied static pose, text, logo lettering, white border, accidental padding, subject trapped in a low-quality container, or too much background detail.
 

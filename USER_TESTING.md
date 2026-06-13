@@ -39,7 +39,7 @@ This guide is for a local desktop trial of Poster Lab Pro 1.1.0 stable.
 Use fresh uploaded assets when possible:
 
 - Poster: game character, BOSS/key subject, game logo, optional style or composition reference.
-- Icon: one subject reference or character/prop/logo as the single icon subject.
+- Icon: one subject reference or character/prop as the single icon subject; optional composition/style references may guide layout or rendering.
 - Logo: uploaded logo as brand reference; expect copy-safe blank wordmark behavior for complex titles.
 - Announcement: optional character, logo, UI/layout, or background reference.
 - Collab: game character, partner character, game logo, optional partner brand logo. If no partner logo exists, expect a blank partner brand plate.

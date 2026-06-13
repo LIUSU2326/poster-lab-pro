@@ -173,8 +173,8 @@ export const promptGuardrailsByMode: Record<ProductionMode, PromptGuardrailRule[
       id: "icon-subject-fidelity",
       mode: "icon",
       severity: "hard",
-      rule: "Stay faithful to uploaded subject references while redrawing/simplifying them into one strong high-contrast icon subject readable at 64px.",
-      negativeRule: "Do not invent unrelated characters, replace the uploaded subject identity, paste the original asset as a sticker, or keep a cluttered poster-like scene.",
+      rule: "Stay faithful to uploaded subject references while redrawing/simplifying them into one complete strong high-contrast icon subject readable at 64px.",
+      negativeRule: "Do not invent unrelated characters, replace the uploaded subject identity, paste the original asset as a sticker, keep a cluttered poster-like scene, or crop into only a mouth, teeth, eye, weapon, or blurred face fragment.",
     }),
   ],
 };

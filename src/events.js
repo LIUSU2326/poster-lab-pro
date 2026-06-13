@@ -56,6 +56,15 @@ function markStableRefreshSurface(surface) {
   }
 }
 
+function preserveConfigScrollBeforeRender() {
+  if (typeof document === "undefined") return;
+  const configScroll = document.querySelector(".config-scroll");
+  if (!configScroll) return;
+  const scrollTop = Number(configScroll.scrollTop);
+  if (!Number.isFinite(scrollTop)) return;
+  state.preservedConfigScrollTop = Math.max(0, scrollTop);
+}
+
 function persistProviderPreferences() {
   saveLocalProviderPreferences(state);
 }
@@ -111,6 +120,7 @@ export function bindEvents(render) {
   document.querySelectorAll(".scheme-card[data-scheme-id]").forEach((card) => {
     card.addEventListener("click", (event) => {
       if (event.target?.closest?.("a, button, input, textarea, select, [data-action]")) return;
+      preserveConfigScrollBeforeRender();
       state.selectedScheme = card.dataset.schemeId;
       render();
     });
@@ -118,6 +128,7 @@ export function bindEvents(render) {
       if (event.target?.closest?.("a, button, input, textarea, select, [data-action]")) return;
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
+        preserveConfigScrollBeforeRender();
         state.selectedScheme = card.dataset.schemeId;
         render();
       }
@@ -187,6 +198,7 @@ export function bindEvents(render) {
       const schemeId = button.dataset.schemeId;
       const variant = Number(button.dataset.schemeVariant);
       if (!schemeId || !Number.isFinite(variant)) return;
+      preserveConfigScrollBeforeRender();
       state.selectedScheme = schemeId;
       state.selectedSchemeVariants = {
         ...(state.selectedSchemeVariants || {}),
@@ -203,6 +215,7 @@ export function bindEvents(render) {
       const schemeId = button.dataset.schemeId;
       const count = clampImageCount(button.dataset.schemeRenderCount);
       if (!schemeId) return;
+      preserveConfigScrollBeforeRender();
       state.selectedScheme = schemeId;
       state.schemeRenderCounts = {
         ...(state.schemeRenderCounts || {}),
@@ -456,6 +469,7 @@ function nextUntitledWorkspaceName() {
 async function handleActionControl(control, event, render) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
+  preserveConfigScrollBeforeRender();
   const action = control.dataset.action;
   if (generationFormSyncActions.has(action)) {
     syncVisibleGenerationFormControls();

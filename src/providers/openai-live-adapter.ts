@@ -555,7 +555,7 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
   if (!hasBrandLogo) return "";
   switch (request.context.mode) {
     case "icon":
-      return "Icon logo rule: uploaded logos may guide color, symbol shape, or brand style, but icon mode must not render logo lettering or readable text.";
+      return "Icon logo rule: if a legacy uploaded logo reference reaches icon mode, use only non-letter color/material cues or abstract symbol energy; do not render logo lettering, readable text, or use it as the primary icon subject.";
 	    case "logo":
 	      return "Logo text safety: uploaded logos guide brand continuity through color, silhouette, rhythm, spacing, and material style. Follow Logo Text Strategy exactly. In copy-safe blank wordmark mode, do not render readable letters, uploaded-logo text, project-title fragments, partial words, pseudo-letters, slogans, or decorative fake typography; use a polished blank wordmark plate, emblem, badge, or mark system.";
     case "announcement":

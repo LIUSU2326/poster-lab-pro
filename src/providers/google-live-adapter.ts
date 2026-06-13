@@ -518,7 +518,7 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
   if (!hasBrandLogo) return "";
   switch (request.context.mode) {
     case "icon":
-      return "Brand icon rule: uploaded logos may guide colors, symbol shape, or brand energy, but icon mode must not render logo lettering, captions, or readable text.";
+      return "Brand icon rule: if a legacy uploaded logo reference reaches icon mode, use only non-letter color/material cues or abstract symbol energy; do not render logo lettering, captions, readable text, or use it as the primary icon subject.";
     case "logo":
       return "Brand logo rule: uploaded logos guide wordmark rhythm, colors, silhouette, spacing, material finish, and brand continuity. Follow Logo Text Strategy exactly. In copy-safe blank wordmark mode, do not render readable letters, uploaded-logo text, project-title fragments, partial words, pseudo-letters, slogans, or decorative fake typography; use a polished blank wordmark plate, emblem, badge, or mark system.";
     case "announcement":
@@ -913,7 +913,7 @@ function modeBriefTask(mode: BriefGenerationRequest["context"]["mode"]): string 
 function modeBriefIdentityRule(mode: BriefGenerationRequest["context"]["mode"]): string {
   switch (mode) {
     case "icon":
-      return "Icon reference planning: choose one dominant uploaded subject or brand motif as the icon subject, preserve its identity/silhouette/colors as a reference, and redraw/simplify it into one clean icon form.";
+      return "Icon reference planning: choose one dominant uploaded non-text subject or motif as the icon subject, preserve its identity/silhouette/colors as a reference, and redraw/simplify it into one clean icon form.";
     case "logo":
       return "Logo reference planning: uploaded logos are brand references, not prompts for fake replacement words. Preserve brand shape language and letterform rhythm only when spelling can stay accurate.";
     case "announcement":
@@ -940,8 +940,9 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
     return [
       ...shared,
       "Icon mode hard lock: 1:1 square, one single dominant subject, no text, no logo lettering, no captions, no poster scene, no multi-character battle, no empty corner padding, no white border, and no separate container that shrinks the subject. Rounded corners are acceptable when intentional and polished.",
-      "Icon prompt must prioritize bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square composition, crisp focal detail, and 64px readability.",
-      "If several uploaded assets exist, choose one best subject or brand motif for each scheme instead of crowding them together.",
+      "Icon prompt must prioritize a complete compact subject or deliberate readable bust, bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square composition, crisp focal detail, and 64px readability.",
+      "Avoid close-up fragments: do not plan only a mouth, teeth, eye, cropped face, cropped weapon, or blurred background crop as the icon.",
+      "If several uploaded assets exist, choose one best non-text subject or motif for each scheme instead of crowding them together.",
       "slogans must be an empty object for icon mode.",
     ];
   }
@@ -1554,7 +1555,7 @@ function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { bri
     case "icon":
       return {
         brief: "Icon 模式锁定：1:1 方形、单一主主体、无文字、无海报/KV 场景、低背景复杂度、64px 仍可读；圆角可接受但不能有白边或劣质容器框。",
-        prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject, absolutely no text or logo lettering, no poster scene, no multi-character battle, full-bleed square composition, no white border or accidental padding, minimal background, high contrast, readable at 64px. Rounded corners are acceptable when intentional and polished.",
+        prompt: "ICON MODE ONLY: create a premium 1:1 game/app icon, one single dominant subject shown as a complete compact subject or deliberate readable bust, absolutely no text or logo lettering, no poster scene, no multi-character battle, no close-up mouth/eye/teeth/face fragment crop, full-bleed square composition, no white border or accidental padding, minimal background, high contrast, readable at 64px. Rounded corners are acceptable when intentional and polished.",
       };
     case "logo":
       return {

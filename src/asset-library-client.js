@@ -386,7 +386,7 @@ async function runWorkbenchAssetUpload(input = {}, options = {}) {
     ? await client.listWorkspaceAssets(workspaceId, { role: payload.role, usage: "input" })
     : commit;
   const snapshotReload = commit.ok
-    ? await loadWorkspaceSnapshotForWorkbench({ ...options, workspaceId })
+    ? await loadWorkspaceSnapshotForWorkbench({ ...options, workspaceId, preserveActiveMode: true })
     : commit;
 
   const ok = uploadPlan.ok && (!input.file || binaryUpload?.ok) && commit.ok && assetList.ok && snapshotReload.ok;

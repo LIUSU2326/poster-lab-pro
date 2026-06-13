@@ -58,7 +58,7 @@ export const PromptBuilderInputSchema = z.object({
 export type PromptBuilderInput = z.infer<typeof PromptBuilderInputSchema>;
 type SloganLanguage = z.infer<typeof SloganLanguageSchema>;
 const FINAL_PROMPT_MAX_CHARS = 18000;
-const ICON_PRIMARY_ASSET_ROLES = new Set(["subjectReference", "gameCharacter", "prop", "gameLogo"]);
+const ICON_PRIMARY_ASSET_ROLES = new Set(["subjectReference", "gameCharacter", "prop"]);
 const SECTION_CONTENT_MAX_CHARS = 4000;
 
 function clampSectionContent(content: string): string {
@@ -320,7 +320,7 @@ function assetsForRequiredSlot(params: {
 
 function requiredSlotLabel(mode: ProductionMode, slot: ReturnType<typeof getRequiredAssetSlots>[number]): string {
   if (mode === "icon" && slot.role === "subjectReference") {
-    return "Icon primary subject (subjectReference, gameCharacter, prop, or gameLogo)";
+    return "Icon primary subject (subjectReference, gameCharacter, or prop)";
   }
   return `${slot.label} (${slot.role})`;
 }
@@ -583,11 +583,14 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
     return [
       sharedRules,
       "Icon quality target: premium game/app icon, perfect 1:1 square, one single dominant subject, bold readable silhouette, high contrast, minimal background, crisp focal detail, and readable at 64px.",
-      "Icon asset handling: uploaded character, prop, BOSS-like subject, or logo reference can become the main icon subject, but it must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
+      "Icon asset handling: uploaded character, prop, or BOSS-like subject can become the main icon subject, but it must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
+      "Icon subject framing lock: show a complete compact subject or a deliberate bust with all defining features visible; do not zoom into only the mouth, teeth, eye, face crop, weapon crop, or a blurred fragment of the uploaded asset.",
+      "Icon silhouette lock: the subject must read instantly as one designed app icon at 64px, with clean contour separation, intentional negative space, crisp edges, and no accidental crop through the head, hands, limbs, props, or signature shape.",
       "Icon canvas lock: generate clean full-bleed 1:1 square artwork with one dominant subject. Rounded corners, badge-like framing, or app-icon styling are acceptable only when intentional and polished; do not add a white border, empty corner padding, crop marks, or a separate dark container that shrinks the subject.",
+      "Icon background lock: use minimal supporting glow, material, frame, or shape field only. Do not render a room, poster battle, landscape, UI panel, campaign scene, or complex story environment behind the icon subject.",
       "Icon edge cleanliness lock: no border frame, no white margin, no crop marks, no reference-sheet side markings, no barcode-like strokes, no numerals, no digits, no decorative glyphs, no colored edge labels, no top-edge sample-sheet marks, and no tiny black side labels near the canvas edges.",
       "Icon reference isolation: if any uploaded reference contains logo text, UI, poster copy, or edge markings, ignore those text/edge marks completely and render only the single clean subject or non-letter motif.",
-      "Icon exclusions: ABSOLUTELY NO TEXT, no letters, no numbers, no logo lettering, no captions, no UI copy, no pseudo-text marks, no pseudo-text edge marks, no poster scene complexity, no multi-character battle scene, no invented shield/weapon/tool/accessory, no white border, no accidental padding, and no copied static asset pose.",
+      "Icon exclusions: ABSOLUTELY NO TEXT, no letters, no numbers, no logo lettering, no captions, no UI copy, no pseudo-text marks, no pseudo-text edge marks, no poster scene complexity, no multi-character battle scene, no close-up fragment crop, no invented shield/weapon/tool/accessory, no white border, no accidental padding, and no copied static asset pose.",
     ].join("\n");
   }
 
@@ -809,6 +812,23 @@ function selectedStyleRenderingDirective(style: string, modeLabel: string): stri
     return `Hard selected-style rendering lock for "${style}": use crisp stylized 3D hard-surface finish with beveled forms, controlled specular highlights, clean material separation, and precise silhouette design; avoid mushy painterly blur.`;
   }
 
+  if (/卡牌|魔框|card|frame|ornate|badge/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": the final ${modeLabel} must visibly use an ornate fantasy card-frame / premium badge icon treatment.`,
+      "Use a polished decorative frame, beveled rim, gem or metal accents, layered depth, centered readable subject, strong rim light, and clean square app-icon silhouette.",
+      "The frame is part of the icon design, not a poster border. Keep the subject large and legible inside it, with no words, no numbers, no logo lettering, and no campaign text.",
+      "Negative style lock: no plain close-up crop, no blurry background-only render, no poster scene, and no cropped mouth/face that loses the full subject identity.",
+    ].join("\n");
+  }
+
+  if (/Q\s*版|爆炸|chibi|burst|cute/i.test(style)) {
+    return [
+      `Hard selected-style rendering lock for "${style}": use a cute chibi impact-icon treatment with oversized readable shapes and explosive radial energy.`,
+      "Use a compact full subject, clear face/silhouette, bold color contrast, simplified details, and app-icon scale readability.",
+      "Avoid cluttered multi-character poster scenes, tiny background stories, text, and cropped body parts.",
+    ].join("\n");
+  }
+
   return `Selected-style execution lock for "${style}": make this style visibly dominant in palette, rendering method, line/edge language, material finish, lighting, and surface treatment across the whole ${modeLabel}.`;
 }
 
@@ -821,7 +841,7 @@ function formatStyleStrategy(modeState: WorkspaceModeState, assets: PromptAssetB
 
   const styleAssets = assets.filter((asset) => assetSemanticRole(asset) === "styleReference");
   const characterAssets = assets.filter((asset) => assetSemanticRole(asset) === "protagonist");
-  const subjectAssets = assets.filter((asset) => ["subjectReference", "prop", "gameLogo"].includes(asset.role));
+  const subjectAssets = assets.filter((asset) => ["subjectReference", "prop", "gameCharacter"].includes(asset.role));
   const selectedStyle = form.mode === "poster" || form.mode === "logo" || form.mode === "icon"
     ? form.styleTags[0]?.trim() || ""
     : "";

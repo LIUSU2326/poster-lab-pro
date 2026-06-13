@@ -309,7 +309,10 @@ async function saveActiveWorkspaceBeforeSwitch(options = {}) {
 }
 
 function applyLoadedWorkspaceSnapshot(snapshot, source = "http", options = {}) {
-  setRuntimeWorkspaceSnapshot(snapshot, source);
+  const nextSnapshot = options.preserveActiveMode && state.activeMode
+    ? { ...snapshot, activeMode: state.activeMode }
+    : snapshot;
+  setRuntimeWorkspaceSnapshot(nextSnapshot, source);
   if (options.resetUi) resetWorkspaceSwitchUiState();
 }
 
@@ -336,13 +339,22 @@ export async function loadWorkspaceSnapshotForWorkbench(options = {}) {
     if (normalized.changed) {
       const saved = await service.saveWorkspaceSnapshot(workspaceId, { snapshot: normalized.snapshot });
       if (saved.ok) {
-        applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", { resetUi: options.resetUi });
+        applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", {
+          resetUi: options.resetUi,
+          preserveActiveMode: options.preserveActiveMode,
+        });
       } else {
-        applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", { resetUi: options.resetUi });
+        applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", {
+          resetUi: options.resetUi,
+          preserveActiveMode: options.preserveActiveMode,
+        });
         state.workspaceLoadError = saved.error?.message || "Failed to persist normalized workspace state.";
       }
     } else {
-      applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", { resetUi: options.resetUi });
+      applyLoadedWorkspaceSnapshot(normalized.snapshot, "http", {
+        resetUi: options.resetUi,
+        preserveActiveMode: options.preserveActiveMode,
+      });
     }
   } else {
     state.workspaceLoadStatus = "error";

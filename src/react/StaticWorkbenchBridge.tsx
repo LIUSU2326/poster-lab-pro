@@ -56,9 +56,11 @@ export function StaticWorkbenchBridge() {
     const render = (options?: WorkbenchRenderOptions) => {
       const requestedConfigScrollTop = Number(options?.configScrollTop);
       const preservedConfigScrollTop = consumePreservedWorkbenchConfigScrollTop();
+      const stateConfigScrollTop = Number(state.preservedConfigScrollTop);
       const configScrollTop = Number.isFinite(requestedConfigScrollTop)
         ? requestedConfigScrollTop
-        : preservedConfigScrollTop ?? host.querySelector<HTMLElement>(".config-scroll")?.scrollTop ?? 0;
+        : preservedConfigScrollTop ?? (Number.isFinite(stateConfigScrollTop) ? stateConfigScrollTop : null) ?? host.querySelector<HTMLElement>(".config-scroll")?.scrollTop ?? 0;
+      state.preservedConfigScrollTop = null;
       ensureSelectedScheme();
       document.documentElement.dataset.theme = state.theme;
       const hadRenderedWorkbench = Boolean(host.firstElementChild);

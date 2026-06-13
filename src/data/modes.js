@@ -340,8 +340,7 @@ export const modeSpecs = {
     assets: [
       { role: "subjectReference", label: "素材主体", state: "形象参考", tone: "blue" },
       { role: "prop", label: "道具/奖励", state: "可选", tone: "orange" },
-      { role: "gameLogo", label: "Logo 视觉参考", state: "可选", tone: "ink" },
-      { role: "compositionReference", label: "构图参考", state: "轮循分配", tone: "teal" },
+      { role: "compositionReference", label: "图标构图参考", state: "轮循分配", tone: "teal" },
       { role: "styleReference", label: "画风参考", state: "可选", tone: "violet" },
     ],
     styles: ["3D 潮流粘土", "二次元幻彩", "欧美扁平矢量", "复古街机像素", "卡牌华丽魔框", "Q 版爆炸", "道具互动", "高饱和休闲", "电竞猛兽图腾", "仙侠流光云海"],
