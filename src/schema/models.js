@@ -186,14 +186,14 @@ export const formSchemas = {
     },
     collab: {
       mode: { const: "collab" },
-      collabBrandName: { type: "string", required: true, max: 80 },
+      collabBrandName: { type: "string", required: false, max: 80 },
       collabStyleInjection: { enum: ["native", "brand", "game"], default: "native" },
       characterPlaceholdersOnly: { type: "boolean", const: true },
       preventCharacterMerge: { type: "boolean", const: true },
     },
     announcement: {
       mode: { const: "announcement" },
-      announcementTitle: { type: "string", required: true, max: 80 },
+      announcementTitle: { type: "string", required: false, max: 80 },
       copyPreset: { type: "string", nullable: true },
       layoutMode: { enum: ["integratedTypography", "regularPanel"], default: "integratedTypography" },
       groupShotWhenMultiCharacter: { type: "boolean", default: true },
@@ -201,7 +201,7 @@ export const formSchemas = {
     logo: {
       mode: { const: "logo" },
       styleTags: { type: "string[]", default: [] },
-      wordmark: { type: "string", required: true, max: 80 },
+      wordmark: { type: "string", required: false, max: 80 },
       solidBackground: { type: "boolean", const: true },
       backgroundColor: { type: "string", default: "#ffffff" },
       wordmarkIsPrimarySubject: { type: "boolean", const: true },

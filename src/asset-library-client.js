@@ -422,15 +422,22 @@ export function uploadWorkbenchAssetFile(input = {}, options = {}) {
 
 function removeAssetsFromSnapshot(snapshot, role, label, options = {}) {
   const updatedAt = nowIso(options);
+  const targetAssetIds = new Set(Array.isArray(options.assetIds) ? options.assetIds.filter(Boolean) : []);
   const removedIds = new Set();
+  const removedLabels = new Set();
   const nextAssets = snapshot.assets.filter((asset) => {
-    if (asset.role !== role) return true;
-    if (label && asset.label !== label) return true;
+    const matchesById = targetAssetIds.size > 0 && targetAssetIds.has(asset.id);
+    const matchesByRoleLabel = targetAssetIds.size === 0 && asset.role === role && (!label || asset.label === label);
+    if (!matchesById && !matchesByRoleLabel) return true;
     removedIds.add(asset.id);
+    if (asset.label) removedLabels.add(asset.label);
     return false;
   });
   const nextReferenceAnalyses = (snapshot.referenceAnalyses || []).filter((analysis) => {
     if (analysis.role !== role) return true;
+    if (targetAssetIds.size > 0) {
+      return !removedLabels.has(analysis.label);
+    }
     if (!label) return false;
     return analysis.label !== label && !String(analysis.key || "").startsWith(`${role}:`);
   });
@@ -440,12 +447,14 @@ function removeAssetsFromSnapshot(snapshot, role, label, options = {}) {
       changed: false,
       snapshot,
       removedIds,
+      removedLabels,
     };
   }
 
   return {
     changed: true,
     removedIds,
+    removedLabels,
     snapshot: {
       ...snapshot,
       assets: nextAssets,
@@ -493,6 +502,7 @@ async function runRemoveWorkbenchAssetsByRoleLabel(role, label = "", options = {
   state.referenceUploadDataUrls = Object.fromEntries(
     Object.entries(state.referenceUploadDataUrls || {}).filter(([key]) => {
       if (!key.startsWith(`${role}:`)) return true;
+      if (removal.removedLabels?.has?.(key.slice(`${role}:`.length))) return false;
       if (!label) return false;
       if (key === `${role}:style` || key === `${role}:composition`) return false;
       return key !== `${role}:${label}` && !key.startsWith(`${role}:${label}:`);
@@ -502,6 +512,7 @@ async function runRemoveWorkbenchAssetsByRoleLabel(role, label = "", options = {
     Object.entries(state.referenceAnalysis || {}).filter(([key, value]) => {
       const matchesRole = key.startsWith(`${role}:`) || value?.role === role;
       if (!matchesRole) return true;
+      if (removal.removedLabels?.has?.(value?.label) || removal.removedLabels?.has?.(key.slice(`${role}:`.length))) return false;
       if (!label) return false;
       return value?.label !== label && key !== `${role}:${label}` && !key.startsWith(`${role}:${label}:`);
     }),

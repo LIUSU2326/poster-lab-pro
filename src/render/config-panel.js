@@ -48,7 +48,7 @@ const modeCopy = {
     label: "公告",
     short: "公告",
     description: "运营公告批量方案，强调文字层级和安全排版区域。",
-    cta: "生成公告图",
+    cta: "生成公告视觉方案",
     styles: ["维护公告", "版本更新", "限时活动", "社区赛事"],
     directionTitle: "先保证可读性",
     directionHelper: "为文案留出安静空间，避免文字后方出现过多噪声。",
@@ -259,10 +259,12 @@ function getModeCopy(modeId) {
 
 function getDirectionPayload(modeId) {
   const copy = getModeCopy(modeId);
+  const spec = modeSpecs[modeId] || {};
+  const direction = spec.direction || {};
   return {
-    styles: copy.styles,
-    title: copy.directionTitle,
-    helper: copy.directionHelper,
+    styles: spec.styles || copy.styles,
+    title: direction.title || copy.directionTitle,
+    helper: direction.helper || copy.directionHelper,
   };
 }
 
@@ -475,7 +477,7 @@ function getOutputSizes(modeId, fallback = []) {
     poster: ["16:9", "9:16", "1:1", "4:3", "1200x627", "自定义"],
     collab: ["16:9", "9:16", "1:1", "1200x627", "自定义"],
     announcement: ["16:9", "9:16", "1:1", "4:3", "1200x627", "自定义"],
-    logo: ["方形", "横版", "浅色背景", "深色背景"],
+    logo: ["1:1", "4:3", "16:9"],
     icon: ["1:1"],
   }[modeId];
   return sizes || fallback;
@@ -508,8 +510,7 @@ function renderModeBrief(activeMode, form) {
           <strong>合作品牌</strong>
           <span>原生</span>
         </div>
-        <input value="${escapeAttribute(modeForm.collabBrandName || "")}" aria-label="合作品牌名称" data-form-field="modeForm.collabBrandName" />
-        <input value="高级、轻松、家庭友好或活动指定调性" aria-label="合作品牌调性" />
+        <input value="${escapeAttribute(modeForm.collabBrandName || "")}" aria-label="合作品牌名称" data-form-field="modeForm.collabBrandName" placeholder="可选：合作品牌名称" />
         <div class="segmented compact">
           ${["native", "brand", "game"].map((value) => `<button class="${modeForm.collabStyleInjection === value ? "active" : ""}" type="button" data-form-choice="modeForm.collabStyleInjection" data-choice-value="${value}">${value === "native" ? "原生" : value === "brand" ? "品牌" : "游戏"}</button>`).join("")}
         </div>
@@ -522,9 +523,9 @@ function renderModeBrief(activeMode, form) {
       <div class="mode-context">
         <div class="mode-context-head">
           <strong>公告标题</strong>
-          <span>必填</span>
+          <span>可选</span>
         </div>
-        <input value="${escapeAttribute(modeForm.announcementTitle || "")}" aria-label="公告标题" data-form-field="modeForm.announcementTitle" />
+        <input value="${escapeAttribute(modeForm.announcementTitle || "")}" aria-label="公告标题" data-form-field="modeForm.announcementTitle" placeholder="例如：版本更新、限时礼包或维护公告" />
         <div class="segmented compact">
           <button class="${modeForm.layoutMode === "integratedTypography" ? "active" : ""}" type="button" data-form-choice="modeForm.layoutMode" data-choice-value="integratedTypography">融入场景</button>
           <button class="${modeForm.layoutMode === "regularPanel" ? "active" : ""}" type="button" data-form-choice="modeForm.layoutMode" data-choice-value="regularPanel">常规面板</button>
@@ -540,7 +541,7 @@ function renderModeBrief(activeMode, form) {
           <strong>Logo 字标</strong>
           <span>品牌</span>
         </div>
-        <input value="${escapeAttribute(modeForm.wordmark || "")}" aria-label="Logo 字标" data-form-field="modeForm.wordmark" />
+        <input value="${escapeAttribute(modeForm.wordmark || "")}" aria-label="Logo 字标" data-form-field="modeForm.wordmark" placeholder="可选：留空则使用项目名称" />
         <div class="mode-field-grid solid-bg-grid">
           ${[
             ["#ffffff", "白底"],
@@ -595,21 +596,8 @@ function renderSloganSettings(form, modeId) {
   const mode = settings.mode || "off";
   const globalSlogan = settings.globalSlogan || "";
   const languages = Array.isArray(settings.languages) && settings.languages.length > 0 ? settings.languages : ["en-US"];
-  if (modeId === "icon") {
-    return renderLockedTextStrategy({
-      title: "文本",
-      label: "图标模式",
-      detail: "图标模式固定无文字。上传的角色、道具或 LOGO 只作为视觉身份参考，不会把宣传词写入图标。",
-      chips: ["无宣传词", "无字标", "64px 可读"],
-    });
-  }
-  if (modeId === "logo") {
-    return renderLockedTextStrategy({
-      title: "文本",
-      label: "标识模式",
-      detail: "标识模式只使用下方字标字段和上传 LOGO 参考，不使用海报宣传词，避免生成额外口号或乱码。",
-      chips: ["字标优先", "不生成口号", "纯色背景"],
-    });
+  if (["announcement", "logo", "icon"].includes(modeId)) {
+    return "";
   }
   const options = [
     ["auto", "自动"],
@@ -697,14 +685,14 @@ function renderModeDirection(activeMode, form) {
     return `
       <div class="preset-groups">
         ${[
-          ["运营", ["维护公告", "版本更新", "系统升级"]],
-          ["活动", ["每日登录", "限时礼包", "充值返利"]],
-          ["社区", ["决赛", "公会战", "直播活动"]],
-          ["账号", ["封禁通知", "找回账号", "身份验证"]],
+          ["运营", [["maintenance", "维护公告"], ["version", "版本更新"], ["system", "系统升级"]]],
+          ["活动", [["login", "每日登录"], ["gift", "限时礼包"], ["rebate", "充值返利"]]],
+          ["社区", [["final", "决赛"], ["guild", "公会战"], ["live", "直播活动"]]],
+          ["账号", [["account", "封禁通知"], ["recover", "找回账号"], ["verify", "身份验证"]]],
         ].map(([group, items]) => `
           <div>
             <strong>${group}</strong>
-            <span>${items.map((item) => `<button type="button">${item}</button>`).join("")}</span>
+            <span>${items.map(([value, item]) => `<button class="${modeForm.copyPreset === value ? "active" : ""}" type="button" data-form-choice="modeForm.copyPreset" data-choice-value="${escapeAttribute(value)}">${item}</button>`).join("")}</span>
           </div>
         `).join("")}
       </div>
@@ -753,8 +741,8 @@ function renderModeOutput(activeMode, form, outputSizes) {
       </div>
     </div>
     ${suiteMode ? `<div class="segmented">
-      <button class="active" type="button">${activeMode.id === "icon" ? "锁定方形" : "统一方案"}</button>
-      <button type="button">${activeMode.id === "icon" ? "不改尺寸" : "独立方案"}</button>
+      <button class="${outputSettings.planStrategy !== "independent" ? "active" : ""}" type="button" data-form-choice="outputSettings.planStrategy" data-choice-value="unified">${activeMode.id === "icon" ? "锁定方形" : "统一方案"}</button>
+      <button class="${outputSettings.planStrategy === "independent" ? "active" : ""}" type="button" data-form-choice="outputSettings.planStrategy" data-choice-value="independent">${activeMode.id === "icon" ? "不改尺寸" : "独立方案"}</button>
     </div>` : ""}
     <p class="output-note">${getOutputNote(activeMode.id, activeMode.sizeNote)}</p>
   `;

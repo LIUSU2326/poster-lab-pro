@@ -35,8 +35,6 @@ for (const mode of enums.productionMode) {
   addCheck(`${mode} output defaults`, validateOutputSettingsForm(mode, createOutputSettingsDefaults(mode)));
 
   const modeDefaults = createModeFormDefaults(mode);
-  if (mode === "collab") modeDefaults.collabBrandName = "Partner Brand";
-  if (mode === "announcement") modeDefaults.announcementTitle = "Scheduled Maintenance";
   addCheck(`${mode} mode defaults`, validateModeForm(mode, modeDefaults));
 }
 

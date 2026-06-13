@@ -79,7 +79,7 @@ function createSnapshotModeForm(modeId) {
   if (modeId === "collab") {
     return {
       mode: "collab",
-      collabBrandName: "Partner Brand",
+      collabBrandName: "",
       collabStyleInjection: "native",
       characterPlaceholdersOnly: true,
       preventCharacterMerge: true,
@@ -88,8 +88,8 @@ function createSnapshotModeForm(modeId) {
   if (modeId === "announcement") {
     return {
       mode: "announcement",
-      announcementTitle: "Scheduled Maintenance",
-      copyPreset: "maintenance",
+      announcementTitle: "",
+      copyPreset: null,
       layoutMode: "integratedTypography",
       groupShotWhenMultiCharacter: true,
     };
@@ -98,7 +98,7 @@ function createSnapshotModeForm(modeId) {
     return {
       mode: "logo",
       styleTags: [],
-      wordmark: "Pizza Kitchen Adventures",
+      wordmark: "",
       solidBackground: true,
       backgroundColor: "#ffffff",
       wordmarkIsPrimarySubject: true,

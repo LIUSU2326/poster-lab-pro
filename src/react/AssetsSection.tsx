@@ -27,6 +27,7 @@ type AssetSlot = {
   previewUrl?: string | null;
   previewUrls?: string[];
   assetCount?: number;
+  assetIds?: string[];
 };
 
 type VisibleAssetSlot = AssetSlot & {
@@ -524,7 +525,9 @@ export function AssetsSection({
         transport: state.apiMode,
       });
       try {
-        const result = await removeWorkbenchAssetsByRoleLabel(role, slot.label);
+        const result = await removeWorkbenchAssetsByRoleLabel(role, slot.label, {
+          assetIds: slot.assetIds || [],
+        });
         if (!result.ok) {
           throw new Error(result.save?.error?.message || "删除素材后保存工作区失败。");
         }

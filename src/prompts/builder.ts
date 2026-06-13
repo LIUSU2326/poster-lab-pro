@@ -475,16 +475,19 @@ function formatAssetInventory(assets: PromptAssetBinding[], mode: ProductionMode
 function formatModeForm(modeState: WorkspaceModeState): string {
   const form = modeState.modeForm;
   if (form.mode === "collab") {
-    return `Collab style injection: ${form.collabStyleInjection}. Character placeholders only: ${form.characterPlaceholdersOnly}. Prevent merge: ${form.preventCharacterMerge}.`;
+    const partnerName = form.collabBrandName?.trim() || "unspecified partner brand";
+    return `Partner brand: ${partnerName}. Collab style injection: ${form.collabStyleInjection}. Character placeholders only: ${form.characterPlaceholdersOnly}. Prevent merge: ${form.preventCharacterMerge}.`;
   }
   if (form.mode === "announcement") {
-    const policy = announcementCopySafetyPolicy(form.announcementTitle);
-    return `Announcement title: ${form.announcementTitle}. Layout mode: ${form.layoutMode}. Group shot when multi-character: ${form.groupShotWhenMultiCharacter}. Copy safety strategy: ${policy.strategy}.`;
+    const announcementTitle = form.announcementTitle?.trim() || form.copyPreset || "game announcement";
+    const policy = announcementCopySafetyPolicy(announcementTitle);
+    return `Announcement title: ${announcementTitle}. Layout mode: ${form.layoutMode}. Group shot when multi-character: ${form.groupShotWhenMultiCharacter}. Copy safety strategy: ${policy.strategy}.`;
   }
 	  if (form.mode === "logo") {
-	    const policy = logoWordmarkTextRisk(form.wordmark);
+	    const sourceWordmark = form.wordmark?.trim() || modeState.projectBrief.projectName?.trim() || "logo wordmark";
+	    const policy = logoWordmarkTextRisk(sourceWordmark);
 	    const wordmarkText = policy.strategy === "exactShortWordmark"
-	      ? form.wordmark
+	      ? sourceWordmark
 	      : "redacted for copy-safe blank wordmark plate";
 	    return `Wordmark: ${wordmarkText}. Selected logo style: ${styleTagsText(form.styleTags)}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}. Logo text strategy: ${policy.strategy}.`;
 	  }

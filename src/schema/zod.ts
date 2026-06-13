@@ -198,7 +198,7 @@ export const PosterModeFormSchema = z.object({
 
 export const CollabModeFormSchema = z.object({
   mode: z.literal("collab"),
-  collabBrandName: z.string().min(1).max(80),
+  collabBrandName: z.string().max(80),
   collabStyleInjection: z.enum(["native", "brand", "game"]).default("native"),
   characterPlaceholdersOnly: z.literal(true),
   preventCharacterMerge: z.literal(true),
@@ -206,7 +206,7 @@ export const CollabModeFormSchema = z.object({
 
 export const AnnouncementModeFormSchema = z.object({
   mode: z.literal("announcement"),
-  announcementTitle: z.string().min(1).max(80),
+  announcementTitle: z.string().max(80),
   copyPreset: z.string().max(80).nullable().optional(),
   layoutMode: z.enum(["integratedTypography", "regularPanel"]).default("integratedTypography"),
   groupShotWhenMultiCharacter: z.boolean().default(true),
@@ -215,7 +215,7 @@ export const AnnouncementModeFormSchema = z.object({
 export const LogoModeFormSchema = z.object({
   mode: z.literal("logo"),
   styleTags: z.array(z.string().min(1)).default([]),
-  wordmark: z.string().min(1).max(80),
+  wordmark: z.string().max(80),
   solidBackground: z.literal(true),
   backgroundColor: z.string().min(1).max(40).default("#ffffff"),
   wordmarkIsPrimarySubject: z.literal(true),

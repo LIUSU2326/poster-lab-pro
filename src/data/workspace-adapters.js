@@ -239,6 +239,7 @@ export function getAssetSlotsForMode(modeId, fallbackAssets = []) {
         state: asset?.sourceType && asset.sourceType !== "placeholder" ? "uploaded" : slot.state,
         tone: roleTone[slot.role] || slot.tone || "blue",
         assetCount: assets.length,
+        assetIds: assets.map((item) => item.id).filter(Boolean),
         previewUrls: assets.map((item) => normalizePreviewUrl(item.previewUrl)).filter(Boolean),
         previewUrl: normalizePreviewUrl(asset?.previewUrl || slot.previewUrl),
       };
@@ -262,6 +263,7 @@ export function getAssetSlotsForMode(modeId, fallbackAssets = []) {
     state: asset.sourceType === "placeholder" ? "placeholder" : (asset.usage || ["input"]).join(" / "),
     tone: roleTone[asset.role] || "blue",
     assetCount: group.length,
+    assetIds: group.map((item) => item.id).filter(Boolean),
     previewUrls: group.map((item) => normalizePreviewUrl(item.previewUrl)).filter(Boolean),
     previewUrl: normalizePreviewUrl(asset.previewUrl),
       };

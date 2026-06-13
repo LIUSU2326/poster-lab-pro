@@ -171,7 +171,7 @@ for (const [fileName, source] of [
 
 async function runRuntimeCheck() {
   const { workspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/data/workspace-snapshot.js")).href);
-  const { state, ensureSelectedScheme, setRuntimeWorkspaceSnapshot } = await import(pathToFileURL(path.join(root, "src/state.js")).href);
+  const { state, ensureSelectedScheme, setRuntimeWorkspaceSnapshot, setActiveWorkspaceMode } = await import(pathToFileURL(path.join(root, "src/state.js")).href);
   const { getActiveGenerationFormValues, replaceGenerationFormField, updateGenerationFormField, setGenerationFormChoice } = await import(pathToFileURL(path.join(root, "src/generation-form-runtime.js")).href);
   const {
     createBoundWorkspaceSnapshot,
@@ -239,6 +239,36 @@ async function runRuntimeCheck() {
   if (queueSubmission.payload.imagesPerScheme !== 3) {
     issues.push("queue plan payload should read imagesPerScheme from bound form state");
   }
+  for (const modeId of ["collab", "announcement", "logo", "icon"]) {
+    setActiveWorkspaceMode(modeId);
+    ensureSelectedScheme();
+    replaceGenerationFormField("projectBrief", {
+      projectName: "Form Bound Pizza Lab",
+      gameDescription: "Custom form-bound game description.",
+      focusGuidanceEnabled: false,
+      focusGuidance: "",
+    });
+    const modeBound = createBoundWorkspaceSnapshot({ renderImages: false });
+    const modeState = modeBound.modeStates.find((item) => item.mode === modeId);
+    const generatedIds = modeState?.selectedSchemeIds || [];
+    if (generatedIds.length === 0 || generatedIds.some((id) => !String(id).startsWith(`generated-${modeId}-`))) {
+      issues.push(`${modeId} scheme generation should create generated pending schemes for its own mode`);
+    }
+    if (modeBound.schemes.some((scheme) => generatedIds.includes(scheme.id) && scheme.mode !== modeId)) {
+      issues.push(`${modeId} generated scheme ids should only point to ${modeId} schemes`);
+    }
+    const modePrompt = buildPromptPackageCreateSubmission(modeBound, { renderImages: false });
+    const modeQueue = buildQueuePlanCreateSubmission(modeBound, { renderImages: false });
+    if (modePrompt.payload.target !== "brief") {
+      issues.push(`${modeId} scheme generation should create a brief prompt package`);
+    }
+    if (modeQueue.payload.mode !== modeId || modeQueue.payload.regenerateSchemes !== true || modeQueue.payload.includeImageGeneration !== false) {
+      issues.push(`${modeId} queue payload should regenerate schemes without images for scheme-only generation`);
+    }
+  }
+  setActiveWorkspaceMode("poster");
+  ensureSelectedScheme();
+
   const baseOutputSettings = values.outputSettings;
   const suiteAspectRatios = ["1920x1080", "1080x1920", "1080x1080", "1600x300", "1200x627"];
   replaceGenerationFormField("outputSettings", {

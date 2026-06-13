@@ -1,7 +1,7 @@
 import { enums } from "./models.js";
 
 const defaultProjectName = "";
-const defaultLogoWordmark = "Untitled Logo";
+const defaultLogoWordmark = "";
 
 export const modeDefaultOutput = {
   poster: {

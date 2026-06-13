@@ -18,7 +18,7 @@ import {
   providerCapabilityGateUserMessage,
 } from './provider-capabilities.js';
 
-const generatedBatchSchemePrefix = "generated-poster";
+const generatedBatchSchemePrefix = "generated";
 const activeQueueStatuses = new Set(["queued", "running", "blocked"]);
 const terminalJobStatuses = new Set(["completed", "failed", "cancelled", "partial"]);
 const generationTaskKinds = new Set(["briefGeneration", "conceptGeneration", "imageGeneration"]);
@@ -294,11 +294,10 @@ function createSloganSettingsDraft() {
 }
 
 function createModeFormDraft(activeMode) {
-  const workspaceSnapshot = getRuntimeWorkspaceSnapshot();
   if (activeMode.id === "collab") {
     return {
       mode: "collab",
-      collabBrandName: "Partner Brand",
+      collabBrandName: "",
       collabStyleInjection: "native",
       characterPlaceholdersOnly: true,
       preventCharacterMerge: true,
@@ -307,8 +306,8 @@ function createModeFormDraft(activeMode) {
   if (activeMode.id === "announcement") {
     return {
       mode: "announcement",
-      announcementTitle: activeMode.schemes[0]?.zh || "Scheduled Maintenance",
-      copyPreset: "maintenance",
+      announcementTitle: "",
+      copyPreset: null,
       layoutMode: "integratedTypography",
       groupShotWhenMultiCharacter: true,
     };
@@ -317,7 +316,7 @@ function createModeFormDraft(activeMode) {
     return {
       mode: "logo",
       styleTags: [],
-      wordmark: workspaceSnapshot.project.name,
+      wordmark: "",
       solidBackground: true,
       backgroundColor: "#ffffff",
       wordmarkIsPrimarySubject: true,
@@ -429,9 +428,101 @@ export function createBoundWorkspaceSnapshot(options = {}) {
   snapshot.metadata.updatedAt = updatedAt;
   ensureActiveModeSchemesInSnapshot(snapshot, activeMode);
   applyOutputOverrides(snapshot, activeMode.id, normalizedOptions.outputOverrides, updatedAt);
-  preparePosterBatchSchemes(snapshot, activeMode, updatedAt, normalizedOptions);
+  prepareBatchSchemes(snapshot, activeMode, updatedAt, normalizedOptions);
 
   return snapshot;
+}
+
+function generatedBatchSchemePrefixForMode(modeId) {
+  return `${generatedBatchSchemePrefix}-${modeId}`;
+}
+
+function generatedSchemeCode(activeMode, index) {
+  const prefix = String(activeMode.icon || activeMode.id || "SC")
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 2)
+    .toUpperCase() || "SC";
+  return `${prefix}-${String(index + 1).padStart(2, "0")}`;
+}
+
+function modeDisplayName(activeMode) {
+  return activeMode.short || activeMode.label || activeMode.id || "当前";
+}
+
+function createGeneratedScheme({ snapshot, activeMode, index, batchId, outputPresets, updatedAt }) {
+  const modeId = activeMode.id;
+  const label = modeDisplayName(activeMode);
+  return {
+    id: `${generatedBatchSchemePrefixForMode(modeId)}-${batchId}-${index + 1}`,
+    projectId: snapshot.project.id,
+    mode: modeId,
+    code: generatedSchemeCode(activeMode, index),
+    title: `待生成${label}方案 ${index + 1}`,
+    brief: `等待 AI 根据当前${label}模式的项目描述、素材、画风、输出尺寸与侧重点生成新的方案。`,
+    slogans: {},
+    promptBlocks: activeMode.promptBlocks || [],
+    lockedFields: [],
+    outputPresets,
+    status: "pending",
+    createdAt: updatedAt,
+    updatedAt,
+  };
+}
+
+function getCurrentModeSchemeIds(snapshot, activeMode, outputSettings, options = {}) {
+  const explicitIds = Array.isArray(options.schemeIds) ? options.schemeIds.filter(Boolean) : [];
+  if (explicitIds.length > 0) return explicitIds;
+
+  const schemeCount = plannedSchemeCount(outputSettings, options.schemeCountOverride);
+  const fixtureIds = new Set((activeMode.schemes || []).map((scheme) => scheme.id));
+  const resultSchemeIds = new Set((snapshot.results || [])
+    .filter((result) => result.mode === activeMode.id)
+    .map((result) => result.schemeId));
+  const modeSchemes = (snapshot.schemes || [])
+    .filter((scheme) => scheme.mode === activeMode.id && scheme.status !== "pending");
+  const producedSchemes = modeSchemes.filter((scheme) =>
+    !fixtureIds.has(scheme.id) || resultSchemeIds.has(scheme.id),
+  );
+  const candidates = producedSchemes.length > 0 ? producedSchemes : modeSchemes;
+  return candidates.slice(0, schemeCount).map((scheme) => scheme.id);
+}
+
+function prepareBatchSchemes(snapshot, activeMode, updatedAt, options = {}) {
+  const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
+  const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
+  const schemeCount = plannedSchemeCount(outputSettings, options.schemeCountOverride);
+  if (options.schemeStrategy === "continue") {
+    const currentIds = getCurrentModeSchemeIds(snapshot, activeMode, outputSettings, options);
+    if (currentIds.length > 0) {
+      if (modeState) {
+        modeState.selectedSchemeIds = currentIds;
+        modeState.updatedAt = updatedAt;
+      }
+      return currentIds;
+    }
+  }
+
+  const outputPresets = outputSettings.platformPresets?.length
+    ? outputSettings.platformPresets
+    : platformPresetsByMode[activeMode.id] || ["custom"];
+  const batchId = options.batchId || createBatchId();
+  const batchSchemes = Array.from({ length: schemeCount }, (_, index) =>
+    createGeneratedScheme({ snapshot, activeMode, index, batchId, outputPresets, updatedAt }),
+  );
+  const batchIds = batchSchemes.map((scheme) => scheme.id);
+  const modeGeneratedPrefix = `${generatedBatchSchemePrefixForMode(activeMode.id)}-`;
+
+  snapshot.schemes = [
+    ...batchSchemes,
+    ...snapshot.schemes.filter((scheme) =>
+      !(scheme.mode === activeMode.id && String(scheme.id).startsWith(modeGeneratedPrefix) && scheme.status === "pending"),
+    ),
+  ];
+  if (modeState) {
+    modeState.selectedSchemeIds = batchIds;
+    modeState.updatedAt = updatedAt;
+  }
+  return batchIds;
 }
 
 function createGeneratedPosterScheme({ snapshot, index, batchId, outputPresets, updatedAt }) {
@@ -585,7 +676,7 @@ export function buildPromptPackageCreateSubmission(snapshot = createBoundWorkspa
   const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
   const schemeId = getFirstSelectedSchemeId(snapshot, activeMode, selected);
   const selectedSnapshotScheme = snapshot.schemes.find((scheme) => scheme.id === schemeId);
-  const target = activeMode.id === "poster" && (
+  const target = (
     !normalizedOptions.renderImages
     || normalizedOptions.schemeStrategy !== "continue"
     || selectedSnapshotScheme?.status === "pending"
@@ -610,20 +701,16 @@ export function buildQueuePlanCreateSubmission(snapshot = createBoundWorkspaceSn
   const selected = getSelectedScheme();
   const modeState = snapshot.modeStates.find((item) => item.mode === activeMode.id);
   const outputSettings = modeState?.outputSettings || createOutputSettingsDraft(activeMode);
-  const selectedBatchIds = activeMode.id === "poster"
-    ? normalizedOptions.schemeStrategy === "continue"
-      ? getCurrentPosterSchemeIds(snapshot, activeMode, outputSettings, normalizedOptions)
-      : Array.isArray(modeState?.selectedSchemeIds) ? modeState.selectedSchemeIds : []
+  const selectedBatchIds = normalizedOptions.schemeStrategy === "continue"
+    ? getCurrentModeSchemeIds(snapshot, activeMode, outputSettings, normalizedOptions)
     : Array.isArray(modeState?.selectedSchemeIds) ? modeState.selectedSchemeIds : [];
-  const batchSchemeIds = activeMode.id === "poster" && selectedBatchIds.length > 0
+  const batchSchemeIds = selectedBatchIds.length > 0
     ? selectedBatchIds
     : getModeSchemes()
       .slice(0, Math.max(1, outputSettings.schemeCount || 1))
       .map((scheme) => scheme.id);
-  const shouldRegenerateSchemes = activeMode.id === "poster"
-    ? normalizedOptions.schemeStrategy !== "continue"
-      || batchSchemeIds.some((schemeId) => snapshot.schemes.find((scheme) => scheme.id === schemeId)?.status === "pending")
-    : true;
+  const shouldRegenerateSchemes = normalizedOptions.schemeStrategy !== "continue"
+    || batchSchemeIds.some((schemeId) => snapshot.schemes.find((scheme) => scheme.id === schemeId)?.status === "pending");
 
   return {
     routeId: "queue.plan.create",

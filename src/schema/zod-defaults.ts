@@ -9,7 +9,7 @@ import type {
 } from "./zod";
 
 export const defaultProjectName = "";
-const defaultLogoWordmark = "Untitled Logo";
+const defaultLogoWordmark = "";
 
 export const modeDefaultOutput: Record<ProductionMode, Omit<OutputSettingsForm, "mode">> = {
   poster: {
@@ -191,14 +191,14 @@ export function createModeFormDefaults(mode: ProductionMode = "poster"): ModeFor
     },
     collab: {
       mode: "collab",
-      collabBrandName: "Partner Brand",
+      collabBrandName: "",
       collabStyleInjection: "native",
       characterPlaceholdersOnly: true,
       preventCharacterMerge: true,
     },
     announcement: {
       mode: "announcement",
-      announcementTitle: "Scheduled Maintenance",
+      announcementTitle: "",
       copyPreset: null,
       layoutMode: "integratedTypography",
       groupShotWhenMultiCharacter: true,

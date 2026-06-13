@@ -267,8 +267,12 @@ export function DirectionSection({ mode, initialValues, styles, directionTitle, 
   };
 
   const styleLibrary = useMemo(
-    () => uniqueStrings([...styles, ...posterStyleLibrary, ...customStyles]),
-    [customStyles, styles],
+    () => uniqueStrings([
+      ...styles,
+      ...(mode === "poster" ? posterStyleLibrary : []),
+      ...customStyles,
+    ]),
+    [customStyles, mode, styles],
   );
   const recommendedStyles = rotateStrings(styleLibrary, state.directionLibraryOffset?.[mode] || 0).slice(0, 6);
   const filteredStyles = styleLibrary.filter((style) => style.toLowerCase().includes(search.trim().toLowerCase()));

@@ -16,6 +16,16 @@ function assertNonEmptyString(value, path, issues) {
   }
 }
 
+function assertOptionalString(value, path, issues, { max = Infinity } = {}) {
+  if (typeof value !== "string") {
+    issues.push(issue(path, "Expected a string."));
+    return;
+  }
+  if (value.length > max) {
+    issues.push(issue(path, `Expected ${max} characters or fewer.`));
+  }
+}
+
 function assertStringArray(value, path, issues, { minItems = 0, maxItems = Infinity } = {}) {
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
     issues.push(issue(path, "Expected an array of strings."));
@@ -113,7 +123,7 @@ export function validateModeForm(mode, data) {
   }
 
   if (mode === "collab") {
-    assertNonEmptyString(data?.collabBrandName, "collabBrandName", issues);
+    assertOptionalString(data?.collabBrandName ?? "", "collabBrandName", issues, { max: 80 });
     assertEnum(data?.collabStyleInjection, ["native", "brand", "game"], "collabStyleInjection", issues);
     if (data?.characterPlaceholdersOnly !== true) {
       issues.push(issue("characterPlaceholdersOnly", "Collab planning must use character placeholders only."));
@@ -124,13 +134,13 @@ export function validateModeForm(mode, data) {
   }
 
   if (mode === "announcement") {
-    assertNonEmptyString(data?.announcementTitle, "announcementTitle", issues);
+    assertOptionalString(data?.announcementTitle ?? "", "announcementTitle", issues, { max: 80 });
     assertEnum(data?.layoutMode, ["integratedTypography", "regularPanel"], "layoutMode", issues);
   }
 
   if (mode === "logo") {
     assertStringArray(data?.styleTags, "styleTags", issues);
-    assertNonEmptyString(data?.wordmark, "wordmark", issues);
+    assertOptionalString(data?.wordmark ?? "", "wordmark", issues, { max: 80 });
     if (data?.solidBackground !== true) {
       issues.push(issue("solidBackground", "Logo mode requires a solid background."));
     }

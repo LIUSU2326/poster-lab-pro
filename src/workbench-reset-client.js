@@ -47,9 +47,9 @@ async function postJson(path, payload, options = {}) {
 
 function validModeForm(modeId, projectName) {
   const form = createModeFormDefaults(modeId);
-  if (modeId === "collab") return { ...form, collabBrandName: "合作伙伴" };
-  if (modeId === "announcement") return { ...form, announcementTitle: "公告标题" };
-  if (modeId === "logo") return { ...form, wordmark: projectName || "Untitled Logo" };
+  if (modeId === "collab") return { ...form, collabBrandName: "" };
+  if (modeId === "announcement") return { ...form, announcementTitle: "" };
+  if (modeId === "logo") return { ...form, wordmark: projectName || "" };
   return form;
 }
 
