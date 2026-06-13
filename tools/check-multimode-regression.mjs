@@ -258,11 +258,11 @@ async function runRuntimeCheck() {
 
     const announcement = buildAndMap({ prompts: runtime.prompts, mapper: runtime.mapper, snapshot, mode: "announcement" });
     requireIncludes(announcement.mapped.request.prompt, "Game Announcement Card Task", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "large calm editable copy area", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "natural UI panel", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "Keep the copy area intentionally blank", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "small blank decorative brand badge", "announcement provider request");
-    requireIncludes(announcement.mapped.request.prompt, "No character squads", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "designed header strip", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "framed message panel", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "supporting side art", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "copy-safe fields", "announcement provider request");
+    requireIncludes(announcement.mapped.request.prompt, "no empty beige board", "announcement provider request");
     requireExcludes(announcement.mapped.request.prompt, "Integrated Game Campaign KV Task", "announcement provider request");
 
     const collab = buildAndMap({ prompts: runtime.prompts, mapper: runtime.mapper, snapshot, mode: "collab" });

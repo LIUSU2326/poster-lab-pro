@@ -303,8 +303,8 @@ function imagePrompt(request: ImageGenerationRequest): string {
     }
     if (request.context.mode === "announcement") {
       return [
-        "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, and polished UI/event art direction.",
-        "Composition bar: uploaded subjects support the announcement surface without covering headline or key copy.",
+        "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, polished UI/event art direction, and enough themed visual content to avoid an empty blank template.",
+        "Composition bar: uploaded subjects, UI panels, logos, props, and backgrounds support the announcement surface without covering headline or key copy.",
         "Announcement Copy Safety Strategy lock: follow the prompt's safety strategy exactly. Reserve calm editable title/body copy-safe fields; if exact text is uncertain, leave polished blank fields instead of garbled operational text or pseudo-copy.",
       ].join(" ");
     }
@@ -542,7 +542,7 @@ function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): st
   if (!hasSemanticRole(request, "protagonist")) return "";
   switch (request.context.mode) {
     case "icon":
-      return "Icon subject roster lock: when a gameCharacter reference is used, it should become the single main icon subject or be omitted in favor of a stronger selected subject; do not add extra characters.";
+      return "Icon subject roster lock: when a gameCharacter reference is used, it must become the single main icon subject unless a different uploaded non-text subject was explicitly selected. Do not replace it with a pizza slice, logo fragment, generic avatar, badge frame, or extra character.";
     case "logo":
       return "Logo character rule: uploaded characters may influence mascot/brand-world motifs only if they support the mark; do not let character art dominate the wordmark.";
     case "announcement":
@@ -775,6 +775,12 @@ function referenceLabelForAsset(
   const nextIndex = (roleCounters.get(semanticRole) || 0) + 1;
   roleCounters.set(semanticRole, nextIndex);
   const referenceName = posterAssetReferenceName(asset, nextIndex);
+  if (
+    mode === "icon"
+    && (semanticRole === "protagonist" || semanticRole === "antagonist" || semanticRole === "prop" || semanticRole === "keySubject")
+  ) {
+    return `[ICON PRIMARY SUBJECT REFERENCE: this image defines the only dominant icon subject, ${referenceName}. Preserve its exact silhouette, colors, face/marking details, material cues, visible accessories, and absence/presence of tools while simplifying it into a premium 1:1 app icon. Do not substitute a pizza slice, generic mascot face, logo fragment, avatar portrait, badge frame, or easier project motif unless that exact thing is the uploaded reference. No extra subjects, no text, no poster scene.]`;
+  }
   if (semanticRole === "protagonist") {
     return `[CRITICAL VISUAL REFERENCE: this image defines ${referenceName}. Copy the exact identity: visible hair color, face, costume, body proportions, original tool/prop, line weight, chibi/mascot scale, and absence/presence of facial hair. You may change pose, expression, action, camera angle, lighting, and scene integration only when identity remains recognizable.]`;
   }
@@ -922,11 +928,11 @@ function modeBriefTask(mode: BriefGenerationRequest["context"]["mode"]): string 
 function modeBriefIdentityRule(mode: BriefGenerationRequest["context"]["mode"]): string {
   switch (mode) {
     case "icon":
-      return "Icon reference planning: choose one dominant uploaded non-text subject or motif as the icon subject, preserve its identity/silhouette/colors as a reference, and redraw/simplify it into one clean icon form.";
+      return "Icon reference planning: choose one dominant uploaded non-text subject or motif as the icon subject, preserve its identity/silhouette/colors as a reference, and redraw/simplify it into one clean icon form. If a subjectReference, character, prop, or BOSS-like reference exists, do not replace it with a generic pizza, logo fragment, avatar face, badge frame, or easier project motif.";
     case "logo":
       return "Logo reference planning: uploaded logos are brand references, not prompts for fake replacement words. Preserve brand shape language and letterform rhythm only when spelling can stay accurate.";
     case "announcement":
-      return "Announcement reference planning: uploaded characters, props, and logos support a readable event/update panel. They must not steal priority from the announcement copy-safe area.";
+      return "Announcement reference planning: uploaded characters, props, UI/panel references, backgrounds, and logos support a readable event/update panel. The card must feel finished and project-specific, not like an empty beige template.";
     case "collab":
       return "Collab reference planning: each uploaded character, logo, and partner asset remains a separate identity. Do not merge two brands, characters, or logos into one hybrid.";
     default:
@@ -949,6 +955,7 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
     return [
       ...shared,
       "Icon mode hard lock: 1:1 square, one single dominant subject, no text, no logo lettering, no captions, no poster scene, no multi-character battle, no empty corner padding, no white border, and no separate container that shrinks the subject. Rounded corners are acceptable when intentional and polished.",
+      "If a subjectReference, character, prop, or BOSS-like uploaded asset exists, each icon scheme must bind to one uploaded non-text subject as the only dominant subject. Do not plan a different generic motif just because the project description mentions food, logos, or characters.",
       "Icon prompt must prioritize a complete compact subject or deliberate readable bust, bold silhouette, simple readable shape, high contrast, minimal background detail, full-bleed square composition, crisp focal detail, and 64px readability.",
       "Avoid close-up fragments: do not plan only a mouth, teeth, eye, cropped face, cropped weapon, or blurred background crop as the icon.",
       "If several uploaded assets exist, choose one best non-text subject or motif for each scheme instead of crowding them together.",
@@ -971,6 +978,7 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
     return [
       ...shared,
       "Announcement mode hard lock: readable update/event graphic first, with a calm copy-safe panel or UI surface. Do not turn it into a battle poster or movie KV.",
+      "The announcement must include a designed header strip, framed message area, small tabs/badges/ornaments, themed frame material, and supporting side art when references exist. Do not plan a mostly empty board.",
       "Characters and props may frame, point to, or lightly interact with the panel, but they must not cover the headline/copy area.",
       "If exact announcement text cannot be rendered cleanly, plan polished blank fields or title plates instead of fake text or pseudo-letters.",
       imageRenderableSloganRule(targetLanguage),
@@ -1506,10 +1514,106 @@ function coerceBriefCompletion(value: unknown): unknown {
   return firstObjectArray ? { schemes: firstObjectArray.map(normalizeBriefScheme) } : value;
 }
 
-function parseBriefText(text: string) {
+function parseBriefText(text: string, request?: BriefGenerationRequest) {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1]?.trim();
-  return GoogleBriefCompletionSchema.parse(coerceBriefCompletion(JSON.parse(fenced || trimmed)));
+  try {
+    return GoogleBriefCompletionSchema.parse(coerceBriefCompletion(JSON.parse(fenced || trimmed)));
+  } catch (error) {
+    if (!request) throw error;
+    return createFallbackBriefCompletion(request);
+  }
+}
+
+function createFallbackBriefCompletion(request: BriefGenerationRequest): z.infer<typeof GoogleBriefCompletionSchema> {
+  return {
+    schemes: Array.from({ length: Math.max(1, request.schemeCount) }, (_, index) =>
+      createReadableModeFallbackScheme(request, index)),
+  };
+}
+
+function createReadableModeFallbackScheme(
+  request: BriefGenerationRequest,
+  index: number,
+): z.infer<typeof GoogleBriefCompletionSchema>["schemes"][number] {
+  const mode = request.context.mode;
+  const targetLanguage = request.languageTargets[0] || "en-US";
+  const fallbackPlans: Partial<Record<BriefGenerationRequest["context"]["mode"], Array<{
+    title: string;
+    brief: string;
+    prompt: string;
+    slogan: string;
+  }>>> = {
+    poster: [
+      {
+        title: "Poster Recovery",
+        brief: "A resilient poster route that preserves uploaded identities and the current project premise.",
+        prompt: "POSTER MODE: create a polished game campaign visual from the current project premise and uploaded assets. Preserve uploaded character, BOSS/key subject, logo, prop, and environment identities while changing pose, camera, lighting, depth, and scene integration. No sticker collage and no unrelated sample-project scenery.",
+        slogan: "Fresh Campaign Moment",
+      },
+    ],
+    icon: [
+      {
+        title: "Icon Scheme",
+        brief: "One uploaded non-text subject becomes a clean 1:1 app icon with minimal background and no text.",
+        prompt: "ICON MODE ONLY: bind to one uploaded subjectReference, character, prop, or BOSS-like subject as the only dominant icon subject. Redraw it as a complete compact premium app icon. No text, no logo letters, no poster scene, no replacement pizza slice or generic mascot.",
+        slogan: "",
+      },
+    ],
+    logo: [
+      {
+        title: "Logo Scheme",
+        brief: "A clean mark or uploaded-logo redesign route that avoids generic blank plaques and fake text.",
+        prompt: "LOGO MODE ONLY: create a polished logo/mark system. If an uploaded logo exists, preserve its silhouette, color rhythm, emblem layout, and material finish while redrawing cleanly. If exact text is unsafe, use non-letter brand shapes rather than fake words.",
+        slogan: "",
+      },
+    ],
+    announcement: [
+      {
+        title: "Announcement Scheme",
+        brief: "A finished in-game announcement card with a copy-safe panel, visual header, ornaments, and supporting side art.",
+        prompt: "ANNOUNCEMENT MODE ONLY: design a finished in-game event/update card with header strip, framed copy-safe message panel, small badges/tabs/ornaments, themed border material, and supporting presenter or prop art if uploaded. No fake text and no empty beige board.",
+        slogan: "Update Ready",
+      },
+    ],
+    collab: [
+      {
+        title: "Collab Handoff",
+        brief: "Two separate collaboration identities share one readable handoff moment with balanced scale and separate brand zones.",
+        prompt: "COLLAB MODE ONLY: show [Game Character 1] and [Collab Character 1] as separate co-stars exchanging or presenting a shared event prop. Keep game-side and partner-side brand plates separate; if exact brand text is unsafe, use blank polished non-letter plates. No hybrid character, no merged logo, no fake partner words.",
+        slogan: "Shared Table",
+      },
+      {
+        title: "Split Stage Pact",
+        brief: "A split-stage composition shows both sides keeping their own identity while meeting at one shared center action.",
+        prompt: "COLLAB MODE ONLY: design a split-stage event visual with the game side and partner side clearly separated by color/material, then connected by one shared object, portal, table, or reward. Keep uploaded identities distinct and similarly important. No fake sponsor text.",
+        slogan: "Two Worlds Meet",
+      },
+      {
+        title: "Shared Reward Table",
+        brief: "A shared reward or product table creates the collaboration story without fusing the two brands.",
+        prompt: "COLLAB MODE ONLY: place the two uploaded participant identities around one shared reward table, display stand, or in-world booth. Use separate blank brand lockups and a unified lighting system. Do not turn it into a generic poster battle.",
+        slogan: "Cook Together",
+      },
+    ],
+  };
+  const plans = fallbackPlans[mode] || fallbackPlans.collab!;
+  const plan = plans[index % plans.length]!;
+  const title = `${plan.title} ${index + 1}`;
+  const prompt = [
+    `${mode} mode resilient fallback scheme ${index + 1}.`,
+    plan.prompt,
+    modeBriefIdentityRule(mode),
+    "Use uploaded assets as references only, redraw naturally for the mode, and keep this scheme visually distinct from the others.",
+  ].join(" ");
+  return {
+    title,
+    brief: `${title}: ${plan.brief}`,
+    prompt,
+    promptZh: prompt,
+    promptEn: prompt,
+    slogans: mode === "icon" || mode === "logo" ? {} : { [targetLanguage]: plan.slogan || title },
+  };
 }
 
 function normalizePosterBriefSchemes(parsed: z.infer<typeof GoogleBriefCompletionSchema>, request: BriefGenerationRequest) {
@@ -1688,7 +1792,7 @@ function parseBriefResponse(
         }),
       };
     }
-    const parsed = parseBriefText(text);
+    const parsed = parseBriefText(text, request);
     return {
       ok: true,
       value: ProviderBriefResponseSchema.parse({

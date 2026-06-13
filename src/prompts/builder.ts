@@ -583,7 +583,8 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
     return [
       sharedRules,
       "Icon quality target: premium game/app icon, perfect 1:1 square, one single dominant subject, bold readable silhouette, high contrast, minimal background, crisp focal detail, and readable at 64px.",
-      "Icon asset handling: uploaded character, prop, or BOSS-like subject can become the main icon subject, but it must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
+      "Icon primary subject lock: when a subjectReference, gameCharacter, prop, or BOSS-like key subject is uploaded, that uploaded non-text subject is mandatory and must become the only dominant icon subject. Do not replace it with a pizza slice, generic mascot face, logo fragment, avatar portrait, badge frame, or easier project motif unless that exact thing is visibly the uploaded reference.",
+      "Icon asset handling: uploaded character, prop, or BOSS-like subject must be redrawn/simplified into a clean icon form with stronger silhouette and fewer details.",
       "Icon subject framing lock: show a complete compact subject or a deliberate bust with all defining features visible; do not zoom into only the mouth, teeth, eye, face crop, weapon crop, or a blurred fragment of the uploaded asset.",
       "Icon silhouette lock: the subject must read instantly as one designed app icon at 64px, with clean contour separation, intentional negative space, crisp edges, and no accidental crop through the head, hands, limbs, props, or signature shape.",
       "Icon canvas lock: generate clean full-bleed 1:1 square artwork with one dominant subject. Rounded corners, badge-like framing, or app-icon styling are acceptable only when intentional and polished; do not add a white border, empty corner padding, crop marks, or a separate dark container that shrinks the subject.",
@@ -623,7 +624,8 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
       sharedRules,
       "Announcement quality target: readable in-game announcement/event visual with clear title hierarchy, deliberate copy-safe area, polished UI/event art direction, and quiet enough background for later text placement.",
       "Announcement asset handling: uploaded characters or key subjects can act as guide/presenter/event support around the announcement surface; uploaded logos should be small clean lockups; backgrounds and UI screenshots guide panel material and spacing.",
-      "Announcement exclusions: do not cover the headline/copy zone, do not turn the image into a battle poster, do not generate garbled operational text, fake title words, repeated watermark logos, or busy effects behind copy.",
+      "Announcement completion lock: the output must be a finished game operation/event card, not a mostly empty beige board. Include a designed header strip, framed message surface, small tabs/badges/ornaments, and supporting side art when references exist while preserving blank copy-safe fields.",
+      "Announcement exclusions: do not cover the headline/copy zone, do not turn the image into a battle poster, do not generate garbled operational text, fake title words, repeated watermark logos, busy effects behind copy, or an empty template with no project flavor.",
     ].join("\n");
   }
 

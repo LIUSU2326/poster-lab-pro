@@ -14,6 +14,7 @@ import {
 } from "../assets/semantic-roles";
 import { PromptPackageSchema, type PromptAssetBinding, type PromptPackage } from "../prompts/contracts";
 import { logoWordmarkTextRisk } from "../prompts/logo-text-policy";
+import { announcementCopySafetyPolicy } from "../prompts/mode-safety-policy";
 import { integratedSloganTreatmentRule } from "../prompts/slogan-policy";
 import { WorkspaceSnapshotSchema, type WorkspaceModeState, type WorkspaceSnapshot } from "../storage/contracts";
 import {
@@ -337,8 +338,19 @@ function filterImageReferenceAssetsForMode(
     case "logo":
       if (options.copySafeLogoText) return [];
       return uniqueAssets([firstAsset(assets, bySemanticRole("brandLogo"))]);
-    case "announcement":
-      return [];
+    case "announcement": {
+      const uiReference = firstAsset(assets, bySourceRole("uiScreenshot"));
+      const background = firstAsset(assets, bySourceRole("background"));
+      const logo = firstAsset(assets, bySourceRole("gameLogo", "brandLogo"))
+        || firstAsset(assets, bySemanticRole("brandLogo"));
+      const presenter = firstAsset(assets, bySourceRole("gameCharacter", "collabCharacter"))
+        || firstAsset(assets, bySemanticRole("protagonist"))
+        || firstAsset(assets, bySemanticRole("keySubject"));
+      const eventCue = firstAsset(assets, bySourceRole("prop"))
+        || firstAsset(assets, bySemanticRole("prop"))
+        || firstAsset(assets, bySemanticRole("antagonist"));
+      return uniqueAssets([uiReference, background, logo, presenter, eventCue]).slice(0, 4);
+    }
     case "collab": {
       const gameCharacter = firstAsset(assets, (asset) =>
         bySourceRole("gameCharacter")(asset) || assetSemanticRole(asset) === "keySubject");
@@ -376,11 +388,11 @@ function imageReferencePolicyPromptBlock(
   ];
   const modeRule: Record<ProductionMode, string> = {
     poster: "",
-    icon: "Icon hard request lock: no pseudo-text edge marks, no poster scene complexity, no close-up fragment crop, no logo lettering, and no extra subjects. Icon mode isolation: use at most one uploaded non-text subject/motif as identity reference. Do not use uploaded logo lettering as the icon subject. Do not copy poster composition, slogan lettering, UI panels, multi-character battle scenes, reference-sheet side markings, crop marks, side labels, edge numbers, numerals, pseudo-text edge marks, barcode-like strokes, or text from any uploaded reference. Final output must be a 1:1 text-free icon with one bold complete subject, clean silhouette, minimal background, no poster scene complexity, and no close-up fragment crop. If the attached raw reference is a character or object, redraw that subject only; do not add a second large object, shield, weapon, unrelated prop, badge, or hand-held item unless it is visibly present in that reference.",
+    icon: "Icon hard request lock: no pseudo-text edge marks, no poster scene complexity, no close-up fragment crop, no logo lettering, no reference-sheet side markings, no numerals, and no extra subjects. Icon mode isolation: use at most one uploaded non-text subject/motif as identity reference. The attached raw icon reference, when present, is the mandatory single dominant icon subject; do not replace it with a pizza slice, generic mascot face, logo fragment, avatar portrait, badge frame, or easier project motif unless that exact thing is visibly the uploaded reference. Do not use uploaded logo lettering as the icon subject. Do not copy poster composition, slogan lettering, UI panels, multi-character battle scenes, reference-sheet side markings, crop marks, side labels, edge numbers, numerals, pseudo-text edge marks, barcode-like strokes, or text from any uploaded reference. Final output must be a 1:1 text-free icon with one bold complete subject, clean silhouette, minimal background, no poster scene complexity, and no close-up fragment crop. If the attached raw reference is a character or object, redraw that subject only; do not add a second large object, shield, weapon, unrelated prop, badge, or hand-held item unless it is visibly present in that reference.",
     logo: options.copySafeLogoText
       ? "Logo mode copy-safe isolation: no raw logo lettering reference is sent because the requested wordmark is text-risky. Build a clean blank logo/wordmark plate, emblem, or mark system from non-text brand cues only. No scene, no characters, no poster background, no pseudo-letters."
       : "Logo mode isolation: use only brand/logo references as raw images. If an uploaded logo reference is present, it is the primary brand redesign source: preserve recognizable silhouette, color rhythm, emblem/plate layout, material language, and spacing while redrawing it cleanly. Other uploaded assets are motif/style context only, not scene subjects. Final output must be a logo/mark system, not a blank generic plaque, poster, or character scene.",
-    announcement: "Announcement mode isolation: raw references are limited to brand/supporting presenter imagery. Build a calm in-game announcement panel or event card with a strong copy-safe area; do not turn the render into an action poster and do not generate garbled operational text.",
+    announcement: "Announcement mode isolation: raw references may include a UI/panel reference, background, small logo lockup, presenter character, or event prop. Use them to build a finished in-game announcement/event card with a clear copy-safe panel plus supporting art; do not output a mostly empty beige board, do not turn the render into an action poster, and do not generate garbled operational text.",
     collab: "Collab mode isolation: raw references are limited to participant identities and, only when both sides have uploaded brand references, separate brand logos. If the partner brandLogo is missing, do not use or redraw uploaded gameLogo lettering as visible text; reserve blank non-letter brand plates or neutral emblems. Render one clear instance of each side, keep them separate, and show a shared interaction; do not duplicate either side, merge them into a hybrid, or generate pseudo-letters.",
   };
   if (promptPackage.mode === "icon") {
@@ -410,17 +422,25 @@ function logoCopySafeImagePromptFromPromptPackage(input: {
 
 function announcementImagePromptFromPromptPackage(input: {
   promptPackage: PromptPackage;
+  modeState: WorkspaceModeState;
   maxChars: number;
 }): string {
+  const configuredTitle = input.modeState.modeForm.mode === "announcement"
+    ? input.modeState.modeForm.announcementTitle?.trim() || ""
+    : "";
+  const copyPolicy = announcementCopySafetyPolicy(configuredTitle);
+  const titleInstruction = copyPolicy.strategy === "exactShortTitleWithCopySafePanel" && copyPolicy.title
+    ? `Configured announcement title: "${copyPolicy.title}". It may appear once as a clean short headline only if every letter stays exact; otherwise leave the title field blank for later layout.`
+    : "Configured announcement copy is high-risk or missing. Reserve polished blank headline/body fields for later layout; do not invent fake announcement words.";
   return joinPromptBlocks([
     "## Game Announcement Card Task",
-    "Create a polished in-game announcement/event card layout, not a campaign poster, battle KV, logo screen, or action illustration.",
-    "Highest priority: reserve a large calm editable copy area as the main visual hierarchy. The copy area should occupy roughly half of the canvas and read as a natural UI panel, parchment board, menu card, signboard, or event notice surface.",
-    "Keep the copy area intentionally blank or filled with simple non-readable placeholder strokes only. Do not generate operational text, fake text, slogans, pseudo-letters, title words, instruction words, or garbled lettering.",
-    "Use one small blank decorative brand badge or empty header medallion if needed; it must contain no readable letters. Do not copy or invent a game title.",
-    "Use optional small non-specific side decoration only if it does not compete with the copy area. No character squads, no battle pose, no BOSS, no action scene, no large mascot, no large logo.",
-    "Use a quiet illustrated game UI feel: clear foreground panel, soft themed background, low visual noise behind text zones, restrained particles, readable margins, and obvious hierarchy. Culinary-adventure motifs may appear as subtle frame ornaments only.",
-    "Final audit before rendering: it must look like an announcement card with a blank editable copy zone, not a poster. One tiny blank badge maximum. No character group. No readable generated text.",
+    "Create a polished in-game announcement/event card layout, not a campaign poster, battle KV, logo screen, blank template, or action illustration.",
+    titleInstruction,
+    "Design a non-empty announcement system: designed header strip, framed message panel, body-copy safe area, small badges/tabs/buttons/ornaments, themed border material, and supporting side art. The copy-safe panel should occupy about 35-55% of the canvas, not the entire image.",
+    "Use uploaded UI/panel/background references for layout, material, and spacing cues. Use an uploaded game logo only as a small clean lockup or reserved brand-safe plate. Use one uploaded character/key subject as a presenter or event cue at the side when sent, without covering the title/copy zone.",
+    "Keep headline/body areas blank or filled with simple non-readable placeholder strokes unless the exact short configured title can be rendered perfectly. Do not generate operational paragraphs, fake text, slogans, pseudo-letters, instruction words, or garbled lettering.",
+    "The result must feel like a finished game operation notice or event card: calm readable hierarchy, themed frame, intentional margins, visual depth, gentle lighting, and enough project flavor; no empty beige board.",
+    "Final audit before rendering: one clear announcement surface with copy-safe fields, supporting brand/character/event art if references exist, no fake text, no battle-poster staging, no empty-template output.",
   ]).slice(0, input.maxChars);
 }
 
@@ -456,6 +476,7 @@ function nonPosterImagePromptFromPromptPackage(input: {
       mandatoryModeContract,
       announcementImagePromptFromPromptPackage({
         promptPackage: input.promptPackage,
+        modeState: input.modeState,
         maxChars: input.maxChars,
       }),
     ]).slice(0, input.maxChars);

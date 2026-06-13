@@ -184,6 +184,7 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
     case "icon":
       return [
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
+        "Primary subject lock: if one uploaded non-text subject reference is attached for icon mode, that reference is the mandatory single dominant icon subject. Do not substitute a pizza slice, generic mascot face, logo fragment, avatar portrait, badge frame, or easier project motif unless that exact thing is visibly the uploaded reference.",
         "Composition bar: premium 1:1 square icon artwork with full-bleed clarity, one dominant subject, intentional polished edge treatment, no white border, no accidental corner padding, no separate dark container that shrinks the subject, no text, no pseudo-letters, no glyph-like strokes, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory. Rounded corners or badge-like app-icon styling are acceptable when intentional and high quality.",
       ].join(" ");
     case "logo": {
@@ -202,8 +203,8 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
     }
     case "announcement":
       return [
-        "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, and polished UI/event art direction.",
-        "Composition bar: uploaded subjects support the announcement surface without covering headline or key copy.",
+        "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, polished UI/event art direction, and enough themed visual content to avoid an empty blank template.",
+        "Composition bar: uploaded subjects, UI panels, logos, props, and backgrounds support the announcement surface without covering headline or key copy.",
         "Announcement Copy Safety Strategy lock: follow the prompt's safety strategy exactly. Reserve calm editable title/body copy-safe fields; if exact text is uncertain, leave polished blank fields instead of garbled operational text or pseudo-copy.",
       ].join(" ");
     case "collab":
@@ -519,11 +520,11 @@ function hasSemanticRole(request: ImageGenerationRequest, role: ReturnType<typeo
 function modeReferenceInstruction(request: ImageGenerationRequest): string {
   switch (request.context.mode) {
     case "icon":
-      return "Icon reference handling: choose one dominant uploaded subject or motif and simplify/redraw it into a clean 1:1 icon silhouette. Do not create a poster scene, multi-character battle, copied sticker, invented shield/weapon/tool/accessory, or any text.";
+      return "Icon reference handling: choose one dominant uploaded subject or motif and simplify/redraw it into a clean 1:1 icon silhouette. When a raw icon reference is attached, it is the only dominant subject and must not be replaced by a pizza slice, generic face, logo fragment, badge frame, or easier project motif. Do not create a poster scene, multi-character battle, copied sticker, invented shield/weapon/tool/accessory, or any text.";
     case "logo":
       return "Logo reference handling: use uploaded assets as brand continuity, motif, material, or shape references for a wordmark/mark system. Do not turn them into a scene or pasted collage, and use Logo Text Strategy rather than pseudo-letters.";
     case "announcement":
-      return "Announcement reference handling: use uploaded assets as supporting art around a readable copy-safe announcement panel. Do not cover the title/copy area, and follow Announcement Copy Safety Strategy instead of generating garbled operational text.";
+      return "Announcement reference handling: use uploaded assets as supporting art around a readable copy-safe announcement panel. Build a finished announcement/event card with header, panel, frame, ornaments, and side art when references exist; do not leave a mostly empty board, cover the title/copy area, or generate garbled operational text.";
     case "collab":
       return "Collab reference handling: keep uploaded characters and logos as separate identities unified by one scene, shared lighting, materials, and interaction. Follow Collab Brand Safety Strategy; do not merge identities, invent partner brand names, or create hybrid marks.";
     case "poster":
@@ -542,7 +543,7 @@ function modeSpecificProtagonistInstruction(request: ImageGenerationRequest): st
   if (protagonistCount === 0) return "";
   switch (request.context.mode) {
     case "icon":
-      return "Icon character rule: a gameCharacter reference may become the single main icon subject, but no extra characters or crowded group scenes.";
+      return "Icon character rule: a gameCharacter reference must become the single main icon subject when it is the selected icon reference. Do not replace it with a pizza slice, logo fragment, generic avatar, badge frame, extra character, or crowded group scene.";
     case "logo":
       return "Logo character rule: character references may inspire mascot-like motifs only if the wordmark/mark remains primary.";
     case "announcement":
