@@ -465,9 +465,9 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
 	    return [
 	      ...shared,
 	      "Logo mode hard lock: design a logo, symbol, badge, wordmark, or title lockup. Do not create a cinematic scene, character battle, poster background, environmental set piece, or campaign slogan art.",
-	      "Logo Text Strategy: use exact provided brand text only when it can stay readable; otherwise create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction without pseudo-letters.",
-	      "When planning a copy-safe blank wordmark plate, do not place the project name, uploaded-logo letters, partial title words, readable alphabet letters, or pseudo-letters in image prompts. Refer to the brand only as an uploaded brand reference or reserved blank wordmark area.",
-	      "Uploaded logo references guide brand color, silhouette, rhythm, and finish. Do not generate a fake replacement logo or look-alike gibberish.",
+	      "Logo Text Strategy: use exact provided brand text only when it can stay readable. If an uploaded logo reference is present, plan a redraw/elevation from that logo's silhouette, color rhythm, emblem layout, and material finish. Only without an uploaded logo reference, create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction when exact text is unsafe.",
+	      "When no uploaded logo reference is available and a blank wordmark plate is required, do not place the project name, partial title words, readable alphabet letters, or pseudo-letters in image prompts. Otherwise refer to the uploaded logo as the brand reference and preserve its non-text identity cues.",
+	      "Uploaded logo references guide brand color, silhouette, rhythm, layout, and finish. Do not generate a fake replacement logo, unrelated empty plaque, or look-alike gibberish.",
 	      "slogans must be an empty object for logo mode.",
 	    ];
   }
@@ -846,7 +846,7 @@ function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { bri
 	    case "logo":
 	      return {
 	        brief: "Logo 模式锁定：标识/徽章/字标优先，不做电影场景或海报，不生成乱码假字。",
-	        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. If the wordmark is copy-safe blank, render no readable letters, uploaded-logo text, project-title fragments, partial words, slogans, or pseudo-letters; use a polished blank wordmark plate, emblem, badge, or mark system.",
+	        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. If an uploaded logo reference is available, redesign/elevate that logo as the primary brand source: preserve recognizable silhouette, color rhythm, emblem layout, and material finish; keep lettering only when it stays clean, and do not replace it with a generic empty plaque. If no uploaded logo is available and exact lettering is unsafe, use a polished blank wordmark plate, emblem, badge, or mark system without pseudo-letters.",
 	      };
     case "announcement":
       return {

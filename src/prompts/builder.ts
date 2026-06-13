@@ -488,7 +488,7 @@ function formatModeForm(modeState: WorkspaceModeState): string {
 	    const policy = logoWordmarkTextRisk(sourceWordmark);
 	    const wordmarkText = policy.strategy === "exactShortWordmark"
 	      ? sourceWordmark
-	      : "redacted for copy-safe blank wordmark plate";
+	      : "reserved for logo refinement";
 	    return `Wordmark: ${wordmarkText}. Selected logo style: ${styleTagsText(form.styleTags)}. Solid background: ${form.solidBackground}. Background color: ${form.backgroundColor}. Wordmark is primary: ${form.wordmarkIsPrimarySubject}. Logo text strategy: ${policy.strategy}.`;
 	  }
   if (form.mode === "icon") {
@@ -595,11 +595,25 @@ function formatModeQualityDirection(modeState: WorkspaceModeState, assets: Promp
   }
 
   if (modeState.mode === "logo") {
+    const hasUploadedLogoReference = assets.some((asset) => assetSemanticRole(asset) === "brandLogo");
+    const sourceWordmark = modeState.modeForm.mode === "logo"
+      ? modeState.modeForm.wordmark?.trim() || modeState.projectBrief.projectName?.trim()
+      : "";
+    const logoTextPolicy = logoWordmarkTextRisk(sourceWordmark);
+    const usesBlankLogoFallback = !hasUploadedLogoReference
+      && logoTextPolicy.strategy === "copySafeBlankWordmark";
+    const logoTextLock = usesBlankLogoFallback
+      ? "Logo copy-safe blank lock: when Logo Text Strategy is copySafeBlankWordmark, do not render any readable letters, partial project-title words, uploaded-logo text, pseudo-letters, subtitles, slogans, or decorative fake typography."
+      : hasUploadedLogoReference
+        ? "Uploaded-logo redraw lock: the uploaded logo is the primary brand reference. Redraw and elevate its recognizable silhouette, color rhythm, pizza/title motif, material language, and spacing as a production logo asset. Do not replace it with a generic empty plaque, poster scene, character scene, or unrelated fantasy UI frame."
+        : "Logo text accuracy lock: render exact short wordmarks only when every letter can remain clean; if not, reserve a clean non-letter mark area for later vector/text refinement.";
     return [
 	      sharedRules,
 	      "Logo quality target: readable wordmark/mark system is the primary subject, with clean silhouette, premium material finish, strong brand rhythm, and a pure solid-color background suitable for later compositing.",
-	      "Logo asset handling: uploaded logos are brand continuity references for shape, color, letter rhythm, and style. Preserve exact spelling only when reliable; otherwise design a clean copy-safe mark or blank wordmark treatment without fake replacement text.",
-	      "Logo copy-safe blank lock: when Logo Text Strategy is copySafeBlankWordmark, do not render any readable letters, partial project-title words, uploaded-logo text, pseudo-letters, subtitles, slogans, or decorative fake typography.",
+	      hasUploadedLogoReference
+          ? "Logo asset handling: uploaded logos are brand continuity references for shape, color, letter rhythm, icon/pizza silhouette, layout, and style. Preserve exact spelling only when reliable; otherwise keep the uploaded logo's non-text identity cues without fake replacement text."
+          : "Logo asset handling: when no uploaded logo exists, build a clean mark/wordmark system from the configured project context. Preserve exact spelling only when reliable; otherwise use a clean non-letter mark treatment without fake replacement text.",
+	      logoTextLock,
 	      "Logo exclusions: do not turn logo mode into a poster scene, character scene, product render, landscape, or sticker collage. Do not invent look-alike words, substitute letters, repeat the uploaded logo as a pasted sticker, or let props/characters dominate the wordmark.",
 	    ].join("\n");
 	  }
@@ -684,7 +698,7 @@ function formatModeTypographyDirection(
 function formatLogoTextDirection(modeState: WorkspaceModeState, assets: PromptAssetBinding[]): string {
   if (modeState.mode !== "logo" || modeState.modeForm.mode !== "logo") return "";
   return logoTextPolicyBlock({
-    wordmark: modeState.modeForm.wordmark,
+    wordmark: modeState.modeForm.wordmark || modeState.projectBrief.projectName,
     hasUploadedLogoReference: assets.some((asset) => assetSemanticRole(asset) === "brandLogo"),
   });
 }

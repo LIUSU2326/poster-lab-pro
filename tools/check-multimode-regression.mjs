@@ -245,17 +245,15 @@ async function runRuntimeCheck() {
     }
 
     const logo = buildAndMap({ prompts: runtime.prompts, mapper: runtime.mapper, snapshot, mode: "logo" });
-    requireIncludes(logo.mapped.request.prompt, "Logo Asset Task", "logo provider request");
-    requireIncludes(logo.mapped.request.prompt, "blank non-letter title plaque", "logo provider request");
-    requireIncludes(logo.mapped.request.prompt, "pure solid-color background", "logo provider request");
-    requireIncludes(logo.mapped.request.prompt, "No readable text anywhere", "logo provider request");
-    requireIncludes(logo.mapped.request.prompt, "zero characters", "logo provider request");
-    requireIncludes(logo.mapped.request.prompt, "zero scene", "logo provider request");
-    requireNoRegex(logo.mapped.request.prompt, /\b(Pizza|Kitchen|Adventures)\b/i, "logo provider request");
-    requireNoRegex(logo.mapped.request.prompt, /readable wordmark|lettering rhythm|letter rhythm/i, "logo provider request");
-    if (logo.mapped.request.assets.some((asset) =>
-      /readable wordmark|lettering rhythm|letter rhythm|readable brand rhythm/i.test(asset.description || ""))) {
-      issues.push("logo provider request: copy-safe asset descriptions should not contain readable-lettering cues");
+    requireIncludes(logo.mapped.request.prompt, "Logo mode isolation", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "uploaded logo reference is present", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "primary brand redesign source", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "Uploaded-logo redraw lock", "logo provider request");
+    requireIncludes(logo.mapped.request.prompt, "uploadedLogoReferenceRedraw", "logo provider request");
+    requireExcludes(logo.mapped.request.prompt, "Logo Asset Task", "logo provider request with uploaded logo");
+    requireExcludes(logo.mapped.request.prompt, "blank non-letter title plaque", "logo provider request with uploaded logo");
+    if (!logo.mapped.request.assets.some((asset) => /semanticRole=brandLogo/.test(asset.description || ""))) {
+      issues.push("logo provider request: uploaded logo reference should be sent to the image model for redesign");
     }
 
     const announcement = buildAndMap({ prompts: runtime.prompts, mapper: runtime.mapper, snapshot, mode: "announcement" });

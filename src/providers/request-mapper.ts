@@ -379,7 +379,7 @@ function imageReferencePolicyPromptBlock(
     icon: "Icon hard request lock: no pseudo-text edge marks, no poster scene complexity, no close-up fragment crop, no logo lettering, and no extra subjects. Icon mode isolation: use at most one uploaded non-text subject/motif as identity reference. Do not use uploaded logo lettering as the icon subject. Do not copy poster composition, slogan lettering, UI panels, multi-character battle scenes, reference-sheet side markings, crop marks, side labels, edge numbers, numerals, pseudo-text edge marks, barcode-like strokes, or text from any uploaded reference. Final output must be a 1:1 text-free icon with one bold complete subject, clean silhouette, minimal background, no poster scene complexity, and no close-up fragment crop. If the attached raw reference is a character or object, redraw that subject only; do not add a second large object, shield, weapon, unrelated prop, badge, or hand-held item unless it is visibly present in that reference.",
     logo: options.copySafeLogoText
       ? "Logo mode copy-safe isolation: no raw logo lettering reference is sent because the requested wordmark is text-risky. Build a clean blank logo/wordmark plate, emblem, or mark system from non-text brand cues only. No scene, no characters, no poster background, no pseudo-letters."
-      : "Logo mode isolation: use only brand/logo references as raw images. Other uploaded assets are motif/style context only, not scene subjects. Final output must be a logo/mark system, not a poster or character scene.",
+      : "Logo mode isolation: use only brand/logo references as raw images. If an uploaded logo reference is present, it is the primary brand redesign source: preserve recognizable silhouette, color rhythm, emblem/plate layout, material language, and spacing while redrawing it cleanly. Other uploaded assets are motif/style context only, not scene subjects. Final output must be a logo/mark system, not a blank generic plaque, poster, or character scene.",
     announcement: "Announcement mode isolation: raw references are limited to brand/supporting presenter imagery. Build a calm in-game announcement panel or event card with a strong copy-safe area; do not turn the render into an action poster and do not generate garbled operational text.",
     collab: "Collab mode isolation: raw references are limited to participant identities and, only when both sides have uploaded brand references, separate brand logos. If the partner brandLogo is missing, do not use or redraw uploaded gameLogo lettering as visible text; reserve blank non-letter brand plates or neutral emblems. Render one clear instance of each side, keep them separate, and show a shared interaction; do not duplicate either side, merge them into a hybrid, or generate pseudo-letters.",
   };
@@ -467,6 +467,7 @@ function nonPosterImagePromptFromPromptPackage(input: {
       prompt: normalizeModePlaceholderAliases(input.promptPackage.finalPrompt, input.promptPackage.mode),
       snapshot: input.snapshot,
       modeState: input.modeState,
+      promptPackage: input.promptPackage,
     }),
   ]).slice(0, input.maxChars);
 }
@@ -1223,20 +1224,35 @@ function redactLogoCopySafePhrases(text: string): string {
     current.replace(pattern, replacement), text);
 }
 
-function isLogoCopySafeBlankWordmarkModeState(modeState: WorkspaceModeState): boolean {
+function promptPackageHasUploadedLogoReference(promptPackage: PromptPackage | undefined): boolean {
+  return Boolean(promptPackage?.assets.some((asset) => assetSemanticRole(asset) === "brandLogo"));
+}
+
+function isLogoCopySafeBlankWordmarkModeState(
+  modeState: WorkspaceModeState,
+  promptPackage?: PromptPackage,
+): boolean {
   const form = modeState.modeForm;
   if (form.mode !== "logo") return false;
-  return logoWordmarkTextRisk(form.wordmark).strategy === "copySafeBlankWordmark";
+  if (promptPackageHasUploadedLogoReference(promptPackage)) return false;
+  const sourceWordmark = form.wordmark?.trim()
+    || modeState.projectBrief.projectName?.trim();
+  return logoWordmarkTextRisk(sourceWordmark).strategy === "copySafeBlankWordmark";
 }
 
 function redactLogoCopySafeWordmarkPrompt(input: {
   prompt: string;
   snapshot: WorkspaceSnapshot;
   modeState: WorkspaceModeState;
+  promptPackage?: PromptPackage;
 }): string {
   const form = input.modeState.modeForm;
   if (form.mode !== "logo") return input.prompt;
-  const policy = logoWordmarkTextRisk(form.wordmark);
+  if (promptPackageHasUploadedLogoReference(input.promptPackage)) return input.prompt;
+  const sourceWordmark = form.wordmark?.trim()
+    || input.modeState.projectBrief.projectName?.trim()
+    || input.snapshot.project.name?.trim();
+  const policy = logoWordmarkTextRisk(sourceWordmark);
   if (policy.strategy !== "copySafeBlankWordmark") return input.prompt;
   const terms = [
     policy.wordmark,
@@ -1325,7 +1341,7 @@ export function mapPromptPackageToBriefRequest(input: {
     ...(focusGuidance ? { focusGuidance } : {}),
     creativeDirection: creativeDirectionFromPromptPackage(input.promptPackage),
     assets: assetsFromPromptPackage(input.promptPackage, input.snapshot, {
-      copySafeLogoText: isLogoCopySafeBlankWordmarkModeState(modeState),
+      copySafeLogoText: isLogoCopySafeBlankWordmarkModeState(modeState, input.promptPackage),
     }),
     guardrails: modeGuardrails(input.promptPackage.mode),
     languageTargets: languageTargetsFrom(input.promptPackage, modeState),
@@ -1370,7 +1386,7 @@ export function mapPromptPackageToImageRequest(input: {
   const promptMaxChars = Math.min(PROVIDER_PROMPT_MAX_CHARS, providerImagePromptMaxChars(input.providerId));
   const count = input.count ?? modeState.outputSettings.imagesPerScheme;
   const useIdentitySafePlate = shouldUsePosterScenePlateFallback(input.promptPackage);
-  const copySafeLogoText = isLogoCopySafeBlankWordmarkModeState(modeState);
+  const copySafeLogoText = isLogoCopySafeBlankWordmarkModeState(modeState, input.promptPackage);
   const assets = providerImageAssetsForRequest({
     promptPackage: input.promptPackage,
     snapshot: input.snapshot,

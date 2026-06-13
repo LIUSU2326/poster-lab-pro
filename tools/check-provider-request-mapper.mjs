@@ -752,16 +752,14 @@ async function runRuntimeCheck() {
         "ABSOLUTELY NO TEXT",
         "no poster scene complexity",
         "Default pipeline: AI integrated redraw",
-      ],
+	      ],
 	      logo: [
-	        "Logo Asset Task",
-	        "standalone game brand mark asset",
-	        "blank non-letter title plaque",
-	        "No readable text anywhere",
-	        "zero readable letters",
-	        "pure solid-color background",
-	        "not a scene, poster",
-        "zero characters",
+	        "Logo mode isolation",
+	        "uploaded logo reference is present",
+	        "primary brand redesign source",
+	        "Uploaded-logo redraw lock",
+	        "uploadedLogoReferenceRedraw",
+	        "not a blank generic plaque",
       ],
       announcement: [
         "Game Announcement Card Task",
@@ -816,18 +814,11 @@ async function runRuntimeCheck() {
 	      if (mappedMode.request.prompt.includes("Poster Quality Bar") && mode !== "poster") {
 	        issues.push(`${mode} prompt should not inherit poster-only quality bar`);
 	      }
-	      if (mode === "logo" && mappedMode.request.prompt.includes(multimodeSnapshot.project.name)) {
-	        issues.push("logo mapped image prompt should redact high-risk project title text in copy-safe blank wordmark mode");
+	      if (mode === "logo" && !mappedMode.request.assets.some((asset) => /semanticRole=brandLogo/.test(asset.description || ""))) {
+	        issues.push("logo mapped request with uploaded logo should send the logo reference to the image model");
 	      }
-	      if (mode === "logo" && /\b(Pizza|Kitchen|Adventures)\b/i.test(mappedMode.request.prompt)) {
-	        issues.push("logo mapped image prompt should redact high-risk wordmark fragments in copy-safe blank wordmark mode");
-	      }
-	      if (mode === "logo" && /readable wordmark|lettering rhythm|letter rhythm/i.test(mappedMode.request.prompt)) {
-	        issues.push("logo mapped image prompt should avoid readable-lettering cues in copy-safe blank wordmark mode");
-	      }
-	      if (mode === "logo" && mappedMode.request.assets.some((asset) =>
-	        /readable wordmark|lettering rhythm|letter rhythm|readable brand rhythm/i.test(asset.description || ""))) {
-	        issues.push("logo mapped asset descriptions should avoid readable-lettering cues in copy-safe blank wordmark mode");
+	      if (mode === "logo" && /Logo Asset Task|blank non-letter title plaque|No readable text anywhere|zero characters/i.test(mappedMode.request.prompt)) {
+	        issues.push("logo mapped request with uploaded logo should not fall back to the blank plaque task");
 	      }
 	    }
   } finally {

@@ -290,10 +290,15 @@ function imagePrompt(request: ImageGenerationRequest): string {
       ].join(" ");
     }
     if (request.context.mode === "logo") {
+      const hasLogoReference = hasSemanticRole(request, "brandLogo");
       return [
         "Quality bar: premium game logo/mark system, readable wordmark or emblem construction, crisp bevel/material finish, clean silhouette, and brand-safe typography.",
         "Composition bar: logo/wordmark is primary on a clean solid-color background when requested; props or characters may influence motifs but must not become a poster scene.",
-        "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Render exact short wordmarks only when reliable; otherwise reserve a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement.",
+        logoCopySafeBlankWordmark
+          ? "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Render exact short wordmarks only when reliable; otherwise reserve a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement."
+          : hasLogoReference
+            ? "Logo reference redraw lock: the uploaded logo reference is the primary brand source. Redraw and elevate its recognizable silhouette, color rhythm, emblem layout, material finish, spacing, and motif language; keep lettering only when clean, and do not replace it with a generic empty plaque."
+            : "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Use clean exact lettering only when reliable; otherwise keep a non-letter mark area for later vector/text refinement.",
       ].join(" ");
     }
     if (request.context.mode === "announcement") {
@@ -520,7 +525,9 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
     case "icon":
       return "Brand icon rule: if a legacy uploaded logo reference reaches icon mode, use only non-letter color/material cues or abstract symbol energy; do not render logo lettering, captions, readable text, or use it as the primary icon subject.";
     case "logo":
-      return "Brand logo rule: uploaded logos guide wordmark rhythm, colors, silhouette, spacing, material finish, and brand continuity. Follow Logo Text Strategy exactly. In copy-safe blank wordmark mode, do not render readable letters, uploaded-logo text, project-title fragments, partial words, pseudo-letters, slogans, or decorative fake typography; use a polished blank wordmark plate, emblem, badge, or mark system.";
+      return isLogoCopySafeBlankWordmarkPrompt(request.prompt)
+        ? "Brand logo rule: if a logo reference is unavailable for this request, use only non-text brand cues and reserve a polished blank wordmark plate, emblem, badge, or mark system."
+        : "Brand logo rule: uploaded logos are the primary brand redesign references. Preserve recognizable silhouette, color rhythm, emblem/plate layout, spacing, material finish, and brand continuity while redrawing cleanly. Keep lettering only when it stays readable; otherwise simplify it into non-letter logo shapes that still echo the uploaded logo. Do not output a generic empty plaque or fake replacement text.";
     case "announcement":
       return "Brand announcement rule: use uploaded logos as clean small lockups or reserved brand-safe areas. Do not create fake replacement logo text or repeated watermark patterns.";
     case "collab":
@@ -776,7 +783,7 @@ function referenceLabelForAsset(
   }
   if (semanticRole === "brandLogo") {
     if (mode === "logo") {
-      return `[BRAND MOTIF REFERENCE: ${referenceName} supplies color palette, silhouette rhythm, material finish, spacing, and emblem/plate styling. Follow Logo Text Strategy. In copy-safe blank wordmark mode, do NOT render readable letters, copied logo text, pseudo-letters, project-title fragments, or any subset of the uploaded wordmark.]`;
+      return `[BRAND LOGO REFERENCE: ${referenceName} is the primary brand redesign source. Preserve its recognizable silhouette rhythm, color palette, material finish, spacing, emblem/plate layout, and motif language while redrawing cleanly. Keep lettering only if it remains clean; otherwise simplify into non-letter brand shapes that still echo the uploaded logo.]`;
     }
     return `[CRITICAL LOGO REFERENCE: exact appearance of ${referenceName}. Include this uploaded logo/wordmark once, integrated into the campaign art without inventing a replacement.]`;
   }
@@ -867,7 +874,9 @@ async function imagePromptParts(request: ImageGenerationRequest): Promise<Google
         ? "Icon mode requires clean full-bleed 1:1 square artwork, one dominant subject, ABSOLUTELY NO TEXT, no white border, no accidental padding, no separate dark container that shrinks the subject, no invented shield/weapon/tool/accessory, minimal background detail, high contrast, and 64px readability. Rounded corners are acceptable when intentional and polished."
         : "",
       request.context.mode === "logo"
-        ? "Logo mode requires wordmark/mark system clarity. Follow Logo Text Strategy exactly. If the strategy is copy-safe blank, render no readable letters or project-title fragments; use a polished blank wordmark plate, emblem, badge, or mark system. Do not turn the result into a cinematic scene and do not invent fake replacement lettering or pseudo-letters for uploaded logo references."
+        ? isLogoCopySafeBlankWordmarkPrompt(request.prompt)
+          ? "Logo mode requires wordmark/mark system clarity. Follow Logo Text Strategy exactly. If the prompt explicitly requires a blank lettering-safe treatment, render no readable letters or project-title fragments; use a polished blank wordmark plate, emblem, badge, or mark system. Do not turn the result into a cinematic scene and do not invent fake replacement lettering or pseudo-letters."
+          : "Logo mode requires wordmark/mark system clarity. Follow Logo Text Strategy exactly. If an uploaded logo reference is present, redraw/elevate that brand reference instead of outputting a generic empty plaque. Do not turn the result into a cinematic scene and do not invent fake replacement lettering or pseudo-letters."
         : "",
       modeSubjectAccessoryInstruction(request),
       modeSpecificBrandLogoInstruction(request),
@@ -951,9 +960,9 @@ function modeBriefRules(mode: BriefGenerationRequest["context"]["mode"], targetL
     return [
       ...shared,
       "Logo mode hard lock: design a logo, symbol, badge, wordmark, or title lockup. Do not create a cinematic scene, character battle, poster background, environmental set piece, or campaign slogan art.",
-      "Logo Text Strategy: use exact provided brand text only when it can stay readable; otherwise create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction without pseudo-letters.",
-      "When planning a copy-safe blank wordmark plate, do not place the project name, uploaded-logo letters, partial title words, readable alphabet letters, or pseudo-letters in image prompts. Refer to the brand only as an uploaded brand reference or reserved blank wordmark area.",
-      "Uploaded logo references guide brand color, silhouette, rhythm, and finish. Do not generate a fake replacement logo or look-alike gibberish.",
+	      "Logo Text Strategy: use exact provided brand text only when it can stay readable. If an uploaded logo reference is present, plan a redraw/elevation from that logo's silhouette, color rhythm, emblem layout, and material finish. Only without an uploaded logo reference, create a polished blank wordmark plate, emblem, symbol, or lettering-safe construction when exact text is unsafe.",
+	      "When no uploaded logo reference is available and a blank wordmark plate is required, do not place the project name, partial title words, readable alphabet letters, or pseudo-letters in image prompts. Otherwise refer to the uploaded logo as the brand reference and preserve its non-text identity cues.",
+	      "Uploaded logo references guide brand color, silhouette, rhythm, layout, and finish. Do not generate a fake replacement logo, unrelated empty plaque, or look-alike gibberish.",
       "slogans must be an empty object for logo mode.",
     ];
   }
@@ -1560,7 +1569,7 @@ function modeQualityLock(mode: BriefGenerationRequest["context"]["mode"]): { bri
     case "logo":
       return {
         brief: "Logo 模式锁定：标识/徽章/字标优先，不做电影场景或海报，不生成乱码假字。",
-        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. If the wordmark is copy-safe blank, render no readable letters, uploaded-logo text, project-title fragments, partial words, slogans, or pseudo-letters; use a polished blank wordmark plate, emblem, badge, or mark system.",
+        prompt: "LOGO MODE ONLY: create a brand logo, symbol, badge, wordmark, or title lockup, not a poster or cinematic scene. If an uploaded logo reference is available, redesign/elevate that logo as the primary brand source: preserve recognizable silhouette, color rhythm, emblem layout, and material finish; keep lettering only when it stays clean, and do not replace it with a generic empty plaque. If no uploaded logo is available and exact lettering is unsafe, use a polished blank wordmark plate, emblem, badge, or mark system without pseudo-letters.",
       };
     case "announcement":
       return {

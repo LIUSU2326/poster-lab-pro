@@ -51,6 +51,10 @@ export const OPENAI_IMAGE_GENERATIONS_PATH = "/images/generations";
 export const OPENAI_IMAGE_EDITS_PATH = "/images/edits";
 type OpenAICompatibleImageProviderId = Extract<ProviderId, "openai" | "aigocode" | "custom" | "agnes">;
 
+function isLogoCopySafeBlankWordmarkPrompt(prompt: string): boolean {
+  return /COPY-SAFE BLANK WORDMARK ENFORCEMENT|copy-safe blank wordmark/i.test(prompt);
+}
+
 const OpenAIImageDataSchema = z
   .object({
     url: z.string().url().nullable().optional(),
@@ -182,13 +186,20 @@ function modeQualityInstruction(request: ImageGenerationRequest): string {
         "Quality bar: premium game/app icon, one dominant subject silhouette, minimal background, crisp focal detail, strong value contrast, and 64px readability.",
         "Composition bar: premium 1:1 square icon artwork with full-bleed clarity, one dominant subject, intentional polished edge treatment, no white border, no accidental corner padding, no separate dark container that shrinks the subject, no text, no pseudo-letters, no glyph-like strokes, no logo lettering, no captions, no UI copy, no poster scene complexity, and no invented shield/weapon/tool/accessory. Rounded corners or badge-like app-icon styling are acceptable when intentional and high quality.",
       ].join(" ");
-    case "logo":
+    case "logo": {
+      const hasLogoReference = request.assets.some((asset) => assetSemanticRole(asset) === "brandLogo");
+      const logoCopySafeBlankWordmark = isLogoCopySafeBlankWordmarkPrompt(request.prompt);
       return [
         "Quality bar: premium game logo/mark system, readable wordmark or emblem construction, crisp bevel/material finish, clean silhouette, and brand-safe typography.",
         "Composition bar: logo/wordmark is primary on a clean solid-color background when requested; props, characters, or uploaded logo references may influence motifs but must not become a poster scene.",
-        "Logo text safety: do not invent fake replacement lettering for uploaded logo references; preserve exact spelling only when reliable, otherwise design a clean copy-safe mark or blank wordmark treatment.",
-        "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Render exact short wordmarks only when reliable; otherwise reserve a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement.",
+        hasLogoReference
+          ? "Logo reference redraw lock: the uploaded logo reference is the primary brand source. Redraw and elevate its recognizable silhouette, color rhythm, emblem layout, material finish, spacing, and motif language; keep lettering only when clean, and do not replace it with a generic empty plaque."
+          : "Logo text safety: do not invent fake replacement lettering; preserve exact spelling only when reliable, otherwise design a clean mark or lettering-safe treatment.",
+        logoCopySafeBlankWordmark
+          ? "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Render exact short wordmarks only when reliable; otherwise reserve a polished blank wordmark plate, emblem, badge, or mark system for later vector/text refinement."
+          : "Logo Text Strategy lock: follow the prompt's Logo Text Strategy section exactly. Use clean exact lettering only when reliable; otherwise keep a non-letter mark area for later vector/text refinement.",
       ].join(" ");
+    }
     case "announcement":
       return [
         "Quality bar: readable in-game announcement or event visual with strong copy hierarchy, clean title/copy safe area, and polished UI/event art direction.",
@@ -557,7 +568,9 @@ function modeSpecificBrandLogoInstruction(request: ImageGenerationRequest): stri
     case "icon":
       return "Icon logo rule: if a legacy uploaded logo reference reaches icon mode, use only non-letter color/material cues or abstract symbol energy; do not render logo lettering, readable text, or use it as the primary icon subject.";
 	    case "logo":
-	      return "Logo text safety: uploaded logos guide brand continuity through color, silhouette, rhythm, spacing, and material style. Follow Logo Text Strategy exactly. In copy-safe blank wordmark mode, do not render readable letters, uploaded-logo text, project-title fragments, partial words, pseudo-letters, slogans, or decorative fake typography; use a polished blank wordmark plate, emblem, badge, or mark system.";
+	      return isLogoCopySafeBlankWordmarkPrompt(request.prompt)
+          ? "Logo text safety: if a logo reference is unavailable for this request, use only non-text brand cues and reserve a polished blank wordmark plate, emblem, badge, or mark system. Do not render readable letters, uploaded-logo text, project-title fragments, partial words, pseudo-letters, slogans, or decorative fake typography."
+          : "Logo text safety: uploaded logos are the primary brand redesign references. Preserve recognizable silhouette, color rhythm, emblem/plate layout, spacing, material finish, and brand continuity while redrawing cleanly. Keep lettering only when it stays readable; otherwise simplify it into non-letter logo shapes that still echo the uploaded logo. Rule: do not invent fake replacement lettering, output a generic empty plaque, or create fake replacement text.";
     case "announcement":
       return "Announcement logo rule: use uploaded logos as small clean lockups or reserved brand-safe areas, never as fake repeated watermark text.";
     case "collab":
